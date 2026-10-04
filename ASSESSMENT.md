@@ -1,6 +1,6 @@
 # OpenUp: where the stack stands
 
-4 October 2026. Dale asked: "an assessment of the 'openup' stack".
+4 October 2026. We asked: "an assessment of the 'openup' stack".
 
 ## In short
 
@@ -63,7 +63,7 @@
    first, not last.
 6. **Networking on real machines.** OpenSocketDirect has to be built, or
    OpenUp must rely on what is installed: Roadshow, or Emu68's own
-   `bsdsocket.library` on a PiStorm. That choice is Dale's.
+   `bsdsocket.library` on a PiStorm. That choice is our.
 7. **Licences:**
    - fine: OS 3.2.3 is the user's own copy; AmiSSL is Apache 2.0; AAText
      is MIT; Poseidon is APL 1.1; DejaVu has the Bitstream Vera licence;

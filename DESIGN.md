@@ -1,6 +1,6 @@
 # OpenUp: design
 
-Dale, 4 October 2026:
+We, 4 October 2026:
 - "one 'upgrade' or some cool name for us installing it on a base 3.2.3
   install"
 - "so it's: install 3.2.3, run our 'upgrade' or 'unifier' or 'extender' pack"
@@ -73,14 +73,14 @@ with its notices.
 | 2 | Each Open part as it lands: OpenRTG, `zunemaster.library` and the passthrough, OpenGadTools, OpenTypes, OpenCompress, OpenMail, OpenBrowser | Each works after the pack is re-run |
 | 3 | PiStorm and real-Amiga detection, with testers' hardware | The same pack on a PiStorm and on a real A1200 with an RTG card |
 | 4 | Cradle's OS 3.2.3 recipe applies the pack; the appliance ships it | A new instance from Cradle comes up with the Open family |
-| 5 | OpenUp Update and OpenUp Picks (section 6); OpenStart if Dale says yes | A pack installed today updates itself on request, and a newcomer adds a tested program with one tick |
+| 5 | OpenUp Update and OpenUp Picks (section 6); OpenStart if we say yes | A pack installed today updates itself on request, and a newcomer adds a tested program with one tick |
 
-**Name and repository:** OpenUp (Dale, 4 October 2026: "OpenUp it is"),
+**Name and repository:** OpenUp (We, 4 October 2026: "OpenUp it is"),
 `DalsinAI/openamigaup`.
 
 ## 6. What AmiKit tries to be, in OpenUp
 
-Dale, 4 October 2026: "I would like a lot of what AmiKit tries to be, to be
+We, 4 October 2026: "I would like a lot of what AmiKit tries to be, to be
 part of OpenUp".
 
 **What AmiKit is.** Jan Zahurancik's AmiKit (since 2005, now AmiKit X13;
@@ -123,7 +123,7 @@ AmiKit is credited as the precedent (the claims register lists it with
 ClassicWB and Coffin). We don't copy its artwork, themes, wallpapers or
 exclusive builds.
 
-**Questions for Dale:**
+**Questions for us:**
 1. **A start menu or launcher** (what AmiStart is to AmiKit). Either build
    OpenStart, a small GadTools launcher fed by OpenTypes' list of programs,
    or leave launching to Workbench and OpenFiles.
