@@ -103,7 +103,7 @@ and it's the part we take.
 | Everything set up out of the box | One Installer on the user's own OS 3.2.3; a Novice gets the recommended answer to every question | Take |
 | AmiKit Setup, a first-boot app for settings | **OpenUp Setup**, a GadTools app that runs once at first boot. It sets the look preset, the screen mode (with OpenRTG's boot to RTG), the network on or off, the printer, and which programs to add. It stays in Prefs to run again | Take |
 | Morpheuz's Startup Manager: each patch on or off | **Startup switches** in OpenUp Setup: every line OpenUp put in its marked startup block, in plain words, each with a switch that cleanly takes it out | Take |
-| Visual themes, Dark mode, a 32-bit desktop, FullHD wallpapers | OpenGadTools' presets (Classic, Open, Dark, Retro; its section 2c) on a true-colour desktop from boot (OpenRTG `RESIDENT`), with AGA and four-colour forms. Our own art and wallpapers | Take, our way |
+| Visual themes, Dark mode, a 32-bit desktop, FullHD wallpapers | OpenGadTools' presets (Classic, Open in the OS 4 style, Graphite in the AmiKit style, Retro; Open and Graphite light or dark; its sections 2c and 2d) on a true-colour desktop from boot (OpenRTG `RESIDENT`), with AGA and four-colour forms. Our own art and wallpapers | Take, our way |
 | A dozen overlapping look patches (VisualPrefs, Birdie, MCP, MagicMenu and more) | One look in OpenGadTools, one prefs page, "off is off" | Ours is simpler |
 | Antialiased TrueType (TTEngine, AfA_OS) | OpenGadTools' smooth text (its section 2b), or AAText until that is ready | Take |
 | DualPNG icons with their own icon.library | GlowIcons-style colour icons for everything, on OS 3.2's own icon.library | Ours |
