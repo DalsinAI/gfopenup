@@ -2,7 +2,7 @@
 
 Install AmigaOS 3.2.3, run OpenUp, and it's ready to boot on a real Amiga, a PiStorm or the AmigaChrome appliance. Dale, 4 October 2026: "install 3.2.3, run our pack", "and it's ready to boot on a PiStorm, our appliance, real Amiga"; "OpenUp it is".
 
-Status, 4 October 2026: designed (phase 1: OpenSocket, OpenPrint and OpenView, and AmigaChrome's sharing tools). `DESIGN.md` is the design.
+Status, 4 October 2026: designed (phase 1: OpenSocket, OpenPrint and OpenView, and AmigaChrome's sharing tools). `DESIGN.md` is the design. Section 6 takes in a lot of what AmiKit tries to be: an Amiga that is beautiful and ready the moment it starts, with first-boot Setup, startup switches, look presets, Picks and free updates.
 
 Part of the Open family (internally, the Great Open Source Reunification
 Project): one platform, AmigaOS 3.2.x with the Open libraries, that is easy
