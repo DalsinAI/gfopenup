@@ -69,10 +69,63 @@ with its notices.
 
 | Phase | Delivers | Done when |
 | --- | --- | --- |
-| 1 | The Installer, machine detection, the manifest and the uninstaller; what is ready now: OpenSocket, OpenPrint and OpenView, and accontrol's tools in AmigaChrome | A fresh OS 3.2.3 scratch copy, plus the pack, prints and reaches the network after one reboot; the uninstaller returns it to clean |
+| 1 | The Installer, machine detection, the manifest and the uninstaller; OpenUp Setup with the startup switches (section 6); what is ready now: OpenSocket, OpenPrint and OpenView, and accontrol's tools in AmigaChrome | A fresh OS 3.2.3 scratch copy, plus the pack, prints and reaches the network after one reboot; the uninstaller returns it to clean |
 | 2 | Each Open part as it lands: OpenRTG, `zunemaster.library` and the passthrough, OpenGadTools, OpenTypes, OpenCompress, OpenMail, OpenBrowser | Each works after the pack is re-run |
 | 3 | PiStorm and real-Amiga detection, with testers' hardware | The same pack on a PiStorm and on a real A1200 with an RTG card |
 | 4 | Cradle's OS 3.2.3 recipe applies the pack; the appliance ships it | A new instance from Cradle comes up with the Open family |
+| 5 | OpenUp Update and OpenUp Picks (section 6); OpenStart if Dale says yes | A pack installed today updates itself on request, and a newcomer adds a tested program with one tick |
 
 **Name and repository:** OpenUp (Dale, 4 October 2026: "OpenUp it is"),
 `DalsinAI/openamigaup`.
+
+## 6. What AmiKit tries to be, in OpenUp
+
+Dale, 4 October 2026: "I would like a lot of what AmiKit tries to be, to be
+part of OpenUp".
+
+**What AmiKit is.** Jan Zahurancik's AmiKit (since 2005, now AmiKit X13;
+commercial, by subscription) turns the user's own AmigaOS 3.x into a modern,
+good-looking desktop with over 400 programs installed and set up.
+- **Where it runs:**
+  - in WinUAE or Amiberry on Windows, macOS, Linux and the Raspberry Pi;
+  - from a bootable USB stick;
+  - on a PiStorm: an A1200 with a PiStorm32-lite and a Pi 4, on OS 3.2 with
+    the 3.2.2.1 hotfix and Picasso96 2.0.
+- **The user supplies** the Kickstart and AmigaOS.
+- **Updates** come by its LiveUpdate.
+
+**What it tries to be:** an Amiga that is beautiful and ready the moment it
+starts, kept up to date, with nothing to hunt for. That is our mission too,
+and it's the part we take.
+
+| AmiKit | OpenUp | |
+| --- | --- | --- |
+| Everything set up out of the box | One Installer on the user's own OS 3.2.3; a Novice gets the recommended answer to every question | Take |
+| AmiKit Setup, a first-boot app for settings | **OpenUp Setup**, a GadTools app that runs once at first boot. It sets the look preset, the screen mode (with OpenRTG's boot to RTG), the network on or off, the printer, and which programs to add. It stays in Prefs to run again | Take |
+| Morpheuz's Startup Manager: each patch on or off | **Startup switches** in OpenUp Setup: every line OpenUp put in its marked startup block, in plain words, each with a switch that cleanly takes it out | Take |
+| Visual themes, Dark mode, a 32-bit desktop, FullHD wallpapers | OpenGadTools' presets (Classic, Open, Dark, Retro; its section 2c) on a true-colour desktop from boot (OpenRTG `RESIDENT`), with AGA and four-colour forms. Our own art and wallpapers | Take, our way |
+| A dozen overlapping look patches (VisualPrefs, Birdie, MCP, MagicMenu and more) | One look in OpenGadTools, one prefs page, "off is off" | Ours is simpler |
+| Antialiased TrueType (TTEngine, AfA_OS) | OpenGadTools' smooth text (its section 2b), or AAText until that is ready | Take |
+| DualPNG icons with their own icon.library | GlowIcons-style colour icons for everything, on OS 3.2's own icon.library | Ours |
+| Directory Opus 5 in place of Workbench | OpenFiles beside Workbench; making it the default for drawers is a switch, off by default | Ours |
+| AmiStart start menu (six designs) and a Mini Launcher | To decide: question 1 below | Ask |
+| Registered MUI 5, under AmiKit's own licence | OpenMUI: MUI programs run through Zune with nothing to buy. A user's own MUI is left alone | Ours, free |
+| 400+ programs installed | **OpenUp Picks:** a short, tested list of free programs, ticked in Setup and installed from pinned Aminet archives with their licences and readmes. Nothing we may not pass on | Take, licences respected |
+| FPU builds swapped for non-FPU ones | The Installer picks each program's build for the CPU and FPU it finds (section 2) | Take |
+| LiveUpdate, by subscription | **OpenUp Update**, free: it checks for a newer pack and re-runs it in place (section 3's manifest). It never runs on its own, and it shows what will change first | Take, free |
+| KIT, an optional AI helper (AmigaGPT 3) | Guided tours first: show, don't send people to guides. An assistant later, optional and off by default (question 3) | Later |
+| Rabbit Hole (host programs from the Amiga desktop); Dropbox and Google Drive folders | On AmigaChrome, the shared clipboard, files dropped in and the PC's folders already work. Starting host programs from Workbench is a candidate for Cradle | Partly there |
+| Emulators first (WinUAE, Amiberry); its PiStorm edition still being tuned | The same pack on a real Amiga, a PiStorm, AmigaChrome and the appliance | Ours |
+| Closed, by subscription | MIT and free; one uninstaller puts the OS back | Ours |
+| Grown from OS 3.9 and AfA_OS; OS 3.2 users can't move straight to X13 | Built on OS 3.2.3 as Hyperion ships it | Ours |
+
+AmiKit is credited as the precedent (the claims register lists it with
+ClassicWB and Coffin). We don't copy its artwork, themes, wallpapers or
+exclusive builds.
+
+**Questions for Dale:**
+1. **A start menu or launcher** (what AmiStart is to AmiKit). Either build
+   OpenStart, a small GadTools launcher fed by OpenTypes' list of programs,
+   or leave launching to Workbench and OpenFiles.
+2. **OpenUp Picks:** which programs, and how many ticked by default?
+3. **An assistant like KIT:** later, or not at all?
