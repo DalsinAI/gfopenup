@@ -19,7 +19,8 @@ choose:
 - OpenSocket: the network, through the PC (bsdsocket.library 4.2);
 - OpenPrint and OpenView: printing to PDF and network printers, and viewing;
 - AmigaChrome sharing: the clipboard and files, shared with the PC;
-- OpenLook: one look for every GadTools program (Open, Graphite or Classic).
+- OpenLook: one look for every GadTools program (Open, Graphite or Classic);
+- Backgrounds: the look's desktop as Workbench's backdrop, for your screen.
 Every file it adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest;
 replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines
 sit in one marked block in S:User-Startup. Uninstall-OpenUp (in

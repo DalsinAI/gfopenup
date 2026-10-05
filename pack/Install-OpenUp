@@ -22,7 +22,7 @@
          "Nothing of the OS is deleted: a file OpenUp replaces is kept in "
          "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back."))
 
-; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook
+; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -32,15 +32,19 @@
               "and view pictures and documents.\n\n"
               "AmigaChrome sharing: the clipboard and files, shared with this PC. "
               "AmigaChrome instances only.\n\n"
-              "OpenLook: one look for every GadTools program, on RTG screens.")
+              "OpenLook: one look for every GadTools program, on RTG screens.\n\n"
+              "Backgrounds: the look's desktop as Workbench's backdrop, drawn for "
+              "your screen's shape. Your old backdrop setting is kept.")
         (choices "OpenSocket: networking"
                  "OpenPrint and OpenView: printing"
                  "AmigaChrome sharing: clipboard and files"
-                 "OpenLook: the look")
-        (default (if #ac 15 10))))
+                 "OpenLook: the look"
+                 "Backgrounds: the look's desktop")
+        (default (if #ac 31 26))))
 
 (set #look "Open light")
-(if (bitand #parts 8)
+(set #back "Open-light")
+(if (bitand #parts 24)
     (set #look
         (select
             (askchoice
@@ -52,6 +56,8 @@
                 (choices "Open" "Graphite" "Classic")
                 (default 0))
             "Open light" "Graphite light" "Classic light")))
+(if (= #look "Graphite light") (set #back "Graphite-light"))
+(if (= #look "Classic light") (set #back ""))
 
 ; Each part: OpenUpTool INSTALL, its messages in T:OpenUp.log.
 (run "Delete >NIL: T:OpenUp.log")
@@ -80,6 +86,14 @@
             (message "OpenLook didn't install completely. T:OpenUp.log says why; nothing else changed."))
         (run (cat #tool " SETTING ENVARC:OpenGadTools/Look \"" #look "\" >>T:OpenUp.log"))
         (run (cat #tool " SETTING ENV:OpenGadTools/Look \"" #look "\" >>T:OpenUp.log"))))
+
+(if (bitand #parts 16)
+    (
+        (working "Installing the backgrounds")
+        (if (> (run (cat #tool " INSTALL Parts/Backdrops >>T:OpenUp.log")) 5)
+            (message "The backgrounds didn't install completely. T:OpenUp.log says why; nothing else changed."))
+        (if (<> #back "")
+            (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/OpenUp/" #back " >>T:OpenUp.log")))))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
