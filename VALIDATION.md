@@ -73,6 +73,17 @@ back).
 installed (1 file), tested a zip as good from C: after the reboot, and the
 uninstall left the drive identical again.
 
+**Fifth run, OpenUp 0.2: the look in one go** (5 October 2026): OpenLook
+0.3 with the five themes (Open, Graphite, Ember, Clear, Classic), the
+screens' font set to CGTriumvirate 13 (`OpenUpTool FONT`), title bars two
+pixels taller (`OpenUpTool TITLEBARS 2 2`, IControl's Title Bar Extra
+Height), and OpenCompress 0.3 as a Workbench program in SYS:Utilities with
+its own icon. Installed (98 files in the manifest), after the reboot the
+Workbench came up in the Open look with the new font and title bars,
+`OpenCompress t` passed an LhA archive from the Shell's path and its window
+opened an ADF, and the uninstall left all 1,575 files on the drive
+identical, Font.prefs and IControl.prefs (none before) included.
+
 ## Still to check
 
 - **The Installer's own windows** (`Install-OpenUp` and `Uninstall-OpenUp`

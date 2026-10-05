@@ -18,7 +18,7 @@ a Part file that C/OpenUpTool reads:
   OpenLook/             the look and its themes (opengadtools)
   Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
   OpenTypes/            which program opens each kind of file (openamigaprefs)
-  OpenCompress/         C:OpenCompress, archives and disk images (openamigacompress)
+  OpenCompress/         OpenCompress, its window and command (openamigacompress)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 AmigaChrome Team.
@@ -104,6 +104,11 @@ def os32_icons(oap: Path, icons_mod, jobs: list[tuple[Path, str | None]]) -> Non
             if art is None:
                 spec.append({"info": str(info), "from": str(drawer)})
                 continue
+            if callable(art):                       # a picture of the pack's own
+                rgba = Path(tmp) / f"{art.__name__}.rgba"
+                rgba.write_bytes(art())
+                spec.append({"info": str(info), "rgba": str(rgba), "w": icon_art.W, "h": icon_art.H})
+                continue
             rgba = Path(tmp) / f"{art}.rgba"
             if not rgba.exists():
                 rgba.write_bytes(icon_art.draw(art))
@@ -111,6 +116,29 @@ def os32_icons(oap: Path, icons_mod, jobs: list[tuple[Path, str | None]]) -> Non
         (Path(tmp) / "jobs.json").write_text(json.dumps(spec))
         subprocess.run(["node", str(oap / "tools" / "os32_icons.js"), str(icons_mod.ACBUILD_ICON_JS), str(Path(tmp) / "jobs.json")],
                        check=True, stdout=subprocess.DEVNULL)
+
+
+def archive_art() -> bytes:
+    """OpenCompress's icon: an archive box with a green arrow coming out, drawn
+    as icon_art draws (four times the size, reduced, hard-edged), 48 x 40 RGBA."""
+    from PIL import Image, ImageDraw
+    W, H, S = 48, 40, 4
+    img = Image.new("RGBA", (W * S, H * S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    r = lambda *v: tuple(int(x * S) for x in v)
+    d.rounded_rectangle(r(5, 15, 33, 39), radius=2 * S, fill=(40, 40, 60, 110))                       # shadow
+    d.rectangle(r(3, 13, 31, 37), fill=(214, 168, 104, 255), outline=(80, 50, 20, 255), width=S)        # the box
+    d.rectangle(r(1, 7, 33, 13), fill=(232, 192, 132, 255), outline=(80, 50, 20, 255), width=S)          # its lid
+    d.rectangle(r(12, 18, 22, 21), fill=(80, 50, 20, 255))                                              # the handle
+    d.polygon([r(22, 22), r(34, 22), r(34, 16), r(46, 27), r(34, 38), r(34, 32), r(22, 32)],
+              fill=(60, 180, 80, 255), outline=(20, 90, 40, 255))                                       # the arrow, out
+    img = img.resize((W, H), Image.LANCZOS)
+    px = img.load()
+    for y in range(H):
+        for x in range(W):
+            rr, g, b, a = px[x, y]
+            px[x, y] = (rr, g, b, 255) if a >= 128 else (0, 0, 0, 0)
+    return img.tobytes()
 
 
 def build_parts(a):
@@ -227,7 +255,7 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.1", "OpenLook: the OpenGadTools look for every GadTools program")
+    look = Part(top, "OpenLook", "0.3", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
@@ -246,9 +274,11 @@ def main() -> int:
     ty.add("Prefs/OpenTypes.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenTypes.info")
     ty.write()
 
-    # OpenCompress: the command (the window comes in its phase 2)
-    oc = Part(top, "OpenCompress", "0.1", "C:OpenCompress: list, test and extract ADF, ADZ, zip, tar and gzip")
-    oc.add("C/OpenCompress", (a.openamigacompress / "build/os3/OpenCompress").read_bytes(), "SYS:C/OpenCompress")
+    # OpenCompress: one program, the window from Workbench and the command in
+    # the Shell (SYS:Utilities is in the Shell's path)
+    oc = Part(top, "OpenCompress", "0.3", "OpenCompress: archives and disk images, from its window or the Shell")
+    oc.add("Utilities/OpenCompress", (a.openamigacompress / "build/os3/OpenCompress").read_bytes(), "SYS:Utilities/OpenCompress")
+    oc.add("Utilities/OpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenCompress.info")
     oc.write()
 
     # The drawer's own icon, and OS 3.2-style icons for the scripts
@@ -257,6 +287,7 @@ def main() -> int:
         os32_icons(a.openamigaprint, icons, [(top / "Install-OpenUp.info", "install"), (top / "Uninstall-OpenUp.info", "install"),
                                              (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "install"),
                                              (ty.dir / "Prefs/OpenTypes.info", "page"),
+                                             (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (a.out / "OpenUp.info", None)])
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
     except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
