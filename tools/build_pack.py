@@ -16,6 +16,7 @@ a Part file that C/OpenUpTool reads:
   OpenPrint/            OpenPrint and OpenView (openamigaprint's package)
   AmigaChromeSharing/   accontrol.device, ACClip and ACDrop (amigachrome-guest)
   OpenLook/             the look and its themes (opengadtools)
+  Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 AmigaChrome Team.
@@ -116,6 +117,7 @@ def build_parts(a):
     run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", "-fno-common",
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
+    run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
     g = a.guest
     out = g / "build/guest/os32"
     run(["sh", g / "devices/accontrol.device/build.sh", out], env=env)
@@ -224,6 +226,12 @@ def main() -> int:
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
     look.line("startup Run >NIL: C:OpenLook")
     look.write()
+
+    # The background pack: each theme's desktop at four screen shapes (opengadtools)
+    bd = Part(top, "Backdrops", "0.1", "The themes' desktops as Workbench backdrops")
+    for png in sorted((o / "build/backdrops").glob("*.png")):
+        bd.add(f"Backdrops/{png.name}", png.read_bytes(), f"SYS:Prefs/Presets/Backdrops/OpenUp/{png.name}")
+    bd.write()
 
     # The drawer's own icon, and OS 3.2-style icons for the scripts
     (a.out / "OpenUp.info").write_bytes(icons.icon(icons.WBDRAWER, "drawer", window=(440, 170)))
