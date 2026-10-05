@@ -1,0 +1,22 @@
+; $VER: Uninstall-OpenUp @VERSION@ (@DATE@)
+; Takes OpenUp out: every file it added goes, every file it replaced comes
+; back from SYS:Storage/OpenUp-Superseded, and its lines leave
+; S:User-Startup. MIT, Copyright (c) 2026 Dalsin Limited.
+
+(set @app-name "OpenUp")
+(set #tool (if (exists "C/OpenUpTool") "C/OpenUpTool" "C:OpenUpTool"))
+
+(welcome "This takes OpenUp out and puts back everything it replaced.")
+
+(if (askbool
+        (prompt "Take OpenUp out of this Amiga?")
+        (help "OpenUp keeps a list of every file it added or replaced "
+              "(ENVARC:OpenAmiga/OpenUp.manifest). Uninstalling works from that list, "
+              "so files OpenUp didn't install are left alone.")
+        (default 0))
+    (
+        (set #rc (run (cat #tool " UNINSTALL >T:OpenUp-uninstall.log")))
+        (if (> #rc 5)
+            (message "Some files couldn't be put back. T:OpenUp-uninstall.log "
+                     "says which, and what to do."))
+        (exit "OpenUp is out. Reboot the Amiga to finish.")))
