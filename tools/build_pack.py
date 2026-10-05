@@ -116,6 +116,7 @@ def os32_icons(oap: Path, icons_mod, jobs: list[tuple[Path, str | None]]) -> Non
 def build_parts(a):
     """Each part's own build, into its own build folder."""
     env = dict(os.environ, AMIGA_CC=str(CC), PATH=f"{CC.parent}:{os.environ['PATH']}")
+    (ROOT / "build/os3").mkdir(parents=True, exist_ok=True)   # a fresh checkout has no build folder
     run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", "-fno-common",
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
@@ -264,7 +265,8 @@ def main() -> int:
     if a.lha:
         arc = a.out / f"OpenUp-{a.version}.lha"
         arc.unlink(missing_ok=True)
-        run(["lha", "aq", arc.name, "OpenUp", "OpenUp.info"], cwd=a.out)
+        # jlha makes archives; on some systems "lha" is lhasa, which only reads them
+        run([shutil.which("jlha") or "lha", "aq", arc.name, "OpenUp", "OpenUp.info"], cwd=a.out)
         print(f"{arc}: {arc.stat().st_size} bytes")
     return 0
 
