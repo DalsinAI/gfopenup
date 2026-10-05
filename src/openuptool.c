@@ -6,6 +6,8 @@
  *   OpenUpTool UNINSTALL              puts everything back
  *   OpenUpTool LIST                   what is installed
  *   OpenUpTool SETTING <dest> <text>  a setting the Installer asked for, as a file
+ *   OpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-<W>x<H>.png, the
+ *                                     one nearest the screen's shape, scaled to fit
  *
  * The rules it keeps:
  * - The base OS stays as shipped. A file OpenUp replaces goes first to
@@ -41,6 +43,8 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/expansion.h>
+#include <proto/intuition.h>
+#include <intuition/screens.h>
 
 #include <string.h>
 
@@ -587,7 +591,15 @@ static int uninstall(void)
                 if (!blank) continue;                       /* someone else wrote in it since */
             }
             if (DeleteFile((STRPTR)e->a)) removed++;
-            else if (exists(e->a)) { say("OpenUp: can't delete ", e->a, ". Is it in use? Delete it by hand."); problems++; }
+            else if (exists(e->a)) {
+                /* In use, as Workbench's backdrop picture is until it has read
+                 * the setting put back above: give it up to ten seconds. */
+                int tries;
+                for (tries = 0; tries < 20 && !DeleteFile((STRPTR)e->a) && exists(e->a); tries++)
+                    Delay(25);
+                if (exists(e->a)) { say("OpenUp: can't delete ", e->a, ". Is it in use? Delete it by hand."); problems++; }
+                else removed++;
+            }
         } else if (!strcmp(e->kind, "replaced")) {
             if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; }
             else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); problems++; }
@@ -620,6 +632,106 @@ static int uninstall(void)
     return problems ? RETURN_ERROR : RETURN_OK;
 }
 
+/* ---- BACKDROP ------------------------------------------------------------------------------ */
+
+#define WBPATTERN "ENVARC:Sys/WBPattern.prefs"
+#define WBPATTERN_ENV "ENV:Sys/WBPattern.prefs"
+
+static ULONG get32(const UBYTE *p) { return (ULONG)p[0] << 24 | (ULONG)p[1] << 16 | (ULONG)p[2] << 8 | p[3]; }
+static void put32(UBYTE *p, ULONG v) { p[0] = v >> 24; p[1] = v >> 16; p[2] = v >> 8; p[3] = v; }
+
+/* Workbench's backdrop (the ROOT pattern of WBPattern.prefs) becomes the
+ * picture nearest the screen's shape, scaled to fit; the drawer and screen
+ * patterns are kept as they are. The old file is kept, as every file OpenUp
+ * replaces is. */
+static int backdrop(const char *prefix)
+{
+    static const UWORD sizes[4][2] = { { 1920, 1080 }, { 1920, 1200 }, { 1600, 1200 }, { 1280, 1024 } };
+    char pic[220];
+    struct Screen *scr = LockPubScreen((STRPTR)"Workbench");
+    long sw = scr ? scr->Width : 640, sh = scr ? scr->Height : 480, best = -1, bestd = 0;
+    int i;
+    LONG oldlen = 0, len;
+    UBYTE *old, *buf, *o;
+    if (scr) UnlockPubScreen(NULL, scr);
+    for (i = 0; i < 4; i++) {
+        /* how far the picture's shape is from the screen's, in thousandths */
+        long d = (sw * sizes[i][1] * 1000) / (sh * sizes[i][0]) - 1000;
+        char name[220];
+        if (d < 0) d = -d;
+        strncpy(name, prefix, 180);
+        name[180] = 0;
+        {                                                    /* "-1920x1080.png" */
+            char tail[24];
+            int a = sizes[i][0], b = sizes[i][1], k = 0, t;
+            char digits[8];
+            tail[k++] = '-';
+            for (t = 0; a; a /= 10) digits[t++] = '0' + a % 10;
+            while (t) tail[k++] = digits[--t];
+            tail[k++] = 'x';
+            for (t = 0; b; b /= 10) digits[t++] = '0' + b % 10;
+            while (t) tail[k++] = digits[--t];
+            strcpy(tail + k, ".png");
+            strcat(name, tail);
+        }
+        if (exists(name) && (best < 0 || d < bestd)) { best = i; bestd = d; strcpy(pic, name); }
+    }
+    if (best < 0) {
+        say("OpenUp: no backdrop pictures named ", prefix, "-<width>x<height>.png. Install the Backdrops part first.");
+        return RETURN_ERROR;
+    }
+    old = (UBYTE *)read_file(WBPATTERN, &oldlen);
+    if (!(buf = AllocVec(oldlen + 512, MEMF_CLEAR))) { if (old) FreeVec(old); return RETURN_FAIL; }
+    o = buf;
+    memcpy(o, "FORM\0\0\0\0PREF", 12); o += 12;
+    /* the header: the old file's, or an empty one */
+    if (old && oldlen >= 12 && !memcmp(old, "FORM", 4) && !memcmp(old + 8, "PREF", 4) && oldlen >= 22 && !memcmp(old + 12, "PRHD", 4)) {
+        ULONG n = get32(old + 16);
+        memcpy(o, old + 12, 8 + n + (n & 1)); o += 8 + n + (n & 1);
+    } else {
+        memcpy(o, "PRHD\0\0\0\6\0\0\0\0\0\0", 14); o += 14;
+    }
+    /* the backdrop */
+    {
+        ULONG n = strlen(pic) + 1, size = 24 + n;
+        memcpy(o, "PTRN", 4); put32(o + 4, size); o += 8;
+        memset(o, 0, 24);
+        o[16] = 0; o[17] = 0;                                /* wbp_Which: WBP_ROOT */
+        o[18] = 0x3a; o[19] = 0x00;                          /* scale (good), image precision, good dither */
+        o[22] = n >> 8; o[23] = n & 255;                     /* wbp_DataLength */
+        memcpy(o + 24, pic, n);
+        o += 24 + n + (size & 1);
+    }
+    /* the drawer and screen patterns, as they were */
+    if (old && oldlen > 12 && !memcmp(old, "FORM", 4)) {
+        LONG k = 12;
+        while (k + 8 <= oldlen) {
+            ULONG n = get32(old + k + 4), whole = 8 + n + (n & 1);
+            if (k + (LONG)whole > oldlen) break;
+            if (!memcmp(old + k, "PTRN", 4) && n >= 18 && (old[k + 8 + 16] << 8 | old[k + 8 + 17]) != 0) {
+                memcpy(o, old + k, whole); o += whole;
+            }
+            k += whole;
+        }
+    }
+    len = o - buf;
+    put32(buf + 4, len - 8);
+    if (old) FreeVec(old);
+    manifest_load();
+    ensure_dir("ENVARC:Sys", 0);
+    ensure_dir("ENV:Sys", 0);
+    i = write_file("T:OpenUp-wbpattern", (char *)buf, len)
+        && install_file("T:OpenUp-wbpattern", WBPATTERN, 0) >= 0
+        && install_file("T:OpenUp-wbpattern", WBPATTERN_ENV, 0) >= 0
+        && manifest_save();
+    DeleteFile((STRPTR)"T:OpenUp-wbpattern");
+    FreeVec(buf);
+    if (!i)
+        return RETURN_ERROR;
+    say("OpenUp: Workbench's backdrop is ", pic, "");
+    return RETURN_OK;
+}
+
 static int list(void)
 {
     int i, files = 0;
@@ -639,7 +751,7 @@ int main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text>\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -652,6 +764,7 @@ int main(void)
     else if (same_word(cmd, "STARTUP")) rc = write_startup(0) ? RETURN_OK : (say("OpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL), RETURN_ERROR);
     else if (same_word(cmd, "UNINSTALL")) rc = uninstall();
     else if (same_word(cmd, "LIST")) rc = list();
+    else if (same_word(cmd, "BACKDROP") && args[1]) rc = backdrop((const char *)args[1]);
     else if (same_word(cmd, "SETTING") && args[1] && args[2]) {
         /* The text goes through T: so it is installed like any file. */
         char line[200];
@@ -666,7 +779,7 @@ int main(void)
             if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
         }
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
