@@ -64,6 +64,11 @@ same 1,575 files):
 | Uninstall | "70 files removed, 2 put back as they were" (WBPattern.prefs in ENVARC: and ENV:). The backdrop picture is in use until Workbench has read the old setting again, so uninstall now waits for it (up to 10 seconds) |
 | **Clean** | **Identical to before the install again: all 1,575 files.** This also proves that files OpenUp replaces are kept and put back |
 
+**Third run, with OpenTypes** (5 October 2026): OpenTypes installed in
+`SYS:Prefs` (2 files), listed the kinds of file from there after the reboot,
+and the uninstall left the drive identical again (72 files removed, 2 put
+back).
+
 ## Still to check
 
 - **The Installer's own windows** (`Install-OpenUp` and `Uninstall-OpenUp`
