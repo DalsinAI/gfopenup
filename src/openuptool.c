@@ -504,6 +504,16 @@ static int install(const char *drawer)
 
 /* ---- S:User-Startup ---------------------------------------------------------------------- */
 
+/* 1 when the line from p to e is exactly the marker (trailing blanks
+ * allowed): ";BEGIN OpenUp" and not ";BEGIN OpenUpSomething", another
+ * program's block whose name starts the same way. */
+static int is_marker_line(const char *p, const char *e, const char *marker)
+{
+    size_t ml = strlen(marker);
+    while (e > p && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r')) e--;
+    return (size_t)(e - p) == ml && !strncmp(p, marker, ml);
+}
+
 /* The file without our block; *had says whether there was one. */
 static char *without_block(const char *text, int *had)
 {
@@ -516,8 +526,8 @@ static char *without_block(const char *text, int *had)
     while (*p) {
         const char *e = p;
         while (*e && *e != '\n') e++;
-        if (!strncmp(p, BLOCK_BEGIN, strlen(BLOCK_BEGIN))) { in = 1; *had = 1; }
-        else if (in && !strncmp(p, BLOCK_END, strlen(BLOCK_END))) in = 0;
+        if (!in && is_marker_line(p, e, BLOCK_BEGIN)) { in = 1; *had = 1; }
+        else if (in && is_marker_line(p, e, BLOCK_END)) in = 0;
         else if (!in) { memcpy(o, p, e - p); o += e - p; if (*e) *o++ = '\n'; }
         p = *e ? e + 1 : e;
     }
