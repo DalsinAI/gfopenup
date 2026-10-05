@@ -84,6 +84,12 @@ Workbench came up in the Open look with the new font and title bars,
 opened an ADF, and the uninstall left all 1,575 files on the drive
 identical, Font.prefs and IControl.prefs (none before) included.
 
+**Sixth run, with OpenService** (5 October 2026): `OpenUpTool INSTALL
+Parts/OpenService` put `openservice.device` 1.0 in DEVS: and Nursery in C:
+(2 files); Nursery ran ("Board: none", "LAN: no network" on the scratch
+copy, which has no services board or network), and the uninstall removed
+both. Nursery has no version string `Version` can find yet.
+
 ## Still to check
 
 - **The Installer's own windows** (`Install-OpenUp` and `Uninstall-OpenUp`
