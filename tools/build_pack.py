@@ -4,7 +4,7 @@ archive (DESIGN.md sections 3 and 4).
 
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
-        [--guest DIR] [--no-build] [--lha]
+        [--guest DIR] [--openamigaservice DIR] [--no-build] [--lha]
 
 Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
@@ -19,6 +19,8 @@ a Part file that C/OpenUpTool reads:
   Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
   OpenTypes/            which program opens each kind of file (openamigaprefs)
   OpenCompress/         OpenCompress, its window and command (openamigacompress)
+  OpenService/          openservice.device and Nursery: services from boards and
+                        paired Cradles (openamigaservice)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 AmigaChrome Team.
@@ -158,6 +160,7 @@ def build_parts(a):
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
+    run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -174,10 +177,11 @@ def main() -> int:
     ap.add_argument("--guest", type=Path, default=first(DEV / "amigachrome-guest", DEV / "guest"))
     ap.add_argument("--openamigaprefs", type=Path, default=first(DEV / "openamigaprefs"))
     ap.add_argument("--openamigacompress", type=Path, default=first(DEV / "openamigacompress"))
+    ap.add_argument("--openamigaservice", type=Path, default=first(DEV / "openamigaservice", DEV.parent / "openamigaservice"))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
-    for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress"):
+    for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     if not a.no_build:
@@ -280,6 +284,13 @@ def main() -> int:
     oc.add("Utilities/OpenCompress", (a.openamigacompress / "build/os3/OpenCompress").read_bytes(), "SYS:Utilities/OpenCompress")
     oc.add("Utilities/OpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenCompress.info")
     oc.write()
+
+    # OpenService: the services device and Nursery (openamigaservice). It
+    # does nothing on the LAN until ENV:OpenService/Paired lists a Cradle.
+    sv = Part(top, "OpenService", "0.1", "OpenService: services from AutoConfig boards and paired Cradles")
+    sv.add("Devs/openservice.device", (a.openamigaservice / "bin/openservice.device").read_bytes(), "DEVS:openservice.device")
+    sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
+    sv.write()
 
     # The drawer's own icon, and OS 3.2-style icons for the scripts
     (a.out / "OpenUp.info").write_bytes(icons.icon(icons.WBDRAWER, "drawer", window=(440, 170)))
