@@ -25,7 +25,10 @@ choose:
 - Backgrounds: the look's desktop as Workbench's backdrop, for your screen;
 - OpenTypes: which program opens each kind of file (SYS:Prefs/OpenTypes);
 - OpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
-  gzip, from its window in SYS:Utilities or from the Shell.
+  gzip, from its window in SYS:Utilities or from the Shell;
+- OpenService: services from AmigaChrome's boards and from a Cradle you pair
+  with (DEVS:openservice.device, and C:Nursery to list them); nothing goes on
+  the network until a Cradle is paired.
 Every file it adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest;
 replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines
 sit in one marked block in S:User-Startup. Uninstall-OpenUp (in
