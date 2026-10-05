@@ -1,0 +1,92 @@
+; $VER: Install-OpenUp @VERSION@ (@DATE@)
+; OpenUp's Installer script (C:Installer / SYS:System/Installer). Run it from
+; its icon in the OpenUp drawer. What it does is DESIGN.md section 3: the
+; base OS stays as shipped, every file is listed, and Uninstall-OpenUp puts
+; everything back. MIT, Copyright (c) 2026 Dalsin Limited.
+
+(set #version "@VERSION@")
+(set @app-name "OpenUp")
+(set #tool "C/OpenUpTool")
+
+(if (< (/ (getversion) 65536) 47)
+    (abort "OpenUp needs AmigaOS 3.2 or later. This Amiga has an older version."))
+
+(run (cat #tool " DETECT >NIL:"))
+(set #machine (getenv "OpenUp/Machine"))
+(set #summary (getenv "OpenUp/Summary"))
+(set #ac (= #machine "AmigaChrome"))
+
+(welcome
+    (cat "This installs OpenUp " #version ": the Open family of programs, set up "
+         "to work together on AmigaOS 3.2.\n\n" #summary "\n"
+         "Nothing of the OS is deleted: a file OpenUp replaces is kept in "
+         "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back."))
+
+; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook
+(set #parts
+    (askoptions
+        (prompt "Which parts should OpenUp install?")
+        (help "OpenSocket: the Amiga's network (bsdsocket.library 4.2), through this PC. "
+              "AmigaChrome instances only.\n\n"
+              "OpenPrint and OpenView: print to PDF and to printers on your network, "
+              "and view pictures and documents.\n\n"
+              "AmigaChrome sharing: the clipboard and files, shared with this PC. "
+              "AmigaChrome instances only.\n\n"
+              "OpenLook: one look for every GadTools program, on RTG screens.")
+        (choices "OpenSocket: networking"
+                 "OpenPrint and OpenView: printing"
+                 "AmigaChrome sharing: clipboard and files"
+                 "OpenLook: the look")
+        (default (if #ac 15 10))))
+
+(set #look "Open light")
+(if (bitand #parts 8)
+    (set #look
+        (select
+            (askchoice
+                (prompt "Which look?")
+                (help "Open: light grey with blue, in the AmigaOS 4 style.\n"
+                      "Graphite: graphite and steel, in the AmiKit style.\n"
+                      "Classic: the OS's own look, drawn as it always was.\n\n"
+                      "You can change it later with OpenLook THEME <name> SAVE.")
+                (choices "Open" "Graphite" "Classic")
+                (default 0))
+            "Open light" "Graphite light" "Classic light")))
+
+; Each part: OpenUpTool INSTALL, its messages in T:OpenUp.log.
+(run "Delete >NIL: T:OpenUp.log")
+(working "Installing OpenUp")
+(if (> (run (cat #tool " INSTALL Parts/OpenUp >>T:OpenUp.log")) 5)
+    (abort "OpenUp's own files didn't install. T:OpenUp.log says why; nothing else changed."))
+(if (bitand #parts 1)
+    (
+        (working "Installing OpenSocket")
+        (if (> (run (cat #tool " INSTALL Parts/OpenSocket >>T:OpenUp.log")) 5)
+            (message "OpenSocket didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+(if (bitand #parts 2)
+    (
+        (working "Installing OpenPrint")
+        (if (> (run (cat #tool " INSTALL Parts/OpenPrint >>T:OpenUp.log")) 5)
+            (message "OpenPrint didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+(if (bitand #parts 4)
+    (
+        (working "Installing AmigaChromeSharing")
+        (if (> (run (cat #tool " INSTALL Parts/AmigaChromeSharing >>T:OpenUp.log")) 5)
+            (message "AmigaChromeSharing didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+(if (bitand #parts 8)
+    (
+        (working "Installing OpenLook")
+        (if (> (run (cat #tool " INSTALL Parts/OpenLook >>T:OpenUp.log")) 5)
+            (message "OpenLook didn't install completely. T:OpenUp.log says why; nothing else changed."))
+        (run (cat #tool " SETTING ENVARC:OpenGadTools/Look \"" #look "\" >>T:OpenUp.log"))
+        (run (cat #tool " SETTING ENV:OpenGadTools/Look \"" #look "\" >>T:OpenUp.log"))))
+
+(set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
+(if (> #rc 5)
+    (message "OpenUp couldn't write its lines in S:User-Startup. Is SYS: write-protected?"))
+
+(exit
+    (cat "OpenUp " #version " is installed.\n\n"
+         "Reboot the Amiga to start everything.\n\n"
+         "To take it out again, run Uninstall-OpenUp from SYS:Utilities/OpenUp, "
+         "or OpenUpTool UNINSTALL in a Shell."))

@@ -14,7 +14,16 @@ It finds what it is running on (a real Amiga with its cards, a PiStorm, or
 AmigaChrome) and installs the Open family to match. Anything it replaces is
 kept, and one uninstaller puts everything back.
 
-Status: designed, not built; this readme is ready for the first release.
+Version 0.1 is for AmigaChrome instances. Its Installer installs, as you
+choose:
+- OpenSocket: the network, through the PC (bsdsocket.library 4.2);
+- OpenPrint and OpenView: printing to PDF and network printers, and viewing;
+- AmigaChrome sharing: the clipboard and files, shared with the PC;
+- OpenLook: one look for every GadTools program (Open, Graphite or Classic).
+Every file it adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest;
+replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines
+sit in one marked block in S:User-Startup. Uninstall-OpenUp (in
+SYS:Utilities/OpenUp) takes it all out again.
 
 Licence: MIT, Copyright (c) 2026 Dalsin Limited, for our files; third-party
 code keeps its own. If you build on it, we ask that you credit Dalsin Limited
