@@ -8,6 +8,9 @@
  *   OpenUpTool SETTING <dest> <text>  a setting the Installer asked for, as a file
  *   OpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-<W>x<H>.png, the
  *                                     one nearest the screen's shape, scaled to fit
+ *   OpenUpTool FONT <font> <size>     the screens' font (Font prefs, "Screen text")
+ *   OpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
+ *                                     prefs, Appearance Settings, Title Bar Extra Height)
  *
  * The rules it keeps:
  * - The base OS stays as shipped. A file OpenUp replaces goes first to
@@ -47,6 +50,7 @@
 #include <intuition/screens.h>
 
 #include <string.h>
+#include <stdlib.h>
 
 static const char version[] = "$VER: OpenUpTool 0.1 (5.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
@@ -732,6 +736,132 @@ static int backdrop(const char *prefix)
     return RETURN_OK;
 }
 
+/* ---- FONT and TITLEBARS: OS 3.2's own prefs files, changed in one place ------------------ */
+
+/* Puts a prefs file built in memory in place in ENVARC: and ENV:, the
+ * originals kept as any file OpenUp replaces. */
+static int install_prefs(const char *name, const UBYTE *data, LONG len)
+{
+    char envarc[64], env[64];
+    int ok;
+    strcpy(envarc, "ENVARC:Sys/"); strcat(envarc, name);
+    strcpy(env, "ENV:Sys/"); strcat(env, name);
+    manifest_load();
+    ensure_dir("ENVARC:Sys", 0);
+    ensure_dir("ENV:Sys", 0);
+    ok = write_file("T:OpenUp-prefs", (const char *)data, len)
+         && install_file("T:OpenUp-prefs", envarc, 0) >= 0
+         && install_file("T:OpenUp-prefs", env, 0) >= 0
+         && manifest_save();
+    DeleteFile((STRPTR)"T:OpenUp-prefs");
+    return ok;
+}
+
+/* Copies the chunks of an IFF PREF file that keep() wants, after the header. */
+static UBYTE *prefs_start(const UBYTE *old, LONG oldlen, LONG extra, UBYTE **o)
+{
+    UBYTE *buf = AllocVec(oldlen + extra + 64, MEMF_CLEAR);
+    if (!buf) return NULL;
+    *o = buf;
+    memcpy(*o, "FORM\0\0\0\0PREF", 12); *o += 12;
+    if (old && oldlen >= 22 && !memcmp(old, "FORM", 4) && !memcmp(old + 8, "PREF", 4) && !memcmp(old + 12, "PRHD", 4)) {
+        ULONG n = get32(old + 16);
+        memcpy(*o, old + 12, 8 + n + (n & 1)); *o += 8 + n + (n & 1);
+    } else {
+        memcpy(*o, "PRHD\0\0\0\6\0\0\0\0\0\0", 14); *o += 14;
+    }
+    return buf;
+}
+
+#define FONT_CHUNK 156               /* struct FontPrefs */
+
+/* The screens' font: the FONT chunk whose fp_Type is 2 (FP_SCREENFONT). */
+static int set_font(const char *font, LONG size)
+{
+    LONG oldlen = 0, k, len;
+    UBYTE *old = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &oldlen), *buf, *o, *mine;
+    int ok;
+    if (size < 6 || size > 64 || strlen(font) > 120) { say("OpenUp: FONT wants a font name and a size from 6 to 64", NULL, NULL); if (old) FreeVec(old); return RETURN_FAIL; }
+    if (!(buf = prefs_start(old, oldlen, FONT_CHUNK + 8, &o))) { if (old) FreeVec(old); return RETURN_FAIL; }
+    if (old && oldlen > 12 && !memcmp(old, "FORM", 4)) {
+        for (k = 12; k + 8 <= oldlen; ) {
+            ULONG n = get32(old + k + 4), whole = 8 + n + (n & 1);
+            if (k + (LONG)whole > oldlen) break;
+            if (!memcmp(old + k, "FONT", 4) && !(n >= 16 && old[k + 8 + 14] == 0 && old[k + 8 + 15] == 2)) {
+                memcpy(o, old + k, whole); o += whole;               /* the icons' and the system font stay */
+            }
+            k += whole;
+        }
+    }
+    memcpy(o, "FONT", 4); put32(o + 4, FONT_CHUNK); o += 8;
+    mine = o;
+    memset(mine, 0, FONT_CHUNK);
+    mine[15] = 2;                                   /* fp_Type: the screens' font */
+    mine[16] = 1; mine[17] = 0; mine[18] = 1;       /* fp_FrontPen, fp_BackPen, fp_DrawMode (JAM2) */
+    mine[24] = size >> 8; mine[25] = size & 255;    /* fp_TextAttr.ta_YSize */
+    mine[27] = 0x02;                                /* ta_Flags: FPF_DISKFONT */
+    strcpy((char *)mine + 28, font);                /* fp_Name */
+    o += FONT_CHUNK;
+    len = o - buf;
+    put32(buf + 4, len - 8);
+    if (old) FreeVec(old);
+    ok = install_prefs("Font.prefs", buf, len);
+    FreeVec(buf);
+    if (!ok) return RETURN_ERROR;
+    say("OpenUp: the screens' font is ", font, " (from the next reboot)");
+    return RETURN_OK;
+}
+
+#define ICTL_CHUNK 38                /* struct IControlPrefs, version 2 */
+
+/* Title bar extra height: the last two bytes of ic_GUIGeometry (screen,
+ * window), read by IPrefs only when ic_Flags has ICF_VERSIONED. */
+static int set_titlebars(LONG screen, LONG window)
+{
+    static const UBYTE defaults[ICTL_CHUNK] = {    /* as IControl saves with nothing changed */
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,  0,0x32, 0,0x40,  0x80,0,0,0x1e,  'N','M','V','B',  0,2, 0,0, 0,0, 0,0,0,0 };
+    LONG oldlen = 0, k, len;
+    UBYTE *old = (UBYTE *)read_file("ENVARC:Sys/IControl.prefs", &oldlen), *buf, *o, *mine = NULL;
+    int ok;
+    if (screen < 0 || screen > 16 || window < 0 || window > 16) { say("OpenUp: TITLEBARS wants two numbers from 0 to 16", NULL, NULL); if (old) FreeVec(old); return RETURN_FAIL; }
+    if (!(buf = prefs_start(old, oldlen, ICTL_CHUNK + 8, &o))) { if (old) FreeVec(old); return RETURN_FAIL; }
+    if (old && oldlen > 12 && !memcmp(old, "FORM", 4)) {
+        for (k = 12; k + 8 <= oldlen; ) {
+            ULONG n = get32(old + k + 4), whole = 8 + n + (n & 1);
+            if (k + (LONG)whole > oldlen) break;
+            if (!memcmp(old + k, "ICTL", 4) && !mine) {
+                /* the user's own settings, made the current version's size */
+                memcpy(o, "ICTL", 4); put32(o + 4, n > ICTL_CHUNK ? n : ICTL_CHUNK);
+                memcpy(o + 8, old + k + 8, n);
+                if (n < ICTL_CHUNK) { o[8 + 28] = 0; o[8 + 29] = 2; }      /* an old file: version 2 now */
+                mine = o + 8;
+                o += 8 + (n > ICTL_CHUNK ? n + (n & 1) : ICTL_CHUNK);
+            } else if (memcmp(old + k, "PRHD", 4)) {
+                memcpy(o, old + k, whole); o += whole;                     /* IEXC exceptions and the rest */
+            }
+            k += whole;
+        }
+    }
+    if (!mine) {
+        memcpy(o, "ICTL", 4); put32(o + 4, ICTL_CHUNK);
+        memcpy(o + 8, defaults, ICTL_CHUNK);
+        mine = o + 8;
+        o += 8 + ICTL_CHUNK;
+    }
+    mine[20] |= 0x80;                               /* ICF_VERSIONED */
+    if (!mine[28] && mine[29] < 2) mine[29] = 2;
+    mine[36] = (UBYTE)screen;
+    mine[37] = (UBYTE)window;
+    len = o - buf;
+    put32(buf + 4, len - 8);
+    if (old) FreeVec(old);
+    ok = install_prefs("IControl.prefs", buf, len);
+    FreeVec(buf);
+    if (!ok) return RETURN_ERROR;
+    say("OpenUp: title bars have extra height (from the next reboot)", NULL, NULL);
+    return RETURN_OK;
+}
+
 static int list(void)
 {
     int i, files = 0;
@@ -751,7 +881,7 @@ int main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix>\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -765,6 +895,8 @@ int main(void)
     else if (same_word(cmd, "UNINSTALL")) rc = uninstall();
     else if (same_word(cmd, "LIST")) rc = list();
     else if (same_word(cmd, "BACKDROP") && args[1]) rc = backdrop((const char *)args[1]);
+    else if (same_word(cmd, "FONT") && args[1] && args[2]) rc = set_font((const char *)args[1], atol((const char *)args[2]));
+    else if (same_word(cmd, "TITLEBARS") && args[1] && args[2]) rc = set_titlebars(atol((const char *)args[1]), atol((const char *)args[2]));
     else if (same_word(cmd, "SETTING") && args[1] && args[2]) {
         /* The text goes through T: so it is installed like any file. */
         char line[200];
@@ -779,7 +911,7 @@ int main(void)
             if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
         }
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
