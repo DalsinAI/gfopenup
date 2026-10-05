@@ -6,7 +6,8 @@
  *   OpenUpTool UNINSTALL              puts everything back
  *   OpenUpTool LIST                   what is installed
  *   OpenUpTool SETTING <dest> <text>  a setting the Installer asked for, as a file
- *   OpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-<W>x<H>.png, the
+ *   OpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-strip-<H>.png for the
+ *                                     screen's height, tiled, when there is one; else <prefix>-<W>x<H>.png, the
  *                                     one nearest the screen's shape, scaled to fit
  *   OpenUpTool FONT <font> <size>     the screens' font (Font prefs, "Screen text")
  *   OpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
@@ -667,8 +668,27 @@ static int backdrop(const char *prefix)
     int i;
     LONG oldlen = 0, len;
     UBYTE *old, *buf, *o;
+    UWORD flags = 0x3a00;                                    /* scale (good), image precision, good dither */
     if (scr) UnlockPubScreen(NULL, scr);
-    for (i = 0; i < 4; i++) {
+    {
+        /* a strip as tall as the screen, tiled across from the top left: it
+         * decodes 16 x H pixels and scales nothing, where a whole picture
+         * took most of a minute to decode and scale without a JIT (6 Oct 2026) */
+        char name[220], tail[24];
+        int k = 0, t;
+        long h = sh;
+        char digits[8];
+        strncpy(name, prefix, 180);
+        name[180] = 0;
+        strcpy(tail, "-strip-");
+        k = 7;
+        for (t = 0; h; h /= 10) digits[t++] = '0' + h % 10;
+        while (t) tail[k++] = digits[--t];
+        strcpy(tail + k, ".png");
+        strcat(name, tail);
+        if (exists(name)) { best = 0; strcpy(pic, name); flags = 0x4a00; }   /* tile, left top, image precision, good dither */
+    }
+    for (i = 0; flags != 0x4a00 && i < 4; i++) {
         /* how far the picture's shape is from the screen's, in thousandths */
         long d = (sw * sizes[i][1] * 1000) / (sh * sizes[i][0]) - 1000;
         char name[220];
@@ -711,7 +731,7 @@ static int backdrop(const char *prefix)
         memcpy(o, "PTRN", 4); put32(o + 4, size); o += 8;
         memset(o, 0, 24);
         o[16] = 0; o[17] = 0;                                /* wbp_Which: WBP_ROOT */
-        o[18] = 0x3a; o[19] = 0x00;                          /* scale (good), image precision, good dither */
+        o[18] = flags >> 8; o[19] = flags & 255;             /* wbp_Flags: placement, precision, dither */
         o[22] = n >> 8; o[23] = n & 255;                     /* wbp_DataLength */
         memcpy(o + 24, pic, n);
         o += 24 + n + (size & 1);
