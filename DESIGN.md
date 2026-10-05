@@ -69,7 +69,7 @@ with its notices.
 
 | Phase | Delivers | Done when |
 | --- | --- | --- |
-| 1 | The Installer, machine detection, the manifest and the uninstaller; OpenUp Setup with the startup switches (section 6); what is ready now: OpenSocket, OpenPrint and OpenView, and accontrol's tools in AmigaChrome | A fresh OS 3.2.3 scratch copy, plus the pack, prints and reaches the network after one reboot; the uninstaller returns it to clean |
+| 1 | The Installer, machine detection, the manifest and the uninstaller; OpenUp Setup with the startup switches (section 6); what is ready now: OpenSocket, OpenPrint and OpenView, and accontrol's tools in AmigaChrome | A fresh OS 3.2.3 scratch copy, plus the pack, prints and reaches the network after one reboot; the uninstaller returns it to clean. **0.1 done, 5 October 2026, for AmigaChrome instances, with OpenLook too (`VALIDATION.md`); Setup and the startup switches are next** |
 | 2 | Each Open part as it lands: OpenRTG, `zunemaster.library` and the passthrough, OpenGadTools, OpenTypes, OpenCompress, OpenMail, OpenBrowser | Each works after the pack is re-run |
 | 3 | PiStorm and real-Amiga detection, with testers' hardware | The same pack on a PiStorm and on a real A1200 with an RTG card |
 | 4 | Cradle's OS 3.2.3 recipe applies the pack; the appliance ships it | A new instance from Cradle comes up with the Open family |
@@ -124,8 +124,11 @@ ClassicWB and Coffin). We don't copy its artwork, themes, wallpapers or
 exclusive builds.
 
 **Questions for us:**
-1. **A start menu or launcher** (what AmiStart is to AmiKit). Either build
-   OpenStart, a small GadTools launcher fed by OpenTypes' list of programs,
-   or leave launching to Workbench and OpenFiles.
+1. ~~A start menu or launcher~~ **Decided (5 October 2026): OpenDock**,
+   not a start menu: "an opendock that reads existing dock formats, but is
+   closer to the behavior of the mac version". It reads the docks people
+   already have (ToolManager docks, AmigaOS 4's AmiDock, DOpus button banks
+   among them) and behaves like the Mac's: running programs marked, click to
+   start or bring to the front, drag to add or take away, magnification.
 2. **OpenUp Picks:** which programs, and how many ticked by default?
 3. **An assistant like KIT:** later, or not at all?
