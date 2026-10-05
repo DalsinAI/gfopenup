@@ -18,6 +18,7 @@ a Part file that C/OpenUpTool reads:
   OpenLook/             the look and its themes (opengadtools)
   Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
   OpenTypes/            which program opens each kind of file (openamigaprefs)
+  OpenCompress/         C:OpenCompress, archives and disk images (openamigacompress)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 AmigaChrome Team.
@@ -127,6 +128,7 @@ def build_parts(a):
     run([CC, "-noixemul", "-m68020", "-O2", "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
+    run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -142,10 +144,11 @@ def main() -> int:
     ap.add_argument("--opengadtools", type=Path, default=first(DEV / "opengadtools", DEV / "opengadtools-export"))
     ap.add_argument("--guest", type=Path, default=first(DEV / "amigachrome-guest", DEV / "guest"))
     ap.add_argument("--openamigaprefs", type=Path, default=first(DEV / "openamigaprefs"))
+    ap.add_argument("--openamigacompress", type=Path, default=first(DEV / "openamigacompress"))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
-    for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs"):
+    for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     if not a.no_build:
@@ -241,6 +244,11 @@ def main() -> int:
     ty.add("Prefs/OpenTypes", (a.openamigaprefs / "OpenTypes/build/os3/OpenTypes").read_bytes(), "SYS:Prefs/OpenTypes")
     ty.add("Prefs/OpenTypes.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenTypes.info")
     ty.write()
+
+    # OpenCompress: the command (the window comes in its phase 2)
+    oc = Part(top, "OpenCompress", "0.1", "C:OpenCompress: list, test and extract ADF, ADZ, zip, tar and gzip")
+    oc.add("C/OpenCompress", (a.openamigacompress / "build/os3/OpenCompress").read_bytes(), "SYS:C/OpenCompress")
+    oc.write()
 
     # The drawer's own icon, and OS 3.2-style icons for the scripts
     (a.out / "OpenUp.info").write_bytes(icons.icon(icons.WBDRAWER, "drawer", window=(440, 170)))

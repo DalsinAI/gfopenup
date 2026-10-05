@@ -69,6 +69,10 @@ same 1,575 files):
 and the uninstall left the drive identical again (72 files removed, 2 put
 back).
 
+**Fourth run, with OpenCompress** (5 October 2026): `C:OpenCompress`
+installed (1 file), tested a zip as good from C: after the reboot, and the
+uninstall left the drive identical again.
+
 ## Still to check
 
 - **The Installer's own windows** (`Install-OpenUp` and `Uninstall-OpenUp`

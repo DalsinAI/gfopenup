@@ -21,7 +21,9 @@ choose:
 - AmigaChrome sharing: the clipboard and files, shared with the PC;
 - OpenLook: one look for every GadTools program (Open, Graphite or Classic);
 - Backgrounds: the look's desktop as Workbench's backdrop, for your screen;
-- OpenTypes: which program opens each kind of file (SYS:Prefs/OpenTypes).
+- OpenTypes: which program opens each kind of file (SYS:Prefs/OpenTypes);
+- OpenCompress: C:OpenCompress lists, tests and extracts ADF, ADZ, zip, tar
+  and gzip.
 Every file it adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest;
 replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines
 sit in one marked block in S:User-Startup. Uninstall-OpenUp (in

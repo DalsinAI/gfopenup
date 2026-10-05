@@ -22,7 +22,7 @@
          "Nothing of the OS is deleted: a file OpenUp replaces is kept in "
          "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back."))
 
-; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes
+; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -35,14 +35,16 @@
               "OpenLook: one look for every GadTools program, on RTG screens.\n\n"
               "Backgrounds: the look's desktop as Workbench's backdrop, drawn for "
               "your screen's shape. Your old backdrop setting is kept.\n\n"
-              "OpenTypes: choose the program that opens each kind of file, in Prefs.")
+              "OpenTypes: choose the program that opens each kind of file, in Prefs.\n\n"
+              "OpenCompress: C:OpenCompress lists, tests and extracts ADF, ADZ, zip, tar and gzip.")
         (choices "OpenSocket: networking"
                  "OpenPrint and OpenView: printing"
                  "AmigaChrome sharing: clipboard and files"
                  "OpenLook: the look"
                  "Backgrounds: the look's desktop"
-                 "OpenTypes: which program opens what")
-        (default (if #ac 63 58))))
+                 "OpenTypes: which program opens what"
+                 "OpenCompress: archives and disk images")
+        (default (if #ac 127 122))))
 
 (set #look "Open light")
 (set #back "Open-light")
@@ -102,6 +104,12 @@
         (working "Installing OpenTypes")
         (if (> (run (cat #tool " INSTALL Parts/OpenTypes >>T:OpenUp.log")) 5)
             (message "OpenTypes didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 64)
+    (
+        (working "Installing OpenCompress")
+        (if (> (run (cat #tool " INSTALL Parts/OpenCompress >>T:OpenUp.log")) 5)
+            (message "OpenCompress didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
