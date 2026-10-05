@@ -90,6 +90,11 @@ Parts/OpenService` put `openservice.device` 1.0 in DEVS: and Nursery in C:
 copy, which has no services board or network), and the uninstall removed
 both. Nursery has no version string `Version` can find yet.
 
+**Seventh run, OpenLook 0.4 with its editor** (6 October 2026):
+`OpenUpTool INSTALL Parts/OpenLook` put OpenLook 0.4, the five themes, Look
+0.1 in SYS:Prefs and the three desktop profiles in place (11 files);
+`OpenLook WHICH` read the prefs; the uninstall removed all 11.
+
 ## Still to check
 
 - **The Installer's own windows** (`Install-OpenUp` and `Uninstall-OpenUp`

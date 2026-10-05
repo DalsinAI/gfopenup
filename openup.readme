@@ -21,7 +21,8 @@ choose:
 - AmigaChrome sharing: the clipboard and files, shared with the PC;
 - OpenLook: one look for every GadTools program, title bars and borders too
   (Open, Graphite, Ember, Clear or Classic), with a clear screen font and a
-  little more room in the title bars;
+  little more room in the title bars; Look in SYS:Prefs changes it (dark by
+  the clock, accent, Lite for a real 68040, desktop profiles);
 - Backgrounds: the look's desktop as Workbench's backdrop, for your screen;
 - OpenTypes: which program opens each kind of file (SYS:Prefs/OpenTypes);
 - OpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and

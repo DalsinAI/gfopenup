@@ -15,7 +15,8 @@ a Part file that C/OpenUpTool reads:
                         vendored payload, vendor/opensocket-os32)
   OpenPrint/            OpenPrint and OpenView (openamigaprint's package)
   AmigaChromeSharing/   accontrol.device, ACClip and ACDrop (amigachrome-guest)
-  OpenLook/             the look and its themes (opengadtools)
+  OpenLook/             the look and its themes (opengadtools), and its editor,
+                        OpenPrefs Look, with the desktop profiles (openamigaprefs)
   Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
   OpenTypes/            which program opens each kind of file (openamigaprefs)
   OpenCompress/         OpenCompress, its window and command (openamigacompress)
@@ -159,6 +160,7 @@ def build_parts(a):
     run([CC, "-noixemul", "-m68020", "-O2", "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
+    run(["sh", a.openamigaprefs / "Look/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     p = a.openamigaprint
@@ -259,10 +261,15 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.3", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too")
+    look = Part(top, "OpenLook", "0.4", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too, and its editor")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
+    # OpenPrefs Look, OpenLook's editor, and the desktop profiles it offers
+    look.add("Prefs/Look", (a.openamigaprefs / "Look/build/os3/Look").read_bytes(), "SYS:Prefs/Look")
+    look.add("Prefs/Look.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Look.info")
+    for pr in sorted((a.openamigaprefs / "Look/profiles").glob("*.profile")):
+        look.add(f"Profiles/{pr.name}", pr.read_bytes(), f"SYS:Prefs/Presets/OpenPrefs/{pr.name}")
     look.line("startup Run >NIL: C:OpenLook")
     look.write()
 
@@ -298,6 +305,7 @@ def main() -> int:
         os32_icons(a.openamigaprint, icons, [(top / "Install-OpenUp.info", "install"), (top / "Uninstall-OpenUp.info", "install"),
                                              (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "install"),
                                              (ty.dir / "Prefs/OpenTypes.info", "page"),
+                                             (look.dir / "Prefs/Look.info", "page"),
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (a.out / "OpenUp.info", None)])
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
