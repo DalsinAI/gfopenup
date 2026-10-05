@@ -22,7 +22,7 @@
          "Nothing of the OS is deleted: a file OpenUp replaces is kept in "
          "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back."))
 
-; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds
+; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -34,13 +34,15 @@
               "AmigaChrome instances only.\n\n"
               "OpenLook: one look for every GadTools program, on RTG screens.\n\n"
               "Backgrounds: the look's desktop as Workbench's backdrop, drawn for "
-              "your screen's shape. Your old backdrop setting is kept.")
+              "your screen's shape. Your old backdrop setting is kept.\n\n"
+              "OpenTypes: choose the program that opens each kind of file, in Prefs.")
         (choices "OpenSocket: networking"
                  "OpenPrint and OpenView: printing"
                  "AmigaChrome sharing: clipboard and files"
                  "OpenLook: the look"
-                 "Backgrounds: the look's desktop")
-        (default (if #ac 31 26))))
+                 "Backgrounds: the look's desktop"
+                 "OpenTypes: which program opens what")
+        (default (if #ac 63 58))))
 
 (set #look "Open light")
 (set #back "Open-light")
@@ -94,6 +96,12 @@
             (message "The backgrounds didn't install completely. T:OpenUp.log says why; nothing else changed."))
         (if (<> #back "")
             (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/OpenUp/" #back " >>T:OpenUp.log")))))
+
+(if (bitand #parts 32)
+    (
+        (working "Installing OpenTypes")
+        (if (> (run (cat #tool " INSTALL Parts/OpenTypes >>T:OpenUp.log")) 5)
+            (message "OpenTypes didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
