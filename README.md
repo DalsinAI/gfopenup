@@ -4,7 +4,7 @@ Install AmigaOS 3.2.3, run OpenUp, and it's ready to boot on a real Amiga, a PiS
 
 Status, 5 October 2026: **OpenUp 0.1 is built, for AmigaChrome instances**
 (phase 1, plus OpenLook). It installs OpenSocket, OpenPrint and OpenView,
-AmigaChrome's sharing tools and OpenLook, and its uninstaller puts the system
+AmigaChrome's sharing tools, OpenLook and the background pack, and its uninstaller puts the system
 back exactly as it was: validated on a scratch OS 3.2.3 instance
 (`VALIDATION.md`).
 

@@ -54,6 +54,16 @@ the install and again after the uninstall.
 | Uninstall | "54 files removed, 0 put back as they were" |
 | **Clean** | **The system drive after the uninstall is identical to before the install: all 1,575 files** |
 
+**Second run, with the background pack** (the same machine, reset to the
+same 1,575 files):
+
+| Check | Result |
+| --- | --- |
+| Backgrounds | 16 backdrops installed; `OpenUpTool BACKDROP` chose `Open-light-1600x1200.png` for the 800x600 screen and set it, keeping the old WBPattern.prefs |
+| On screen | Workbench's desktop in the Open theme's sky, the gallery in the Open look (`docs/validation-open-look.png`) |
+| Uninstall | "70 files removed, 2 put back as they were" (WBPattern.prefs in ENVARC: and ENV:). The backdrop picture is in use until Workbench has read the old setting again, so uninstall now waits for it (up to 10 seconds) |
+| **Clean** | **Identical to before the install again: all 1,575 files.** This also proves that files OpenUp replaces are kept and put back |
+
 ## Still to check
 
 - **The Installer's own windows** (`Install-OpenUp` and `Uninstall-OpenUp`
@@ -63,6 +73,5 @@ the install and again after the uninstall.
   is to look at. The name lookup shows the network works.
 - **A printed page,** to PDF and to an IPP printer, through Prefs/Printer
   (OpenUp Setup will set the printer).
-- **Replacing files:** a system that already had older Open-family files,
-  where the originals are kept and put back. The code does it; this test's
-  machine had none, so nothing was replaced.
+- **Replacing older Open-family files** on a system that has them (the
+  keep-and-restore path itself is proven by WBPattern.prefs, above).
