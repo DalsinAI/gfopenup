@@ -32,11 +32,14 @@
               "and view pictures and documents.\n\n"
               "AmigaChrome sharing: the clipboard and files, shared with this PC. "
               "AmigaChrome instances only.\n\n"
-              "OpenLook: one look for every GadTools program, on RTG screens.\n\n"
+              "OpenLook: one look for every GadTools program, on RTG screens: title bars, "
+              "borders, gadgets, scrollers and window backgrounds, with a clear screen font "
+              "and a little more room in the title bars. Your old settings are kept.\n\n"
               "Backgrounds: the look's desktop as Workbench's backdrop, drawn for "
               "your screen's shape. Your old backdrop setting is kept.\n\n"
               "OpenTypes: choose the program that opens each kind of file, in Prefs.\n\n"
-              "OpenCompress: C:OpenCompress lists, tests and extracts ADF, ADZ, zip, tar and gzip.")
+              "OpenCompress: open, test and extract archives and disk images (ADF, ADZ, DMS, "
+              "LhA, zip, tar, gzip) from its window in SYS:Utilities, or from the Shell.")
         (choices "OpenSocket: networking"
                  "OpenPrint and OpenView: printing"
                  "AmigaChrome sharing: clipboard and files"
@@ -47,21 +50,25 @@
         (default (if #ac 127 122))))
 
 (set #look "Open light")
+(set #theme "Open")
 (set #back "Open-light")
 (if (bitand #parts 24)
-    (set #look
+    (set #theme
         (select
             (askchoice
                 (prompt "Which look?")
                 (help "Open: light grey with blue, in the AmigaOS 4 style.\n"
                       "Graphite: graphite and steel, in the AmiKit style.\n"
+                      "Ember: flat warm greys with orange, in the Ubuntu style.\n"
+                      "Clear: flat, light and rounded, in the Windows 11 style.\n"
                       "Classic: the OS's own look, drawn as it always was.\n\n"
                       "You can change it later with OpenLook THEME <name> SAVE.")
-                (choices "Open" "Graphite" "Classic")
+                (choices "Open" "Graphite" "Ember" "Clear" "Classic")
                 (default 0))
-            "Open light" "Graphite light" "Classic light")))
-(if (= #look "Graphite light") (set #back "Graphite-light"))
-(if (= #look "Classic light") (set #back ""))
+            "Open" "Graphite" "Ember" "Clear" "Classic")))
+(set #look (cat #theme " light"))
+(set #back (cat #theme "-light"))
+(if (= #theme "Classic") (set #back ""))
 
 ; Each part: OpenUpTool INSTALL, its messages in T:OpenUp.log.
 (run "Delete >NIL: T:OpenUp.log")
@@ -89,7 +96,15 @@
         (if (> (run (cat #tool " INSTALL Parts/OpenLook >>T:OpenUp.log")) 5)
             (message "OpenLook didn't install completely. T:OpenUp.log says why; nothing else changed."))
         (run (cat #tool " SETTING ENVARC:OpenGadTools/Look \"" #look "\" >>T:OpenUp.log"))
-        (run (cat #tool " SETTING ENV:OpenGadTools/Look \"" #look "\" >>T:OpenUp.log"))))
+        (run (cat #tool " SETTING ENV:OpenGadTools/Look \"" #look "\" >>T:OpenUp.log"))
+        ; the Open programs (OpenCompress, OpenMail) draw in the same theme
+        (run (cat #tool " SETTING ENVARC:OpenGadTools/Theme \"" #theme "\" >>T:OpenUp.log"))
+        (run (cat #tool " SETTING ENV:OpenGadTools/Theme \"" #theme "\" >>T:OpenUp.log"))
+        ; with a look: a clear screen font, and title bars a pixel taller at the top and bottom
+        (if (<> #theme "Classic")
+            (
+                (run (cat #tool " FONT CGTriumvirate.font 13 >>T:OpenUp.log"))
+                (run (cat #tool " TITLEBARS 2 2 >>T:OpenUp.log"))))))
 
 (if (bitand #parts 16)
     (
