@@ -837,20 +837,19 @@ static int backdrop(const char *prefix)
 
 /* ---- FONT and TITLEBARS: OS 3.2's own prefs files, changed in one place ------------------ */
 
-/* Puts a prefs file built in memory in place in ENVARC: and ENV:, the
- * originals kept as any file OpenUp replaces. */
+/* Puts a prefs file built in memory in place in ENVARC:, the original kept
+ * as any file OpenUp replaces. Not ENV:: IPrefs would reset the Workbench
+ * screen at once, while the Installer's window is open on it ("Intuition is
+ * attempting to reset the Workbench screen"); ENV: gets it at the next boot. */
 static int install_prefs(const char *name, const UBYTE *data, LONG len)
 {
-    char envarc[64], env[64];
+    char envarc[64];
     int ok;
     strcpy(envarc, "ENVARC:Sys/"); strcat(envarc, name);
-    strcpy(env, "ENV:Sys/"); strcat(env, name);
     manifest_load();
     ensure_dir("ENVARC:Sys", 0);
-    ensure_dir("ENV:Sys", 0);
     ok = write_file("T:OpenUp-prefs", (const char *)data, len)
          && install_file("T:OpenUp-prefs", envarc, 0) >= 0
-         && install_file("T:OpenUp-prefs", env, 0) >= 0
          && manifest_save();
     DeleteFile((STRPTR)"T:OpenUp-prefs");
     return ok;
