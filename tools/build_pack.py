@@ -4,7 +4,7 @@ archive (DESIGN.md sections 3 and 4).
 
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
-        [--guest DIR] [--openamigaservice DIR] [--no-build] [--lha]
+        [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--no-build] [--lha]
 
 Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
@@ -22,6 +22,8 @@ a Part file that C/OpenUpTool reads:
   OpenCompress/         OpenCompress, its window and command (openamigacompress)
   OpenService/          openservice.device and Nursery: services from boards and
                         paired Cradles (openamigaservice)
+  OpenImage/            datatypes: WebP and WebM on the 68k, and AVIF, HEIC, SVG,
+                        FLAC, MP4, DOCX and more through OpenService (openamigaimage)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 AmigaChrome Team.
@@ -69,11 +71,14 @@ class Part:
         self.dir.mkdir(parents=True)
         self.lines = [f"part {name} {version}", f'; {title}']
 
-    def add(self, rel: str, data: bytes, dest: str, default: bool = False):
+    def add(self, rel: str, data: bytes, dest: str, default: bool = False, own: bool = False):
+        """default: only where nothing is (the user's settings); own: where
+        nothing is or OpenUp put it, so an upgrade reaches it but another
+        program's file stays."""
         p = self.dir / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(data)
-        self.lines.append(f'{"default" if default else "copy"} "{rel}" "{dest}"')
+        self.lines.append(f'{"add" if own else "default" if default else "copy"} "{rel}" "{dest}"')
 
     def line(self, text: str):
         self.lines.append(text)
@@ -163,6 +168,7 @@ def build_parts(a):
     run(["sh", a.openamigaprefs / "Look/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
+    run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -180,10 +186,12 @@ def main() -> int:
     ap.add_argument("--openamigaprefs", type=Path, default=first(DEV / "openamigaprefs"))
     ap.add_argument("--openamigacompress", type=Path, default=first(DEV / "openamigacompress"))
     ap.add_argument("--openamigaservice", type=Path, default=first(DEV / "openamigaservice", DEV.parent / "openamigaservice"))
+    ap.add_argument("--openamigaimage", type=Path, default=first(DEV / "openamigaimage", DEV.parent / "openamigaimage"))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
-    for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice"):
+    for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
+                 "openamigaimage"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     if not a.no_build:
@@ -298,6 +306,22 @@ def main() -> int:
     sv.add("Devs/openservice.device", (a.openamigaservice / "bin/openservice.device").read_bytes(), "DEVS:openservice.device")
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
     sv.write()
+
+    # OpenImage: datatypes (openamigaimage). WebP and WebM decode on the 68k;
+    # the rest ask media.decode/1 or doc.render/1 through OpenService. A
+    # datatype or descriptor already there (Aminet's flac.datatype, say)
+    # stays: ours only go where nothing is or where OpenUp put them (so a
+    # newer pack updates them), and a machine without a Cradle keeps what it
+    # had. Their own classes have names nobody else uses.
+    dt = a.openamigaimage / "Datatypes/out"
+    img = Part(top, "OpenImage", "0.1", "OpenImage: datatypes for today's pictures, sounds, documents and video")
+    for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
+        img.add(f"Classes/DataTypes/{c.name}", c.read_bytes(), f"SYS:Classes/DataTypes/{c.name}",
+                own=c.name in ("webp.datatype", "webm.datatype"))
+    for d in sorted((dt / "Devs/DataTypes").iterdir()):
+        if d.is_file() and not d.name.endswith(".info"):
+            img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", own=True)
+    img.write()
 
     # The drawer's own icon, and OS 3.2-style icons for the scripts
     (a.out / "OpenUp.info").write_bytes(icons.icon(icons.WBDRAWER, "drawer", window=(440, 170)))
