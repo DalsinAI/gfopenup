@@ -4,7 +4,8 @@ archive (DESIGN.md sections 3 and 4).
 
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
-        [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR] [--no-build] [--lha]
+        [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR]
+        [--openamigafilemanager DIR] [--no-build] [--lha]
 
 Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
@@ -35,6 +36,7 @@ a Part file that C/OpenUpTool reads:
   OpenRTG/              Workbench on OpenRTG's own 16-bit screen, without Picasso96:
                         openrtg.library, its monitor driver and CyberGraphX
                         compatibility (openamigartg; AmigaChrome's ACRTG board)
+  OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 Dalsin Limited.
@@ -195,10 +197,38 @@ def build_parts(a):
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
     run(["sh", a.openamigartg / "library/build.sh"], env=env)
+    run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
     run([sys.executable, p / "tools/make_package.py", "--out", p / "build/package"], cwd=p, env=env)
+
+
+def files_art() -> bytes:
+    """OpenFiles' icon: a window with two panes of files, a drawer and pages
+    in them, drawn as archive_art is, 48 x 40 RGBA."""
+    from PIL import Image, ImageDraw
+    W, H, S = 48, 40, 4
+    img = Image.new("RGBA", (W * S, H * S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    r = lambda *v: tuple(int(x * S) for x in v)
+    d.rounded_rectangle(r(4, 6, 46, 38), radius=2 * S, fill=(40, 40, 60, 110))                       # shadow
+    d.rectangle(r(2, 3, 44, 35), fill=(238, 240, 246, 255), outline=(48, 48, 64, 255), width=S)        # the window
+    d.rectangle(r(2, 3, 44, 8), fill=(40, 90, 200, 255), outline=(48, 48, 64, 255), width=S)           # its title bar
+    d.line(r(23, 8, 23, 35), fill=(48, 48, 64, 255), width=S)                                          # between the panes
+    for x in (5, 26):
+        d.rectangle(r(x, 11, x + 6, 16), fill=(232, 192, 100, 255), outline=(110, 80, 20, 255))         # a drawer
+        d.rectangle(r(x, 10, x + 3, 11), fill=(232, 192, 100, 255))
+        for i, y in enumerate((20, 24, 28, 32)):
+            d.line(r(x, y, x + 14 - (4 if i % 2 else 0), y), fill=(90, 90, 110, 255), width=S)          # files
+    d.rectangle(r(26, 23, 41, 25), fill=(40, 90, 200, 255))                                           # the chosen one
+    img = img.resize((W, H), Image.LANCZOS)
+    px = img.load()
+    for y in range(H):
+        for x in range(W):
+            rr, g, b, a = px[x, y]
+            px[x, y] = (rr, g, b, 255) if a >= 128 else (0, 0, 0, 0)
+    return img.tobytes()
 
 
 def main() -> int:
@@ -214,11 +244,13 @@ def main() -> int:
     ap.add_argument("--openamigaservice", type=Path, default=first(DEV / "openamigaservice", DEV.parent / "openamigaservice"))
     ap.add_argument("--openamigaimage", type=Path, default=first(DEV / "openamigaimage", DEV.parent / "openamigaimage"))
     ap.add_argument("--openamigartg", type=Path, default=first(DEV / "openamigartg", DEV.parent / "openamigartg"))
+    ap.add_argument("--openamigafilemanager", type=Path,
+                    default=first(DEV / "openamigafilemanager", DEV.parent / "openamigafilemanager"))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
-                 "openamigaimage", "openamigartg"):
+                 "openamigaimage", "openamigartg", "openamigafilemanager"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     if not a.no_build:
@@ -393,7 +425,7 @@ def main() -> int:
     # Picasso96 monitor for the same board is moved aside (UNINSTALL puts it
     # back), and Workbench's screen mode becomes OpenRTG.1 800x600 16-bit.
     rtg = a.openamigartg / "build"
-    rt = Part(top, "OpenRTG", "0.9", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
+    rt = Part(top, "OpenRTG", "0.10", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
     rt.line("needs AmigaChrome")
     rt.line("needs ACRTG")
     rt.line('retire "DEVS:Monitors/acrtg"')
@@ -407,6 +439,13 @@ def main() -> int:
     rt.add("Prefs/ScreenMode-ENV.prefs", mode, "ENV:Sys/ScreenMode.prefs")
     rt.write()
 
+    # OpenFiles: the file manager (openamigafilemanager). Double-click opens
+    # files with their icon's program, else OpenView (the OpenPrint part).
+    of = Part(top, "OpenFiles", "0.1", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
+    of.add("Utilities/OpenFiles", (a.openamigafilemanager / "build/os3/OpenFiles").read_bytes(), "SYS:Utilities/OpenFiles")
+    of.add("Utilities/OpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenFiles.info")
+    of.write()
+
     # The drawer's own icon, and OS 3.2-style icons for the scripts
     (a.out / "OpenUp.info").write_bytes(icons.icon(icons.WBDRAWER, "drawer", window=(440, 170)))
     try:
@@ -419,6 +458,7 @@ def main() -> int:
                                              (menus.dir / "Prefs/Menus.info", "page"),
                                              (setup.dir / "Prefs/OpenUp-Setup.info", "page"),
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
+                                             (of.dir / "Utilities/OpenFiles.info", files_art),
                                              (a.out / "OpenUp.info", None)])
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
     except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
