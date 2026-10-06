@@ -28,6 +28,8 @@ a Part file that C/OpenUpTool reads:
                         places, with its editor, OpenPrefs Windows (openamigaprefs)
   OpenDock/             a dock, which takes over ToolManager's, AmiDock's or AmiStart's
                         buttons, and its editor, OpenPrefs Dock (openamigaprefs)
+  OpenMenus/            OpenMenus, our own menus (pull-down or pop-up), and their editor,
+                        OpenPrefs Menus (openamigaprefs)
   OpenUpSetup/          OpenUp Setup: the first-start wizard and the startup switches
                         (openamigaprefs)
   OpenRTG/              Workbench on OpenRTG's own 16-bit screen, without Picasso96:
@@ -187,6 +189,8 @@ def build_parts(a):
     run(["sh", a.openamigaprefs / "Windows/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Dock/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Setup/build.sh"], env=env)
+    run(["sh", a.openamigaprefs / "Menus/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
+    run(["sh", a.openamigaprefs / "Menus/engine/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
@@ -365,6 +369,15 @@ def main() -> int:
     dock.line("startup Run >NIL: C:OpenDock")
     dock.write()
 
+    # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
+    # The Installer takes MagicMenu's settings over once, when there are any.
+    menus = Part(top, "OpenMenus", "0.1", "OpenMenus: our own menus, and their editor")
+    menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
+    menus.add("Prefs/Menus", (a.openamigaprefs / "Menus/build/os3/Menus").read_bytes(), "SYS:Prefs/Menus")
+    menus.add("Prefs/Menus.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Menus.info")
+    menus.line("startup Run >NIL: C:OpenMenus")
+    menus.write()
+
     # OpenUp Setup: the first-start wizard (openamigaprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:OpenAmiga/Setup.done.
     setup = Part(top, "OpenUpSetup", "0.1", "OpenUp Setup: the first-start wizard, with the startup switches")
@@ -403,6 +416,7 @@ def main() -> int:
                                              (look.dir / "Prefs/Look.info", "page"),
                                              (ow.dir / "Prefs/Windows.info", "page"),
                                              (dock.dir / "Prefs/Dock.info", "page"),
+                                             (menus.dir / "Prefs/Menus.info", "page"),
                                              (setup.dir / "Prefs/OpenUp-Setup.info", "page"),
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (a.out / "OpenUp.info", None)])
