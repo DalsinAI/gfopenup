@@ -144,6 +144,57 @@ def os32_icons(oap: Path, icons_mod, jobs: list[tuple[Path, str | None]]) -> Non
                        check=True, stdout=subprocess.DEVNULL)
 
 
+OPEN_ART = ROOT / "icons" / "open"     # the Open apps' pictures, 64 x 64 (tools/open_icons_art.py draws them)
+
+
+def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Path, list[Path]]) -> None:
+    """The Open apps' own icons: each job's icon keeps what it is (type,
+    default tool, tool types, stack) and gets its picture from icons/open as
+    a GlowIcon, dithered for a 16-bit screen. Icons in drawers we share with
+    the system (Prefs, Utilities, Tools) are left unplaced, so Workbench puts
+    them where there is room; `drawers` maps each drawer icon of our own to
+    the icons in it, which are laid out on a grid with the window sized to
+    them (amigachrome's icon_theme, as Cradle's new icon set does)."""
+    sys.path.insert(0, str(amigachrome / "scripts"))
+    import amiga_icon
+    import icon_theme
+
+    def art(name: str) -> list[tuple[int, int, bytes]]:
+        w, h, rgba = amiga_icon.png_decode((OPEN_ART / f"{name}.png").read_bytes())
+        hard = bytearray(rgba)
+        for i in range(0, len(hard), 4):              # GlowIcons: every pixel solid or see-through
+            hard[i:i + 4] = hard[i:i + 3] + b"\xff" if hard[i + 3] >= 110 else b"\0\0\0\0"
+        normal = amiga_icon.dither_rgb565(w, h, bytes(hard))
+        return [(w, h, normal), (w, h, amiga_icon.dither_rgb565(w, h, amiga_icon.glow_selected(w, h, normal)))]
+
+    def meta(icon: dict, x: int, y: int, drawer) -> dict:
+        return {"type": icon["type"], "defaultTool": icon.get("defaultTool"), "toolTypes": icon.get("toolTypes") or [],
+                "toolWindow": icon.get("toolWindow"), "stack": icon.get("stack") or 4096, "x": x, "y": y, "drawer": drawer}
+
+    none = amiga_icon.NO_POSITION
+    pictures = {Path(info): name for info, name in jobs}
+    places: dict[Path, tuple[int, int]] = {}
+    windows: dict[Path, dict] = {}
+    for i, (drawer_info, inside) in enumerate(drawers.items()):
+        rows = [{"rel": f"d/{f.name}", "folder": "d", "name": f.name[:-5],
+                 "family": icon_theme.FAMILY.get(amiga_icon.read_icon(f.read_bytes())["type"], "project")} for f in inside]
+        lay = icon_theme.layout(rows, (1920, 1024), 64)
+        for f in inside:
+            places[f] = lay["icons"][f"d/{f.name}"]
+        windows[Path(drawer_info)] = {**lay["windows"]["d"], "left": 120 + 40 * i, "top": 80 + 30 * i}   # stepped, so none hides another
+    for info in sorted(set(pictures) | set(places)):
+        icon = amiga_icon.read_icon(info.read_bytes())
+        x, y = places.get(info, (none, none))
+        window = windows.get(info)
+        drawer = None
+        if icon["type"] in amiga_icon.DRAWER_TYPES:
+            drawer = {**(icon.get("drawer") or {}), **(window or {}), "currentX": 0, "currentY": 0}
+        if info in pictures:
+            info.write_bytes(amiga_icon.write_os35(meta(icon, x, y, drawer), art(pictures[info])))
+        else:                                         # not ours to redraw: only placed
+            info.write_bytes(icon_theme.place_only(info.read_bytes(), x, y, drawer))
+
+
 def screenmode_prefs(mode_id: int, w: int, h: int, depth: int) -> bytes:
     """ScreenMode.prefs (IFF PREF: PRHD, SCRM) for Workbench's screen."""
     import struct
@@ -323,6 +374,7 @@ def main() -> int:
     core.add("Utilities/OpenUp/Uninstall-OpenUp", un, "SYS:Utilities/OpenUp/Uninstall-OpenUp")
     core.add("Utilities/OpenUp/Uninstall-OpenUp.info", (top / "Uninstall-OpenUp.info").read_bytes(),
              "SYS:Utilities/OpenUp/Uninstall-OpenUp.info")
+    core.add("Utilities/OpenUp.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/OpenUp.info", own=True)
     core.write()
 
     # OpenSocket: amigachrome's vendored payload, by its manifest
@@ -507,6 +559,7 @@ def main() -> int:
     snd = Part(top, "Sound", "0.1", "Sound: the volume, Paula's and AHI's levels, and a speaker on the menu bar")
     snd.add("Prefs/Sound", (so / "Sound").read_bytes(), "SYS:Prefs/Sound")
     snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")
+    snd.add("Prefs/Sound.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Sound.info")
     snd.line("startup SYS:Prefs/Sound USE")
     snd.write()
 
@@ -538,6 +591,25 @@ def main() -> int:
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
     except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
         print(f"  (OS 3.2-style icons not made: {e}; the classic ones stay)")
+    try:
+        open_icons(a.amigachrome, [
+            (a.out / "OpenUp.info", "drawer-OpenUp"), (top / "Install-OpenUp.info", "Install-OpenUp"),
+            (top / "Uninstall-OpenUp.info", "Install-OpenUp"), (core.dir / "Utilities/OpenUp.info", "drawer-OpenUp"),
+            (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "Install-OpenUp"),
+            (pr.dir / "Icons/OpenPrint.info", "drawer-OpenPrint"), (pr.dir / "Drawer/OpenView.info", "OpenView"),
+            (pr.dir / "Drawer/Printers and Queue.info", "Printers and Queue"),
+            (ty.dir / "Prefs/OpenTypes.info", "OpenTypes"), (look.dir / "Prefs/Look.info", "Look"),
+            (ow.dir / "Prefs/Windows.info", "Windows"), (dock.dir / "Prefs/Dock.info", "Dock"),
+            (menus.dir / "Prefs/Menus.info", "Menus"), (tb.dir / "Prefs/TitleBar.info", "TitleBar"),
+            (snd.dir / "Prefs/Sound.info", "Sound"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
+            (setup.dir / "WBStartup/OpenUp-Setup.info", "OpenUp-Setup"), (oc.dir / "Utilities/OpenCompress.info", "OpenCompress"),
+            (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
+            (om.dir / "Tools/ZuneTest.info", "ZuneTest")],
+            drawers={a.out / "OpenUp.info": [top / "Install-OpenUp.info", top / "Uninstall-OpenUp.info"],
+                     core.dir / "Utilities/OpenUp.info": [core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info"],
+                     pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info"))})
+    except Exception as e:                  # an amigachrome checkout without amiga_icon (before #153): the icons above stay
+        print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
     if a.lha:
         arc = a.out / f"OpenUp-{a.version}.lha"
