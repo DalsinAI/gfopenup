@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (We fill this in at upload time)
 Author:       Dalsin Limited
 Type:         util/misc
-Version:      0.6.11
+Version:      0.6.12
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -50,6 +50,9 @@ choose:
   playlist and a slideshow (SYS:Utilities);
 - OpenTitle (new): AmigaChrome's logo, the free chip and fast memory and a
   clock on the title bar, set in SYS:Prefs/TitleBar;
+- Sound (new): the volume, Amiga sound (Paula) and AHI sound in one editor,
+  and a speaker on the menu bar; the old Sound editor is kept in
+  SYS:Prefs/Classic;
 - OpenMUI (preview, off unless picked): zunemaster.library, MUI built from
   AROS's Zune for OS 3.x, beside MUI and replacing nothing, with ZuneTest
   (SYS:Tools);
