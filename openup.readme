@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (We fill this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.5
+Version:      0.6
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -14,7 +14,7 @@ It finds what it is running on (a real Amiga with its cards, a PiStorm, or
 AmigaChrome) and installs the Open family to match. Anything it replaces is
 kept, and one uninstaller puts everything back.
 
-Version 0.5 is for AmigaChrome instances. Its Installer installs, as you
+Version 0.6 is for AmigaChrome instances. Its Installer installs, as you
 choose:
 - OpenSocket: the network, through the PC (bsdsocket.library 4.2);
 - OpenPrint and OpenView: printing to PDF and network printers, and viewing;
@@ -33,6 +33,12 @@ choose:
 - OpenImage: datatypes for WebP and WebM on the Amiga itself, and through
   OpenService for AVIF, HEIC, JPEG XL, camera RAW, SVG, FLAC, Ogg, MP3, MIDI,
   MP4 and other video, and office documents; datatypes already there stay;
+- OpenWindows: windows snap to edges and to each other, Amiga+Tab switches
+  between them, the wheel scrolls the window under the pointer, and programs'
+  windows open where they were last left (Windows in SYS:Prefs);
+- OpenDock: a dock for your programs, starting with ToolManager's, AmiDock's
+  or AmiStart's buttons when you have one (Dock in SYS:Prefs);
+- OpenUp Setup: a few questions at the next start, and the startup switches;
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller.
