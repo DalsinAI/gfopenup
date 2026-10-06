@@ -12,6 +12,10 @@
  *   OpenUpTool FONT <font> <size>     the screens' font (Font prefs, "Screen text")
  *   OpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
  *                                     prefs, Appearance Settings, Title Bar Extra Height)
+ *   OpenUpTool P96LEFTOVER            5 (WARN) on a real Amiga with Picasso96's
+ *                                     library left in LIBS: and no Picasso96 board running
+ *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
+ *                                     come back with UNINSTALL
  *
  * The rules it keeps:
  * - The base OS stays as shipped. A file OpenUp replaces goes first to
@@ -60,7 +64,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] = "$VER: OpenUpTool 0.3 (6.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] = "$VER: OpenUpTool 0.4 (6.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 
@@ -1005,6 +1009,21 @@ int main(void)
             DeleteFile((STRPTR)"T:OpenUp-setting");
             if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
         }
+    }
+    else if (same_word(cmd, "P96LEFTOVER")) {
+        /* Picasso96API.library in LIBS: with no Picasso96 board running (its
+         * monitor driver would have opened rtg.library at boot) hangs SDL's
+         * video start (6 Oct 2026). AmigaChrome's instances are never asked. */
+        int rtg;
+        Forbid();
+        rtg = FindName(&SysBase->LibList, (STRPTR)"rtg.library") != NULL;
+        Permit();
+        rc = (!is_amigachrome() && !rtg && exists("LIBS:Picasso96API.library")) ? RETURN_WARN : RETURN_OK;
+    }
+    else if (same_word(cmd, "RETIRE") && args[1]) {
+        manifest_load();
+        rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
+        if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
     else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
