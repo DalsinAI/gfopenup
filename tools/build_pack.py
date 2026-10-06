@@ -160,13 +160,23 @@ def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Pa
     import amiga_icon
     import icon_theme
 
-    def art(name: str) -> list[tuple[int, int, bytes]]:
-        w, h, rgba = amiga_icon.png_decode((OPEN_ART / f"{name}.png").read_bytes())
+    def frame(path: Path) -> tuple[int, int, bytes]:
+        w, h, rgba = amiga_icon.png_decode(path.read_bytes())
         hard = bytearray(rgba)
         for i in range(0, len(hard), 4):              # GlowIcons: every pixel solid or see-through
             hard[i:i + 4] = hard[i:i + 3] + b"\xff" if hard[i + 3] >= 110 else b"\0\0\0\0"
-        normal = amiga_icon.dither_rgb565(w, h, bytes(hard))
-        return [(w, h, normal), (w, h, amiga_icon.dither_rgb565(w, h, amiga_icon.glow_selected(w, h, normal)))]
+        return w, h, bytes(hard)
+
+    def art(name: str) -> list[tuple[int, int, bytes]]:
+        """The icon's two frames (docs/ICONS.md): NAME.png at rest, and NAME-selected.png,
+        its second frame, with the glow round it, shown while the icon is chosen."""
+        w, h, rest = frame(OPEN_ART / f"{name}.png")
+        chosen = OPEN_ART / f"{name}-selected.png"
+        sw, sh, sel = frame(chosen) if chosen.exists() else (w, h, rest)
+        if (sw, sh) != (w, h):
+            raise SystemExit(f"{chosen.name}: {sw}x{sh}, but {name}.png is {w}x{h}")
+        return [(w, h, amiga_icon.dither_rgb565(w, h, rest)),
+                (w, h, amiga_icon.dither_rgb565(w, h, amiga_icon.glow_selected(w, h, sel)))]
 
     def meta(icon: dict, x: int, y: int, drawer) -> dict:
         return {"type": icon["type"], "defaultTool": icon.get("defaultTool"), "toolTypes": icon.get("toolTypes") or [],
