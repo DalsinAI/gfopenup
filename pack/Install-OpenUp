@@ -23,7 +23,7 @@
          "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back."))
 
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
-; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup
+; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -55,6 +55,9 @@
               "OpenDock: a dock at the bottom of Workbench for your programs. It starts "
               "with the buttons of ToolManager, AmiDock or AmiStart if you have one. Dock in "
               "SYS:Prefs sets it.\n\n"
+              "OpenMenus: menus in the look of the theme, from the screen bar or at the pointer "
+              "(new, off unless picked). MagicMenu's settings are taken over; take MagicMenu "
+              "out of WBStartup if you pick this. Menus in SYS:Prefs sets it.\n\n"
               "OpenUp Setup: a few questions at the next start (theme, what starts with the "
               "machine), and in SYS:Prefs afterwards.\n\n"
               "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
@@ -72,7 +75,8 @@
                  "OpenRTG: Workbench without Picasso96 (new)"
                  "OpenWindows: snapping, Amiga+Tab, wheel"
                  "OpenDock: a dock for your programs"
-                 "OpenUp Setup: the first-start questions")
+                 "OpenUp Setup: the first-start questions"
+                 "OpenMenus: menus in the theme's look (new)")
         (default (if #ac 7679 7674))))
 
 (set #look "Open light")
@@ -205,6 +209,14 @@
         (working "Installing OpenUp Setup")
         (if (> (run (cat #tool " INSTALL Parts/OpenUpSetup >>T:OpenUp.log")) 5)
             (message "OpenUp Setup didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 8192)
+    (
+        (working "Installing OpenMenus")
+        (if (> (run (cat #tool " INSTALL Parts/OpenMenus >>T:OpenUp.log")) 5)
+            (message "OpenMenus didn't install completely. T:OpenUp.log says why; nothing else changed.")
+            (if (and (exists "ENVARC:MagicMenu.prefs") (not (exists "ENVARC:OpenMenus/Menus")))
+                (run "SYS:Prefs/Menus MAGICMENU ENVARC:MagicMenu.prefs SAVE >>T:OpenUp.log")))))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
