@@ -39,6 +39,7 @@ a Part file that C/OpenUpTool reads:
                         compatibility (openamigartg; AmigaChrome's ACRTG board)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
+  OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory and clock on the title bar (openamigaprefs)
   OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
@@ -196,6 +197,7 @@ def build_parts(a):
     run(["sh", a.openamigaprefs / "Setup/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Menus/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Menus/engine/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
+    run(["sh", a.openamigaprefs / "TitleBar/build.sh"], env=env)
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
@@ -487,6 +489,15 @@ def main() -> int:
     op.add("Utilities/OpenPlay.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenPlay.info")
     op.write()
 
+    # OpenTitle: the title bar's logo, free memory and clock, and its editor (openamigaprefs)
+    tbo = a.openamigaprefs / "TitleBar/build/os3"
+    tb = Part(top, "OpenTitle", "0.1", "OpenTitle: AmigaChrome's logo, free memory and a clock on the title bar")
+    tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
+    tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
+    tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
+    tb.line("startup Run >NIL: C:OpenTitle")
+    tb.write()
+
     # OpenMUI: zunemaster.library, MUI from Zune for OS 3.x (openamigamui), a
     # preview beside MUI, which it doesn't replace; ZuneTest shows it working.
     mui = a.openamigamui / "build/os3"
@@ -506,6 +517,7 @@ def main() -> int:
                                              (ow.dir / "Prefs/Windows.info", "page"),
                                              (dock.dir / "Prefs/Dock.info", "page"),
                                              (menus.dir / "Prefs/Menus.info", "page"),
+                                             (tb.dir / "Prefs/TitleBar.info", "page"),
                                              (setup.dir / "Prefs/OpenUp-Setup.info", "page"),
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (of.dir / "Utilities/OpenFiles.info", files_art),
