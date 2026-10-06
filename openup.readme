@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (We fill this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.6.12
+Version:      0.6.13
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -53,6 +53,8 @@ choose:
 - Sound (new): the volume, Amiga sound (Paula) and AHI sound in one editor,
   and a speaker on the menu bar; the old Sound editor is kept in
   SYS:Prefs/Classic;
+- OpenEdit (new): a text editor with tabs, find and replace, and colours
+  for scripts and code (C:OpenEdit);
 - OpenMUI (preview, off unless picked): zunemaster.library, MUI built from
   AROS's Zune for OS 3.x, beside MUI and replacing nothing, with ZuneTest
   (SYS:Tools);
