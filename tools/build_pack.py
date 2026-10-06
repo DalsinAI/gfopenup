@@ -5,7 +5,7 @@ archive (DESIGN.md sections 3 and 4).
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
         [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR]
-        [--openamigafilemanager DIR] [--no-build] [--lha]
+        [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--no-build] [--lha]
 
 Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
@@ -37,6 +37,7 @@ a Part file that C/OpenUpTool reads:
                         openrtg.library, its monitor driver and CyberGraphX
                         compatibility (openamigartg; AmigaChrome's ACRTG board)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
+  OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 Dalsin Limited.
@@ -198,6 +199,7 @@ def build_parts(a):
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
     run(["sh", a.openamigartg / "library/build.sh"], env=env)
     run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
+    run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -231,6 +233,30 @@ def files_art() -> bytes:
     return img.tobytes()
 
 
+def play_art() -> bytes:
+    """OpenPlay's icon: a film frame with a green play button on it, drawn
+    as files_art is, 48 x 40 RGBA."""
+    from PIL import Image, ImageDraw
+    W, H, S = 48, 40, 4
+    img = Image.new("RGBA", (W * S, H * S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    r = lambda *v: tuple(int(x * S) for x in v)
+    d.rounded_rectangle(r(4, 6, 46, 38), radius=3 * S, fill=(40, 40, 60, 110))                       # shadow
+    d.rounded_rectangle(r(2, 3, 44, 35), radius=3 * S, fill=(70, 120, 210, 255), outline=(20, 50, 110, 255), width=S)   # the screen
+    for x in range(5, 44, 6):
+        d.rectangle(r(x, 4, x + 3, 6), fill=(230, 236, 246, 255))                                      # film holes
+        d.rectangle(r(x, 32, x + 3, 34), fill=(230, 236, 246, 255))
+    d.ellipse(r(14, 9, 32, 27), fill=(70, 160, 50, 255), outline=(30, 80, 20, 255), width=S)           # the play button
+    d.polygon([r(20, 13)[0:2], r(28, 18)[0:2], r(20, 23)[0:2]], fill=(255, 255, 255, 255))
+    img = img.resize((W, H), Image.LANCZOS)
+    px = img.load()
+    for y in range(H):
+        for x in range(W):
+            rr, g, b, a = px[x, y]
+            px[x, y] = (rr, g, b, 255) if a >= 128 else (0, 0, 0, 0)
+    return img.tobytes()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--version", default="0.1")
@@ -246,11 +272,13 @@ def main() -> int:
     ap.add_argument("--openamigartg", type=Path, default=first(DEV / "openamigartg", DEV.parent / "openamigartg"))
     ap.add_argument("--openamigafilemanager", type=Path,
                     default=first(DEV / "openamigafilemanager", DEV.parent / "openamigafilemanager"))
+    ap.add_argument("--openamigamediaplayer", type=Path,
+                    default=first(DEV / "openamigamediaplayer", DEV.parent / "openamigamediaplayer"))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
-                 "openamigaimage", "openamigartg", "openamigafilemanager"):
+                 "openamigaimage", "openamigartg", "openamigafilemanager", "openamigamediaplayer"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     if not a.no_build:
@@ -446,6 +474,13 @@ def main() -> int:
     of.add("Utilities/OpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenFiles.info")
     of.write()
 
+    # OpenPlay: the media player for every datatype (openamigamediaplayer).
+    # Files can be shift-clicked with it or dropped on its window.
+    op = Part(top, "OpenPlay", "0.1", "OpenPlay: plays everything the datatypes open, with a playlist")
+    op.add("Utilities/OpenPlay", (a.openamigamediaplayer / "build/os3/OpenPlay").read_bytes(), "SYS:Utilities/OpenPlay")
+    op.add("Utilities/OpenPlay.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenPlay.info")
+    op.write()
+
     # The drawer's own icon, and OS 3.2-style icons for the scripts
     (a.out / "OpenUp.info").write_bytes(icons.icon(icons.WBDRAWER, "drawer", window=(440, 170)))
     try:
@@ -459,6 +494,7 @@ def main() -> int:
                                              (setup.dir / "Prefs/OpenUp-Setup.info", "page"),
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (of.dir / "Utilities/OpenFiles.info", files_art),
+                                             (op.dir / "Utilities/OpenPlay.info", play_art),
                                              (a.out / "OpenUp.info", None)])
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
     except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
