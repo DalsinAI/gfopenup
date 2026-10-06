@@ -13,7 +13,7 @@
         (help "OpenUp keeps a list of every file it added or replaced "
               "(ENVARC:OpenAmiga/OpenUp.manifest). Uninstalling works from that list, "
               "so files OpenUp didn't install are left alone.")
-        (default 0))
+        (default 1))
     (
         ; every icon OpenTypes changed (OpenView in MultiView's place among them)
         ; goes back first, while OpenTypes is still there to do it
