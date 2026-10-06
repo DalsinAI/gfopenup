@@ -60,7 +60,7 @@
               "and a menu for each icon and for the desktop on the right button. MagicMenu's "
               "settings are taken over; take MagicMenu out of WBStartup if you pick this. "
               "Menus in SYS:Prefs sets it.\n\n"
-              "OpenFiles: a file manager with two panes and tabs (new, off unless picked). "
+              "OpenFiles: a file manager with two panes and tabs (new). "
               "Copies are checked before anything is replaced, deleted files go to a trashcan "
               "on their own disk, and Undo puts things back. In SYS:Utilities.\n\n"
               "OpenUp Setup: a few questions at the next start (theme, what starts with the "
@@ -83,7 +83,7 @@
                  "OpenUp Setup: the first-start questions"
                  "OpenMenus: menus, and right-click menus on icons"
                  "OpenFiles: a file manager (new)")
-        (default (if #ac 15871 15866))))
+        (default (if #ac 32255 32250))))
 
 (set #look "Open light")
 (set #theme "Open")
