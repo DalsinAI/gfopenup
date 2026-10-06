@@ -55,9 +55,10 @@
               "OpenDock: a dock at the bottom of Workbench for your programs. It starts "
               "with the buttons of ToolManager, AmiDock or AmiStart if you have one. Dock in "
               "SYS:Prefs sets it.\n\n"
-              "OpenMenus: menus in the look of the theme, from the screen bar or at the pointer "
-              "(new, off unless picked). MagicMenu's settings are taken over; take MagicMenu "
-              "out of WBStartup if you pick this. Menus in SYS:Prefs sets it.\n\n"
+              "OpenMenus: menus in the look of the theme, from the screen bar or at the pointer, "
+              "and a menu for each icon and for the desktop on the right button. MagicMenu's "
+              "settings are taken over; take MagicMenu out of WBStartup if you pick this. "
+              "Menus in SYS:Prefs sets it.\n\n"
               "OpenUp Setup: a few questions at the next start (theme, what starts with the "
               "machine), and in SYS:Prefs afterwards.\n\n"
               "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
@@ -76,8 +77,8 @@
                  "OpenWindows: snapping, Amiga+Tab, wheel"
                  "OpenDock: a dock for your programs"
                  "OpenUp Setup: the first-start questions"
-                 "OpenMenus: menus in the theme's look (new)")
-        (default (if #ac 7679 7674))))
+                 "OpenMenus: menus, and right-click menus on icons")
+        (default (if #ac 15871 15866))))
 
 (set #look "Open light")
 (set #theme "Open")
