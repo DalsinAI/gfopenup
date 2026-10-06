@@ -23,7 +23,7 @@
          "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back."))
 
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
-; 128 OpenService, 256 OpenImage, 512 OpenRTG
+; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -49,6 +49,9 @@
               "open WebP and WebM, and, through OpenService, AVIF and HEIC photos, JPEG XL, "
               "camera RAW, SVG, FLAC, Ogg, MP3, MIDI, MP4 and other video, Word and other "
               "office documents. Datatypes you already have are kept.\n\n"
+              "OpenWindows: windows snap to edges and to each other, Amiga+Tab switches "
+              "between them, the mouse wheel goes to the window under the pointer, and "
+              "programs' windows open where you last left them. Windows in SYS:Prefs sets it.\n\n"
               "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
               "on AmigaChrome's graphics board. Picasso96's monitor for that board is put "
               "aside in SYS:Storage, and Uninstall puts it back. New: off unless you pick it.")
@@ -61,8 +64,9 @@
                  "OpenCompress: archives and disk images"
                  "OpenService: services from boards and Cradles"
                  "OpenImage: datatypes for today's files"
-                 "OpenRTG: Workbench without Picasso96 (new)")
-        (default (if #ac 511 506))))
+                 "OpenRTG: Workbench without Picasso96 (new)"
+                 "OpenWindows: snapping, Amiga+Tab, wheel")
+        (default (if #ac 1535 1530))))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -161,6 +165,12 @@
         (working "Installing OpenRTG")
         (if (> (run (cat #tool " INSTALL Parts/OpenRTG >>T:OpenUp.log")) 5)
             (message "OpenRTG didn't install completely. T:OpenUp.log says why."))))
+
+(if (bitand #parts 1024)
+    (
+        (working "Installing OpenWindows")
+        (if (> (run (cat #tool " INSTALL Parts/OpenWindows >>T:OpenUp.log")) 5)
+            (message "OpenWindows didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
