@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (We fill this in at upload time)
 Author:       Dalsin Limited
 Type:         util/misc
-Version:      0.6.1
+Version:      0.6.2
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -39,6 +39,8 @@ choose:
 - OpenDock: a dock for your programs, starting with ToolManager's, AmiDock's
   or AmiStart's buttons when you have one (Dock in SYS:Prefs);
 - OpenUp Setup: a few questions at the next start, and the startup switches;
+- OpenMenus (new, off unless picked): menus in the theme's look, from the
+  screen bar or at the pointer, with MagicMenu's settings taken over;
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller.
