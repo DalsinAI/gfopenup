@@ -572,6 +572,9 @@ def main() -> int:
     ed.add("C/OpenEdit", (oe / "OpenEdit").read_bytes(), "SYS:C/OpenEdit")
     for k in sorted((oe / "Kinds").glob("*.kind")):
         ed.add(f"Kinds/{k.name}", k.read_bytes(), f"ENVARC:OpenEdit/Kinds/{k.name}")
+    # its Tools icon: a script IconX runs without a window, so it opens OpenEdit with no file
+    ed.add("Tools/OpenEdit", b"Run >NIL: C:OpenEdit\n", "SYS:Tools/OpenEdit")
+    ed.add("Tools/OpenEdit.info", icons.icon(icons.WBPROJECT, "page", "C:IconX", ["WINDOW=NIL:"], stack=8192), "SYS:Tools/OpenEdit.info")
     ed.write()
 
     # OpenMUI: zunemaster.library, MUI from Zune for OS 3.x (openamigamui), a
@@ -615,7 +618,7 @@ def main() -> int:
             (snd.dir / "Prefs/Sound.info", "Sound"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
             (setup.dir / "WBStartup/OpenUp-Setup.info", "OpenUp-Setup"), (oc.dir / "Utilities/OpenCompress.info", "OpenCompress"),
             (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
-            (om.dir / "Tools/ZuneTest.info", "ZuneTest")],
+            (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/OpenEdit.info", "OpenEdit")],
             drawers={a.out / "OpenUp.info": [top / "Install-OpenUp.info", top / "Uninstall-OpenUp.info"],
                      core.dir / "Utilities/OpenUp.info": [core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info"],
                      pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info"))})
