@@ -5,7 +5,8 @@ archive (DESIGN.md sections 3 and 4).
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
         [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR]
-        [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--no-build] [--lha]
+        [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
+        [--no-build] [--lha]
 
 Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
@@ -38,6 +39,7 @@ a Part file that C/OpenUpTool reads:
                         compatibility (openamigartg; AmigaChrome's ACRTG board)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
+  OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 Dalsin Limited.
@@ -200,6 +202,7 @@ def build_parts(a):
     run(["sh", a.openamigartg / "library/build.sh"], env=env)
     run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
+    run(["sh", a.openamigamui / "os3/build.sh"], env=env)
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -274,11 +277,13 @@ def main() -> int:
                     default=first(DEV / "openamigafilemanager", DEV.parent / "openamigafilemanager"))
     ap.add_argument("--openamigamediaplayer", type=Path,
                     default=first(DEV / "openamigamediaplayer", DEV.parent / "openamigamediaplayer"))
+    ap.add_argument("--openamigamui", type=Path, default=first(DEV / "openamigamui", DEV.parent / "openamigamui"))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
-                 "openamigaimage", "openamigartg", "openamigafilemanager", "openamigamediaplayer"):
+                 "openamigaimage", "openamigartg", "openamigafilemanager", "openamigamediaplayer",
+                 "openamigamui"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     if not a.no_build:
@@ -431,7 +436,7 @@ def main() -> int:
 
     # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "OpenMenus", "0.2", "OpenMenus: our own menus, right-click menus on Workbench, and their editor")
+    menus = Part(top, "OpenMenus", "0.4", "OpenMenus: our own menus, right-click menus on Workbench, and their editor")
     menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
     menus.add("Prefs/Menus", (a.openamigaprefs / "Menus/build/os3/Menus").read_bytes(), "SYS:Prefs/Menus")
     menus.add("Prefs/Menus.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Menus.info")
@@ -459,6 +464,7 @@ def main() -> int:
     rt.line('retire "DEVS:Monitors/acrtg"')
     rt.line('retire "DEVS:Monitors/acrtg.info"')
     rt.add("Libs/openrtg.library", (rtg / "openrtg.library").read_bytes(), "LIBS:openrtg.library")
+    rt.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
     rt.add("Libs/OpenRTG/cybergraphics.library", (rtg / "cybergraphics.library").read_bytes(), "LIBS:OpenRTG/cybergraphics.library")
     rt.add("C/OpenRTG", (rtg / "OpenRTG").read_bytes(), "C:OpenRTG")
     rt.add("Devs/Monitors/OpenRTG", (rtg / "OpenRTG-Monitor").read_bytes(), "DEVS:Monitors/OpenRTG")
@@ -480,6 +486,15 @@ def main() -> int:
     op.add("Utilities/OpenPlay", (a.openamigamediaplayer / "build/os3/OpenPlay").read_bytes(), "SYS:Utilities/OpenPlay")
     op.add("Utilities/OpenPlay.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenPlay.info")
     op.write()
+
+    # OpenMUI: zunemaster.library, MUI from Zune for OS 3.x (openamigamui), a
+    # preview beside MUI, which it doesn't replace; ZuneTest shows it working.
+    mui = a.openamigamui / "build/os3"
+    om = Part(top, "OpenMUI", "0.1", "OpenMUI: zunemaster.library, MUI from Zune (preview), and ZuneTest")
+    om.add("Libs/zunemaster.library", (mui / "zunemaster.library").read_bytes(), "LIBS:zunemaster.library")
+    om.add("Tools/ZuneTest", (mui / "ZuneTest").read_bytes(), "SYS:Tools/ZuneTest")
+    om.add("Tools/ZuneTest.info", icons.icon(icons.WBTOOL, "install", stack=16384), "SYS:Tools/ZuneTest.info")
+    om.write()
 
     # The drawer's own icon, and OS 3.2-style icons for the scripts
     (a.out / "OpenUp.info").write_bytes(icons.icon(icons.WBDRAWER, "drawer", window=(440, 170)))
