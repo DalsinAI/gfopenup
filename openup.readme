@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (We fill this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.6.6
+Version:      0.6.7
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -42,14 +42,19 @@ choose:
 - OpenUp Setup: a few questions at the next start, and the startup switches;
 - OpenMenus: menus in the theme's look, from the screen bar or at the
   pointer, and a menu for each icon and for the desktop on the right button,
-  with MagicMenu's settings taken over;
+  with MagicMenu's settings taken over; the bar can sit at any edge of the
+  screen, and the menus work from the keyboard;
 - OpenFiles (new): a file manager with two panes and
   tabs, safe copies, a trashcan on each disk and undo (SYS:Utilities);
 - OpenPlay (new): a media player for everything the datatypes open, with a
   playlist and a slideshow (SYS:Utilities);
+- OpenMUI (preview, off unless picked): zunemaster.library, MUI built from
+  AROS's Zune for OS 3.x, beside MUI and replacing nothing, with ZuneTest
+  (SYS:Tools);
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
-  board is put aside and comes back with the uninstaller.
+  board is put aside and comes back with the uninstaller. It brings
+  opengpu.library 0.1 too (drawing on the CPU for now).
 Every file it adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest;
 replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines
 sit in one marked block in S:User-Startup. Uninstall-OpenUp (in
