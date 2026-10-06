@@ -438,7 +438,7 @@ def main() -> int:
 
     # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "OpenMenus", "0.4", "OpenMenus: our own menus, right-click menus on Workbench, and their editor")
+    menus = Part(top, "OpenMenus", "0.5", "OpenMenus: our own menus, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
     menus.add("Prefs/Menus", (a.openamigaprefs / "Menus/build/os3/Menus").read_bytes(), "SYS:Prefs/Menus")
     menus.add("Prefs/Menus.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Menus.info")
