@@ -23,7 +23,9 @@
  *   manifest, ENVARC:OpenAmiga/OpenUp.manifest (and ENV:), so UNINSTALL can
  *   take exactly those away and put the originals back.
  * - Startup lines go in one marked block in S:User-Startup:
- *   ";BEGIN OpenUp" to ";END OpenUp".
+ *   ";BEGIN OpenUp" to ";END OpenUp". A line listed in
+ *   ENVARC:OpenAmiga/Startup.off (OpenUp Setup's switches) is written with
+ *   ";OFF " in front, so AmigaDOS skips it.
  * - Errors say what to do next, in plain words.
  *
  * A part's drawer holds its files, laid out as they go, and a Part file:
@@ -58,7 +60,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] = "$VER: OpenUpTool 0.2 (6.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] = "$VER: OpenUpTool 0.3 (6.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 
@@ -75,6 +77,7 @@ static int same_word(const char *a, const char *b)
 #define USER_STARTUP "S:User-Startup"
 #define BLOCK_BEGIN ";BEGIN OpenUp"
 #define BLOCK_END ";END OpenUp"
+#define STARTUP_OFF "ENVARC:OpenAmiga/Startup.off"
 
 #define DALSIN 0xDA15
 #define DALSIN_OLD 2011
@@ -578,6 +581,23 @@ static char *without_block(const char *text, int *had)
     return out;
 }
 
+/* 1 when line is listed in ENVARC:OpenAmiga/Startup.off (OpenUp Setup's
+ * switches: one startup line per line, ";" comments, blanks ignored). */
+static int switched_off(const char *off, const char *line)
+{
+    const char *p = off;
+    size_t n = strlen(line);
+    while (p && *p) {
+        const char *e = p, *t;
+        while (*e && *e != '\n') e++;
+        t = e;
+        while (t > p && (t[-1] == ' ' || t[-1] == '\r' || t[-1] == '\t')) t--;
+        if (*p != ';' && (size_t)(t - p) == n && !strncmp(p, line, n)) return 1;
+        p = *e ? e + 1 : e;
+    }
+    return 0;
+}
+
 static int write_startup(int remove_only)
 {
     char *text, *rest, *buf;
@@ -607,14 +627,17 @@ static int write_startup(int remove_only)
         for (i = 0; i < nents; i++)
             if (!strcmp(ents[i].kind, "startup")) lines++;
         if (lines) {
+            char *off = read_file(STARTUP_OFF, NULL);
             if (buf[0] && buf[strlen(buf) - 1] != '\n') strcat(buf, "\n");
             strcat(buf, BLOCK_BEGIN "\n; Added by OpenUp. OpenUpTool UNINSTALL takes it out.\n");
             for (i = 0; i < nents; i++)
                 if (!strcmp(ents[i].kind, "startup") && strlen(buf) + strlen(ents[i].a) + 32 < (ULONG)(64 + MAXE * 2 + 8192)) {
+                    if (off && switched_off(off, ents[i].a)) strcat(buf, ";OFF ");     /* switched off in OpenUp Setup */
                     strcat(buf, ents[i].a);
                     strcat(buf, "\n");
                 }
             strcat(buf, BLOCK_END "\n");
+            if (off) FreeVec(off);
         }
     }
     i = write_file(USER_STARTUP, buf, strlen(buf));

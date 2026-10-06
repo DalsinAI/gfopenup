@@ -24,6 +24,8 @@ a Part file that C/OpenUpTool reads:
                         paired Cradles (openamigaservice)
   OpenImage/            datatypes: WebP and WebM on the 68k, and AVIF, HEIC, SVG,
                         FLAC, MP4, DOCX and more through OpenService (openamigaimage)
+  OpenWindows/          snapping, Amiga+Tab, the wheel under the pointer and window
+                        places, with its editor, OpenPrefs Windows (openamigaprefs)
   OpenRTG/              Workbench on OpenRTG's own 16-bit screen, without Picasso96:
                         openrtg.library, its monitor driver and CyberGraphX
                         compatibility (openamigartg; AmigaChrome's ACRTG board)
@@ -178,6 +180,7 @@ def build_parts(a):
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Look/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
+    run(["sh", a.openamigaprefs / "Windows/build.sh"], env=env)
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
@@ -337,6 +340,15 @@ def main() -> int:
             img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", own=True)
     img.write()
 
+    # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
+    ow = Part(top, "OpenWindows", "0.1", "OpenWindows: snapping, Amiga+Tab, the wheel under the pointer, window places")
+    ow.add("Prefs/Windows", (a.openamigaprefs / "Windows/build/os3/Windows").read_bytes(), "SYS:Prefs/Windows")
+    ow.add("Prefs/Windows.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Windows.info")
+    ow.add("Tools/Commodities/OpenWindows", (a.openamigaprefs / "Windows/build/os3/OpenWindows").read_bytes(),
+           "SYS:Tools/Commodities/OpenWindows")
+    ow.line("startup Run >NIL: SYS:Tools/Commodities/OpenWindows")
+    ow.write()
+
     # OpenRTG: Workbench on OpenRTG's own screens, without Picasso96, on
     # AmigaChrome's ACRTG board. LoadMonDrvs runs its monitor driver; the
     # Picasso96 monitor for the same board is moved aside (UNINSTALL puts it
@@ -363,6 +375,7 @@ def main() -> int:
                                              (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "install"),
                                              (ty.dir / "Prefs/OpenTypes.info", "page"),
                                              (look.dir / "Prefs/Look.info", "page"),
+                                             (ow.dir / "Prefs/Windows.info", "page"),
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (a.out / "OpenUp.info", None)])
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
