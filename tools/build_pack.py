@@ -173,10 +173,13 @@ def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Pa
                 "toolWindow": icon.get("toolWindow"), "stack": icon.get("stack") or 4096, "x": x, "y": y, "drawer": drawer}
 
     none = amiga_icon.NO_POSITION
-    pictures = {Path(info): name for info, name in jobs}
+    pictures = {Path(info): name for info, name in jobs if Path(info).is_file()}   # a part that changed shape keeps its own
     places: dict[Path, tuple[int, int]] = {}
     windows: dict[Path, dict] = {}
     for i, (drawer_info, inside) in enumerate(drawers.items()):
+        inside = [f for f in inside if f.is_file()]
+        if not Path(drawer_info).is_file():
+            continue
         rows = [{"rel": f"d/{f.name}", "folder": "d", "name": f.name[:-5],
                  "family": icon_theme.FAMILY.get(amiga_icon.read_icon(f.read_bytes())["type"], "project")} for f in inside]
         lay = icon_theme.layout(rows, (1920, 1024), 64)
