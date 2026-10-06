@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (We fill this in at upload time)
 Author:       Dalsin Limited
 Type:         util/misc
-Version:      0.6.8
+Version:      0.6.9
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -48,6 +48,8 @@ choose:
   tabs, safe copies, a trashcan on each disk and undo (SYS:Utilities);
 - OpenPlay (new): a media player for everything the datatypes open, with a
   playlist and a slideshow (SYS:Utilities);
+- OpenTitle (new): AmigaChrome's logo, the free chip and fast memory and a
+  clock on the title bar, set in SYS:Prefs/TitleBar;
 - OpenMUI (preview, off unless picked): zunemaster.library, MUI built from
   AROS's Zune for OS 3.x, beside MUI and replacing nothing, with ZuneTest
   (SYS:Tools);
