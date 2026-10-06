@@ -440,8 +440,8 @@ def main() -> int:
     # OpenPrefs Look, OpenLook's editor, and the desktop profiles it offers
     look.add("Prefs/Look", (a.openamigaprefs / "Look/build/os3/Look").read_bytes(), "SYS:Prefs/Look")
     look.add("Prefs/Look.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Look.info")
-    for pr in sorted((a.openamigaprefs / "Look/profiles").glob("*.profile")):
-        look.add(f"Profiles/{pr.name}", pr.read_bytes(), f"SYS:Prefs/Presets/OpenPrefs/{pr.name}")
+    for prof in sorted((a.openamigaprefs / "Look/profiles").glob("*.profile")):
+        look.add(f"Profiles/{prof.name}", prof.read_bytes(), f"SYS:Prefs/Presets/OpenPrefs/{prof.name}")
     look.line("startup Run >NIL: C:OpenLook")
     look.write()
 
