@@ -15,7 +15,13 @@
               "so files OpenUp didn't install are left alone.")
         (default 0))
     (
-        (set #rc (run (cat #tool " UNINSTALL >T:OpenUp-uninstall.log")))
+        ; every icon OpenTypes changed (OpenView in MultiView's place among them)
+        ; goes back first, while OpenTypes is still there to do it
+        (if (exists "SYS:Prefs/OpenTypes")
+            (run "SYS:Prefs/OpenTypes UNDO >T:OpenUp-uninstall.log"))
+        (if (exists "ENVARC:OpenAmiga/OpenView-switched")
+            (delete "ENVARC:OpenAmiga/OpenView-switched"))
+        (set #rc (run (cat #tool " UNINSTALL >>T:OpenUp-uninstall.log")))
         (if (> #rc 5)
             (message "Some files couldn't be put back. T:OpenUp-uninstall.log "
                      "says which, and what to do."))

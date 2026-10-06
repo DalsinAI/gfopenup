@@ -264,6 +264,21 @@
         (if (> (run (cat #tool " INSTALL Parts/OpenTitle >>T:OpenUp.log")) 5)
             (message "OpenTitle didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
+; OpenView opens what MultiView opened (pictures, text, guides, documents;
+; sounds, video and fonts stay), once, so a kind someone moves back later
+; stays moved. MultiView stays installed; OpenTypes UNDO puts it all back.
+(if (and (exists "SYS:Prefs/OpenTypes") (exists "SYS:Utilities/OpenPrint/OpenView")
+         (not (exists "ENVARC:OpenAmiga/OpenView-switched")))
+    (
+        (working "Making OpenView open pictures, text and guides")
+        (if (< (run "SYS:Prefs/OpenTypes SWITCH MultiView TO SYS:Utilities/OpenPrint/OpenView SAVE IN SYS: >>T:OpenUp.log") 10)
+            (textfile (dest "ENVARC:OpenAmiga/OpenView-switched") (append "OpenUp switched MultiView's kinds of file to OpenView.\n")))))
+
+; OpenFiles and OpenView on the dock, also a dock someone already has; the
+; rest of it is left alone, and a button already there isn't added twice.
+(if (exists "SYS:Prefs/Dock")
+    (run "SYS:Prefs/Dock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView SAVE >>T:OpenUp.log"))
+
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
     (message "OpenUp couldn't write its lines in S:User-Startup. Is SYS: write-protected?"))
