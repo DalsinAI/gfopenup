@@ -23,7 +23,7 @@
          "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back."))
 
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
-; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows
+; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -52,6 +52,11 @@
               "OpenWindows: windows snap to edges and to each other, Amiga+Tab switches "
               "between them, the mouse wheel goes to the window under the pointer, and "
               "programs' windows open where you last left them. Windows in SYS:Prefs sets it.\n\n"
+              "OpenDock: a dock at the bottom of Workbench for your programs. It starts "
+              "with the buttons of ToolManager, AmiDock or AmiStart if you have one. Dock in "
+              "SYS:Prefs sets it.\n\n"
+              "OpenUp Setup: a few questions at the next start (theme, what starts with the "
+              "machine), and in SYS:Prefs afterwards.\n\n"
               "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
               "on AmigaChrome's graphics board. Picasso96's monitor for that board is put "
               "aside in SYS:Storage, and Uninstall puts it back. New: off unless you pick it.")
@@ -65,8 +70,10 @@
                  "OpenService: services from boards and Cradles"
                  "OpenImage: datatypes for today's files"
                  "OpenRTG: Workbench without Picasso96 (new)"
-                 "OpenWindows: snapping, Amiga+Tab, wheel")
-        (default (if #ac 1535 1530))))
+                 "OpenWindows: snapping, Amiga+Tab, wheel"
+                 "OpenDock: a dock for your programs"
+                 "OpenUp Setup: the first-start questions")
+        (default (if #ac 7679 7674))))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -171,6 +178,20 @@
         (working "Installing OpenWindows")
         (if (> (run (cat #tool " INSTALL Parts/OpenWindows >>T:OpenUp.log")) 5)
             (message "OpenWindows didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 2048)
+    (
+        (working "Installing OpenDock")
+        (set #first (not (exists "ENVARC:OpenDock/Dock")))
+        (if (> (run (cat #tool " INSTALL Parts/OpenDock >>T:OpenUp.log")) 5)
+            (message "OpenDock didn't install completely. T:OpenUp.log says why; nothing else changed.")
+            (if #first (run "SYS:Prefs/Dock SAVE >>T:OpenUp.log")))))
+
+(if (bitand #parts 4096)
+    (
+        (working "Installing OpenUp Setup")
+        (if (> (run (cat #tool " INSTALL Parts/OpenUpSetup >>T:OpenUp.log")) 5)
+            (message "OpenUp Setup didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
