@@ -347,7 +347,7 @@ def main() -> int:
     img.write()
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
-    ow = Part(top, "OpenWindows", "0.1", "OpenWindows: snapping, Amiga+Tab, the wheel under the pointer, window places")
+    ow = Part(top, "OpenWindows", "0.2", "OpenWindows: snapping, Amiga+Tab, the wheel under the pointer, window places")
     ow.add("Prefs/Windows", (a.openamigaprefs / "Windows/build/os3/Windows").read_bytes(), "SYS:Prefs/Windows")
     ow.add("Prefs/Windows.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Windows.info")
     ow.add("Tools/Commodities/OpenWindows", (a.openamigaprefs / "Windows/build/os3/OpenWindows").read_bytes(),
@@ -380,7 +380,7 @@ def main() -> int:
     # Picasso96 monitor for the same board is moved aside (UNINSTALL puts it
     # back), and Workbench's screen mode becomes OpenRTG.1 800x600 16-bit.
     rtg = a.openamigartg / "build"
-    rt = Part(top, "OpenRTG", "0.7", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
+    rt = Part(top, "OpenRTG", "0.8", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
     rt.line("needs AmigaChrome")
     rt.line("needs ACRTG")
     rt.line('retire "DEVS:Monitors/acrtg"')
