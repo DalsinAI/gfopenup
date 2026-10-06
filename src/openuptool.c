@@ -32,6 +32,8 @@
  *   keep <dest> <marker> [<marker>...]  (dest must be absent or contain a marker)
  *   copy <file in the drawer> <dest>
  *   default <file in the drawer> <dest> (copied only when dest is missing)
+ *   add <file in the drawer> <dest>     (copied when dest is missing or OpenUp
+ *                                        put it there; another program's stays)
  *   startup <the rest of the line>
  * Words with spaces are quoted.
  *
@@ -399,13 +401,17 @@ static int words(char *line, char **w, int max)
 
 /* Puts one file in place, keeping the original the first time OpenUp
  * replaces it, and notes it in the manifest (loaded by the caller).
+ * only_if_missing: 1 leaves any file already there (the user's own setting);
+ * 2 replaces only a file OpenUp itself added, so an upgrade reaches it.
  * 1 copied, 0 nothing to do, -1 failed (said why). */
 static int install_file(const char *from, const char *dest, int only_if_missing)
 {
     char backup[260];
     entry *e = find_entry(NULL, dest);
-    if (only_if_missing && exists(dest))
+    if (only_if_missing == 1 && exists(dest))
         return 0;                                   /* the user's own setting stays */
+    if (only_if_missing == 2 && exists(dest) && (!e || strcmp(e->kind, "new")))
+        return 0;                                   /* another program's file stays */
     if (exists(dest) && same_file(from, dest)) {
         if (!e) add_entry("same", dest, NULL);
         return 0;
@@ -476,10 +482,11 @@ static int install(const char *drawer)
                     say("        To use ", partname, ", remove that program first, then run OpenUp again.");
                     refused = 1;
                 }
-            } else if (pass == 1 && (!strcmp(w[0], "copy") || !strcmp(w[0], "default")) && n >= 3) {
+            } else if (pass == 1 && (!strcmp(w[0], "copy") || !strcmp(w[0], "default") || !strcmp(w[0], "add"))
+                       && n >= 3) {
                 strcpy(from, drawer);
                 AddPart((STRPTR)from, (STRPTR)w[1], sizeof from);
-                switch (install_file(from, w[2], !strcmp(w[0], "default"))) {
+                switch (install_file(from, w[2], !strcmp(w[0], "default") ? 1 : !strcmp(w[0], "add") ? 2 : 0)) {
                 case 1: files++; break;
                 case -1: errors++; break;
                 }

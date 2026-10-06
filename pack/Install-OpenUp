@@ -23,7 +23,7 @@
          "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back."))
 
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
-; 128 OpenService
+; 128 OpenService, 256 OpenImage
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -44,7 +44,11 @@
               "LhA, zip, tar, gzip) from its window in SYS:Utilities, or from the Shell.\n\n"
               "OpenService: services from AmigaChrome's boards and from a Cradle you pair "
               "with (openservice.device, and Nursery to list them). Nothing goes on your "
-              "network until you pair a Cradle.")
+              "network until you pair a Cradle.\n\n"
+              "OpenImage: datatypes, so MultiView and every program that uses datatypes "
+              "open WebP and WebM, and, through OpenService, AVIF and HEIC photos, JPEG XL, "
+              "camera RAW, SVG, FLAC, Ogg, MP3, MIDI, MP4 and other video, Word and other "
+              "office documents. Datatypes you already have are kept.")
         (choices "OpenSocket: networking"
                  "OpenPrint and OpenView: printing"
                  "AmigaChrome sharing: clipboard and files"
@@ -52,8 +56,9 @@
                  "Backgrounds: the look's desktop"
                  "OpenTypes: which program opens what"
                  "OpenCompress: archives and disk images"
-                 "OpenService: services from boards and Cradles")
-        (default (if #ac 255 250))))
+                 "OpenService: services from boards and Cradles"
+                 "OpenImage: datatypes for today's files")
+        (default (if #ac 511 506))))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -137,6 +142,15 @@
         (working "Installing OpenService")
         (if (> (run (cat #tool " INSTALL Parts/OpenService >>T:OpenUp.log")) 5)
             (message "OpenService didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 256)
+    (
+        (working "Installing OpenImage")
+        (if (> (run (cat #tool " INSTALL Parts/OpenImage >>T:OpenUp.log")) 5)
+            (message "OpenImage didn't install completely. T:OpenUp.log says why; nothing else changed."))
+        (if (not (bitand #parts 128))
+            (message "OpenImage's datatypes for AVIF, HEIC, FLAC, video and documents need OpenService "
+                     "and a services card or a paired Cradle. WebP and WebM work without them."))))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
