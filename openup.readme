@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (We fill this in at upload time)
 Author:       Dalsin Limited
 Type:         util/misc
-Version:      0.6.4
+Version:      0.6.5
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -45,6 +45,8 @@ choose:
   with MagicMenu's settings taken over;
 - OpenFiles (new): a file manager with two panes and
   tabs, safe copies, a trashcan on each disk and undo (SYS:Utilities);
+- OpenPlay (new): a media player for everything the datatypes open, with a
+  playlist and a slideshow (SYS:Utilities);
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller.
