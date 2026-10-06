@@ -54,6 +54,7 @@ import importlib.util
 import json
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import time
@@ -71,6 +72,16 @@ OPENSOCKET_MARKERS = ["OpenSocket (AmigaChrome)", "ACNet (AmigaChrome)", "AmigaC
 def run(cmd, cwd=None, env=None):
     print("  $", " ".join(str(c) for c in cmd), flush=True)
     subprocess.run([str(c) for c in cmd], cwd=cwd, env=env, check=True)
+
+
+def wbconfig_backdrop() -> bytes:
+    """ENVARC:Sys/WBConfig.prefs with Workbench as a backdrop: WBCF is flags (0:
+    no saved box), 0, the window box (0, 11, 640, 389, as a stock 3.2.3 writes)
+    and the backdrop word (1)."""
+    wbcf = struct.pack(">IIhhhhhh", 0, 0, 0, 11, 640, 389, 1, 0)
+    prhd = b"\0" * 6
+    body = b"PREF" + b"PRHD" + struct.pack(">I", len(prhd)) + prhd + b"WBCF" + struct.pack(">I", len(wbcf)) + wbcf
+    return b"FORM" + struct.pack(">I", len(body)) + body
 
 
 def first(*paths: Path) -> Path | None:
@@ -499,10 +510,16 @@ def main() -> int:
     # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
     # Installer runs "SYS:Prefs/Dock SAVE" once, on a first install, so the
     # dock starts with the buttons of a dock already there.
-    dock = Part(top, "OpenDock", "0.1", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "OpenDock", "0.2", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     dock.add("Prefs/Dock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/Dock")
     dock.add("Prefs/Dock.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Dock.info")
+    # Workbench as a backdrop: OpenDock sits just above it, so Workbench's own
+    # window would cover the dock. A stock 3.2.3 opens Workbench as a window;
+    # the backdrop flag is the word at offset 16 of WBConfig.prefs' WBCF chunk
+    # (Workbench writes it on Window > Snapshot, not when Backdrop is toggled).
+    # OpenUpTool keeps the original in SYS:Storage and UNINSTALL puts it back.
+    dock.add("Prefs/Env-Archive/Sys/WBConfig.prefs", wbconfig_backdrop(), "ENVARC:Sys/WBConfig.prefs")
     dock.line("startup Run >NIL: C:OpenDock")
     dock.write()
 
