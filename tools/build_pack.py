@@ -491,7 +491,7 @@ def main() -> int:
 
     # OpenTitle: the title bar's logo, free memory and clock, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.1", "OpenTitle: AmigaChrome's logo, free memory and a clock on the title bar")
+    tb = Part(top, "OpenTitle", "0.2", "OpenTitle: AmigaChrome's logo, free memory and a clock on the title bar")
     tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
     tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
     tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
