@@ -101,6 +101,19 @@
 (working "Installing OpenUp")
 (if (> (run (cat #tool " INSTALL Parts/OpenUp >>T:OpenUp.log")) 5)
     (abort "OpenUp's own files didn't install. T:OpenUp.log says why; nothing else changed."))
+; A real AGA Amiga with Picasso96's library left behind and no Picasso96 board
+; running: SDL games hang at their video start. Ask to set it aside (6 Oct 2026).
+(if (= (run (cat #tool " P96LEFTOVER")) 5)
+    (if (askbool
+            (prompt "Picasso96's library is in LIBS:, but no Picasso96 graphics board is running.\n\n"
+                    "Programs that use SDL (many newer games) hang when they start their picture "
+                    "while it is there.\n\nSet LIBS:Picasso96API.library aside? It is kept in "
+                    "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back.")
+            (help "Choose Yes unless you are about to fit a Picasso96 graphics card. Nothing else "
+                  "of Picasso96 is touched.")
+            (default 1))
+        (run (cat #tool " RETIRE LIBS:Picasso96API.library >>T:OpenUp.log"))))
+
 (if (bitand #parts 1)
     (
         (working "Installing OpenSocket")
