@@ -28,7 +28,7 @@
 
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
 ; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus,
-; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI
+; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -73,6 +73,9 @@
               "OpenMUI: zunemaster.library, MUI built from AROS's Zune for OS 3.x (a preview, "
               "off unless picked). It sits beside MUI and replaces nothing; ZuneTest in "
               "SYS:Tools shows it working.\n\n"
+              "OpenTitle: AmigaChrome's logo at the title bar's left, the free chip and "
+              "fast memory after Workbench's title, and the day, date and time at the right "
+              "(new). Title bar in SYS:Prefs switches each, and a black border around the screen.\n\n"
               "OpenUp Setup: a few questions at the next start (theme, what starts with the "
               "machine), and in SYS:Prefs afterwards.\n\n"
               "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
@@ -94,8 +97,9 @@
                  "OpenMenus: menus, and right-click menus on icons"
                  "OpenFiles: a file manager (new)"
                  "OpenPlay: a media player (new)"
-                 "OpenMUI: MUI from Zune (preview)")
-        (default (if #ac 65023 65018))))
+                 "OpenMUI: MUI from Zune (preview)"
+                 "OpenTitle: logo, memory, clock on the title bar (new)")
+        (default (if #ac 196095 196090))))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -253,6 +257,12 @@
         (working "Installing OpenMUI")
         (if (> (run (cat #tool " INSTALL Parts/OpenMUI >>T:OpenUp.log")) 5)
             (message "OpenMUI didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 131072)
+    (
+        (working "Installing OpenTitle")
+        (if (> (run (cat #tool " INSTALL Parts/OpenTitle >>T:OpenUp.log")) 5)
+            (message "OpenTitle didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
