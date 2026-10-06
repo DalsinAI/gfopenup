@@ -28,7 +28,7 @@
 
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
 ; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus,
-; 16384 OpenFiles, 32768 OpenPlay
+; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -63,12 +63,16 @@
               "OpenMenus: menus in the look of the theme, from the screen bar or at the pointer, "
               "and a menu for each icon and for the desktop on the right button. MagicMenu's "
               "settings are taken over; take MagicMenu out of WBStartup if you pick this. "
-              "Menus in SYS:Prefs sets it.\n\n"
+              "The bar can sit at any edge of the screen, and the menus work from the "
+              "keyboard too (Right Amiga+Space). Menus in SYS:Prefs sets it.\n\n"
               "OpenFiles: a file manager with two panes and tabs (new). "
               "Copies are checked before anything is replaced, deleted files go to a trashcan "
               "on their own disk, and Undo puts things back. In SYS:Utilities.\n\n"
               "OpenPlay: a media player for everything the datatypes open (new): pictures as "
               "a slideshow, sounds, tunes and films, with a playlist. In SYS:Utilities.\n\n"
+              "OpenMUI: zunemaster.library, MUI built from AROS's Zune for OS 3.x (a preview, "
+              "off unless picked). It sits beside MUI and replaces nothing; ZuneTest in "
+              "SYS:Tools shows it working.\n\n"
               "OpenUp Setup: a few questions at the next start (theme, what starts with the "
               "machine), and in SYS:Prefs afterwards.\n\n"
               "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
@@ -89,7 +93,8 @@
                  "OpenUp Setup: the first-start questions"
                  "OpenMenus: menus, and right-click menus on icons"
                  "OpenFiles: a file manager (new)"
-                 "OpenPlay: a media player (new)")
+                 "OpenPlay: a media player (new)"
+                 "OpenMUI: MUI from Zune (preview)")
         (default (if #ac 65023 65018))))
 
 (set #look "Open light")
@@ -242,6 +247,12 @@
         (working "Installing OpenPlay")
         (if (> (run (cat #tool " INSTALL Parts/OpenPlay >>T:OpenUp.log")) 5)
             (message "OpenPlay didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 65536)
+    (
+        (working "Installing OpenMUI")
+        (if (> (run (cat #tool " INSTALL Parts/OpenMUI >>T:OpenUp.log")) 5)
+            (message "OpenMUI didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)
