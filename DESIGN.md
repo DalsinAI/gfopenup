@@ -55,6 +55,8 @@ with its notices.
   `ENVARC:OpenAmiga/` lists what is installed, with versions; ACBuild's
   AmigaChrome Tools tab can read it.
 - **Errors say what to do next,** in plain words (the mission test).
+- **Every app and prefs editor has an animated GlowIcon,** drawn and
+  shipped as [ICONS.md](ICONS.md) sets out.
 
 ## 4. Where it ships
 
