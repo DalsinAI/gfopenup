@@ -41,6 +41,7 @@ a Part file that C/OpenUpTool reads:
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory and clock on the title bar (openamigaprefs)
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs)
+  OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
@@ -207,6 +208,7 @@ def build_parts(a):
     run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamui / "os3/build.sh"], env=env)
+    run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -282,12 +284,13 @@ def main() -> int:
     ap.add_argument("--openamigamediaplayer", type=Path,
                     default=first(DEV / "openamigamediaplayer", DEV.parent / "openamigamediaplayer"))
     ap.add_argument("--openamigamui", type=Path, default=first(DEV / "openamigamui", DEV.parent / "openamigamui"))
+    ap.add_argument("--openamigaedit", type=Path, default=first(DEV / "openamigaedit", DEV.parent / "openamigaedit"))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
                  "openamigaimage", "openamigartg", "openamigafilemanager", "openamigamediaplayer",
-                 "openamigamui"):
+                 "openamigamui", "openamigaedit"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     if not a.no_build:
@@ -338,7 +341,7 @@ def main() -> int:
 
     # OpenPrint and OpenView: openamigaprint's own package, laid out as its Installer does
     pkg = a.openamigaprint / "build/package/OpenPrint"
-    pr = Part(top, "OpenPrint", "0.3", "OpenPrint and OpenView: printing to PDF and IPP, and viewing")
+    pr = Part(top, "OpenPrint", "0.4", "OpenPrint and OpenView: printing to PDF and IPP, and viewing")
     for p in sorted(pkg.rglob("*")):
         if not p.is_file():
             continue
@@ -479,7 +482,7 @@ def main() -> int:
 
     # OpenFiles: the file manager (openamigafilemanager). Double-click opens
     # files with their icon's program, else OpenView (the OpenPrint part).
-    of = Part(top, "OpenFiles", "0.1", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
+    of = Part(top, "OpenFiles", "0.2", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
     of.add("Utilities/OpenFiles", (a.openamigafilemanager / "build/os3/OpenFiles").read_bytes(), "SYS:Utilities/OpenFiles")
     of.add("Utilities/OpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenFiles.info")
     of.write()
@@ -493,7 +496,7 @@ def main() -> int:
 
     # OpenTitle: the title bar's logo, free memory and clock, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.3", "OpenTitle: AmigaChrome's logo, free memory and a clock on the title bar")
+    tb = Part(top, "OpenTitle", "0.4", "OpenTitle: AmigaChrome's logo, free memory and a clock on the title bar")
     tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
     tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
     tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
@@ -509,6 +512,14 @@ def main() -> int:
     snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")
     snd.line("startup SYS:Prefs/Sound USE")
     snd.write()
+
+    # OpenEdit: the text editor (openamigaedit), with its kinds of file in ENVARC:
+    oe = a.openamigaedit / "build/os3"
+    ed = Part(top, "OpenEdit", "0.1", "OpenEdit: a text editor with tabs, find and replace, and colours for scripts and code")
+    ed.add("C/OpenEdit", (oe / "OpenEdit").read_bytes(), "SYS:C/OpenEdit")
+    for k in sorted((oe / "Kinds").glob("*.kind")):
+        ed.add(f"Kinds/{k.name}", k.read_bytes(), f"ENVARC:OpenEdit/Kinds/{k.name}")
+    ed.write()
 
     # OpenMUI: zunemaster.library, MUI from Zune for OS 3.x (openamigamui), a
     # preview beside MUI, which it doesn't replace; ZuneTest shows it working.
