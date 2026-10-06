@@ -29,11 +29,14 @@
  * A part's drawer holds its files, laid out as they go, and a Part file:
  *   part <name> <version>
  *   needs AmigaChrome                  (only on an AmigaChrome instance)
+ *   needs ACRTG                        (only with an ACRTG graphics board)
  *   keep <dest> <marker> [<marker>...]  (dest must be absent or contain a marker)
  *   copy <file in the drawer> <dest>
  *   default <file in the drawer> <dest> (copied only when dest is missing)
  *   add <file in the drawer> <dest>     (copied when dest is missing or OpenUp
  *                                        put it there; another program's stays)
+ *   retire <dest>                       (moved to SYS:Storage/OpenUp-Superseded,
+ *                                        so it no longer runs; UNINSTALL puts it back)
  *   startup <the rest of the line>
  * Words with spaces are quoted.
  *
@@ -55,7 +58,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] = "$VER: OpenUpTool 0.1 (5.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] = "$VER: OpenUpTool 0.2 (6.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 
@@ -437,6 +440,29 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
     return 1;
 }
 
+/* Takes a file out of the way (another program's monitor driver, say),
+ * keeping it in SYS:Storage/OpenUp-Superseded for UNINSTALL to put back.
+ * 1 moved, 0 nothing to do, -1 failed (said why). */
+static int retire_file(const char *dest)
+{
+    char backup[260], dir[260];
+    if (!exists(dest) || find_entry(NULL, dest))
+        return 0;                                   /* absent, or OpenUp's already */
+    backup_path(dest, backup, sizeof backup);
+    parent_of(backup, dir, sizeof dir);
+    if (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0)) {
+        say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; it was left in place. Is SYS: full or write-protected?");
+        return -1;
+    }
+    if (!DeleteFile((STRPTR)dest)) {
+        DeleteFile((STRPTR)backup);
+        say("OpenUp: can't move ", dest, " out of the way. Is it in use, or the disk write-protected?");
+        return -1;
+    }
+    add_entry("replaced", dest, backup);
+    return 1;
+}
+
 static int install(const char *drawer)
 {
     char path[220], from[260], *text, *p, *line, partname[64] = "", partver[32] = "";
@@ -476,11 +502,20 @@ static int install(const char *drawer)
                     say("OpenUp: ", partname, " is for AmigaChrome instances; left out here.");
                     refused = 1;
                 }
+                if (!strcmp(w[1], "ACRTG") && !board(9)) {
+                    say("OpenUp: ", partname, " needs an ACRTG graphics board; left out here. In AmigaChrome, fit one in Cradle (Hardware, Display).");
+                    refused = 1;
+                }
             } else if (pass == 0 && !strcmp(w[0], "keep") && n >= 3) {
                 if (exists(w[1]) && !has_marker(w[1], w + 2, n - 2) && !find_entry(NULL, w[1])) {
                     say("OpenUp: ", w[1], " belongs to another program, so OpenUp leaves it and this part out.");
                     say("        To use ", partname, ", remove that program first, then run OpenUp again.");
                     refused = 1;
+                }
+            } else if (pass == 1 && !strcmp(w[0], "retire") && n >= 2) {
+                switch (retire_file(w[1])) {
+                case 1: files++; break;
+                case -1: errors++; break;
                 }
             } else if (pass == 1 && (!strcmp(w[0], "copy") || !strcmp(w[0], "default") || !strcmp(w[0], "add"))
                        && n >= 3) {

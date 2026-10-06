@@ -4,7 +4,7 @@ archive (DESIGN.md sections 3 and 4).
 
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
-        [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--no-build] [--lha]
+        [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR] [--no-build] [--lha]
 
 Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
@@ -24,6 +24,9 @@ a Part file that C/OpenUpTool reads:
                         paired Cradles (openamigaservice)
   OpenImage/            datatypes: WebP and WebM on the 68k, and AVIF, HEIC, SVG,
                         FLAC, MP4, DOCX and more through OpenService (openamigaimage)
+  OpenRTG/              Workbench on OpenRTG's own 16-bit screen, without Picasso96:
+                        openrtg.library, its monitor driver and CyberGraphX
+                        compatibility (openamigartg; AmigaChrome's ACRTG board)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 Dalsin Limited.
@@ -126,6 +129,15 @@ def os32_icons(oap: Path, icons_mod, jobs: list[tuple[Path, str | None]]) -> Non
                        check=True, stdout=subprocess.DEVNULL)
 
 
+def screenmode_prefs(mode_id: int, w: int, h: int, depth: int) -> bytes:
+    """ScreenMode.prefs (IFF PREF: PRHD, SCRM) for Workbench's screen."""
+    import struct
+    prhd = b"PRHD" + struct.pack(">IBBI", 6, 0, 0, 0)
+    scrm = b"SCRM" + struct.pack(">I", 28) + bytes(16) + struct.pack(">IHHHH", mode_id, w, h, depth, 1)
+    body = b"PREF" + prhd + scrm
+    return b"FORM" + struct.pack(">I", len(body)) + body
+
+
 def archive_art() -> bytes:
     """OpenCompress's icon: an archive box with a green arrow coming out, drawn
     as icon_art draws (four times the size, reduced, hard-edged), 48 x 40 RGBA."""
@@ -169,6 +181,7 @@ def build_parts(a):
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
+    run(["sh", a.openamigartg / "library/build.sh"], env=env)
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -187,11 +200,12 @@ def main() -> int:
     ap.add_argument("--openamigacompress", type=Path, default=first(DEV / "openamigacompress"))
     ap.add_argument("--openamigaservice", type=Path, default=first(DEV / "openamigaservice", DEV.parent / "openamigaservice"))
     ap.add_argument("--openamigaimage", type=Path, default=first(DEV / "openamigaimage", DEV.parent / "openamigaimage"))
+    ap.add_argument("--openamigartg", type=Path, default=first(DEV / "openamigartg", DEV.parent / "openamigartg"))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
-                 "openamigaimage"):
+                 "openamigaimage", "openamigartg"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     if not a.no_build:
@@ -322,6 +336,25 @@ def main() -> int:
         if d.is_file() and not d.name.endswith(".info"):
             img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", own=True)
     img.write()
+
+    # OpenRTG: Workbench on OpenRTG's own screens, without Picasso96, on
+    # AmigaChrome's ACRTG board. LoadMonDrvs runs its monitor driver; the
+    # Picasso96 monitor for the same board is moved aside (UNINSTALL puts it
+    # back), and Workbench's screen mode becomes OpenRTG.1 800x600 16-bit.
+    rtg = a.openamigartg / "build"
+    rt = Part(top, "OpenRTG", "0.7", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
+    rt.line("needs AmigaChrome")
+    rt.line("needs ACRTG")
+    rt.line('retire "DEVS:Monitors/acrtg"')
+    rt.line('retire "DEVS:Monitors/acrtg.info"')
+    rt.add("Libs/openrtg.library", (rtg / "openrtg.library").read_bytes(), "LIBS:openrtg.library")
+    rt.add("Libs/OpenRTG/cybergraphics.library", (rtg / "cybergraphics.library").read_bytes(), "LIBS:OpenRTG/cybergraphics.library")
+    rt.add("C/OpenRTG", (rtg / "OpenRTG").read_bytes(), "C:OpenRTG")
+    rt.add("Devs/Monitors/OpenRTG", (rtg / "OpenRTG-Monitor").read_bytes(), "DEVS:Monitors/OpenRTG")
+    mode = screenmode_prefs(0x61011100, 800, 600, 16)
+    rt.add("Prefs/ScreenMode.prefs", mode, "ENVARC:Sys/ScreenMode.prefs")
+    rt.add("Prefs/ScreenMode-ENV.prefs", mode, "ENV:Sys/ScreenMode.prefs")
+    rt.write()
 
     # The drawer's own icon, and OS 3.2-style icons for the scripts
     (a.out / "OpenUp.info").write_bytes(icons.icon(icons.WBDRAWER, "drawer", window=(440, 170)))
