@@ -16,9 +16,13 @@
 (set #summary (getenv "OpenUp/Summary"))
 (set #ac (= #machine "AmigaChrome"))
 
+; Short: the 3.2 Installer's welcome window has room for a few lines above
+; its user-level buttons. The rest is a message Intermediate users see.
 (welcome
-    (cat "This installs OpenUp " #version ": the Open family of programs, set up "
-         "to work together on AmigaOS 3.2.\n\n" #summary "\n"
+    (cat "This installs OpenUp " #version ": the Open family of programs, "
+         "set up to work together on AmigaOS 3.2."))
+(message
+    (cat #summary "\n\n"
          "Nothing of the OS is deleted: a file OpenUp replaces is kept in "
          "SYS:Storage/OpenUp-Superseded, and Uninstall-OpenUp puts it back."))
 
@@ -243,8 +247,10 @@
 (if (> #rc 5)
     (message "OpenUp couldn't write its lines in S:User-Startup. Is SYS: write-protected?"))
 
+; (quiet): no stock "can be found in your Work: drawer" box after ours
 (exit
     (cat "OpenUp " #version " is installed.\n\n"
          "Reboot the Amiga to start everything.\n\n"
          "To take it out again, run Uninstall-OpenUp from SYS:Utilities/OpenUp, "
-         "or OpenUpTool UNINSTALL in a Shell."))
+         "or OpenUpTool UNINSTALL in a Shell.")
+    (quiet))
