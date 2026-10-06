@@ -40,6 +40,7 @@ a Part file that C/OpenUpTool reads:
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory and clock on the title bar (openamigaprefs)
+  Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs)
   OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
@@ -198,6 +199,7 @@ def build_parts(a):
     run(["sh", a.openamigaprefs / "Menus/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Menus/engine/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "TitleBar/build.sh"], env=env)
+    run(["sh", a.openamigaprefs / "Sound/build.sh"], env=env)
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
@@ -491,12 +493,22 @@ def main() -> int:
 
     # OpenTitle: the title bar's logo, free memory and clock, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.2", "OpenTitle: AmigaChrome's logo, free memory and a clock on the title bar")
+    tb = Part(top, "OpenTitle", "0.3", "OpenTitle: AmigaChrome's logo, free memory and a clock on the title bar")
     tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
     tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
     tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
     tb.line("startup Run >NIL: C:OpenTitle")
     tb.write()
+
+    # Sound: OpenPrefs Sound (the volume, Paula's and AHI's levels, the beep)
+    # in SYS:Prefs/Sound, whose old editor the Installer copies to
+    # SYS:Prefs/Classic first, and OpenSpeaker on the menu bar (openamigaprefs).
+    so = a.openamigaprefs / "Sound/build/os3"
+    snd = Part(top, "Sound", "0.1", "Sound: the volume, Paula's and AHI's levels, and a speaker on the menu bar")
+    snd.add("Prefs/Sound", (so / "Sound").read_bytes(), "SYS:Prefs/Sound")
+    snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")
+    snd.line("startup SYS:Prefs/Sound USE")
+    snd.write()
 
     # OpenMUI: zunemaster.library, MUI from Zune for OS 3.x (openamigamui), a
     # preview beside MUI, which it doesn't replace; ZuneTest shows it working.
