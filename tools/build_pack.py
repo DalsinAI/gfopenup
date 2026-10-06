@@ -382,7 +382,7 @@ def main() -> int:
     bd.write()
 
     # OpenTypes: which program opens each kind of file (openamigaprefs)
-    ty = Part(top, "OpenTypes", "0.1", "OpenTypes: which program opens each kind of file")
+    ty = Part(top, "OpenTypes", "0.2", "OpenTypes: which program opens each kind of file")
     ty.add("Prefs/OpenTypes", (a.openamigaprefs / "OpenTypes/build/os3/OpenTypes").read_bytes(), "SYS:Prefs/OpenTypes")
     ty.add("Prefs/OpenTypes.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenTypes.info")
     ty.write()
