@@ -71,11 +71,14 @@ class Part:
         self.dir.mkdir(parents=True)
         self.lines = [f"part {name} {version}", f'; {title}']
 
-    def add(self, rel: str, data: bytes, dest: str, default: bool = False):
+    def add(self, rel: str, data: bytes, dest: str, default: bool = False, own: bool = False):
+        """default: only where nothing is (the user's settings); own: where
+        nothing is or OpenUp put it, so an upgrade reaches it but another
+        program's file stays."""
         p = self.dir / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(data)
-        self.lines.append(f'{"default" if default else "copy"} "{rel}" "{dest}"')
+        self.lines.append(f'{"add" if own else "default" if default else "copy"} "{rel}" "{dest}"')
 
     def line(self, text: str):
         self.lines.append(text)
@@ -307,16 +310,17 @@ def main() -> int:
     # OpenImage: datatypes (openamigaimage). WebP and WebM decode on the 68k;
     # the rest ask media.decode/1 or doc.render/1 through OpenService. A
     # datatype or descriptor already there (Aminet's flac.datatype, say)
-    # stays: ours only go where nothing is, so a machine without a Cradle
-    # keeps what it had. Their own classes have names nobody else uses.
+    # stays: ours only go where nothing is or where OpenUp put them (so a
+    # newer pack updates them), and a machine without a Cradle keeps what it
+    # had. Their own classes have names nobody else uses.
     dt = a.openamigaimage / "Datatypes/out"
     img = Part(top, "OpenImage", "0.1", "OpenImage: datatypes for today's pictures, sounds, documents and video")
     for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
         img.add(f"Classes/DataTypes/{c.name}", c.read_bytes(), f"SYS:Classes/DataTypes/{c.name}",
-                default=c.name in ("webp.datatype", "webm.datatype"))
+                own=c.name in ("webp.datatype", "webm.datatype"))
     for d in sorted((dt / "Devs/DataTypes").iterdir()):
         if d.is_file() and not d.name.endswith(".info"):
-            img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", default=True)
+            img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", own=True)
     img.write()
 
     # The drawer's own icon, and OS 3.2-style icons for the scripts
