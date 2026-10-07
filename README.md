@@ -15,7 +15,7 @@ its own repository's scripts (checkouts beside this one, or given with
 Install-OpenUp in the drawer. Without an AmigaChrome install on the build
 machine, point the icon writer at the amigachrome repository:
 `ACBUILD_ICON_JS=<amigachrome>/launcher/acbuild-tools/amiga-icon.js` and
-`BOXIE_ICONS=<amigachrome>/resources/icons/collections/boxie`. `DESIGN.md` is the design. Section 6 takes in a lot of what AmiKit tries to be: an Amiga that is beautiful and ready the moment it starts, with first-boot Setup, startup switches, themes, Picks and free updates.
+`BOXIE_ICONS=<amigachrome>/resources/icons/collections/boxie`. `DESIGN.md` is the design. Section 6 takes in a lot of what AmiKit tries to be: an Amiga that is beautiful and ready the moment it starts, with first-boot Setup, startup switches, themes and free updates.
 
 Part of the Open family (internally, the Great Open Source Reunification
 Project): one platform, AmigaOS 3.2.x with the Open libraries, that is easy

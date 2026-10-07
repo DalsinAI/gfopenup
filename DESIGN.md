@@ -75,7 +75,7 @@ with its notices.
 | 2 | Each Open part as it lands: OpenRTG, `zunemaster.library` and the passthrough, OpenGadTools, OpenTypes, OpenCompress, OpenMail, OpenBrowser | Each works after the pack is re-run |
 | 3 | PiStorm and real-Amiga detection, with testers' hardware | The same pack on a PiStorm and on a real A1200 with an RTG card |
 | 4 | Cradle's OS 3.2.3 recipe applies the pack; the appliance ships it | A new instance from Cradle comes up with the Open family |
-| 5 | OpenUp Update and OpenUp Picks (section 6); OpenStart if we say yes | A pack installed today updates itself on request, and a newcomer adds a tested program with one tick |
+| 5 | OpenUp Update (section 6); OpenStart if we say yes. OpenUp Picks is no longer a requirement (the Team, 8 October 2026) | A pack installed today updates itself on request. **Update built (OpenUpTool UPDATE, Cradle's side live, 8 October 2026); the GitHub step is next** |
 
 **Name and repository:** OpenUp (We, 4 October 2026: "OpenUp it is"),
 `DalsinAI/openamigaup`.
@@ -112,7 +112,7 @@ and it's the part we take.
 | Directory Opus 5 in place of Workbench | OpenFiles beside Workbench; making it the default for drawers is a switch, off by default | Ours |
 | AmiStart start menu (six designs) and a Mini Launcher | To decide: question 1 below | Ask |
 | Registered MUI 5, under AmiKit's own licence | OpenMUI: MUI programs run through Zune with nothing to buy. A user's own MUI is left alone | Ours, free |
-| 400+ programs installed | **OpenUp Picks:** a short, tested list of free programs, ticked in Setup and installed from pinned Aminet archives with their licences and readmes. Nothing we may not pass on | Take, licences respected |
+| 400+ programs installed | ~~OpenUp Picks~~: no longer a requirement (the Team, 8 October 2026). OpenUp installs the Open family only; other programs stay the user's choice | Not taken |
 | FPU builds swapped for non-FPU ones | The Installer picks each program's build for the CPU and FPU it finds (section 2) | Take |
 | LiveUpdate, by subscription | **OpenUp Update**, free: it checks for a newer pack and re-runs it in place (section 3's manifest). It never runs on its own, and it shows what will change first | Take, free |
 | KIT, an optional AI helper (AmigaGPT 3) | Guided tours first: show, don't send people to guides. An assistant later, optional and off by default (question 3) | Later |
@@ -132,5 +132,5 @@ exclusive builds.
    already have (ToolManager docks, AmigaOS 4's AmiDock, DOpus button banks
    among them) and behaves like the Mac's: running programs marked, click to
    start or bring to the front, drag to add or take away, magnification.
-2. **OpenUp Picks:** which programs, and how many ticked by default?
+2. ~~**OpenUp Picks:** which programs, and how many ticked by default?~~ **Decided (8 October 2026): Picks is not a requirement.**
 3. **An assistant like KIT:** later, or not at all?
