@@ -13,7 +13,8 @@ Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
 a Part file that C/OpenUpTool reads:
 
-  OpenUp/               OpenUpTool and the uninstaller
+  OpenUp/               OpenUpTool and the uninstaller, and OpenUpMenu: the
+                        Tools menu's OpenUp and Preferences sub-menus
   OpenSocket/           bsdsocket.library 4.2 and its tools (amigachrome's
                         vendored payload, vendor/opensocket-os32)
   OpenPrint/            OpenPrint and OpenView (openamigaprint's package)
@@ -261,6 +262,8 @@ def build_parts(a):
     (ROOT / "build/os3").mkdir(parents=True, exist_ok=True)   # a fresh checkout has no build folder
     run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", "-fno-common",
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
+    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", "-fno-common",
+         "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
     g = a.guest
@@ -403,9 +406,15 @@ def main() -> int:
     readme = (ROOT / "openup.readme").read_bytes()
     put("OpenUp.readme", readme)
 
-    # OpenUp itself: the tool and the uninstaller, where they can be found later
-    core = Part(top, "OpenUp", a.version, "OpenUpTool and the uninstaller")
+    # OpenUp itself: the tool and the uninstaller, where they can be found later,
+    # and OpenUpMenu: Workbench's Tools menu gets an OpenUp sub-menu (the
+    # programs) and a Preferences one (the settings editors), each showing only
+    # what is installed (DESIGN.md section 7). Started at boot; it waits for
+    # Workbench, as S:User-Startup runs before LoadWB.
+    core = Part(top, "OpenUp", a.version, "OpenUpTool, the uninstaller, and OpenUp's programs and settings in Workbench's Tools menu")
     core.add("C/OpenUpTool", tool, "SYS:C/OpenUpTool")
+    core.add("C/OpenUpMenu", (ROOT / "build/os3/OpenUpMenu").read_bytes(), "SYS:C/OpenUpMenu")
+    core.line("startup Run >NIL: C:OpenUpMenu")
     un = (top / "Uninstall-OpenUp").read_bytes()
     core.add("Utilities/OpenUp/Uninstall-OpenUp", un, "SYS:Utilities/OpenUp/Uninstall-OpenUp")
     core.add("Utilities/OpenUp/Uninstall-OpenUp.info", (top / "Uninstall-OpenUp.info").read_bytes(),

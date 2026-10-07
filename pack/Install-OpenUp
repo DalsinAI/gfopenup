@@ -322,6 +322,12 @@
 (if (> #rc 5)
     (message "OpenUp couldn't write its lines in S:User-Startup. Is SYS: write-protected?"))
 
+; OpenUp's programs and settings in Workbench's Tools menu from now on, not
+; only after the reboot: OpenUpMenu starts, or the one already running (an
+; upgrade) shows what was just installed
+(if (exists "SYS:C/OpenUpMenu")
+    (run "Run >NIL: SYS:C/OpenUpMenu"))
+
 ; (quiet): no stock "can be found in your Work: drawer" box after ours
 (exit
     (cat "OpenUp " #version " is installed.\n\n"

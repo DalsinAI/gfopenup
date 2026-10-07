@@ -134,3 +134,45 @@ exclusive builds.
    start or bring to the front, drag to add or take away, magnification.
 2. **OpenUp Picks:** which programs, and how many ticked by default?
 3. **An assistant like KIT:** later, or not at all?
+
+## 7. OpenUp in Workbench's Tools menu
+
+The user, 7 October 2026: "introduce menu options under tools for the
+openup applications, an extra menu item called preferences".
+
+`OpenUpMenu` (`src/openupmenu.c`, about 10 KB, installed by the OpenUp part
+to `SYS:C/OpenUpMenu`) puts two sub-menus in Workbench's Tools menu:
+
+| Tools > | Holds |
+| --- | --- |
+| OpenUp | OpenFiles, OpenEdit, OpenWrite, OpenPlay, OpenView, OpenCompress, OpenMail, OpenBrowser; then "OpenUp Update..." |
+| Preferences | Look, Windows, Dock, Menus, Title bar, Sound, OpenTypes, OpenUp Setup |
+
+- **Only what is installed shows.** Each entry is shown when its program is
+  where the pack puts it (`tools/build_pack.py`), so a part left out leaves
+  no dead entry. Sound needs `C:OpenSpeaker` as well, since `SYS:Prefs/Sound`
+  is OS 3.2's own editor until the Sound part replaces it. "OpenUp
+  Update..." needs an OpenUpTool with `UPDATE`. OpenBlanker has no editor
+  yet, so it has no entry.
+- **Choosing one is a double-click:** `OpenWorkbenchObjectA`, so the icon's
+  stack and tool types count. Icons selected on Workbench go with an OpenUp
+  program as files to open (not OpenEdit's, which is an IconX script).
+  "OpenUp Update..." runs `OpenUpTool UPDATE` in a window, where it shows
+  what changes and asks first.
+- **Starting.** A `startup Run >NIL: C:OpenUpMenu` line in OpenUp's block in
+  `S:User-Startup`. That runs before `LoadWB`, so OpenUpMenu tries every two
+  seconds until Workbench takes its entries, then only waits on its two
+  message ports (no polling). That is sturdier than a WBStartup icon: it
+  needs no icon, is in Setup's startup switches like every OpenUp line, and
+  goes with the block on uninstall. The Installer also starts it at the
+  end, so the menus are there before the reboot.
+- **One at a time.** Its public port is `OpenUpMenu`. Run again, it tells the
+  running one to build its menus anew (the Installer does this after an
+  upgrade). `OpenUpMenu QUIT`, or Ctrl-C, takes the entries out and ends it;
+  Uninstall-OpenUp runs `QUIT` before `OpenUpTool UNINSTALL`, so the menus
+  go at once. `OpenUpMenu LIST` prints what the menus hold.
+- **Older Workbenches.** Sub-menus need workbench.library 44.1511. Before
+  that, the entries are flat: "OpenUp: OpenFiles", "Preferences: Look".
+
+![Tools > OpenUp on OS 3.2.3, with OpenMenus and the Open light theme](docs/tools-menu-openup.png)
+![Tools > Preferences](docs/tools-menu-preferences.png)
