@@ -27,6 +27,7 @@ a Part file that C/OpenUpTool reads:
                         paired Cradles (openamigaservice)
   OpenImage/            datatypes: WebP and WebM on the 68k, and AVIF, HEIC, SVG,
                         FLAC, MP4, DOCX and more through OpenService (openamigaimage)
+  OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
   OpenWindows/          snapping, Amiga+Tab, the wheel under the pointer and window
                         places, with its editor, OpenPrefs Windows (openamigaprefs)
   OpenDock/             a dock, which takes over ToolManager's, AmiDock's or AmiStart's
@@ -272,6 +273,7 @@ def build_parts(a):
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Look/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Windows/build.sh"], env=env)
+    run(["sh", a.openamigaprefs / "Blanker/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Dock/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Setup/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Menus/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
@@ -513,6 +515,18 @@ def main() -> int:
            "SYS:Tools/Commodities/OpenWindows")
     ow.line("startup Run >NIL: SYS:Tools/Commodities/OpenWindows")
     ow.write()
+
+    # OpenBlanker: the screen blanker, started at boot, on every install
+    # (openamigaprefs): after five minutes with no key or mouse it plays Gods
+    # and Angels, AmigaChrome's homage to the Amiga's makers and keepers
+    bl = Part(top, "OpenBlanker", "1.0", "OpenBlanker: the screen blanker, and its show, Gods and Angels")
+    bl.add("Tools/Commodities/OpenBlanker", (a.openamigaprefs / "Blanker/build/os3/OpenBlanker").read_bytes(),
+           "SYS:Tools/Commodities/OpenBlanker")
+    bl.add("Tools/Commodities/OpenBlanker.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Tools/Commodities/OpenBlanker.info")
+    bl.add("Settings/Blanker", b"300\n", "ENVARC:OpenPrefs/Blanker", default=True)
+    bl.add("Settings/Blanker.env", b"300\n", "ENV:OpenPrefs/Blanker", default=True)
+    bl.line("startup Run >NIL: SYS:Tools/Commodities/OpenBlanker")
+    bl.write()
 
     # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
     # Installer runs "SYS:Prefs/Dock SAVE" once, on a first install, so the

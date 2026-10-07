@@ -55,6 +55,10 @@ choose:
   SYS:Prefs/Classic;
 - OpenEdit (new): a text editor with tabs, find and replace, and colours
   for scripts and code (C:OpenEdit);
+- OpenBlanker (new, always installed): the screen blanker; after five minutes
+  without a key or the mouse it plays Gods and Angels, AmigaChrome's homage
+  to the people who made the Amiga and kept it alive
+  (SYS:Tools/Commodities/OpenBlanker; ENV:OpenPrefs/Blanker sets the seconds);
 - OpenWrite (new): a word processor for DOCX, ODT and Amiga documents,
   with PDF export, printing, spelling and an ARexx port
   (SYS:Utilities/OpenWrite), and C:OWConvert for scripts;

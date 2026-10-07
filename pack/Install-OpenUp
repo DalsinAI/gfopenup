@@ -140,6 +140,10 @@
 (working "Installing OpenUp")
 (if (> (run (cat #tool " INSTALL Parts/OpenUp >>T:OpenUp.log")) 5)
     (abort "OpenUp's own files didn't install. T:OpenUp.log says why; nothing else changed."))
+; OpenBlanker, with its show Gods and Angels, comes with every install.
+(working "Installing OpenBlanker")
+(if (> (run (cat #tool " INSTALL Parts/OpenBlanker >>T:OpenUp.log")) 5)
+    (message "OpenBlanker didn't install completely. T:OpenUp.log says why; nothing else changed."))
 ; A real AGA Amiga with Picasso96's library left behind and no Picasso96 board
 ; running: SDL games hang at their video start. Ask to set it aside (6 Oct 2026).
 (if (= (run (cat #tool " P96LEFTOVER")) 5)
