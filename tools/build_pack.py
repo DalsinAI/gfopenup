@@ -46,6 +46,9 @@ a Part file that C/OpenUpTool reads:
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
+  OpenMail/             OpenMail, the mail reader, and C:OpenMailCheck; needs AmiSSL 5 (openamigamail)
+  OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
+                        OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 Dalsin Limited.
@@ -53,6 +56,7 @@ amiga-icon.js). MIT, Copyright (c) 2026 Dalsin Limited.
 from __future__ import annotations
 
 import argparse
+import re
 import importlib.util
 import json
 import os
@@ -290,6 +294,7 @@ def build_parts(a):
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     # OpenWrite carries its own OpenGadTools copy; DOCX and ODT need zlib's source (--zlib)
     run(["sh", a.openamigawrite / "build-os3.sh"], env=dict(env, ZLIB_SRC=str(a.zlib)))
+    run(["sh", a.openamigamail / "build-os3.sh", a.amissl], env=env)
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -367,6 +372,11 @@ def main() -> int:
     ap.add_argument("--openamigamui", type=Path, default=first(DEV / "openamigamui", DEV.parent / "openamigamui"))
     ap.add_argument("--openamigaedit", type=Path, default=first(DEV / "openamigaedit", DEV.parent / "openamigaedit"))
     ap.add_argument("--openamigawrite", type=Path, default=first(DEV / "openamigawrite", DEV.parent / "openamigawrite"))
+    ap.add_argument("--openamigamail", type=Path, default=first(DEV / "openamigamail", DEV.parent / "openamigamail"))
+    ap.add_argument("--amissl", type=Path, default=DEV / "sdk/amissl/AmiSSL/Developer/include",
+                    help="the AmiSSL 5 SDK's include folder, for OpenMail")
+    ap.add_argument("--openbrowser", type=Path, help="a built OpenBrowser release (.lha or its unpacked folder): "
+                    "makes OpenUp-<version>-OpenBrowser.lha beside the pack")
     ap.add_argument("--zlib", type=Path, help="zlib 1.3 source for OpenWrite's DOCX and ODT (Chromium's, as the 1.0 release)",
                     default=first(DEV / "webkit-os32/deps/src/zlib", Path(os.environ.get("ZLIB_SRC", "/nonexistent"))))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -658,6 +668,61 @@ def main() -> int:
     om.add("Tools/ZuneTest.info", icons.icon(icons.WBTOOL, "install", stack=16384), "SYS:Tools/ZuneTest.info")
     om.write()
 
+    # OpenMail: the mail reader (openamigamail), in a drawer with its providers
+    # and themes beside it (PROGDIR:Providers); OpenMailCheck in C:. It needs
+    # AmiSSL 5, which OS 3.2.3 doesn't have: the Installer says so.
+    mb = a.openamigamail / "build/os3"
+    vm = re.search(rb"\$VER: OpenMail ([0-9.]+)", (mb / "OpenMail").read_bytes())   # the program's own version
+    mv = vm.group(1).decode() if vm else "0.3"
+    ml = Part(top, "OpenMail", mv, "OpenMail: a mail reader for IMAP over TLS (needs AmiSSL 5), and C:OpenMailCheck")
+    ml.add("Utilities/OpenMail/OpenMail", (mb / "OpenMail").read_bytes(), "SYS:Utilities/OpenMail/OpenMail")
+    mi = a.openamigamail / "package/icons"
+    ml.add("Utilities/OpenMail/OpenMail.info", (mi / "OpenMail.info").read_bytes(), "SYS:Utilities/OpenMail/OpenMail.info")
+    for sub in ("Providers", "package/Themes"):
+        for f in sorted((a.openamigamail / sub).glob("*")):
+            if f.is_file():
+                d = f"Utilities/OpenMail/{Path(sub).name}/{f.name}"
+                ml.add(d, f.read_bytes(), f"SYS:{d}")
+    for name, src in (("LICENSE", "LICENSE"), ("OpenMail.readme", "openmail.readme"), ("LICENCE.Boxie", "package/icons/LICENCE.Boxie")):
+        if (a.openamigamail / src).is_file():
+            ml.add(f"Utilities/OpenMail/{name}", (a.openamigamail / src).read_bytes(), f"SYS:Utilities/OpenMail/{name}")
+    ml.add("Utilities/OpenMail.info", (mi / "Drawer.info").read_bytes(), "SYS:Utilities/OpenMail.info", own=True)
+    ml.add("C/OpenMailCheck", (mb / "OpenMailCheck").read_bytes(), "SYS:C/OpenMailCheck")
+    ml.write()
+
+    # OpenBrowser: too big for the pack (its engine is about 100 MB), so it
+    # comes in its own archive, OpenUp-<version>-OpenBrowser.lha, which unpacks
+    # into the same OpenUp drawer as Parts/OpenBrowser. The Installer offers it
+    # when that part is there.
+    browser_top = None
+    if a.openbrowser:
+        import tempfile
+        src = a.openbrowser
+        tmp = None
+        if src.suffix.lower() == ".lha":
+            tmp = Path(tempfile.mkdtemp(prefix="openbrowser-"))
+            run([shutil.which("jlha") or "lha", "xq", src.resolve()], cwd=tmp)
+            src = tmp
+        ob_root = src / "OpenBrowser" if (src / "OpenBrowser" / "OpenBrowser").is_file() else src
+        bv = re.search(r"OpenBrowser-([0-9.]+)", a.openbrowser.name)
+        browser_top = a.out / "companion" / "OpenUp"
+        bp = Part(browser_top, "OpenBrowser", bv.group(1) if bv else "0.5",
+                  "OpenBrowser: a web browser on WebKit (needs an FPU; best on a 68040)")
+        for f in sorted(ob_root.rglob("*")):
+            if not f.is_file():
+                continue
+            rel = f.relative_to(ob_root).as_posix()
+            if rel.startswith("Libs/"):
+                bp.add(f"Libs/{rel[5:]}", f.read_bytes(), f"LIBS:{rel[5:]}")
+            else:
+                bp.add(f"Utilities/OpenBrowser/{rel}", f.read_bytes(), f"SYS:Utilities/OpenBrowser/{rel}")
+        drawer_icon = a.openbrowser.parent / "OpenBrowser.info"
+        if drawer_icon.is_file():
+            bp.add("Utilities/OpenBrowser.info", drawer_icon.read_bytes(), "SYS:Utilities/OpenBrowser.info", own=True)
+        bp.write()
+        if tmp:
+            shutil.rmtree(tmp, ignore_errors=True)
+
     # The drawer's own icon, and OS 3.2-style icons for the scripts
     (a.out / "OpenUp.info").write_bytes(icons.icon(icons.WBDRAWER, "drawer", window=(440, 170)))
     try:
@@ -706,6 +771,11 @@ def main() -> int:
         # jlha makes archives; on some systems "lha" is lhasa, which only reads them
         run([shutil.which("jlha") or "lha", "aq", arc.name, "OpenUp", "OpenUp.info"], cwd=a.out)
         print(f"{arc}: {arc.stat().st_size} bytes")
+        if browser_top:
+            barc = a.out / f"OpenUp-{a.version}-OpenBrowser.lha"
+            barc.unlink(missing_ok=True)
+            run([shutil.which("jlha") or "lha", "aq", barc.resolve(), "OpenUp"], cwd=browser_top.parent)
+            print(f"{barc}: {barc.stat().st_size} bytes")
     return 0
 
 

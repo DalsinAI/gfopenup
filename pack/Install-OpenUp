@@ -29,7 +29,7 @@
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
 ; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus,
 ; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle, 262144 Sound, 524288 OpenEdit,
-; 1048576 OpenWrite
+; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -86,6 +86,12 @@
               "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF "
               "export, printing and spelling (new, version 1.0.2), in SYS:Utilities/OpenWrite; "
               "OWConvert converts documents from a Shell. Needs a 68020.\n\n"
+              "OpenMail: a mail reader for IMAP mail over TLS, with Gmail, Outlook and others "
+              "set up from the address (new, a preview: reading only; off unless you pick it). "
+              "It needs AmiSSL 5, which AmigaOS 3.2.3 doesn't include.\n\n"
+              "OpenBrowser: a web browser built on WebKit (new, a preview; off unless you pick "
+              "it). It needs an FPU and is best on a 68040. It comes in its own archive, "
+              "OpenUp-" #version "-OpenBrowser.lha, because it is large.\n\n"
               "OpenUp Setup: a few questions at the next start (theme, what starts with the "
               "machine), and in SYS:Prefs afterwards.\n\n"
               "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
@@ -111,7 +117,9 @@
                  "OpenTitle: logo, memory, clock on the title bar (new)"
                  "Sound: levels and a menu bar speaker (new)"
                  "OpenEdit: a text editor (new)"
-                 "OpenWrite: a word processor (new)")
+                 "OpenWrite: a word processor (new)"
+                 "OpenMail: a mail reader (preview, needs AmiSSL 5)"
+                 "OpenBrowser: a web browser (preview, its own archive)")
         (default (if #ac 2031103 2031098))))
 
 (set #look "Open light")
@@ -302,6 +310,31 @@
         (working "Installing OpenWrite")
         (if (> (run (cat #tool " INSTALL Parts/OpenWrite >>T:OpenUp.log")) 5)
             (message "OpenWrite didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 2097152)
+    (
+        (working "Installing OpenMail")
+        (if (> (run (cat #tool " INSTALL Parts/OpenMail >>T:OpenUp.log")) 5)
+            (message "OpenMail didn't install completely. T:OpenUp.log says why; nothing else changed."))
+        (if (not (exists "LIBS:amisslmaster.library"))
+            (message "OpenMail is installed, but it needs AmiSSL 5 to reach mail servers, and "
+                     "AmiSSL isn't on this Amiga yet.\n\n"
+                     "Install AmiSSL 5 for OS 3 (Aminet: util/libs), then start OpenMail "
+                     "from SYS:Utilities/OpenMail."))))
+
+(if (bitand #parts 4194304)
+    (if (not (exists "Parts/OpenBrowser/Part"))
+        (message "OpenBrowser comes in its own archive because it is large: "
+                 "OpenUp-" #version "-OpenBrowser.lha, from the same place as this pack.\n\n"
+                 "Unpack it where you unpacked OpenUp (it adds Parts/OpenBrowser to this "
+                 "drawer), then run Install-OpenUp again. Nothing else changes.")
+        (if (= (database "fpu") "NOFPU")
+            (message "OpenBrowser needs an FPU (a 68881, 68882, 68040 or 68060), and this "
+                     "Amiga doesn't have one, so it was left out. Nothing else changed.")
+            (
+                (working "Installing OpenBrowser")
+                (if (> (run (cat #tool " INSTALL Parts/OpenBrowser >>T:OpenUp.log")) 5)
+                    (message "OpenBrowser didn't install completely. T:OpenUp.log says why; nothing else changed."))))))
 
 ; OpenView opens what MultiView opened (pictures, text, guides, documents;
 ; sounds, video and fonts stay), once, so a kind someone moves back later
