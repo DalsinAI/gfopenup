@@ -62,6 +62,12 @@ choose:
 - OpenWrite (new): a word processor for DOCX, ODT and Amiga documents,
   with PDF export, printing, spelling and an ARexx port
   (SYS:Utilities/OpenWrite), and C:OWConvert for scripts;
+- OpenMail (new, a preview, off unless picked): a mail reader for IMAP mail
+  over TLS, set up from the address for Gmail, Outlook and others
+  (SYS:Utilities/OpenMail); it needs AmiSSL 5 (Aminet util/libs);
+- OpenBrowser (new, a preview, off unless picked): a web browser built on
+  WebKit, in its own archive, OpenUp-<version>-OpenBrowser.lha, unpacked
+  beside the pack; it needs an FPU and is best on a 68040;
 - OpenMUI (preview, off unless picked): zunemaster.library, MUI built from
   AROS's Zune for OS 3.x, beside MUI and replacing nothing, with ZuneTest
   (SYS:Tools);
