@@ -1,6 +1,6 @@
 # Restart: OpenUp
 
-_Written 6 October 2026 at about 23:55 UTC, while all work is paused on @SacredTrees's word (23:28 UTC). Read this first when work resumes; the newest capsule and the live PR list win if they disagree._
+_Written 6 October 2026 at about 23:55 UTC and brought up to date on 7 October 2026. Read this first when work resumes; the newest capsule and the live PR list win if they disagree._
 
 ## What this repo is
 
@@ -8,16 +8,17 @@ OpenUp: install AmigaOS 3.2.3, run one pack, and it's ready, on a real Amiga, a 
 
 ## Where it stands
 
-OpenUp 0.6.13 (OpenEdit, OpenFiles 0.2.1, OpenView 0.4, network icons) is shipped and installed on Instances 30 and 31. Merged for 0.6.14 but not cut: the animated GlowIcons and the icon standard ICONS.md (#32), Workbench as a backdrop (#33), OpenFiles 0.2.2 and OpenDock 0.2.
+_Updated 7 October 2026, late._ OpenUp 0.6.14 is the first release on GitHub (tag v0.6.14, `OpenUp-0.6.14.lha`), built from every part's main. Since 0.6.13 it has gained the animated GlowIcons and the icon standard (#32), Workbench as a backdrop with OpenDock 0.2 (#33), OpenFiles 0.2.2, OpenWrite 1.0.2 (#34, #36) and OpenBlanker (#35, always installed).
+
+Phases (DESIGN.md section 5): 1 done for AmigaChrome (Setup 0.1 and the startup switches included); 2 under way (OpenBrowser and OpenMail next, as parts left unticked); 3 (PiStorm, real A1200) waits; 4 (Cradle's OS 3.2.3 recipes apply the pack) and 5 (OpenUp Update from Cradle, then GitHub; OpenUp Picks) are being built.
 
 ## Merged lately
 
+- #36 (3ffbba5, 2026-10-07): OpenWrite 1.0.2 in OpenUp
+- #35 (1544854, 2026-10-07): OpenBlanker, installed with every OpenUp
+- #34 (ec5d7cd, 2026-10-07): OpenWrite 1.0 as a part
 - #33 (9686a36, 2026-10-06): OpenDock part 0.2: Workbench as a backdrop by default
 - #32 (00bdf83, 2026-10-06): The Open apps' own animated GlowIcons, their drawers laid out, and the icon standard
-- #31 (540138e, 2026-10-06): OpenUp 0.6.13: OpenEdit, OpenFiles 0.2.1, OpenView 0.4, network icons
-- #30 (83f6955, 2026-10-06): Credit who made OpenUp: CONTRIBUTORS.md
-- #29 (177b7af, 2026-10-06): OpenUp 0.6.12: Sound and OpenSpeaker, OpenTitle 0.3, OpenView in MultiView's place
-- #28 (41fdd24, 2026-10-06): OpenView in MultiView's place, OpenFiles and OpenView on the dock
 
 ## Open pull requests
 
@@ -25,12 +26,14 @@ OpenUp 0.6.13 (OpenEdit, OpenFiles 0.2.1, OpenView 0.4, network icons) is shippe
 
 ## Next step
 
-1. Cut OpenUp 0.6.14 and attach the .lha as a GitHub release (tag v0.6.14) so the .deb can bundle it.
-2. Install on Instances 30/31 only on "update instances".
+1. Phase 2: OpenBrowser and OpenMail as parts, unticked by default.
+2. Phase 4 in Cradle (amigachrome): new OS 3.2.3 instances come up with the pack.
+3. Phase 5: OpenUp Update (Cradle first, then the GitHub release) and OpenUp Picks (a licence-checked list, approved by the Team before anything is fetched).
 
 ## Waiting on @SacredTrees
 
-- "update instances" once 0.6.14 is cut.
+- "update instances" to put 0.6.14 on Instances 30 and 31.
+- Approving the OpenUp Picks list.
 
 ## Who owns it
 
