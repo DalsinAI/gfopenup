@@ -6,6 +6,7 @@ archive (DESIGN.md sections 3 and 4).
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
         [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR]
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
+        [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--no-build] [--lha]
 
 Each part is built by its own repository's scripts, from checkouts given on
@@ -42,6 +43,7 @@ a Part file that C/OpenUpTool reads:
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory and clock on the title bar (openamigaprefs)
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs)
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
+  OpenWrite/            OpenWrite 1.0.1, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
@@ -284,6 +286,8 @@ def build_parts(a):
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamui / "os3/build.sh"], env=env)
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
+    # OpenWrite carries its own OpenGadTools copy; DOCX and ODT need zlib's source (--zlib)
+    run(["sh", a.openamigawrite / "build-os3.sh"], env=dict(env, ZLIB_SRC=str(a.zlib)))
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -360,12 +364,15 @@ def main() -> int:
                     default=first(DEV / "openamigamediaplayer", DEV.parent / "openamigamediaplayer"))
     ap.add_argument("--openamigamui", type=Path, default=first(DEV / "openamigamui", DEV.parent / "openamigamui"))
     ap.add_argument("--openamigaedit", type=Path, default=first(DEV / "openamigaedit", DEV.parent / "openamigaedit"))
+    ap.add_argument("--openamigawrite", type=Path, default=first(DEV / "openamigawrite", DEV.parent / "openamigawrite"))
+    ap.add_argument("--zlib", type=Path, help="zlib 1.3 source for OpenWrite's DOCX and ODT (Chromium's, as the 1.0 release)",
+                    default=first(DEV / "webkit-os32/deps/src/zlib", Path(os.environ.get("ZLIB_SRC", "/nonexistent"))))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
                  "openamigaimage", "openamigartg", "openamigafilemanager", "openamigamediaplayer",
-                 "openamigamui", "openamigaedit"):
+                 "openamigamui", "openamigaedit", "openamigawrite", "zlib"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     if not a.no_build:
@@ -607,6 +614,25 @@ def main() -> int:
     ed.add("Tools/OpenEdit.info", icons.icon(icons.WBPROJECT, "page", "C:IconX", ["WINDOW=NIL:"], stack=8192), "SYS:Tools/OpenEdit.info")
     ed.write()
 
+    # OpenWrite: the word processor (openamigawrite), as its 1.0 release lays it
+    # out: a drawer, with the dictionary beside the program, where it looks
+    # (PROGDIR:Dictionaries), and OWConvert in C: for scripts
+    ow_src = a.openamigawrite
+    ob = ow_src / "build/os3"
+    wr = Part(top, "OpenWrite", "1.0.1", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr.add("Utilities/OpenWrite/OpenWrite", (ob / "OpenWrite").read_bytes(), "SYS:Utilities/OpenWrite/OpenWrite")
+    wr.add("Utilities/OpenWrite/OpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/OpenWrite/OpenWrite.info")
+    for d in sorted((ow_src / "Dictionaries").glob("*.words")):
+        wr.add(f"Utilities/OpenWrite/Dictionaries/{d.name}", d.read_bytes(), f"SYS:Utilities/OpenWrite/Dictionaries/{d.name}")
+    for name, src in (("LICENSE", "LICENSE"), ("THIRD_PARTY.txt", "THIRD_PARTY.md"), ("Release-Notes.txt", "RELEASE_NOTES_1.0.md")):
+        if (ow_src / src).is_file():
+            wr.add(f"Utilities/OpenWrite/{name}", (ow_src / src).read_bytes(), f"SYS:Utilities/OpenWrite/{name}")
+    for lic in sorted((ow_src / "licenses").glob("*")):
+        wr.add(f"Utilities/OpenWrite/licenses/{lic.name}", lic.read_bytes(), f"SYS:Utilities/OpenWrite/licenses/{lic.name}")
+    wr.add("Utilities/OpenWrite.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/OpenWrite.info", own=True)
+    wr.add("C/OWConvert", (ob / "OWConvert").read_bytes(), "SYS:C/OWConvert")
+    wr.write()
+
     # OpenMUI: zunemaster.library, MUI from Zune for OS 3.x (openamigamui), a
     # preview beside MUI, which it doesn't replace; ZuneTest shows it working.
     mui = a.openamigamui / "build/os3"
@@ -648,10 +674,13 @@ def main() -> int:
             (snd.dir / "Prefs/Sound.info", "Sound"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
             (setup.dir / "WBStartup/OpenUp-Setup.info", "OpenUp-Setup"), (oc.dir / "Utilities/OpenCompress.info", "OpenCompress"),
             (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
-            (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/OpenEdit.info", "OpenEdit")],
+            (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/OpenEdit.info", "OpenEdit"),
+            (wr.dir / "Utilities/OpenWrite/OpenWrite.info", "OpenWrite"),
+            (wr.dir / "Utilities/OpenWrite.info", "drawer-OpenWrite")],
             drawers={a.out / "OpenUp.info": [top / "Install-OpenUp.info", top / "Uninstall-OpenUp.info"],
                      core.dir / "Utilities/OpenUp.info": [core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info"],
-                     pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info"))})
+                     pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info")),
+                     wr.dir / "Utilities/OpenWrite.info": [wr.dir / "Utilities/OpenWrite/OpenWrite.info"]})
     except Exception as e:                  # an amigachrome checkout without amiga_icon (before #153): the icons above stay
         print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
