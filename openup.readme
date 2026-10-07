@@ -55,6 +55,9 @@ choose:
   SYS:Prefs/Classic;
 - OpenEdit (new): a text editor with tabs, find and replace, and colours
   for scripts and code (C:OpenEdit);
+- OpenWrite (new): a word processor for DOCX, ODT and Amiga documents,
+  with PDF export, printing, spelling and an ARexx port
+  (SYS:Utilities/OpenWrite), and C:OWConvert for scripts;
 - OpenMUI (preview, off unless picked): zunemaster.library, MUI built from
   AROS's Zune for OS 3.x, beside MUI and replacing nothing, with ZuneTest
   (SYS:Tools);
