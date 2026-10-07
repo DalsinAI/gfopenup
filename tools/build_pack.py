@@ -44,7 +44,7 @@ a Part file that C/OpenUpTool reads:
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory and clock on the title bar (openamigaprefs)
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs)
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
-  OpenWrite/            OpenWrite 1.0.1, the word processor, and C:OWConvert (openamigawrite)
+  OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
@@ -633,12 +633,14 @@ def main() -> int:
     # (PROGDIR:Dictionaries), and OWConvert in C: for scripts
     ow_src = a.openamigawrite
     ob = ow_src / "build/os3"
-    wr = Part(top, "OpenWrite", "1.0.1", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr = Part(top, "OpenWrite", "1.0.2", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.add("Utilities/OpenWrite/OpenWrite", (ob / "OpenWrite").read_bytes(), "SYS:Utilities/OpenWrite/OpenWrite")
     wr.add("Utilities/OpenWrite/OpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/OpenWrite/OpenWrite.info")
     for d in sorted((ow_src / "Dictionaries").glob("*.words")):
         wr.add(f"Utilities/OpenWrite/Dictionaries/{d.name}", d.read_bytes(), f"SYS:Utilities/OpenWrite/Dictionaries/{d.name}")
-    for name, src in (("LICENSE", "LICENSE"), ("THIRD_PARTY.txt", "THIRD_PARTY.md"), ("Release-Notes.txt", "RELEASE_NOTES_1.0.md")):
+    # the newest release's notes, as the release archive carries them
+    notes = sorted(ow_src.glob("RELEASE_NOTES_*.md"), key=lambda f: [int(n) for n in f.stem.split("_")[-1].split(".")])
+    for name, src in (("LICENSE", "LICENSE"), ("THIRD_PARTY.txt", "THIRD_PARTY.md"), ("Release-Notes.txt", notes[-1].name if notes else "RELEASE_NOTES_1.0.md")):
         if (ow_src / src).is_file():
             wr.add(f"Utilities/OpenWrite/{name}", (ow_src / src).read_bytes(), f"SYS:Utilities/OpenWrite/{name}")
     for lic in sorted((ow_src / "licenses").glob("*")):
