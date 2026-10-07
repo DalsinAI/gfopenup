@@ -219,6 +219,27 @@ def icon_openedit(f=0):
     return p
 
 
+def icon_openwrite(f=0):
+    """A page standing up, set like a document: a heading, text, a picture."""
+    p = Pic()
+    p.shadow(-12, 6, 26, 5)
+    p.box(-12, 6, 0, 26, 3, 36, PAPER, gloss=False)                                                # the page
+    y = 9.05
+    p.poly([(-9, y, 30), (6, y, 30), (6, y, 33), (-9, y, 33)], (40, 70, 160, 255))                 # the heading
+    for i, z in enumerate((26, 23, 20)):                                                           # a paragraph
+        p.line((-9, y, z), (11 - (6 if i == 2 else 0), y, z), (110, 120, 140, 255), 0.8)
+    p.poly([(1, y, 7), (11, y, 7), (11, y, 16), (1, y, 16)], (120, 180, 230, 255))                 # a picture in the text
+    p.poly([(1, y, 7), (5, y, 12), (8, y, 9), (11, y, 13), (11, y, 7)], (70, 150, 80, 255))
+    for z in (15, 12, 9):                                                                          # text beside it
+        p.line((-9, y, z), (-1, y, z), (110, 120, 140, 255), 0.8)
+    cz = (5.5, 5.5)[f]
+    if f:                                                                                          # chosen: a line being typed
+        p.line((-9, y, 5.5), (-3, y, 5.5), (110, 120, 140, 255), 0.8)
+    cx = (-9, -2.6)[f]
+    p.line((cx, y, cz - 1.6), (cx, y, cz + 1.6), RED, 0.9)                                         # the cursor
+    return p
+
+
 def icon_dock(f=0):
     p = Pic(oy=54)
     p.shadow(-18, 6, 34, 10)
@@ -478,12 +499,12 @@ def drawer(badge=None):
 
 
 ICONS = {
-    "OpenFiles": icon_openfiles, "OpenView": icon_openview, "OpenEdit": icon_openedit, "Dock": icon_dock,
+    "OpenFiles": icon_openfiles, "OpenView": icon_openview, "OpenEdit": icon_openedit, "OpenWrite": icon_openwrite, "Dock": icon_dock,
     "Menus": icon_menus, "Sound": icon_sound, "TitleBar": icon_title, "Look": icon_look, "Windows": icon_windows,
     "OpenTypes": icon_types, "OpenUp-Setup": icon_setup, "OpenPlay": icon_play, "OpenBrowser": icon_browser,
     "OpenCompress": icon_compress, "Printers and Queue": icon_printer, "Install-OpenUp": icon_install, "ZuneTest": icon_zune,
     "drawer-OpenUp": lambda: drawer(icon_install), "drawer-OpenPrint": lambda: drawer(icon_printer),
-    "drawer-OpenBrowser": lambda: drawer(icon_browser),
+    "drawer-OpenBrowser": lambda: drawer(icon_browser), "drawer-OpenWrite": lambda: drawer(icon_openwrite),
 }
 
 

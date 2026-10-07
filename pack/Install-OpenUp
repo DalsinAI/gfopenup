@@ -28,7 +28,8 @@
 
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
 ; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus,
-; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle, 262144 Sound, 524288 OpenEdit
+; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle, 262144 Sound, 524288 OpenEdit,
+; 1048576 OpenWrite
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -82,6 +83,9 @@
               "OpenEdit: a text editor with tabs, find and replace, and colours for scripts, "
               "C and guides (new). OpenEdit in a Shell, or OpenEdit file WAIT for programs "
               "that wait for their editor.\n\n"
+              "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF "
+              "export, printing and spelling (new, version 1.0.1), in SYS:Utilities/OpenWrite; "
+              "OWConvert converts documents from a Shell. Needs a 68020.\n\n"
               "OpenUp Setup: a few questions at the next start (theme, what starts with the "
               "machine), and in SYS:Prefs afterwards.\n\n"
               "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
@@ -106,8 +110,9 @@
                  "OpenMUI: MUI from Zune (preview)"
                  "OpenTitle: logo, memory, clock on the title bar (new)"
                  "Sound: levels and a menu bar speaker (new)"
-                 "OpenEdit: a text editor (new)")
-        (default (if #ac 982527 982522))))
+                 "OpenEdit: a text editor (new)"
+                 "OpenWrite: a word processor (new)")
+        (default (if #ac 2031103 2031098))))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -287,6 +292,12 @@
         (working "Installing OpenEdit")
         (if (> (run (cat #tool " INSTALL Parts/OpenEdit >>T:OpenUp.log")) 5)
             (message "OpenEdit didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 1048576)
+    (
+        (working "Installing OpenWrite")
+        (if (> (run (cat #tool " INSTALL Parts/OpenWrite >>T:OpenUp.log")) 5)
+            (message "OpenWrite didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 ; OpenView opens what MultiView opened (pictures, text, guides, documents;
 ; sounds, video and fonts stay), once, so a kind someone moves back later
