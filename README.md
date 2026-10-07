@@ -6,7 +6,7 @@ Status, 5 October 2026: **OpenUp 0.1 is built, for AmigaChrome instances**
 (phase 1, plus OpenLook). It installs OpenSocket, OpenPrint and OpenView,
 AmigaChrome's sharing tools, OpenLook and the background pack, and its uninstaller puts the system
 back exactly as it was: validated on a scratch OS 3.2.3 instance
-(`VALIDATION.md`).
+(`docs/history/VALIDATION.md`).
 
 **Building it:** `python3 tools/build_pack.py --lha` builds every part with
 its own repository's scripts (checkouts beside this one, or given with
