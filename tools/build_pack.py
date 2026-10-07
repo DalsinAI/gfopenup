@@ -43,7 +43,7 @@ a Part file that C/OpenUpTool reads:
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory and clock on the title bar (openamigaprefs)
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs)
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
-  OpenWrite/            OpenWrite 1.0, the word processor, and C:OWConvert (openamigawrite)
+  OpenWrite/            OpenWrite 1.0.1, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
@@ -619,7 +619,7 @@ def main() -> int:
     # (PROGDIR:Dictionaries), and OWConvert in C: for scripts
     ow_src = a.openamigawrite
     ob = ow_src / "build/os3"
-    wr = Part(top, "OpenWrite", "1.0", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr = Part(top, "OpenWrite", "1.0.1", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.add("Utilities/OpenWrite/OpenWrite", (ob / "OpenWrite").read_bytes(), "SYS:Utilities/OpenWrite/OpenWrite")
     wr.add("Utilities/OpenWrite/OpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/OpenWrite/OpenWrite.info")
     for d in sorted((ow_src / "Dictionaries").glob("*.words")):

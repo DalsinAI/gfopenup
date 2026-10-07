@@ -84,7 +84,7 @@
               "C and guides (new). OpenEdit in a Shell, or OpenEdit file WAIT for programs "
               "that wait for their editor.\n\n"
               "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF "
-              "export, printing and spelling (new, version 1.0), in SYS:Utilities/OpenWrite; "
+              "export, printing and spelling (new, version 1.0.1), in SYS:Utilities/OpenWrite; "
               "OWConvert converts documents from a Shell. Needs a 68020.\n\n"
               "OpenUp Setup: a few questions at the next start (theme, what starts with the "
               "machine), and in SYS:Prefs afterwards.\n\n"
