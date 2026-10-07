@@ -16,6 +16,9 @@
  *                                     library left in LIBS: and no Picasso96 board running
  *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
  *                                     come back with UNINSTALL
+ *   OpenUpTool UPDATE [CHECK|YES]     a newer pack Cradle put in DH1:OpenUp: CHECK says
+ *                                     (WARN when one waits); UPDATE shows what changes and
+ *                                     asks; YES doesn't ask. It never runs on its own
  *
  * The rules it keeps:
  * - The base OS stays as shipped. A file OpenUp replaces goes first to
@@ -64,7 +67,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] = "$VER: OpenUpTool 0.4 (6.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] = "$VER: OpenUpTool 0.5 (7.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 
@@ -972,6 +975,138 @@ static int list(void)
     return RETURN_OK;
 }
 
+/* ---- UPDATE: a newer pack from Cradle (amigachrome docs/design/AutoDocs-OpenUp-Update.md) ---- */
+
+#define CRADLE_DRAWER "DH1:OpenUp"
+#define CRADLE_PACK "DH1:OpenUp/Cradle-Pack"
+#define RELEASES "https://github.com/DalsinAI/openamigaup/releases"
+
+/* Versions compare as numbers, dot by dot: 0.6.14 is newer than 0.6.9. */
+static int version_cmp(const char *a, const char *b)
+{
+    while (*a || *b) {
+        char *ea, *eb;
+        long x = strtol(a, &ea, 10), y = strtol(b, &eb, 10);
+        if (x != y) return x < y ? -1 : 1;
+        a = *ea == '.' ? ea + 1 : ea;
+        b = *eb == '.' ? eb + 1 : eb;
+        if (a == ea && b == eb) break;          /* neither moved on: the rest isn't a number */
+    }
+    return 0;
+}
+
+/* "version 0.6.14" from Cradle-Pack (key value lines, ";" comments). */
+static int cradle_version(char *out, int outlen)
+{
+    char *text = read_file(CRADLE_PACK, NULL), *p, *line;
+    int found = 0;
+    if (!text) return 0;
+    for (p = text; *p && !found; ) {
+        line = p;
+        while (*p && *p != '\n') p++;
+        if (*p) *p++ = 0;
+        if (!strncmp(line, "version", 7) && (line[7] == ' ' || line[7] == '\t')) {
+            char *v = line + 8;
+            int n = 0;
+            while (*v == ' ' || *v == '\t') v++;
+            while (v[n] && v[n] != ' ' && v[n] != '\t' && v[n] != '\r' && n < outlen - 1) { out[n] = v[n]; n++; }
+            out[n] = 0;
+            found = n > 0;
+        }
+    }
+    FreeVec(text);
+    return found;
+}
+
+/* Each part in the new pack against the manifest: what an update changes. */
+static int show_changes(void)
+{
+    struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
+    BPTR dir = Lock((STRPTR)CRADLE_DRAWER "/Parts", ACCESS_READ);
+    int changes = 0;
+    if (!dir || !fib) { if (dir) UnLock(dir); if (fib) FreeDosObject(DOS_FIB, fib); return 0; }
+    if (Examine(dir, fib)) {
+        while (ExNext(dir, fib)) {
+            char path[160], *text, *w[4];
+            entry *e;
+            if (fib->fib_DirEntryType <= 0) continue;
+            strcpy(path, CRADLE_DRAWER "/Parts/");
+            strncat(path, (const char *)fib->fib_FileName, sizeof path - strlen(path) - 6);
+            strcat(path, "/Part");
+            if (!(text = read_file(path, NULL))) continue;
+            {
+                char *nl = strchr(text, '\n');
+                if (nl) *nl = 0;
+            }
+            if (words(text, w, 4) >= 3 && !strcmp(w[0], "part")) {
+                e = find_entry("part", w[1]);
+                if (!e) { Printf((STRPTR)"  %s %s: new (installed if you pick it)\n", (LONG)w[1], (LONG)w[2]); changes++; }
+                else if (version_cmp(w[2], e->b) > 0) { Printf((STRPTR)"  %s: %s to %s\n", (LONG)w[1], (LONG)e->b, (LONG)w[2]); changes++; }
+            }
+            FreeVec(text);
+        }
+    }
+    UnLock(dir);
+    FreeDosObject(DOS_FIB, fib);
+    return changes;
+}
+
+/* UPDATE [CHECK|YES]: CHECK only says (WARN when a newer pack is waiting);
+ * plain UPDATE shows what will change and asks; YES doesn't ask (scripts).
+ * It never runs on its own, and it never changes anything until asked. */
+static int update(const char *how)
+{
+    char newer[24], installed[24] = "";
+    entry *e;
+    int check = how && same_word(how, "CHECK"), yes = how && same_word(how, "YES");
+    manifest_load();
+    if ((e = find_entry("part", "OpenUp")) != NULL)
+        strncpy(installed, e->b, sizeof installed - 1);
+    if (!installed[0]) {
+        say("OpenUp isn't installed here, so there is nothing to update. Run Install-OpenUp to install it.", NULL, NULL);
+        return RETURN_WARN;
+    }
+    if (!cradle_version(newer, sizeof newer)) {
+        say("OpenUp ", installed, " is installed. No newer OpenUp from Cradle: this Amiga isn't an AmigaChrome instance with OpenUp's drawer (DH1:OpenUp).");
+        say("On a real Amiga, newer packs are at " RELEASES ": unpack one and run its Install-OpenUp.", NULL, NULL);
+        return RETURN_OK;
+    }
+    if (version_cmp(newer, installed) <= 0) {
+        say("OpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
+        return RETURN_OK;
+    }
+    Printf((STRPTR)"OpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
+    if (check) return RETURN_WARN;
+    if (!show_changes()) say("  (the same parts, updated in place)", NULL, NULL);
+    if (!yes) {
+        struct EasyStruct es = { sizeof(struct EasyStruct), 0, (UBYTE *)"OpenUp Update",
+            (UBYTE *)"OpenUp %s is ready to install (%s is installed now).\n\n"
+                     "OpenUp's Installer runs with your answers from last time;\n"
+                     "what you have changed yourself stays.",
+            (UBYTE *)"Not now|Update" };
+        LONG answer = EasyRequest(NULL, &es, NULL, (LONG)newer, (LONG)installed);
+        if (answer != 0) {           /* "Not now" is 1, the left; "Update" is 0, the right */
+            say("Not updated. OpenUpTool UPDATE asks again whenever you like.", NULL, NULL);
+            return RETURN_OK;
+        }
+    }
+    {
+        const char *inst = exists("C:Installer") ? "C:Installer" : exists("SYS:System/Installer") ? "SYS:System/Installer" : "SYS:Utilities/Installer";
+        char cmd[200];
+        LONG rc;
+        strcpy(cmd, "CD " CRADLE_DRAWER "\n");
+        strcat(cmd, inst);
+        strcat(cmd, " Install-OpenUp APPNAME OpenUp\n");
+        if (!write_file("T:OpenUp-update", cmd, strlen(cmd))) {
+            say("OpenUp: can't write T:OpenUp-update. Is T: full?", NULL, NULL);
+            return RETURN_ERROR;
+        }
+        rc = SystemTagList((STRPTR)"Execute T:OpenUp-update", NULL);
+        DeleteFile((STRPTR)"T:OpenUp-update");
+        return rc == 0 ? RETURN_OK : RETURN_WARN;
+    }
+}
+
 int main(void)
 {
     LONG args[3] = { 0, 0, 0 };
@@ -979,7 +1114,7 @@ int main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window>\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | UPDATE [CHECK|YES]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -1019,12 +1154,13 @@ int main(void)
         Permit();
         rc = (!is_amigachrome() && !rtg && exists("LIBS:Picasso96API.library")) ? RETURN_WARN : RETURN_OK;
     }
+    else if (same_word(cmd, "UPDATE")) rc = update((const char *)args[1]);
     else if (same_word(cmd, "RETIRE") && args[1]) {
         manifest_load();
         rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
