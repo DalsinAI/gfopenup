@@ -473,6 +473,76 @@ def play_art() -> bytes:
     return img.tobytes()
 
 
+def binary_version(data: bytes, name: str) -> str | None:
+    """The version a program's $VER (or a library's or device's ID string)
+    gives for name: "$VER: OpenDock 0.4 (...)" or "opengpu.library 0.9 (...)"."""
+    n = re.escape(name.encode("latin-1"))
+    m = re.search(rb"\$VER: ?" + n + rb" ([0-9][0-9.]*[0-9])", data) or re.search(rb"(?<![A-Za-z0-9_.])" + n + rb" ([0-9]+\.[0-9][0-9.]*) \(", data)
+    return m.group(1).decode() if m else None
+
+
+# Each part's main binary: the part's declared version (its Part file, the
+# Installer's log, the manifest) must be that binary's $VER version.
+PART_MAIN = {
+    "OpenUp": ("Utilities/OpenUp/Uninstall-OpenUp", "Uninstall-OpenUp"),
+    "OpenBlanker": ("Tools/Commodities/OpenBlanker", "OpenBlanker"),
+    "OpenSocket": ("Libs/bsdsocket.library", "bsdsocket.library"),
+    "OpenPrint": ("C/OpenPrint", "OpenPrint"),
+    "OpenLook": ("C/OpenLook", "OpenLook"),
+    "OpenTypes": ("Prefs/OpenTypes", "OpenTypes"),
+    "OpenCompress": ("Utilities/OpenCompress", "OpenCompress"),
+    "OpenService": ("Devs/openservice.device", "openservice.device"),
+    "OpenMulticore": ("Libs/openmulticore.library", "openmulticore.library"),
+    "OpenRTG": ("Libs/openrtg.library", "openrtg.library"),
+    "OpenGPU": ("Libs/opengpu.library", "opengpu.library"),
+    "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
+    "OpenCrypto": ("Libs/opencrypto.library", "opencrypto.library"),
+    "OpenPuTTY": ("Utilities/OpenPuTTY/OpenPuTTY", "OpenPuTTY"),
+    "Tata": ("C/Tata", "Tata"),
+    "OpenFTP": ("Utilities/OpenFTP/OpenFTP", "OpenFTP"),
+    "Telegram": ("Utilities/UnofficialTelegram", "UnofficialTelegram"),
+    "OpenInput": ("Libs/openinput.library", "openinput.library"),
+    "OpenWindows": ("Tools/Commodities/OpenWindows", "OpenWindows"),
+    "OpenDock": ("C/OpenDock", "OpenDock"),
+    "OpenUpSetup": ("Prefs/OpenUp-Setup", "OpenUp-Setup"),
+    "OpenMenus": ("C/OpenMenus", "OpenMenus"),
+    "OpenFiles": ("Utilities/OpenFiles", "OpenFiles"),
+    "OpenPlay": ("Utilities/OpenPlay", "OpenPlay"),
+    "OpenTitle": ("C/OpenTitle", "OpenTitle"),
+    "Sound": ("Prefs/Sound", "Sound"),
+    "OpenEdit": ("C/OpenEdit", "OpenEdit"),
+    "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
+    "OpenMUI": ("Libs/zunemaster.library", "zunemaster.library"),
+    "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
+    "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
+}
+# Parts with a version of their own: bundles of several programs, or files
+# without a binary of their own to read.
+PART_OWN_VERSION = {"AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev"}
+
+
+def check_part_versions(parts: Path) -> None:
+    """Stops the build when a part's declared version is not its main
+    binary's $VER, or when a part says neither which binary that is nor
+    that it has a version of its own."""
+    wrong = []
+    for pf in sorted(parts.glob("*/Part")):
+        name, version = pf.read_text(encoding="latin-1").split("\n", 1)[0].split()[1:3]
+        if name in PART_OWN_VERSION:
+            continue
+        if name not in PART_MAIN:
+            wrong.append(f"{name} {version}: no main binary in PART_MAIN (or add it to PART_OWN_VERSION)")
+            continue
+        rel, vername = PART_MAIN[name]
+        f = pf.parent / rel
+        got = binary_version(f.read_bytes(), vername) if f.is_file() else None
+        if got != version:
+            wrong.append(f"{name}: the part says {version}, {rel} says {got or 'no version'}")
+    if wrong:
+        raise SystemExit("part versions don't match what they ship:\n  " + "\n  ".join(wrong))
+    print(f"  part versions: all {sum(1 for _ in parts.glob('*/Part'))} match their programs")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--version", default="0.1")
@@ -581,7 +651,7 @@ def main() -> int:
 
     # OpenPrint and OpenView: openamigaprint's own package, laid out as its Installer does
     pkg = a.openamigaprint / "build/package/OpenPrint"
-    pr = Part(top, "OpenPrint", "0.4", "OpenPrint and OpenView: printing to PDF and IPP, and viewing")
+    pr = Part(top, "OpenPrint", "0.3", "OpenPrint and OpenView: printing to PDF and IPP, and viewing")
     for p in sorted(pkg.rglob("*")):
         if not p.is_file():
             continue
@@ -663,7 +733,7 @@ def main() -> int:
 
     # OpenService: the services device and Nursery (openamigaservice). It
     # does nothing on the LAN until ENV:OpenService/Paired lists a Cradle.
-    sv = Part(top, "OpenService", "0.1", "OpenService: services from AutoConfig boards and paired Cradles")
+    sv = Part(top, "OpenService", "1.1", "OpenService: services from AutoConfig boards and paired Cradles")
     sv.add("Devs/openservice.device", (a.openamigaservice / "bin/openservice.device").read_bytes(), "DEVS:openservice.device")
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
     sv.write()
@@ -688,7 +758,7 @@ def main() -> int:
     img.write()
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
-    ow = Part(top, "OpenWindows", "0.4", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
+    ow = Part(top, "OpenWindows", "0.5", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
     ow.add("Prefs/Windows", (a.openamigaprefs / "Windows/build/os3/Windows").read_bytes(), "SYS:Prefs/Windows")
     ow.add("Prefs/Windows.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Windows.info")
     ow.add("Tools/Commodities/OpenWindows", (a.openamigaprefs / "Windows/build/os3/OpenWindows").read_bytes(),
@@ -711,7 +781,7 @@ def main() -> int:
     # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
     # Installer runs "SYS:Prefs/Dock SAVE" once, on a first install, so the
     # dock starts with the buttons of a dock already there.
-    dock = Part(top, "OpenDock", "0.3", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "OpenDock", "0.4", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     dock.add("Prefs/Dock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/Dock")
     dock.add("Prefs/Dock.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Dock.info")
@@ -726,7 +796,7 @@ def main() -> int:
 
     # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "OpenMenus", "0.5", "OpenMenus: our own menus, the menu bar at any edge, right-click menus on Workbench, and their editor")
+    menus = Part(top, "OpenMenus", "0.4", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
     menus.add("Prefs/Menus", (a.openamigaprefs / "Menus/build/os3/Menus").read_bytes(), "SYS:Prefs/Menus")
     menus.add("Prefs/Menus.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Menus.info")
@@ -983,7 +1053,7 @@ def main() -> int:
 
     # OpenFiles: the file manager (openamigafilemanager). Double-click opens
     # files with their icon's program, else OpenView (the OpenPrint part).
-    of = Part(top, "OpenFiles", "0.2", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
+    of = Part(top, "OpenFiles", "0.2.2", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
     of.add("Utilities/OpenFiles", (a.openamigafilemanager / "build/os3/OpenFiles").read_bytes(), "SYS:Utilities/OpenFiles")
     of.add("Utilities/OpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenFiles.info")
     of.write()
@@ -1061,8 +1131,7 @@ def main() -> int:
     # there is none, so programs that offload (openmodule.datatype) work on
     # every machine; OMCTest checks it.
     mcb = a.openamigamulticore / "build"
-    mcv = next((l.split(":", 1)[1].strip() for l in (a.openamigamulticore / "openmulticore.readme").read_text(errors="replace").splitlines()
-                if l.startswith("Version:")), "0.1")
+    mcv = binary_version((mcb / "openmulticore.library").read_bytes(), "openmulticore.library") or "0.2"
     mc = Part(top, "OpenMulticore", mcv, "OpenMulticore: openmulticore.library, jobs on the cores board's other cores, and OMCTest")
     mc.add("Libs/openmulticore.library", (mcb / "openmulticore.library").read_bytes(), "LIBS:openmulticore.library")
     mc.add("Tools/OMCTest", (mcb / "OMCTest").read_bytes(), "SYS:Tools/OMCTest")
@@ -1176,6 +1245,9 @@ def main() -> int:
     except Exception as e:                  # an amigachrome checkout without amiga_icon (before #153): the icons above stay
         print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
+    check_part_versions(top / "Parts")
+    if browser_top:
+        check_part_versions(browser_top / "Parts")
     if a.lha:
         arc = a.out / f"OpenUp-{a.version}.lha"
         arc.unlink(missing_ok=True)
