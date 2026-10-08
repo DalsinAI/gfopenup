@@ -48,6 +48,8 @@ a Part file that C/OpenUpTool reads:
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
+  OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
+                        the main CPU without one, and OMCTest (openamigamulticore)
   OpenMail/             OpenMail, the mail reader, and C:OpenMailCheck; needs AmiSSL 5 (openamigamail)
   OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
                         OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser)
@@ -299,6 +301,11 @@ def build_parts(a):
     # OpenWrite carries its own OpenGadTools copy; DOCX and ODT need zlib's source (--zlib)
     run(["sh", a.openamigawrite / "build-os3.sh"], env=dict(env, ZLIB_SRC=str(a.zlib)))
     run(["sh", a.openamigamail / "build-os3.sh", a.amissl], env=env)
+    # openmulticore.library with the os32 stove, as its build.sh says (built with
+    # os32-gcc16 it passes jobs the wrong arguments, 8 October 2026)
+    omc_env = {k: v for k, v in env.items() if k not in ("CC", "AMIGA_CC")}
+    run(["sh", a.openamigamulticore / "library/build.sh"],
+        env=dict(omc_env, STOVE=str(Path.home() / "AmigaChrome/stoves/os32"), OPENSERVICE=str(a.openamigaservice)))
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -376,6 +383,7 @@ def main() -> int:
     ap.add_argument("--openamigamui", type=Path, default=first(DEV / "openamigamui", DEV.parent / "openamigamui"))
     ap.add_argument("--openamigaedit", type=Path, default=first(DEV / "openamigaedit", DEV.parent / "openamigaedit"))
     ap.add_argument("--openamigawrite", type=Path, default=first(DEV / "openamigawrite", DEV.parent / "openamigawrite"))
+    ap.add_argument("--openamigamulticore", type=Path, default=first(DEV / "openamigamulticore", DEV.parent / "openamigamulticore"))
     ap.add_argument("--openamigamail", type=Path, default=first(DEV / "openamigamail", DEV.parent / "openamigamail"))
     ap.add_argument("--amissl", type=Path, default=DEV / "sdk/amissl/AmiSSL/Developer/include",
                     help="the AmiSSL 5 SDK's include folder, for OpenMail")
@@ -680,6 +688,19 @@ def main() -> int:
     om.add("Tools/ZuneTest", (mui / "ZuneTest").read_bytes(), "SYS:Tools/ZuneTest")
     om.add("Tools/ZuneTest.info", icons.icon(icons.WBTOOL, "install", stack=16384), "SYS:Tools/ZuneTest.info")
     om.write()
+
+    # OpenMulticore: openmulticore.library runs a 68k job on another core of a
+    # cores board (openservice.device's cpu.m68k/1), or on the main CPU when
+    # there is none, so programs that offload (openmodule.datatype) work on
+    # every machine; OMCTest checks it.
+    mcb = a.openamigamulticore / "build"
+    mcv = next((l.split(":", 1)[1].strip() for l in (a.openamigamulticore / "openmulticore.readme").read_text(errors="replace").splitlines()
+                if l.startswith("Version:")), "0.1")
+    mc = Part(top, "OpenMulticore", mcv, "OpenMulticore: openmulticore.library, jobs on the cores board's other cores, and OMCTest")
+    mc.add("Libs/openmulticore.library", (mcb / "openmulticore.library").read_bytes(), "LIBS:openmulticore.library")
+    mc.add("Tools/OMCTest", (mcb / "OMCTest").read_bytes(), "SYS:Tools/OMCTest")
+    mc.add("Tools/OMCTest.info", icons.icon(icons.WBTOOL, "install", stack=16384), "SYS:Tools/OMCTest.info")
+    mc.write()
 
     # OpenMail: the mail reader (openamigamail), in a drawer with its providers
     # and themes beside it (PROGDIR:Providers); OpenMailCheck in C:. It needs

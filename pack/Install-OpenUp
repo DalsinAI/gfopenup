@@ -29,7 +29,7 @@
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
 ; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus,
 ; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle, 262144 Sound, 524288 OpenEdit,
-; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser
+; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser, 8388608 OpenMulticore
 (set #parts
     (askoptions
         (prompt "Which parts should OpenUp install?")
@@ -89,6 +89,9 @@
               "OpenMail: a mail reader for IMAP mail over TLS, with Gmail, Outlook and others "
               "set up from the address (new, a preview: reading only; off unless you pick it). "
               "It needs AmiSSL 5, which AmigaOS 3.2.3 doesn't include.\n\n"
+              "OpenMulticore: lets programs hand work to the other cores of AmigaChrome's "
+              "cores board, so the main CPU stays free; without a cores board the work runs "
+              "on the main CPU, so it is safe on every Amiga (new).\n\n"
               "OpenBrowser: a web browser built on WebKit (new, a preview; off unless you pick "
               "it). It needs an FPU and is best on a 68040. It comes in its own archive, "
               "OpenUp-" #version "-OpenBrowser.lha, because it is large.\n\n"
@@ -119,8 +122,9 @@
                  "OpenEdit: a text editor (new)"
                  "OpenWrite: a word processor (new)"
                  "OpenMail: a mail reader (preview, needs AmiSSL 5)"
-                 "OpenBrowser: a web browser (preview, its own archive)")
-        (default (if #ac 2031103 2031098))))
+                 "OpenBrowser: a web browser (preview, its own archive)"
+                 "OpenMulticore: work on the cores board's other cores")
+        (default (if #ac 10419711 10419706))))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -221,6 +225,12 @@
         (working "Installing OpenService")
         (if (> (run (cat #tool " INSTALL Parts/OpenService >>T:OpenUp.log")) 5)
             (message "OpenService didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 8388608)
+    (
+        (working "Installing OpenMulticore")
+        (if (> (run (cat #tool " INSTALL Parts/OpenMulticore >>T:OpenUp.log")) 5)
+            (message "OpenMulticore didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (if (bitand #parts 256)
     (

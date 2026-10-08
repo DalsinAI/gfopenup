@@ -72,6 +72,9 @@ choose:
 - OpenBrowser (new, a preview, off unless picked): a web browser built on
   WebKit, in its own archive, OpenUp-<version>-OpenBrowser.lha, unpacked
   beside the pack; it needs an FPU and is best on a 68040;
+- OpenMulticore (new): openmulticore.library, so programs can hand work to
+  the other cores of AmigaChrome's cores board (music modules in OpenPlay
+  do), or to the main CPU where there is no board;
 - OpenMUI (preview, off unless picked): zunemaster.library, MUI built from
   AROS's Zune for OS 3.x, beside MUI and replacing nothing, with ZuneTest
   (SYS:Tools);
