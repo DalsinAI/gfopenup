@@ -585,6 +585,15 @@ def main() -> int:
         gi = Part(top, "GorillaIcons", "0.1", "Gorilla, AROS's icon set (GPL): new pictures for the system's drawers, programs and default icons")
         for text in gorilla_icons.build(gi.dir, a.amigachrome, ROOT / "build" / "cache"):
             gi.line(text)
+        # beside Mesa's and SDL's: where the pictures come from and under what licence
+        gi.add("Utilities/OpenUp/Licences/Gorilla.txt", (
+            "Gorilla, the icon set of AROS (images/IconSets/Gorilla), is distributed under the\n"
+            "GNU General Public License, as its LEGAL file says; AROS ships version 2 of the\n"
+            "GPL with it, and so does OpenUp, in SYS:Storage/Icons/Gorilla/COPYING.\n\n"
+            f"Source: {gorilla_icons.AROS_URL}, commit {gorilla_icons.AROS_COMMIT}.\n"
+            "The PNG pictures the new icon faces were made from are in\n"
+            "SYS:Storage/Icons/Gorilla, with Gorilla's LEGAL file.\n").encode("latin-1"),
+            "SYS:Utilities/OpenUp/Licences/Gorilla.txt")
         gi.write()
 
     # OpenTypes: which program opens each kind of file (openamigaprefs)
