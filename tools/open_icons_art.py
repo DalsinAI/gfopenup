@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-"""Icons for the Open apps, drawn to sit with Boxie's isometric set (the
-modern pack's drawers) with an OS 4.1 finish: soft top light, a gloss on the
-upper faces, a dark outline. Drawn four times over at 64 x 64 and reduced.
+"""Icons for the Open apps, drawn in the Gorilla style (ICONS.md section 3):
+bold black outlines, soft light from the top left, a gentle gloss and a soft
+shadow down and to the right. Our own drawing, with tools/gstyle.py; nothing
+is traced from Gorilla. MIT, Copyright (c) 2026 Dalsin Limited.
 
-    python3 tools/open_icons_art.py icons/open    # writes NAME.png and NAME-selected.png (needs Pillow)
+    python3 tools/open_icons_art.py icons/open    # needs Pillow and numpy
 
-Every icon has two frames, as docs/ICONS.md asks: NAME.png at rest and
-NAME-selected.png, the same picture with something in it moved (a drawer
-pulled open, the play button turned to pause), which Workbench shows when the
-icon is clicked. Both frames are cropped and scaled alike, so nothing jumps
-but the part that moves. The pack build (build_pack.py, open_icons) turns
-them into GlowIcons.
+Every icon has two frames, as ICONS.md asks: NAME.png at rest and
+NAME-selected.png, with something in the picture moved (the pencil writes on,
+the play button turns to pause), which Workbench shows while the icon is
+chosen. Both frames are cropped and scaled alike (gstyle.finish), so nothing
+jumps but the part that moves. Prefs editors carry the prefs mark, bottom left.
+
+Drawers of our own: badge-NAME.png (the badge alone, where it sits on a
+drawer) and drawer-NAME.png (the badge on a drawer of our own drawing). The
+pack build puts the badge on Gorilla's drawer when it ships Gorilla, so our
+drawers match the system's; drawer-NAME.png is for a pack made without it.
 """
 from __future__ import annotations
 
@@ -18,512 +23,519 @@ import math
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gstyle import *            # noqa: E402,F401,F403
+from PIL import Image           # noqa: E402
 
-SIZE = 64
-S = 4
-PAD = 20                 # room round the 64-unit frame; done() crops to what was drawn
-W = (SIZE + 2 * PAD) * S
-
-
-class TDraw:
-    """ImageDraw in 64-unit-frame pixels, moved into the padded canvas."""
-
-    def __init__(self, img):
-        self.d = ImageDraw.Draw(img)
-
-    @staticmethod
-    def _m(xy):
-        o = PAD * S
-        if xy and isinstance(xy[0], (tuple, list)):
-            return [(x + o, y + o) for x, y in xy]
-        return [v + o for v in xy]
-
-    def polygon(self, xy, **kw):
-        self.d.polygon(self._m(xy), **kw)
-
-    def line(self, xy, **kw):
-        self.d.line(self._m(xy), **kw)
-
-    def ellipse(self, xy, **kw):
-        self.d.ellipse(self._m(xy), **kw)
-
-    def arc(self, xy, a, b, **kw):
-        self.d.arc(self._m(xy), a, b, **kw)
+# ---- pieces ------------------------------------------------------------------------------------
 
 
-def shade(c, k):
-    return tuple(max(0, min(255, round(v * k))) for v in c[:3]) + ((c[3],) if len(c) > 3 else (255,))
+def perp(a):
+    return (-math.sin(a), math.cos(a))
 
 
-def mix(a, b, t):
-    return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3)) + (255,)
+def pencil(ic, tx, ty, angle=-128, length=34, w=3.6, body=ORANGE, body_lo=ORANGE_LO):
+    """A pencil, its point at (tx, ty), lying along angle (degrees) from there."""
+    a = math.radians(angle)
+    d = (math.cos(a), math.sin(a))
+    n = perp(a)
+    at = lambda t, s=0: (tx + d[0] * t + n[0] * s, ty + d[1] * t + n[1] * s)
+    cone, ferrule, rubber = 8, length - 7, length - 3
+    ic.add(poly([at(cone, -w), at(ferrule, -w), at(ferrule, w), at(cone, w)]),
+           linear(at(cone, -w), at(cone, w), lighter(body, 0.3), body_lo), outline=1.5)
+    ic.add(poly([at(ferrule, -w), at(rubber, -w), at(rubber, w), at(ferrule, w)]),
+           linear(at(ferrule, -w), at(ferrule, w), rgb('#E7EAEE'), rgb('#8D949E')), outline=1.5)
+    ic.add(poly([at(rubber, -w), at(length, -w * 0.8), at(length, w * 0.8), at(rubber, w)]),
+           linear(at(rubber, -w), at(rubber, w), rgb('#F7A8B4'), rgb('#C25A6A')), outline=1.5)
+    ic.add(poly([at(0), at(cone, -w), at(cone, w)]), linear(at(cone, -w), at(cone, w), rgb('#F4D9AE'), rgb('#C79A5A')), outline=1.5)
+    ic.detail(poly([at(0), at(2.8, -w * 0.35), at(2.8, w * 0.35)]), INK)
 
 
-class Pic:
-    """One icon: isometric drawing in 64-pixel units, origin at the bottom centre."""
-
-    def __init__(self, ox=32, oy=56):
-        self.img = Image.new("RGBA", (W, W), (0, 0, 0, 0))
-        self.d = TDraw(self.img)
-        self.ox, self.oy = ox, oy
-
-    # 2:1 isometric: x to the right-down, y to the left-down, z up
-    def p(self, x, y, z):
-        return ((self.ox + (x - y)) * S, (self.oy + (x + y) / 2 - z) * S)
-
-    def poly(self, pts3, fill, outline=None, width=1):
-        pts = [self.p(*q) for q in pts3]
-        self.d.polygon(pts, fill=fill)
-        if outline:
-            self.d.line(pts + [pts[0]], fill=outline, width=int(width * S), joint="curve")
-
-    def flat(self, pts2, fill, outline=None, width=1):
-        pts = [(x * S, y * S) for x, y in pts2]
-        self.d.polygon(pts, fill=fill)
-        if outline:
-            self.d.line(pts + [pts[0]], fill=outline, width=int(width * S), joint="curve")
-
-    def line(self, a, b, fill, width=1):
-        self.d.line([self.p(*a), self.p(*b)], fill=fill, width=int(width * S))
-
-    def box(self, x0, y0, z0, w, d, h, colour, outline=True, gloss=True):
-        """A block from (x0, y0, z0); returns its three face colours."""
-        top, left, right = shade(colour, 1.22), colour, shade(colour, 0.72)
-        ink = shade(colour, 0.32)
-        x1, y1, z1 = x0 + w, y0 + d, z0 + h
-        self.poly([(x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1)], left)             # front-left face (y = y1)
-        self.poly([(x1, y0, z0), (x1, y1, z0), (x1, y1, z1), (x1, y0, z1)], right)            # front-right face (x = x1)
-        self.poly([(x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)], top)              # top
-        if gloss:                                                                              # OS 4.1's sheen on the top
-            self.poly([(x0, y0, z1), (x0 + w * 0.55, y0, z1), (x0, y0 + d * 0.55, z1)], shade(top, 1.12))
-            self.poly([(x0, y1, z1), (x0 + w * 0.45, y1, z1), (x0 + w * 0.45, y1, z1 - h * 0.16), (x0, y1, z1 - h * 0.16)],
-                      shade(left, 1.12))
-        if outline:
-            for a, b in [((x0, y1, z0), (x1, y1, z0)), ((x1, y1, z0), (x1, y0, z0)), ((x1, y0, z0), (x1, y0, z1)),
-                         ((x1, y0, z1), (x0, y0, z1)), ((x0, y0, z1), (x0, y1, z1)), ((x0, y1, z1), (x0, y1, z0))]:
-                self.line(a, b, ink, 1)
-            self.line((x0, y1, z1), (x1, y1, z1), shade(top, 0.8), 0.6)
-            self.line((x1, y1, z1), (x1, y0, z1), shade(top, 0.8), 0.6)
-            self.line((x1, y1, z1), (x1, y1, z0), shade(left, 0.6), 0.6)
-        return top, left, right
-
-    def on_left(self, x, z, y):
-        """A point on a front-left face at depth y."""
-        return (x, y, z)
-
-    def shadow(self, x0, y0, w, d):
-        sh = Image.new("RGBA", (W, W), (0, 0, 0, 0))
-        dd = ImageDraw.Draw(sh)
-        pts = [self.p(x0, y0, 0), self.p(x0 + w, y0, 0), self.p(x0 + w, y0 + d, 0), self.p(x0, y0 + d, 0)]
-        pts = [(x + (3 + PAD) * S, y + (2 + PAD) * S) for x, y in pts]
-        dd.polygon(pts, fill=(20, 20, 40, 120))
-        sh = sh.filter(ImageFilter.GaussianBlur(2.5 * S))
-        self.img = Image.alpha_composite(sh, self.img)
-        self.d = TDraw(self.img)
-
-    def bbox(self):
-        return self.img.getchannel("A").point(lambda a: 255 if a > 24 else 0).getbbox()
-
-    def done(self, margin: int = 2, box=None) -> Image.Image:
-        """Cropped to what was drawn (or to box), fitted in 64 x 64, centred and sitting on the bottom."""
-        pic = self.img.crop(box or self.bbox())
-        room = (SIZE - 2 * margin) * S
-        k = min(1.0, room / pic.width, room / pic.height)
-        pic = pic.resize((max(1, round(pic.width * k)), max(1, round(pic.height * k))), Image.LANCZOS)
-        canvas = Image.new("RGBA", (SIZE * S, SIZE * S), (0, 0, 0, 0))
-        canvas.alpha_composite(pic, ((SIZE * S - pic.width) // 2, SIZE * S - margin * S - pic.height))
-        return canvas.resize((SIZE, SIZE), Image.LANCZOS)
+def arrow(ic, x, y, dx, dy, size=1.0, colour=GREEN, colour_lo=GREEN_LO):
+    """A fat arrow whose point is at (x, y), pointing along (dx, dy)."""
+    a = math.atan2(dy, dx)
+    d = (math.cos(a), math.sin(a))
+    n = perp(a)
+    s = size
+    at = lambda t, u: (x - d[0] * t * s + n[0] * u * s, y - d[1] * t * s + n[1] * u * s)
+    pts = [at(0, 0), at(9, -8), at(9, -3.6), at(20, -3.6), at(20, 3.6), at(9, 3.6), at(9, 8)]
+    ic.add(poly(pts), linear(at(20, -4), at(0, 4), lighter(colour, 0.25), colour_lo), outline=1.6, gloss=0.3)
 
 
-INK = (34, 30, 54, 255)
-BLUE = (58, 112, 196, 255)
-TEAL = (48, 150, 160, 255)
-ORANGE = (232, 150, 52, 255)
-GREEN = (78, 170, 82, 255)
-RED = (206, 70, 64, 255)
-PAPER = (240, 238, 228, 255)
-GREY = (150, 156, 170, 255)
-DARK = (64, 70, 92, 255)
-GOLD = (236, 196, 72, 255)
-PURPLE = (126, 92, 190, 255)
+def window(ic, x0, y0, x1, y1, active=True, title_h=5.0, body=PAPER):
+    """A window: a title bar (the accent when active) over a light body."""
+    ic.add(rrect(x0, y0, x1, y1, 2.2), solid(body))
+    bar = linear((0, y0), (0, y0 + title_h), lighter(BLUE, 0.2), BLUE_LO) if active else linear((0, y0), (0, y0 + title_h), rgb('#E2E5E9'), rgb('#B6BBC2'))
+    ic.detail(inter(rrect(x0, y0, x1, y1, 2.2), rect(x0, y0, x1, y0 + title_h)), bar)
+    ic.detail(rect(x0, y0 + title_h, x1, y0 + title_h + 0.6), INK)
+    sq = 2.2
+    ic.detail(rect(x1 - 2.6 - sq, y0 + (title_h - sq) / 2, x1 - 2.6, y0 + (title_h + sq) / 2), (255, 255, 255) if active else rgb('#7C8088'))
 
 
-def window_slab(p: Pic, colour=BLUE, x0=-14, y0=6, w=30, d=4, h=34):
-    """An upright window (a thin slab) facing front-left; returns face mappers."""
-    p.box(x0, y0, 0, w, d, h, (210, 214, 224, 255))
-    y = y0 + d
-    p.poly([(x0, y, h - 6), (x0 + w, y, h - 6), (x0 + w, y, h), (x0, y, h)], colour)               # title bar
-    p.poly([(x0 + w - 5, y, h - 5), (x0 + w - 1, y, h - 5), (x0 + w - 1, y, h - 1), (x0 + w - 5, y, h - 1)], shade(colour, 1.4))
-    return y
+def clock_face(ic, cx, cy, r, hour_a, minute_a):
+    ic.add(ellipse(cx - r, cy - r, cx + r, cy + r), linear((cx - r, cy - r), (cx + r, cy + r), rgb('#F2F4F7'), rgb('#9CA4B0')), gloss=0.2)
+    ri = r - 2.2
+    ic.add(ellipse(cx - ri, cy - ri, cx + ri, cy + ri), radial((cx - ri * 0.4, cy - ri * 0.4), ri * 1.8, rgb('#5E86BE'), rgb('#1D3A66')), outline=0.8)
+    for k in range(12):
+        a = math.radians(k * 30)
+        x, y = cx + math.cos(a) * ri * 0.78, cy + math.sin(a) * ri * 0.78
+        ic.detail(ellipse(x - 0.55, y - 0.55, x + 0.55, y + 0.55), (230, 236, 245))
+    for a, L, wd in ((hour_a, ri * 0.5, 1.6), (minute_a, ri * 0.78, 1.1)):
+        t = math.radians(a - 90)
+        ic.detail(stroke([(cx, cy), (cx + math.cos(t) * L, cy + math.sin(t) * L)], wd), (250, 250, 250))
+    ic.detail(ellipse(cx - 1, cy - 1, cx + 1, cy + 1), (250, 250, 250))
 
 
-def icon_openfiles(f=0):
-    p = Pic()
-    p.shadow(-14, 6, 30, 5)
-    y = window_slab(p)
-    p.line((1, y, 2), (1, y, 27), INK, 0.8)                                                         # between the panes
-    for x0 in (-12, 3):
-        p.poly([(x0, y, 20), (x0 + 7, y, 20), (x0 + 7, y, 25), (x0, y, 25)], ORANGE)              # a drawer
-        p.poly([(x0, y, 25), (x0 + 3, y, 25), (x0 + 3, y, 26), (x0, y, 26)], ORANGE)
-        for i, z in enumerate((16, 12, 8, 4)):
-            p.line((x0, y, z), (x0 + 11 - 3 * (i % 2), y, z), DARK, 0.9)                          # files
-    x0, z0 = ((2.5, 10.6), (-12.5, 14.6))[f]                                                        # the chosen one moves
-    p.poly([(x0, y, z0), (x0 + 13, y, z0), (x0 + 13, y, z0 + 2.8), (x0, y, z0 + 2.8)], (90, 150, 240, 255))
-    return p
+def box(ic, x0, y0, w, h, lid_up=0.0):
+    """An open cardboard box, seen front-on from a little above; lid_up lifts
+    the front flap (0 lying open, 1 standing up)."""
+    depth = h * 0.32
+    ic.add(poly([(x0, y0), (x0 + w, y0), (x0 + w - 3, y0 - depth), (x0 + 3, y0 - depth)]), solid(rgb('#7A4A18')), outline=1.6)
+    ic.add(rrect(x0, y0, x0 + w, y0 + h, 1.4), linear((x0, y0), (x0 + w, y0 + h), rgb('#F2B865'), rgb('#B9701F')), gloss=0.15)
+    ic.detail(rect(x0 + w * 0.38, y0 + 1, x0 + w * 0.62, y0 + h * 0.34), rgb('#F8DDB0'))      # tape
+    fl = 6 + 6 * (1 - lid_up)
+    if lid_up < 0.5:
+        ic.add(poly([(x0 - 1, y0), (x0 + w + 1, y0), (x0 + w + 4, y0 + fl * 0.0 - 0.1), (x0 - 4, y0 - 0.1)]), solid(rgb('#D99A45')), outline=1.2)
+    ic.add(poly([(x0 + 3, y0 - depth), (x0 + w - 3, y0 - depth), (x0 + w - 1, y0 - depth - (8 if lid_up else 3)), (x0 + 1, y0 - depth - (8 if lid_up else 3))]),
+           linear((0, y0 - depth - 8), (0, y0 - depth), rgb('#F5C67A'), rgb('#C98A35')), outline=1.4)
 
 
-def icon_openview(f=0):
-    p = Pic()
-    p.shadow(-12, 4, 28, 6)
-    p.box(-12, 4, 0, 26, 4, 30, (196, 150, 84, 255))                                                # the frame
-    y = 8
-    p.poly([(-9, y, 3), (11, y, 3), (11, y, 27), (-9, y, 27)], (120, 180, 230, 255))               # sky
-    p.poly([(-9, y, 3), (-1, y, 15), (5, y, 8), (11, y, 16), (11, y, 3)], (70, 150, 80, 255))      # hills
-    p.poly([(4, y, 20), (7, y, 20), (7, y, 23), (4, y, 23)], GOLD)                                  # the sun
-    # a magnifier in front
-    cx, cy, r = ((44, 40, 9), (36, 30, 10))[f]                                                      # over the picture when chosen
-    p.d.line([(cx * S + 5 * S, cy * S + 5 * S), (cx * S + 13 * S, cy * S + 13 * S)], fill=INK, width=4 * S)
-    p.d.line([(cx * S + 5 * S, cy * S + 5 * S), (cx * S + 12 * S, cy * S + 12 * S)], fill=(150, 90, 40, 255), width=int(2.6 * S))
-    p.d.ellipse([(cx - r) * S, (cy - r) * S, (cx + r) * S, (cy + r) * S], fill=(200, 230, 250, 200), outline=INK, width=int(1.6 * S))
-    p.d.ellipse([(cx - r + 3) * S, (cy - r + 2) * S, (cx - 1) * S, (cy - 3) * S], fill=(255, 255, 255, 170))
-    return p
+# ---- the Open apps ---------------------------------------------------------------------------
 
 
-def icon_openedit(f=0):
-    p = Pic()
-    p.shadow(-12, 2, 24, 26)
-    p.box(-12, 2, 0, 24, 26, 3, PAPER, gloss=False)                                                 # a pad of paper
-    for i in range(6):                                                                              # its lines
-        y = 7 + i * 3.4
-        p.line((-9, y, 3.05), (8 - (5 if i == 5 else 0), y, 3.05), (130, 150, 190, 255), 0.7)
-    p.poly([(-12, 2, 3.05), (12, 2, 3.05), (12, 5, 3.05), (-12, 5, 3.05)], RED)                     # the binding
-    # a pencil lying across it
-    if f:                                                                                           # a line being written
-        p.line((-9, 24, 3.05), (-2, 24, 3.05), (40, 60, 140, 255), 0.9)
-    a, b = ((-2, 26, 4), (16, 6, 12)) if not f else ((-2, 22, 7), (16, 2, 15))
-    ax, ay = p.p(*a)
-    bx, by = p.p(*b)
-    dx, dy = bx - ax, by - ay
-    n = math.hypot(dx, dy)
-    nx, ny = -dy / n * 2.4 * S, dx / n * 2.4 * S
-    body = [(ax + nx, ay + ny), (bx + nx, by + ny), (bx - nx, by - ny), (ax - nx, ay - ny)]
-    p.d.polygon(body, fill=GOLD, outline=INK)
-    p.d.line([(ax, ay), (bx, by)], fill=shade(GOLD, 0.8), width=S)
-    tip = (ax - dx / n * 7 * S, ay - dy / n * 7 * S)
-    p.d.polygon([(ax + nx, ay + ny), (ax - nx, ay - ny), tip], fill=(240, 210, 160, 255), outline=INK)
-    p.d.polygon([(ax + nx * .35 - dx / n * 4.6 * S, ay + ny * .35 - dy / n * 4.6 * S),
-                 (ax - nx * .35 - dx / n * 4.6 * S, ay - ny * .35 - dy / n * 4.6 * S), tip], fill=INK)
-    p.d.polygon([(bx + nx, by + ny), (bx - nx, by - ny), (bx - nx + dx / n * 4 * S, by - ny + dy / n * 4 * S),
-                 (bx + nx + dx / n * 4 * S, by + ny + dy / n * 4 * S)], fill=(230, 120, 140, 255), outline=INK)
-    return p
+def openfiles(sel):
+    ic = Icon()
+    ic.add(rrect(4, 8, 60, 54, 3.5), linear((4, 8), (60, 54), GREY_HI, rgb('#C9CCD1')), gloss=0.12)
+    ic.detail(rrect(5.2, 9.2, 58.8, 15.5, 2.4), linear((0, 9), (0, 16), rgb('#7FB0F0'), BLUE))
+    for x0 in (8, 33):
+        ic.add(rect(x0, 19, x0 + 22, 50), (255, 255, 255), outline=0.9)
+        for i in range(5):
+            y = 22 + i * 5.6
+            ic.detail(rect(x0 + 2.5, y, x0 + 6, y + 3), rgb('#E2B24A'))
+            ic.detail(rect(x0 + 7.5, y + 0.6, x0 + 19, y + 2.4), CONTENT)
+    x0 = 8 if sel else 33
+    y = 22 + 2 * 5.6
+    ic.detail(rect(x0 + 0.8, y - 1.0, x0 + 21.2, y + 4.0), BLUE)
+    ic.detail(rect(x0 + 2.5, y, x0 + 6, y + 3), GOLD)
+    ic.detail(rect(x0 + 7.5, y + 0.6, x0 + 19, y + 2.4), (255, 255, 255))
+    if sel:
+        ic.add(stroke([(31, 35), (36, 35)], 2.2), GREEN, outline=1.0)
+        ic.add(poly([(28.5, 35), (32.5, 31.5), (32.5, 38.5)]), GREEN, outline=1.0)
+    return ic
 
 
-def icon_openwrite(f=0):
-    """A page standing up, set like a document: a heading, text, a picture."""
-    p = Pic()
-    p.shadow(-12, 6, 26, 5)
-    p.box(-12, 6, 0, 26, 3, 36, PAPER, gloss=False)                                                # the page
-    y = 9.05
-    p.poly([(-9, y, 30), (6, y, 30), (6, y, 33), (-9, y, 33)], (40, 70, 160, 255))                 # the heading
-    for i, z in enumerate((26, 23, 20)):                                                           # a paragraph
-        p.line((-9, y, z), (11 - (6 if i == 2 else 0), y, z), (110, 120, 140, 255), 0.8)
-    p.poly([(1, y, 7), (11, y, 7), (11, y, 16), (1, y, 16)], (120, 180, 230, 255))                 # a picture in the text
-    p.poly([(1, y, 7), (5, y, 12), (8, y, 9), (11, y, 13), (11, y, 7)], (70, 150, 80, 255))
-    for z in (15, 12, 9):                                                                          # text beside it
-        p.line((-9, y, z), (-1, y, z), (110, 120, 140, 255), 0.8)
-    cz = (5.5, 5.5)[f]
-    if f:                                                                                          # chosen: a line being typed
-        p.line((-9, y, 5.5), (-3, y, 5.5), (110, 120, 140, 255), 0.8)
-    cx = (-9, -2.6)[f]
-    p.line((cx, y, cz - 1.6), (cx, y, cz + 1.6), RED, 0.9)                                         # the cursor
-    return p
-
-
-def icon_dock(f=0):
-    p = Pic(oy=54)
-    p.shadow(-18, 6, 34, 10)
-    p.box(-18, 6, 0, 34, 10, 4, DARK)                                                               # the dock
-    for i, c in enumerate((BLUE, ORANGE, GREEN, RED)):
-        x = -16 + i * 8.2
-        p.box(x, 9, 4, 6, 5, 9 + ((3, 6)[f] if i == 1 + f else 0), c)                               # its buttons; one pops up
-    return p
-
-
-def menu_panel(p, x0=-14, y=10, w=24, rows=5, top=36, hi=2):
-    p.box(x0, y - 3, top - rows * 6 - 9, w, 3, rows * 6 + 4, (226, 228, 236, 255))
-    for i in range(rows):
-        z = top - 9 - i * 6
-        if i == hi:
-            p.poly([(x0 + 1, y, z - 2.5), (x0 + w - 1, y, z - 2.5), (x0 + w - 1, y, z + 2.5), (x0 + 1, y, z + 2.5)], BLUE)
-        p.line((x0 + 3, y, z), (x0 + w - 6 - (i % 3) * 3, y, z), (255, 255, 255, 255) if i == hi else DARK, 0.9)
-
-
-def icon_menus(f=0):
-    p = Pic()
-    p.shadow(-16, 4, 30, 8)
-    p.box(-16, 2, 32, 32, 6, 5, BLUE)                                                               # the menu bar
-    p.line((-12, 8, 34.5), (-6, 8, 34.5), (255, 255, 255, 255), 0.9)
-    p.line((-2, 8, 34.5), (4, 8, 34.5), (255, 255, 255, 255), 0.9)
-    menu_panel(p, -12, 9, 22, 4, 32, 1 + 2 * f)
-    # the pointer, following the highlight down
-    pts = [(x, y + 8 * f) for x, y in [(40, 34), (40, 48), (43.5, 45), (46, 50.5), (48, 49.5), (45.5, 44.2), (50, 44)]]
-    p.flat(pts, (255, 255, 255, 255), INK, 1)
-    return p
-
-
-def icon_sound(f=0):
-    p = Pic()
-    p.shadow(-12, 4, 22, 14)
-    p.box(-12, 4, 0, 22, 14, 30, (70, 72, 90, 255))                                                 # the cabinet
-    y = 18
-    for zc, r in ((20, 7.5), (7, 4.2)):                                                             # the cones
-        pts = [(-1 + r * math.cos(t), y, zc + r * math.sin(t)) for t in [i * math.pi / 12 for i in range(24)]]
-        p.poly(pts, (40, 40, 52, 255), (150, 156, 176, 255), 0.8)
-        pts = [(-1 + r * .4 * math.cos(t), y, zc + r * .4 * math.sin(t)) for t in [i * math.pi / 12 for i in range(24)]]
-        p.poly(pts, (110, 116, 140, 255))
-    for k, r in enumerate((6, 10, 14, 18)[:3 + f]):                                                 # the sound, louder when chosen
-        p.d.arc([(40 - r) * S, (26 - r) * S, (40 + r) * S, (26 + r) * S], -50, 50,
-                fill=(60, 150, 230, 255 - k * (50 - 12 * f)), width=int(2 * S))
-    return p
-
-
-def icon_title(f=0):
-    p = Pic(oy=54)
-    p.shadow(-20, 10, 40, 6)
-    p.box(-20, 10, 18, 40, 6, 7, (222, 226, 236, 255))                                              # the title bar
-    y = 16
-    p.poly([(-18, y, 19.5), (-12, y, 19.5), (-12, y, 23.5), (-18, y, 23.5)], (200, 60, 60, 255))    # the logo
-    p.poly([(-15, y, 19.5), (-12, y, 19.5), (-12, y, 21.5), (-15, y, 21.5)], (60, 100, 200, 255))
-    p.line((-9, y, 21.5), (2, y, 21.5), DARK, 1)                                                     # free memory
-    p.box(-20, 10, 0, 40, 6, 18, (150, 176, 214, 255), gloss=False)                                 # the screen under it
-    cx, cy = 46, 22                                                                                 # a clock
-    p.d.ellipse([(cx - 10) * S, (cy - 10) * S, (cx + 10) * S, (cy + 10) * S], fill=PAPER, outline=INK, width=int(1.5 * S))
-    (mx, my), (hx, hy) = (((0, -7), (5, 2)), ((7, 0), (2, 5)))[f]                                  # its hands move on
-    p.d.line([(cx * S, cy * S), ((cx + mx) * S, (cy + my) * S)], fill=INK, width=int(1.4 * S))
-    p.d.line([(cx * S, cy * S), ((cx + hx) * S, (cy + hy) * S)], fill=INK, width=int(1.4 * S))
-    return p
-
-
-def icon_look(f=0):
-    p = Pic()
-    y = window_slab(p, PURPLE, -16, 4, 30, 4, 32)
-    for i, c in enumerate((RED, ORANGE, GOLD, GREEN, BLUE, PURPLE)):                               # swatches
-        x = -13 + (i % 3) * 8
-        z = 16 - (i // 3) * 9
-        p.poly([(x, y, z), (x + 6, y, z), (x + 6, y, z + 6), (x, y, z + 6)], c, (255, 255, 255, 255) if f and i == 0 else INK,
-               1.2 if f and i == 0 else 0.5)
-    # a brush, dipping into the red when chosen
-    dx, dy = (0, 0) if not f else (-5, 5)
-    p.d.line([((40 + dx) * S, (54 + dy) * S), ((55 + dx) * S, (26 + dy) * S)], fill=INK, width=int(4 * S))
-    p.d.line([((40 + dx) * S, (54 + dy) * S), ((55 + dx) * S, (26 + dy) * S)], fill=(160, 100, 50, 255), width=int(2.4 * S))
-    p.d.polygon([((52 + dx) * S, (30 + dy) * S), ((58 + dx) * S, (33 + dy) * S), ((60 + dx) * S, (22 + dy) * S), ((56 + dx) * S, (18 + dy) * S)],
-                fill=RED, outline=INK)
-    return p
-
-
-def icon_windows(f=0):
-    p = Pic()
-    p.shadow(-16, 2, 32, 16)
-    window_slab(p, shade(BLUE, 0.7), -18, 0, 26, 3, 28)
-    window_slab(p, TEAL, -12, 7, 26, 3, 30)
-    x = -6 + 4 * f                                                                                  # the front one slides out
-    y = window_slab(p, (BLUE, ORANGE)[f], x, 14, 26, 3, 32)
-    for i in range(3):
-        p.line((x + 3, y, 20 - i * 5), (x + 21 - i * 3, y, 20 - i * 5), DARK, 0.9)
-    return p
-
-
-def icon_types(f=0):
-    p = Pic()
-    p.shadow(-12, 6, 22, 4)
-    for i, c in enumerate((GREEN, ORANGE, BLUE)):                                                   # three documents
-        x = -14 + i * 8
-        p.box(x, 4 + i * 3, 0, 16, 2, 26 - i * 2, PAPER, gloss=False)
-        y = 6 + i * 3
-        p.poly([(x + 1, y, 22 - i * 2 - 6), (x + 15, y, 22 - i * 2 - 6), (x + 15, y, 22 - i * 2 - 1), (x + 1, y, 22 - i * 2 - 1)], c)
-    # an arrow to a program
-    p.flat([(x + 5 * f, y) for x, y in [(40, 40), (50, 40), (50, 35), (60, 44), (50, 53), (50, 48), (40, 48)]], GREEN, INK, 1)
-    return p
-
-
-def icon_setup(f=0):
-    p = Pic()
-    p.shadow(-12, 6, 24, 20)
-    p.box(-12, 6, 0, 24, 20, 18, (214, 168, 104, 255))                                              # a box
-    p.box(-13, 5, 18, 26, 22, 3, (232, 192, 132, 255))                                              # its lid
-    # a wand with a star
-    p.d.line([(28 * S, 40 * S), (48 * S, 16 * S)], fill=INK, width=int(3.6 * S))
-    p.d.line([(28 * S, 40 * S), (48 * S, 16 * S)], fill=(250, 250, 250, 255), width=int(1.8 * S))
-    cx, cy, R, r = (50, 13, 9, 3.8) if not f else (50, 13, 11.5, 4.6)                              # the star flares and sparkles
-    turn = math.pi / 10 * f
-    star = [(cx + (R if k % 2 == 0 else r) * math.cos(-math.pi / 2 + turn + k * math.pi / 5),
-             cy + (R if k % 2 == 0 else r) * math.sin(-math.pi / 2 + turn + k * math.pi / 5)) for k in range(10)]
-    p.flat(star, GOLD, INK, 1)
-    if f:
-        for sx, sy, k in ((34, 8, 2.6), (60, 26, 2.2), (38, 24, 1.8)):
-            p.flat([(sx, sy - k), (sx + k * .35, sy - k * .35), (sx + k, sy), (sx + k * .35, sy + k * .35),
-                    (sx, sy + k), (sx - k * .35, sy + k * .35), (sx - k, sy), (sx - k * .35, sy - k * .35)], (255, 244, 170, 255), INK, 0.5)
-    return p
-
-
-def icon_play(f=0):
-    p = Pic()
-    p.shadow(-14, 6, 30, 5)
-    p.box(-14, 6, 0, 30, 4, 30, DARK)                                                               # a screen
-    y = 10
-    for x in range(-12, 15, 5):                                                                     # film holes
-        p.poly([(x, y, 26), (x + 2.6, y, 26), (x + 2.6, y, 28.5), (x, y, 28.5)], (230, 236, 246, 255))
-        p.poly([(x, y, 1.5), (x + 2.6, y, 1.5), (x + 2.6, y, 4), (x, y, 4)], (230, 236, 246, 255))
-    p.poly([(-12, y, 6), (14, y, 6), (14, y, 24), (-12, y, 24)], (70, 120, 210, 255))
-    pts = [(-4 + 7 * math.cos(t), y, 15 + 7 * math.sin(t)) for t in [i * math.pi / 12 for i in range(24)]]
-    p.poly(pts, GREEN, INK, 0.8)
-    if not f:                                                                                       # play, and pause when chosen
-        p.poly([(-6.5, y, 19), (-6.5, y, 11), (0, y, 15)], (255, 255, 255, 255))
+def openview(sel):
+    ic = Icon()
+    ic.add(rrect(4, 10, 48, 50, 3), linear((4, 10), (48, 50), GREY_HI, rgb('#C9CCD1')), gloss=0.12)
+    ic.add(rect(8, 14, 44, 44), linear((0, 14), (0, 44), rgb('#9FD0FF'), rgb('#E9F4FF')), outline=0.9)
+    ic.detail(poly([(8, 44), (8, 36), (17, 27), (26, 37), (31, 32), (44, 42), (44, 44)]), linear((0, 27), (0, 44), GREEN, GREEN_LO))
+    ic.detail(ellipse(33, 17, 40, 24), GOLD)
+    if sel:
+        magnifier(ic, 30, 30, 10.5, 45, 13)
     else:
-        for x in (-7.5, -2.5):
-            p.poly([(x, y, 11), (x + 3, y, 11), (x + 3, y, 19), (x, y, 19)], (255, 255, 255, 255))
-    return p
+        magnifier(ic, 47, 42, 9.5, 45, 11)
+    return ic
 
 
-def icon_browser(f=0):
-    p = Pic()
-    cx, cy, r = 32, 28, 17
-    sh = Image.new("RGBA", (W, W), (0, 0, 0, 0))
-    ImageDraw.Draw(sh).ellipse([(PAD + cx - 15) * S, (PAD + cy + 17) * S, (PAD + cx + 17) * S, (PAD + cy + 23) * S], fill=(20, 20, 40, 120))
-    p.img = Image.alpha_composite(sh.filter(ImageFilter.GaussianBlur(2 * S)), p.img)
-    p.d = TDraw(p.img)
-    img = p.img
-    ring = (226, 140, 50, 255)
-    p.d.ellipse([(cx - 26) * S, (cy - 6) * S, (cx + 26) * S, (cy + 9) * S], outline=INK, width=int(4.6 * S))   # back of the ring
-    p.d.ellipse([(cx - 26) * S, (cy - 6) * S, (cx + 26) * S, (cy + 9) * S], outline=ring, width=int(2.6 * S))
-    g = Image.new("RGBA", (W, W), (0, 0, 0, 0))
-    gd = TDraw(g)
-    for k in range(r * S, 0, -S):                                                                   # a shaded sphere
-        t = k / (r * S)
-        c = mix((40, 70, 170), (120, 190, 250), 1 - t)
-        off = (1 - t) * 6 * S
-        gd.ellipse([cx * S - k - off, cy * S - k - off, cx * S + k - off, cy * S + k - off], fill=c)
-    gd.ellipse([(cx - r) * S, (cy - r) * S, (cx + r) * S, (cy + r) * S], outline=INK, width=int(1.4 * S))
-    for lat in (-0.5, 0, 0.5):                                                                      # lines on it
-        yy = cy + lat * r
-        hw = r * math.sqrt(1 - lat * lat)
-        gd.arc([(cx - hw) * S, (yy - 3) * S, (cx + hw) * S, (yy + 3) * S], 0, 180, fill=(220, 240, 255, 200), width=S)
-    for m in ((6,), (11, 1.5))[f]:                                                                  # the meridians turn
-        gd.ellipse([(cx - m) * S, (cy - r) * S, (cx + m) * S, (cy + r) * S], outline=(220, 240, 255, 200), width=S)
-    gd.ellipse([(cx - 11) * S, (cy - 13) * S, (cx - 3) * S, (cy - 6) * S], fill=(255, 255, 255, 150))  # the gloss
-    img = Image.alpha_composite(img, g)
-    d = TDraw(img)
-    d.arc([(cx - 26) * S, (cy - 6) * S, (cx + 26) * S, (cy + 9) * S], 0, 180, fill=INK, width=int(4.6 * S))  # front of the ring
-    d.arc([(cx - 26) * S, (cy - 6) * S, (cx + 26) * S, (cy + 9) * S], 0, 180, fill=ring, width=int(2.6 * S))
-    p.img = img
-    return p
+def openedit(sel):
+    """A notepad and a pencil; chosen, the pencil has written a line more."""
+    ic = Icon()
+    page(ic, 8, 9, 46, 59, holes=False)
+    for i in range(5):
+        x = 12.5 + i * 7
+        ic.add(rrect(x, 4.5, x + 3, 13, 1.5), linear((x, 4), (x + 3, 13), rgb('#E9ECF0'), rgb('#7D848E')), outline=1.1)
+    widths = [26, 22, 27, 18, 24]
+    for i, wd in enumerate(widths):
+        ic.detail(rect(13, 20 + i * 6, 13 + wd, 21.7 + i * 6), CONTENT)
+    if sel:
+        ic.detail(rect(13, 50, 33, 51.7), BLUE_LO)
+        pencil(ic, 34, 51, angle=-55)
+    else:
+        ic.detail(rect(13, 50, 22, 51.7), BLUE_LO)
+        pencil(ic, 23, 51, angle=-55)
+    return ic
 
 
-def icon_compress(f=0):
-    p = Pic()
-    p.shadow(-14, 4, 22, 20)
-    p.box(-14, 4, 0, 22, 20, 18, (214, 168, 104, 255))
-    p.box(-15, 3, 18 + 3 * f, 24, 22, 4, (232, 192, 132, 255))                                      # the lid lifts
-    p.flat([(x + 4 * f, y) for x, y in [(36, 30), (46, 30), (46, 24), (60, 36), (46, 48), (46, 42), (36, 42)]], GREEN, INK, 1)
-    return p
-
-
-def icon_printer(f=0):
-    p = Pic()
-    p.shadow(-16, 4, 30, 20)
-    p.box(-10, 8, 18, 18, 4, 14, PAPER, gloss=False)                                                # paper in
-    p.box(-16, 4, 0, 30, 20, 18, (210, 212, 222, 255))                                              # the printer
-    p.poly([(-12, 24, 6), (10, 24, 6), (10, 24, 10), (-12, 24, 10)], DARK)                          # the slot
-    out = (30, 36)[f]                                                                               # the page comes further out
-    p.poly([(-11, 24, 0), (9, 24, 0), (11, out, -2), (-9, out, -2)], PAPER, INK, 0.6)
-    if f:
-        for k in (1, 2):
-            p.line((-7, 24 + 4 * k, -0.7 * k), (5, 24 + 4 * k, -0.7 * k), (60, 60, 80, 255), 0.6)
-    p.poly([(9, 24, 14), (12, 24, 14), (12, 24, 16), (9, 24, 16)], (GREEN, (120, 240, 120, 255))[f])   # its light
-    return p
-
-
-def icon_install(f=0):
-    p = Pic()
-    p.shadow(-12, 6, 24, 20)
-    p.box(-12, 6, 0, 24, 20, 18, BLUE)
-    p.box(-13, 5, 18, 26, 22, 3, shade(BLUE, 1.15))
-    p.flat([(x, y + 6 * f) for x, y in [(32, 34), (44, 22), (37, 22), (37, 8), (27, 8), (27, 22), (20, 22)]], GREEN, INK, 1)   # down into it
-    return p
-
-
-def icon_zune(f=0):
-    p = Pic()
-    y = window_slab(p, (90, 90, 110, 255), -14, 6, 28, 4, 30)
+def openwrite(sel):
+    """A laid-out page (a heading, two columns, a picture) and a pen nib."""
+    ic = Icon()
+    page(ic, 6, 5, 46, 59, holes=False)
+    ic.detail(rect(11, 11, 41, 15), BLUE_LO)
+    ic.add(rect(11, 19, 24, 31), linear((0, 19), (0, 31), rgb('#9FD0FF'), rgb('#E9F4FF')), outline=0.8)
+    ic.detail(poly([(11, 31), (16, 24), (20, 28), (24, 25), (24, 31)]), GREEN)
     for i in range(3):
-        p.poly([(-11, y, 18 - i * 6), (11, y, 18 - i * 6), (11, y, 22 - i * 6), (-11, y, 22 - i * 6)],
-               (90, 150, 240, 255) if f and i == 1 else (196, 200, 214, 255), INK, 0.5)                # a gadget pressed
-    return p
+        ic.detail(rect(27, 20 + i * 4, 41, 21.4 + i * 4), CONTENT)
+    for i in range(5):
+        wd = 30 if i != 4 else 18
+        ic.detail(rect(11, 35 + i * 4, 11 + wd, 36.4 + i * 4), CONTENT)
+    # the nib: a fountain pen's point, drawn upright and leaning
+    cx, cy = (52, 44) if not sel else (47, 50)
+    a = math.radians(-30)
+    rot = lambda x, y: (cx + x * math.cos(a) - y * math.sin(a), cy + x * math.sin(a) + y * math.cos(a))
+    ic.add(poly([rot(0, 12), rot(-6, -2), rot(-5, -10), rot(5, -10), rot(6, -2)]),
+           linear(rot(-6, -10), rot(6, 6), rgb('#FFE7A0'), rgb('#B98410')), gloss=0.3)
+    ic.detail(stroke([rot(0, 11), rot(0, -1)], 0.9), INK)
+    ic.detail(ellipse(*rot(-1.3, -2.6), *rot(1.3, 0.0)), INK)
+    ic.add(rrect(*rot(-6.5, -22), *rot(6.5, -10), 2), linear(rot(-6, -20), rot(6, -10), rgb('#5A616B'), rgb('#1F2329')), gloss=0.3)
+    if sel:
+        ic.detail(stroke([(14, 56), (20, 54), (26, 56), (33, 54)], 1.2), BLUE_LO)
+    return ic
 
 
-def drawer_pic(f=0):
-    """Boxie's drawer, a blue filing cabinet; chosen, its top drawer is pulled open."""
-    p = Pic()
-    p.shadow(-10, 4, 20, 14)
-    c = (54, 110, 160, 255)
-    p.box(-10, 4, 0, 20, 14, 36, c)
-    y = 18
-    for z0 in (3, 19):
-        p.poly([(-8, y, z0), (8, y, z0), (8, y, z0 + 14), (-8, y, z0 + 14)], shade(c, 0.85), shade(c, 0.4), 0.7)
-        p.poly([(-3, y, z0 + 9), (3, y, z0 + 9), (3, y, z0 + 11), (-3, y, z0 + 11)], shade(c, 0.45))
-    if f:
-        p.box(-8, y - 2, 19, 16, 9, 14, shade(c, 0.9))                                              # out it comes
-        p.poly([(-7, y - 1, 33), (7, y - 1, 33), (7, y + 6, 33), (-7, y + 6, 33)], shade(c, 0.35))   # its inside
-        for k in range(3):                                                                          # files in it
-            p.box(-6 + k * 4.5, y + k * 0.5, 30, 3.4, 5, 5, (PAPER, GOLD, PAPER)[k], gloss=False)
-        p.poly([(-3, y + 7, 28), (3, y + 7, 28), (3, y + 7, 30), (-3, y + 7, 30)], shade(c, 0.45))
-    return p
+def openplay(sel):
+    ic = Icon()
+    ic.add(rrect(4, 10, 60, 52, 3), linear((4, 10), (60, 52), DARK, DARK_LO), gloss=0.18)
+    for y in (12.5, 47):
+        for i in range(8):
+            x = 8 + i * 6.6
+            ic.detail(rrect(x, y, x + 3.4, y + 2.6, 0.8), rgb('#E8EAED'))
+    ic.detail(rect(7, 17, 57, 45), linear((0, 17), (0, 45), rgb('#3A6BB0'), rgb('#1B3D6E')))
+    ic.add(ellipse(20, 19, 44, 43), linear((20, 19), (44, 43), rgb('#FFFFFF'), rgb('#C9D3E0')), gloss=0.3)
+    if sel:
+        ic.detail(rect(27.5, 25.5, 30.5, 36.5), BLUE_LO)
+        ic.detail(rect(33.5, 25.5, 36.5, 36.5), BLUE_LO)
+    else:
+        ic.detail(poly([(28.5, 24.5), (28.5, 37.5), (39, 31)]), BLUE_LO)
+    return ic
 
 
-def frames(fn) -> tuple[Image.Image, Image.Image]:
-    """An icon's two frames, cropped to the box both fill so only the moving part moves."""
-    a, b = fn(0), fn(1)
-    ba, bb = a.bbox(), b.bbox()
-    box = (min(ba[0], bb[0]), min(ba[1], bb[1]), max(ba[2], bb[2]), max(ba[3], bb[3]))
-    return a.done(box=box), b.done(box=box)
+def openbrowser(sel):
+    """A globe in its ring; chosen, the world has turned."""
+    ic = Icon()
+    cx, cy, r = 31, 32, 21
+    sphere = ellipse(cx - r, cy - r, cx + r, cy + r)
+    ic.add(sphere, radial((cx - 8, cy - 9), r * 2.0, rgb('#7DB6F2'), rgb('#123A78')))
+    shift = 9 if sel else 0
+    land = []
+    for dx in (-2 * r - 4, 0, 2 * r + 4):
+        o = dx + shift
+        land.append(poly([(cx - 14 + o, cy - 12), (cx - 4 + o, cy - 16), (cx + 2 + o, cy - 10), (cx - 3 + o, cy - 4),
+                          (cx - 1 + o, cy + 4), (cx - 7 + o, cy + 10), (cx - 12 + o, cy + 2), (cx - 16 + o, cy - 4)]))
+        land.append(poly([(cx + 6 + o, cy - 2), (cx + 15 + o, cy - 6), (cx + 19 + o, cy + 3), (cx + 13 + o, cy + 14), (cx + 7 + o, cy + 9)]))
+    ic.detail(inter(union(*land), sphere), linear((cx - r, cy - r), (cx + r, cy + r), rgb('#9BE07C'), rgb('#2E7D2A')))
+    ic.detail(inter(ellipse(cx - r * 0.75, cy - r * 0.85, cx - r * 0.05, cy - r * 0.35), sphere), (255, 255, 255, ))
+    # the ring, tilted: its back half behind the globe is hidden by drawing only the front arc over it
+    ring_m = cut(ellipse(cx - r - 9, cy - 7, cx + r + 9, cy + 9), ellipse(cx - r - 6, cy - 4, cx + r + 6, cy + 6))
+    front = cut(ring_m, rect(cx - r - 10, cy - 8, cx + r + 10, cy + 1))
+    back = cut(cut(ring_m, sphere), front)
+    ic.add(back, linear((cx - r, 0), (cx + r, 0), GOLD, GOLD_LO), outline=1.2)
+    ic.add(front, linear((cx - r, 0), (cx + r, 0), rgb('#FFE58A'), GOLD_LO), outline=1.2)
+    return ic
 
 
-def drawer(badge=None):
-    """The drawer with a badge at its foot like Boxie's; the badge's own frame plays too."""
-    out = list(frames(drawer_pic))
-    if badge:
-        for i, pic in enumerate(frames(badge)):
-            out[i].alpha_composite(pic.resize((30, 30), Image.LANCZOS), (0, 34))
-    return tuple(out)
+def opencompress(sel):
+    """A box with an arrow coming out of it; chosen, the lid is up and the arrow further out."""
+    ic = Icon()
+    box(ic, 6, 28, 34, 28, lid_up=1.0 if sel else 0.0)
+    if sel:
+        arrow(ic, 60, 26, 1, -0.55, size=1.15)
+    else:
+        arrow(ic, 50, 32, 1, -0.55, size=1.0)
+    return ic
 
+
+def printer(sel):
+    """A printer, a page in the tray; chosen, the page is further out and the light on."""
+    ic = Icon()
+    ic.add(rect(16, 4, 48, 22), linear((16, 4), (48, 22), GREY_HI, rgb('#D4D6DA')))
+    for i in range(3):
+        ic.detail(rect(20, 8 + i * 4, 44, 9.4 + i * 4), CONTENT)
+    ic.add(rrect(5, 18, 59, 44, 4), linear((5, 18), (59, 44), rgb('#E9ECF0'), rgb('#8E96A2')), gloss=0.25)
+    ic.add(rrect(9, 36, 55, 50, 2.5), linear((0, 36), (0, 50), rgb('#C9CED6'), rgb('#6F7782')))
+    ic.detail(rect(12, 39, 52, 41), INK)
+    out = 14 if sel else 6
+    ic.add(rect(15, 40, 49, 40 + out + 4), linear((0, 40), (0, 40 + out + 4), (255, 255, 255), rgb('#D4D6DA')), outline=1.4)
+    for i in range(2 if not sel else 3):
+        ic.detail(rect(19, 47 + i * 4, 44, 48.3 + i * 4), CONTENT)
+    ic.add(ellipse(47, 24, 52, 29), rgb('#7CFF6A') if sel else rgb('#2E5A2A'), outline=1.0)
+    return ic
+
+
+def install(sel):
+    """The OpenUp box with an arrow over it; chosen, the arrow sinks into the box."""
+    ic = Icon()
+    box(ic, 12, 34, 40, 24)
+    y = 30 if sel else 22
+    arrow(ic, 32, y, 0, 1, size=1.25)
+    return ic
+
+
+def uninstall(sel):
+    """The OpenUp box with an arrow lifting out of it; chosen, it is out."""
+    ic = Icon()
+    box(ic, 12, 34, 40, 24)
+    y = 4 if sel else 12
+    arrow(ic, 32, y, 0, -1, size=1.25, colour=RED, colour_lo=RED_LO)
+    return ic
+
+
+def setup(sel):
+    """The OpenUp box and a wand; chosen, the star flares and sparkles."""
+    ic = Icon()
+    box(ic, 18, 36, 38, 22)
+    ic.add(stroke([(14, 44), (36, 18)], 3.4), linear((14, 44), (36, 18), rgb('#5A616B'), rgb('#1F2329')))
+    ic.detail(stroke([(31, 24), (36, 18)], 3.4), (250, 250, 250))
+    r = 10 if sel else 7.5
+    cx, cy = 39, 14
+    pts = []
+    for k in range(10):
+        a = math.radians(-90 + k * 36)
+        rr = r if k % 2 == 0 else r * 0.45
+        pts.append((cx + math.cos(a) * rr, cy + math.sin(a) * rr))
+    ic.add(poly(pts), radial((cx - 2, cy - 2), r * 1.6, rgb('#FFF6B8'), GOLD_LO), outline=1.5, gloss=0.2)
+    if sel:
+        for (x, y, s) in ((54, 8, 3.2), (52, 24, 2.4), (27, 6, 2.6)):
+            ic.add(poly([(x, y - s), (x + s * 0.3, y - s * 0.3), (x + s, y), (x + s * 0.3, y + s * 0.3), (x, y + s),
+                         (x - s * 0.3, y + s * 0.3), (x - s, y), (x - s * 0.3, y - s * 0.3)]), GOLD, outline=1.0)
+    prefs_badge(ic, 2, 40, 1.35)
+    return ic
+
+
+def zunetest(sel):
+    """A window of gadgets; chosen, a button is pressed and the box ticked."""
+    ic = Icon()
+    window(ic, 4, 6, 60, 56, active=True, title_h=6)
+    # a button
+    bx0, by0, bx1, by1 = 10, 17, 34, 25
+    if sel:
+        ic.detail(rect(bx0, by0, bx1, by1), rgb('#8E96A2'))
+        ic.detail(rect(bx0 + 1, by0 + 1, bx1, by1), rgb('#C9CED6'))
+    else:
+        ic.detail(rect(bx0, by0, bx1, by1), (255, 255, 255))
+        ic.detail(rect(bx0 + 1, by0 + 1, bx1, by1), rgb('#7C8088'))
+        ic.detail(rect(bx0 + 1, by0 + 1, bx1 - 1, by1 - 1), rgb('#E2E5E9'))
+    ic.detail(rect(bx0 + 6, by0 + 3.4, bx1 - 6, by0 + 4.8), DARK)
+    # a check box
+    ic.detail(rect(40, 17, 48, 25), rgb('#7C8088'))
+    ic.detail(rect(41, 18, 47, 24), (255, 255, 255))
+    if sel:
+        ic.detail(stroke([(42.2, 21), (43.8, 22.8), (46.4, 19)], 1.3), BLUE_LO)
+    # a slider
+    ic.detail(rect(10, 32, 54, 35), rgb('#B6BBC2'))
+    kx = 30 if sel else 22
+    ic.add(rrect(kx, 29.5, kx + 6, 37.5, 1.2), linear((kx, 29), (kx + 6, 38), lighter(BLUE, 0.3), BLUE_LO), outline=1.0)
+    # a list
+    ic.detail(rect(10, 41, 54, 52), (255, 255, 255))
+    for i in range(3):
+        ic.detail(rect(12, 42.5 + i * 3.2, 46, 43.8 + i * 3.2), BLUE if i == 1 else CONTENT)
+    return ic
+
+
+# ---- prefs editors ------------------------------------------------------------------------------
+
+
+def look(sel):
+    ic = Icon()
+    cols = [(RED, RED_LO), (ORANGE, ORANGE_LO), (GOLD, GOLD_LO), (GREEN, GREEN_LO), (BLUE, BLUE_LO)]
+    for i, (c, lo) in enumerate(cols):
+        a = math.radians(-70 + i * 17 + (6 if sel and i == 4 else 0))
+        cx, cy = 30, 52
+        L, w = 38, 5.2
+        tip = (cx + math.cos(a) * L, cy + math.sin(a) * L)
+        n = (-math.sin(a) * w, math.cos(a) * w)
+        pts = [(cx - n[0], cy - n[1]), (cx + n[0], cy + n[1]), (tip[0] + n[0], tip[1] + n[1]), (tip[0] - n[0], tip[1] - n[1])]
+        ic.add(poly(pts), linear((cx, cy), tip, lighter(c, 0.25), lo), outline=1.4)
+    ic.add(ellipse(27, 49, 33, 55), rgb('#B8BCC4'), outline=1.2)
+    bx, by = (44, 14) if not sel else (40, 20)
+    ic.add(stroke([(bx, by), (bx + 12, by - 12)], 3.6), linear((bx, by), (bx + 12, by - 12), rgb('#C48A4A'), rgb('#7A4E22')))
+    ic.add(poly([(bx - 4.5, by + 4.5), (bx - 1.5, by - 2.5), (bx + 2.5, by + 1.5)]), rgb('#C0C4CC'))
+    ic.add(poly([(bx - 9, by + 9.5), (bx - 4.5, by + 4.5), (bx - 1, by + 8), (bx - 5.5, by + 12)]), RED if sel else rgb('#3B3F46'), outline=1.2)
+    prefs_badge(ic, 3, 40, 1.35)
+    return ic
+
+
+def dock(sel):
+    ic = Icon()
+    ic.add(rrect(3, 34, 61, 50, 6), linear((0, 34), (0, 50), rgb('#E9EEF5'), rgb('#AFBACB')), gloss=0.35)
+    cols = [BLUE, GREEN, ORANGE, RED]
+    for i, c in enumerate(cols):
+        x = 9 + i * 12.5
+        up = 7 if (sel and i == 2) else 0
+        ic.add(rrect(x, 26 - up, x + 9.5, 35.5 - up, 2.4), linear((x, 26 - up), (x + 9.5, 35.5 - up), lighter(c, 0.3), darker(c, 0.25)), outline=1.3, gloss=0.4)
+        if i in (0, 2) and not (sel and i == 2):
+            ic.detail(ellipse(x + 3.9, 43.5, x + 5.6, 45.2), rgb('#2A2E35'))
+    prefs_badge(ic, 3, 3, 1.35)
+    return ic
+
+
+def menus(sel):
+    """A menu, a row lit; chosen, a row lower down is lit and the pointer follows."""
+    ic = Icon()
+    ic.add(rect(4, 4, 60, 11), linear((0, 4), (0, 11), rgb('#F7F8F9'), rgb('#C9CED6')))
+    ic.detail(rect(12, 4.6, 26, 10.4), BLUE)
+    ic.detail(rect(14, 6.8, 24, 8.2), (255, 255, 255))
+    ic.detail(rect(30, 6.8, 40, 8.2), DARK)
+    ic.add(rect(12, 11, 46, 52), linear((12, 11), (46, 52), (255, 255, 255), rgb('#E2E5E9')))
+    lit = 3 if sel else 1
+    for i in range(6):
+        y = 14 + i * 6.2
+        if i == lit:
+            ic.detail(rect(13, y - 1.2, 45, y + 3.8), BLUE)
+        ic.detail(rect(16, y + 0.6, 16 + (22 if i % 2 == 0 else 17), y + 2.0), (255, 255, 255) if i == lit else DARK)
+    py = 14 + lit * 6.2 + 1.5
+    px = 40
+    ic.add(poly([(px, py), (px, py + 13), (px + 3.4, py + 9.6), (px + 6, py + 15), (px + 8.4, py + 14), (px + 5.8, py + 8.6),
+                 (px + 10, py + 8.6)]), (255, 255, 255), outline=1.3)
+    prefs_badge(ic, 2, 40, 1.35)
+    return ic
+
+
+def sound(sel):
+    """A speaker and its waves; chosen, louder: a wave more."""
+    ic = Icon()
+    ic.add(rect(10, 22, 20, 40), linear((10, 22), (20, 40), rgb('#7E8794'), rgb('#2A2F37')), gloss=0.3)
+    ic.add(poly([(20, 22), (32, 10), (32, 52), (20, 40)]), linear((20, 10), (32, 52), rgb('#7E8794'), rgb('#2A2F37')), gloss=0.3)
+    n = 4 if sel else 3
+    for k in range(n):
+        r = 8 + k * 6
+        ic.add(arc(31 - r, 31 - r, 31 + r, 31 + r, -48, 48, 2.6), linear((31, 0), (31 + r, 0), lighter(BLUE, 0.3), BLUE_LO), outline=1.0)
+    prefs_badge(ic, 2, 40, 1.35)
+    return ic
+
+
+def titlebar(sel):
+    """The screen's title bar, and its clock; chosen, the hands move on."""
+    ic = Icon()
+    ic.add(rrect(2, 10, 62, 22, 2), linear((0, 10), (0, 22), rgb('#F7F8F9'), rgb('#C9CED6')), gloss=0.25)
+    ic.add(rrect(5, 12.4, 12, 19.6, 1.5), linear((5, 12), (12, 20), lighter(BLUE, 0.2), BLUE_LO), outline=1.0)
+    for x0, x1 in ((15, 25), (28, 34)):
+        ic.detail(rect(x0, 15.4, x1, 16.8), DARK)
+    if sel:
+        clock_face(ic, 42, 38, 17, 75, 220)
+    else:
+        clock_face(ic, 42, 38, 17, 30, 150)
+    prefs_badge(ic, 2, 40, 1.35)
+    return ic
+
+
+def windows(sel):
+    """Three windows stacked; chosen, the front one slides out and is active."""
+    ic = Icon()
+    window(ic, 22, 4, 58, 30, active=False)
+    window(ic, 14, 13, 50, 39, active=False)
+    if sel:
+        window(ic, 24, 26, 62, 54, active=True)
+    else:
+        window(ic, 6, 22, 42, 48, active=False)
+    prefs_badge(ic, 2, 40, 1.35)
+    return ic
+
+
+def types(sel):
+    """Documents, an arrow to a program; chosen, the arrow moves on."""
+    ic = Icon()
+    page(ic, 14, 2, 36, 30, holes=False)
+    page(ic, 6, 8, 28, 36, holes=False)
+    for i in range(4):
+        ic.detail(rect(9.5, 14 + i * 4.5, 24, 15.4 + i * 4.5), CONTENT)
+    ic.add(rrect(38, 30, 62, 52, 3), linear((38, 30), (62, 52), rgb('#E9ECF0'), rgb('#8E96A2')), gloss=0.2)
+    ic.detail(rect(41, 33, 59, 46), linear((0, 33), (0, 46), rgb('#3E79C8'), rgb('#1B3D6E')))
+    ic.detail(poly([(44, 43), (49, 36), (53, 41), (56, 38), (56, 43)]), GREEN)
+    x = 40 if sel else 34
+    arrow(ic, x, 28, 1, 0.75, size=0.85)
+    prefs_badge(ic, 2, 40, 1.35)
+    return ic
+
+
+# ---- drawers ---------------------------------------------------------------------------------------
+# A badge is drawn in the frame a drawer has (82 x 60 units, as Gorilla's), at
+# its foot on the right, and has its own two frames.
+
+DRAWER_W, DRAWER_H = 82, 60
+
+
+def badge_openup(ic, sel):
+    box(ic, 52, 46, 20, 12)
+    arrow(ic, 62, 44 if sel else 38, 0, 1, size=0.75)
+
+
+def badge_print(ic, sel):
+    ic.add(rect(56, 30, 72, 39), (255, 255, 255))
+    ic.add(rrect(51, 36, 77, 50, 2.5), linear((51, 36), (77, 50), rgb('#E9ECF0'), rgb('#8E96A2')), gloss=0.25)
+    out = 8 if sel else 4
+    ic.add(rect(56, 46, 72, 46 + out + 2), (255, 255, 255), outline=1.3)
+    ic.add(ellipse(71, 39, 74, 42), rgb('#7CFF6A') if sel else rgb('#2E5A2A'), outline=0.8)
+
+
+def badge_browser(ic, sel):
+    cx, cy, r = 64, 45, 11
+    sphere = ellipse(cx - r, cy - r, cx + r, cy + r)
+    ic.add(sphere, radial((cx - 4, cy - 5), r * 2.0, rgb('#7DB6F2'), rgb('#123A78')))
+    o = 4 if sel else 0
+    land = union(poly([(cx - 8 + o, cy - 6), (cx - 2 + o, cy - 8), (cx + 1 + o, cy - 4), (cx - 3 + o, cy + 4), (cx - 7 + o, cy + 1)]),
+                 poly([(cx + 4 + o - 22, cy), (cx + 9 + o - 22, cy - 2), (cx + 10 + o - 22, cy + 5), (cx + 5 + o - 22, cy + 7)]),
+                 poly([(cx + 4 + o, cy), (cx + 9 + o, cy - 2), (cx + 10 + o, cy + 5), (cx + 5 + o, cy + 7)]))
+    ic.detail(inter(land, sphere), rgb('#6CC24A'))
+
+
+def badge_write(ic, sel):
+    page(ic, 54, 30, 74, 56, holes=False)
+    ic.detail(rect(57, 34, 71, 36), BLUE_LO)
+    for i in range(4 if sel else 3):
+        ic.detail(rect(57, 39 + i * 3.6, 70, 40.2 + i * 3.6), CONTENT)
+
+
+def own_drawer(ic, sel):
+    """A drawer of our own drawing in the style (for a pack without Gorilla):
+    an open tray seen from a little above, a handle on its front."""
+    ic.add(poly([(5, 24), (75, 24), (69, 13), (11, 13)]), linear((0, 13), (0, 24), rgb('#8C8A6C'), rgb('#5F5D45')))
+    ic.detail(poly([(13, 15.5), (67, 15.5), (71, 22.5), (9, 22.5)]), rgb('#4A4935'))
+    if sel:
+        for i, c in enumerate((rgb('#F4F5F6'), rgb('#DDE7F4'), rgb('#F6E7A6'))):
+            x = 17 + i * 14
+            ic.add(rect(x, 8 - i, x + 16, 22), c, outline=1.2)
+            ic.detail(rect(x + 3, 11 - i, x + 13, 12 - i), CONTENT)
+    ic.add(rrect(2, 21, 77, 54, 7), linear((2, 21), (77, 54), rgb('#F0EFE2'), rgb('#A9A78A')), gloss=0.3)
+    ic.detail(arc(28, 27, 50, 41, 25, 155, 1.8), rgb('#4A4935'))
+
+
+def drawer_icon(badge, own: bool):
+    def fn(sel):
+        ic = Icon()
+        if own:
+            own_drawer(ic, sel)
+        badge(ic, sel)
+        return ic
+    return fn
+
+
+# ---- the list ------------------------------------------------------------------------------------
 
 ICONS = {
-    "OpenFiles": icon_openfiles, "OpenView": icon_openview, "OpenEdit": icon_openedit, "OpenWrite": icon_openwrite, "Dock": icon_dock,
-    "Menus": icon_menus, "Sound": icon_sound, "TitleBar": icon_title, "Look": icon_look, "Windows": icon_windows,
-    "OpenTypes": icon_types, "OpenUp-Setup": icon_setup, "OpenPlay": icon_play, "OpenBrowser": icon_browser,
-    "OpenCompress": icon_compress, "Printers and Queue": icon_printer, "Install-OpenUp": icon_install, "ZuneTest": icon_zune,
-    "drawer-OpenUp": lambda: drawer(icon_install), "drawer-OpenPrint": lambda: drawer(icon_printer),
-    "drawer-OpenBrowser": lambda: drawer(icon_browser), "drawer-OpenWrite": lambda: drawer(icon_openwrite),
+    "OpenFiles": openfiles, "OpenView": openview, "OpenEdit": openedit, "OpenWrite": openwrite,
+    "OpenPlay": openplay, "OpenBrowser": openbrowser, "OpenCompress": opencompress,
+    "Printers and Queue": printer, "Install-OpenUp": install, "Uninstall-OpenUp": uninstall,
+    "OpenUp-Setup": setup, "ZuneTest": zunetest,
+    "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
 }
+BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write}
 
 
-def harden(im: Image.Image) -> Image.Image:
-    """For a GlowIcon: every pixel solid or see-through."""
-    px = im.load()
-    out = im.copy()
-    o = out.load()
-    for y in range(im.height):
-        for x in range(im.width):
-            r, g, b, a = px[x, y]
-            o[x, y] = (r, g, b, 255) if a >= 110 else (0, 0, 0, 0)
-    return out
+def drawer_frames(badge) -> tuple[list[Image.Image], list[Image.Image]]:
+    """The badge on our own drawer, and the badge alone, both in the drawer's
+    frame (82 x 60 pixels, Gorilla's drawer's size), so the pack build can lay
+    the badge alone on Gorilla's drawer."""
+    region = (P(0), P(0), P(DRAWER_W), P(DRAWER_H))
+    shrink = lambda im: im.crop(region).resize((DRAWER_W, DRAWER_H), Image.LANCZOS)
+    own = [shrink(drawer_icon(badge, True)(s).render()) for s in (False, True)]
+    alone = [shrink(drawer_icon(badge, False)(s).render()) for s in (False, True)]
+    return own, alone
+
+
+def main(out: Path) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    for name, fn in ICONS.items():
+        rest, chosen = finish([fn(False).render(), fn(True).render()])
+        rest.save(out / f"{name}.png")
+        chosen.save(out / f"{name}-selected.png")
+    for name, badge in BADGES.items():
+        own, alone = drawer_frames(badge)
+        own[0].save(out / f"drawer-{name}.png")
+        own[1].save(out / f"drawer-{name}-selected.png")
+        alone[0].save(out / f"badge-{name}.png")
+        alone[1].save(out / f"badge-{name}-selected.png")
+    print(f"{len(ICONS)} icons and {len(BADGES)} drawers in {out}")
 
 
 if __name__ == "__main__":
-    out = Path(sys.argv[1])
-    out.mkdir(parents=True, exist_ok=True)
-    for name, fn in ICONS.items():
-        rest, chosen = fn() if name.startswith("drawer-") else frames(fn)
-        rest.save(out / f"{name}.png")
-        chosen.save(out / f"{name}-selected.png")
+    main(Path(sys.argv[1]))
