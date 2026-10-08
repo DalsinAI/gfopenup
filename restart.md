@@ -8,7 +8,7 @@ OpenUp: install AmigaOS 3.2.3, run one pack, and it's ready, on a real Amiga, a 
 
 ## Where it stands
 
-_Updated 8 October 2026._ OpenUp 0.6.15 is on GitHub (tag v0.6.15, `OpenUp-0.6.15.lha` and `OpenUp-0.6.15-OpenBrowser.lha`), built from every part's main and registered with Cradle. Since 0.6.14: OpenMail and OpenBrowser as parts left unticked (#39); OpenUp Update, `OpenUpTool UPDATE` (#40); the Tools menu's OpenUp and Preferences sub-menus (#42); OpenDock's see-through shelf, the title bar's settings cog, double-click to front and editors without a stray console (openamigaprefs #31-#33, #43); music modules in OpenPlay through openmodule.datatype (OpenImage 0.2, #44).
+_Updated 8 October 2026._ OpenUp 0.6.15 is on GitHub (tag v0.6.15). 0.6.16 was built for the instances but never published. 0.6.17 is built (this branch): OpenGPU 0.5 (opengpu.library, ACRTG.gpu, SDL2.module, GL.module, OpenGPUCheck) and Warp3D 5.0 as new parts ticked on AmigaChrome, OpenDemos as a part left unticked, OpenRTG 0.11, OpenImage 0.3 (openmodule.datatype 47.3), and the parts question asked in three pages of nine, because the 3.2 Installer mixes up the defaults of a longer askoptions. Its release waits for OpenPuTTY 0.2 (bits 134217728 and 268435456 are kept for OpenPuTTY and OpenCrypto) and for openamigartg's 3D core fix (#35). Since 0.6.14: OpenMail and OpenBrowser as parts left unticked (#39); OpenUp Update, `OpenUpTool UPDATE` (#40); the Tools menu's OpenUp and Preferences sub-menus (#42); OpenDock's see-through shelf, the title bar's settings cog, double-click to front and editors without a stray console (openamigaprefs #31-#33, #43); music modules in OpenPlay through openmodule.datatype (OpenImage 0.2, #44).
 
 Phases (DESIGN.md section 5): 1 done for AmigaChrome (Setup 0.1 and the startup switches included); 2 under way (OpenBrowser and OpenMail next, as parts left unticked); 3 (PiStorm, real A1200) waits; 4 (Cradle's OS 3.2.3 recipes apply the pack) is live in Cradle (8 October 2026, with 0.6.14 registered); 5's OpenUp Update is built (Cradle first; the GitHub step next). OpenUp Picks is no longer a requirement.
 
@@ -32,7 +32,7 @@ Phases (DESIGN.md section 5): 1 done for AmigaChrome (Setup 0.1 and the startup 
 
 ## Waiting on @SacredTrees
 
-- "update instances" to put 0.6.14 on Instances 30 and 31.
+- The word that OpenPuTTY 0.2 (on OpenCrypto) is ready, then the 0.6.17 release.
 
 ## Who owns it
 
