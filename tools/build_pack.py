@@ -60,7 +60,7 @@ a Part file that C/OpenUpTool reads:
                         (openamigartg; needs a 68040 or 68060 with its FPU)
   OpenDemos/            Boing, Chrome Gears and Copper Tunnel on GL.module, off
                         by default (--openamigamesa)
-  OpenCrypto/           opencrypto.library 2.0: SSH's and TLS's sums, on the PC through
+  OpenCrypto/           opencrypto.library 2.0: SSH's and TLS's sums, on x86 or ARM64 cores through
                         AC090 on AmigaChrome, on the 68k elsewhere (--openamigatls)
   OpenPuTTY/            OpenPuTTY 0.2, PuTTY on OpenCrypto, off by default (--openamigaputty)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
@@ -519,7 +519,7 @@ def main() -> int:
     # OpenSocket: amigachrome's vendored payload, by its manifest
     payload = a.amigachrome / "vendor/opensocket-os32"
     m = json.loads((payload / "manifest.json").read_text())
-    sock = Part(top, "OpenSocket", "4.2", "bsdsocket.library 4.2 through this PC (" + m.get("identity", "") + ")")
+    sock = Part(top, "OpenSocket", "4.2", "bsdsocket.library 4.2 through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
     sock.line("needs AmigaChrome")
     sock.line('keep "SYS:Libs/bsdsocket.library" ' + " ".join(f'"{x}"' for x in OPENSOCKET_MARKERS))
     for f in m["files"]:
@@ -546,7 +546,7 @@ def main() -> int:
     # AmigaChrome sharing: the control device, the clipboard and the files tools
     gout = a.guest / "build/guest/os32"
     icondir = a.amigachrome / "resources/icons/collections/amigachrome-guest/os3"
-    sh = Part(top, "AmigaChromeSharing", "1.3", "accontrol.device, ACClip and ACDrop: the clipboard and files, with this PC (Send to PC icon optional)")
+    sh = Part(top, "AmigaChromeSharing", "1.3", "accontrol.device, ACClip and ACDrop: the clipboard and files, with the desktop (Send to PC icon optional)")
     sh.line("needs AmigaChrome")
     sh.add("Devs/accontrol.device", (gout / "accontrol.device").read_bytes(), "SYS:Devs/accontrol.device")
     for tool_name in ("ACClip", "ACDrop"):
@@ -790,7 +790,7 @@ def main() -> int:
         ocl = (a.openamigatls / "build-amiga/lib/opencrypto.library").read_bytes()
         ocv = re.search(rb"opencrypto\.library ([0-9]+\.[0-9]+)", ocl)
         oc = Part(top, "OpenCrypto", ocv.group(1).decode() if ocv else "2.0",
-                  "OpenCrypto: opencrypto.library, SSH's and TLS's sums, on the PC on AmigaChrome")
+                  "OpenCrypto: opencrypto.library, SSH's and TLS's sums, on x86 or ARM64 cores on AmigaChrome")
         oc.add("Libs/opencrypto.library", ocl, "LIBS:opencrypto.library")
         oc.write()
 

@@ -41,11 +41,11 @@
 (set #g1
     (askoptions
         (prompt "Which parts should OpenUp install? (1 of 4)")
-        (help "OpenSocket: the Amiga's network (bsdsocket.library 4.2), through this PC. "
+        (help "OpenSocket: the Amiga's network (bsdsocket.library 4.2), through the x86 or ARM64 cores. "
               "AmigaChrome instances only.\n\n"
               "OpenPrint and OpenView: print to PDF and to printers on your network, "
               "and view pictures and documents.\n\n"
-              "AmigaChrome sharing: the clipboard and files, shared with this PC. "
+              "AmigaChrome sharing: the clipboard and files, shared with the desktop. "
               "AmigaChrome instances only.\n\n"
               "OpenLook: one look for every GadTools program, on RTG screens: title bars, "
               "borders, gadgets, scrollers and window backgrounds, with a clear screen font "
@@ -135,7 +135,7 @@
               "cores board, so the main CPU stays free; without a cores board the work runs "
               "on the main CPU, so it is safe on every Amiga (new).\n\n"
               "OpenGPU: opengpu.library, so programs' drawing, SDL 2 games and GL (Mesa) run "
-              "on this PC's graphics chip through AmigaChrome's graphics board; where there is "
+              "on the GPU through AmigaChrome's graphics board; where there is "
               "no board they run on the Amiga's own CPU, as before (new). SDL 2 and GL are in "
               "LIBS:OpenGPU and load only when a program asks. OpenGPUCheck in a Shell checks it.\n\n"
               "Icons: Gorilla, AROS's icon set, as new pictures for the system's own drawers, "
@@ -153,7 +153,7 @@
                  "OpenBrowser: a web browser (preview)"
                  "OpenMulticore: work on a cores board"
                  "Icons: Gorilla's pictures on the system's icons"
-                 "OpenGPU: SDL and GL on the PC's chip (new)"
+                 "OpenGPU: SDL and GL on the GPU (new)"
                  "Warp3D and MiniGL: 3D on OpenGPU (new, 68040)")
         (default (bitand (shiftright #default 18) 511))))
 (set #g4
@@ -163,7 +163,7 @@
               "(new, off unless picked; needs OpenGPU and an FPU). In SYS:Utilities/OpenDemos.\n\n"
               "OpenCrypto: opencrypto.library 2.0, the sums behind secure connections (SSH's key "
               "exchanges, host keys, SHA-2, AES) for the Open programs (new). On AmigaChrome they "
-              "run on the PC, elsewhere on the Amiga's own CPU. OpenPuTTY needs it, so it comes "
+              "run on the x86 or ARM64 cores, elsewhere on the Amiga's own CPU. OpenPuTTY needs it, so it comes "
               "with OpenPuTTY whatever is picked here.\n\n"
               "OpenPuTTY: PuTTY for AmigaOS 3.2, SSH, Telnet and serial terminals, with key "
               "sign-in (new, version 0.2, off unless picked). It needs a network stack "
