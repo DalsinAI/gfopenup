@@ -29,8 +29,8 @@ a Part file that C/OpenUpTool reads:
                         the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through OpenService (openamigaimage)
   OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
-  OpenWindows/          snapping, Amiga+Tab, the wheel under the pointer and window
-                        places, with its editor, OpenPrefs Windows (openamigaprefs)
+  OpenWindows/          snapping, Amiga+Tab, double-click to front, the wheel under the
+                        pointer and window places, with its editor, OpenPrefs Windows (openamigaprefs)
   OpenDock/             a dock, which takes over ToolManager's, AmiDock's or AmiStart's
                         buttons, and its editor, OpenPrefs Dock (openamigaprefs)
   OpenMenus/            OpenMenus, our own menus (pull-down or pop-up), and their editor,
@@ -42,7 +42,7 @@ a Part file that C/OpenUpTool reads:
                         compatibility (openamigartg; AmigaChrome's ACRTG board)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
-  OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory and clock on the title bar (openamigaprefs)
+  OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs)
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
@@ -522,7 +522,7 @@ def main() -> int:
     img.write()
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
-    ow = Part(top, "OpenWindows", "0.3", "OpenWindows: snapping, Amiga+Tab, the wheel under the pointer, window places")
+    ow = Part(top, "OpenWindows", "0.4", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
     ow.add("Prefs/Windows", (a.openamigaprefs / "Windows/build/os3/Windows").read_bytes(), "SYS:Prefs/Windows")
     ow.add("Prefs/Windows.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Windows.info")
     ow.add("Tools/Commodities/OpenWindows", (a.openamigaprefs / "Windows/build/os3/OpenWindows").read_bytes(),
@@ -611,9 +611,9 @@ def main() -> int:
     op.add("Utilities/OpenPlay.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenPlay.info")
     op.write()
 
-    # OpenTitle: the title bar's logo, free memory and clock, and its editor (openamigaprefs)
+    # OpenTitle: the title bar's logo, free memory, clock and settings cog, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.4", "OpenTitle: AmigaChrome's logo, free memory and a clock on the title bar")
+    tb = Part(top, "OpenTitle", "0.5", "OpenTitle: AmigaChrome's logo, free memory, a clock and the settings cog on the title bar")
     tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
     tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
     tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
