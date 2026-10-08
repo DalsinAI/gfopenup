@@ -223,9 +223,45 @@ def picture(png: bytes, amiga_icon) -> tuple[int, int, bytes, bytes]:
     return w, h, amiga_icon.dither_rgb565(w, h, rgba), amiga_icon.dither_rgb565(w, h, amiga_icon.glow_selected(w, h, rgba))
 
 
-def icon_name(dest: str) -> str:
-    """A file name for a system icon's picture: SYS:Prefs/Font -> SYS_Prefs_Font."""
-    return dest.replace(":", "_").replace("/", "_")
+FFS_NAME = 30          # the longest name a standard FFS volume keeps; longer ones are cut short
+
+
+def short_names(paths: list[str], suffix: str) -> dict[str, str]:
+    """A short, unique file name for each path, for an FFS volume: the last
+    part of the path, then the parts before it while two names are the same,
+    then a number. With the suffix, no name is longer than FFS_NAME; names
+    that differ only in case count as the same (AmigaDOS doesn't tell them apart).
+    SYS:Tools/Commodities/ClickToFront -> ClickToFront."""
+    def parts(p: str) -> list[str]:
+        return [x for x in p.replace(":", "/").split("/") if x]
+    room = FFS_NAME - len(suffix)
+    depth = {p: 1 for p in paths}
+    while True:
+        names = {p: "_".join(parts(p)[-depth[p]:])[-room:] for p in paths}
+        seen: dict[str, list[str]] = {}
+        for p, n in names.items():
+            seen.setdefault(n.lower(), []).append(p)
+        clash = [ps for ps in seen.values() if len(ps) > 1]
+        if not clash:
+            return {p: n + suffix for p, n in names.items()}
+        grew = False
+        for ps in clash:
+            for p in ps:
+                if depth[p] < len(parts(p)) and len("_".join(parts(p)[-depth[p] - 1:])) <= room:
+                    depth[p] += 1
+                    grew = True
+        if not grew:
+            break
+    # still the same after every part that fits: a number makes them differ
+    out, used = {}, set()
+    for p in paths:
+        n, k = names[p], 1
+        while n.lower() in used:
+            tail = f"_{k}"
+            n, k = names[p][:room - len(tail)] + tail, k + 1
+        used.add(n.lower())
+        out[p] = n + suffix
+    return out
 
 
 def build(out: Path, amigachrome: Path, cache: Path) -> list[str]:
@@ -238,15 +274,18 @@ def build(out: Path, amigachrome: Path, cache: Path) -> list[str]:
     (out / "Sources").mkdir(parents=True, exist_ok=True)
     lines = [f"; Gorilla, AROS's icon set (GPL), at AROS {AROS_COMMIT[:12]}: new faces for the system's icons"]
     done_src = set()
+    # names an FFS volume keeps whole, unpacked and copied (30 characters)
+    icon_names = short_names([dest for dest, _ in FACES], ".info")
+    src_names = short_names(sorted({rel[:-4] for _, rel in FACES}), ".png")
     for dest, rel in FACES:
         png = (root / MEDIUM / rel).read_bytes()
         w, h, rest, chosen = picture(png, amiga_icon)
         meta = {"type": 4, "defaultTool": None, "toolTypes": [], "toolWindow": None, "stack": 4096,
                 "x": amiga_icon.NO_POSITION, "y": amiga_icon.NO_POSITION, "drawer": None}
-        name = icon_name(dest)
-        (out / "Icons" / f"{name}.info").write_bytes(amiga_icon.write_os35(meta, [(w, h, rest), (w, h, chosen)]))
-        lines.append(f'face "Icons/{name}.info" "{dest}.info"')
-        src = rel.replace("/", "_")
+        name = icon_names[dest]
+        (out / "Icons" / name).write_bytes(amiga_icon.write_os35(meta, [(w, h, rest), (w, h, chosen)]))
+        lines.append(f'face "Icons/{name}" "{dest}.info"')
+        src = src_names[rel[:-4]]
         if src not in done_src:
             (out / "Sources" / src).write_bytes(png)
             lines.append(f'copy "Sources/{src}" "SYS:Storage/Icons/Gorilla/{src}"')

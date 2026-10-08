@@ -145,10 +145,12 @@
                 (choices "Open" "Glass" "Graphite" "Ember" "Clear" "Classic")
                 (default 0))
             "Open" "Glass" "Graphite" "Ember" "Clear" "Classic")))
-; with a look, the windows of the look approved on 8 October 2026: no zoom or
-; size gadget (OpenWindows resizes from the edges), scroll bars only when needed.
+; with a look, the windows of the look approved on 8 October 2026: no zoom
+; gadget, scroll bars only when needed, and no size gadget when OpenWindows is
+; picked too (it resizes from the edges; without it the size gadget stays).
 ; *N is a new line inside a quoted AmigaDOS argument.
-(set #look (cat #theme " light*Nzoom off*Nsizegadget off*Nscrollers auto"))
+(set #look (cat #theme " light*Nzoom off*Nscrollers auto"))
+(if (bitand #parts 1024) (set #look (cat #look "*Nsizegadget off")))
 (set #back (cat #theme "-light"))
 ; on AmigaChrome, its own backdrop: the theme's colours with chrome sweeps
 (if #ac (set #back (cat #theme "-light-chrome")))
@@ -215,11 +217,14 @@
         (if (<> #back "")
             (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/OpenUp/" #back " >>T:OpenUp.log")))))
 
+; a pack built with --no-gorilla has no Parts/GorillaIcons: the icons keep their pictures
 (if (bitand #parts 16777216)
-    (
-        (working "Giving the system's icons Gorilla's pictures")
-        (if (> (run (cat #tool " INSTALL Parts/GorillaIcons >>T:OpenUp.log")) 5)
-            (message "Some icons kept their old pictures. T:OpenUp.log says why; nothing else changed."))))
+    (if (exists "Parts/GorillaIcons/Part")
+        (
+            (working "Giving the system's icons Gorilla's pictures")
+            (if (> (run (cat #tool " INSTALL Parts/GorillaIcons >>T:OpenUp.log")) 5)
+                (message "Some icons kept their old pictures. T:OpenUp.log says why; nothing else changed.")))
+        (message "This pack was made without Gorilla's icons, so the system's icons keep their pictures.")))
 
 (if (bitand #parts 32)
     (
