@@ -162,7 +162,11 @@ static int write_file(const char *path, const char *data, LONG len)
  *   same <dest>   dir <path>   bdir <path>   startup <part> <line>
  *   newfile <path> (a file OpenUp made, such as S:User-Startup) */
 #define MAXE 1024
-typedef struct { char kind[10]; char a[160]; char b[200]; } entry;
+/* a and b hold whole paths as the install code builds them (its path
+ * buffers are 260 bytes), so a long path is never cut short in the
+ * manifest: a cut path would send UNINSTALL to the wrong file. */
+#define ENTRY_PATH 260
+typedef struct { char kind[10]; char a[ENTRY_PATH]; char b[ENTRY_PATH]; } entry;
 static entry ents[MAXE];
 static int nents;
 
@@ -183,9 +187,9 @@ static void manifest_load(void)
             if (*q == '\t') { *q = 0; f[n++] = q + 1; }
         if (!strcmp(f[0], "OpenUp") || !f[0][0])
             continue;
-        strncpy(ents[nents].kind, f[0], sizeof ents[0].kind - 1);
-        strncpy(ents[nents].a, f[1] ? f[1] : "", sizeof ents[0].a - 1);
-        strncpy(ents[nents].b, f[2] ? f[2] : "", sizeof ents[0].b - 1);
+        strlcpy(ents[nents].kind, f[0], sizeof ents[0].kind);
+        strlcpy(ents[nents].a, f[1] ? f[1] : "", sizeof ents[0].a);
+        strlcpy(ents[nents].b, f[2] ? f[2] : "", sizeof ents[0].b);
         nents++;
     }
     FreeVec(text);
@@ -238,9 +242,9 @@ static entry *add_entry(const char *kind, const char *a, const char *b)
         return NULL;
     e = &ents[nents++];
     memset(e, 0, sizeof *e);
-    strncpy(e->kind, kind, sizeof e->kind - 1);
-    strncpy(e->a, a, sizeof e->a - 1);
-    if (b) strncpy(e->b, b, sizeof e->b - 1);
+    strlcpy(e->kind, kind, sizeof e->kind);
+    strlcpy(e->a, a, sizeof e->a);
+    if (b) strlcpy(e->b, b, sizeof e->b);
     return e;
 }
 
@@ -249,10 +253,9 @@ static entry *add_entry(const char *kind, const char *a, const char *b)
 /* Makes the directories up to path (not a volume), noting those it made. */
 static int ensure_dir(const char *path, int record)
 {
-    char buf[200];
+    char buf[ENTRY_PATH];
     char *p;
-    strncpy(buf, path, sizeof buf - 1);
-    buf[sizeof buf - 1] = 0;
+    strlcpy(buf, path, sizeof buf);
     for (p = strchr(buf, ':') ? strchr(buf, ':') + 1 : buf; ; p++) {
         if (*p == '/' || *p == 0) {
             char c = *p;
@@ -452,7 +455,7 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
             say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; it wasn't replaced. Is SYS: full or write-protected?");
             return -1;
         }
-        if (e) { strcpy(e->kind, "replaced"); strncpy(e->b, backup, sizeof e->b - 1); }
+        if (e) { strcpy(e->kind, "replaced"); strlcpy(e->b, backup, sizeof e->b); }
         else add_entry("replaced", dest, backup);
     } else if (!e) {
         add_entry("new", dest, NULL);
@@ -545,7 +548,7 @@ static int face_icon(const char *from, const char *dest)
         return -1;
     }
     if (!e) add_entry("replaced", dest, backup);
-    else if (!strcmp(e->kind, "same")) { strcpy(e->kind, "replaced"); strncpy(e->b, backup, sizeof e->b - 1); }
+    else if (!strcmp(e->kind, "same")) { strcpy(e->kind, "replaced"); strlcpy(e->b, backup, sizeof e->b); }
     return 1;
 }
 
@@ -627,7 +630,7 @@ static int install(const char *drawer)
         return RETURN_WARN;
     {
         entry *pe = find_entry("part", partname);
-        if (pe) strncpy(pe->b, partver, sizeof pe->b - 1);
+        if (pe) strlcpy(pe->b, partver, sizeof pe->b);
         else add_entry("part", partname, partver);
     }
     if (!manifest_save()) {
@@ -1139,12 +1142,12 @@ static int show_changes(void)
  * It never runs on its own, and it never changes anything until asked. */
 static int update(const char *how)
 {
-    char newer[24], installed[24] = "";
+    char newer[24], installed[sizeof ents[0].b] = "";
     entry *e;
     int check = how && same_word(how, "CHECK"), yes = how && same_word(how, "YES");
     manifest_load();
     if ((e = find_entry("part", "OpenUp")) != NULL)
-        strncpy(installed, e->b, sizeof installed - 1);
+        strlcpy(installed, e->b, sizeof installed);
     if (!installed[0]) {
         say("OpenUp isn't installed here, so there is nothing to update. Run Install-OpenUp to install it.", NULL, NULL);
         return RETURN_WARN;
