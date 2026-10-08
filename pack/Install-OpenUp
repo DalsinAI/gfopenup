@@ -30,13 +30,15 @@
 ; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus,
 ; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle, 262144 Sound, 524288 OpenEdit,
 ; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser, 8388608 OpenMulticore, 16777216 Icons (Gorilla),
-; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY.
-; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos and OpenPuTTY
-; (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D (295632378).
+; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY,
+; 1073741824 Tata (the last bit of this word: one more part needs a second word).
+; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos, OpenPuTTY
+; and Tata (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D
+; (295632378). Tata stays unticked while it is 0.x (the user, 8 October 2026), and is ticked from 1.0.
 ; Four questions of at most nine parts: the 3.2 Installer shows nine choices a page,
 ; and a longer askoptions comes back with the defaults of its first pages mixed up
 ; (8 October 2026, on a scratch instance: 60751359 came back as 30265063). Each
-; group is bits 0-8, 9-17, 18-26 and 27-29 of #parts, so the bits above keep their meaning.
+; group is bits 0-8, 9-17, 18-26 and 27-30 of #parts, so the bits above keep their meaning.
 (set #default (if #ac 396295679 295632378))
 (set #g1
     (askoptions
@@ -167,11 +169,18 @@
               "with OpenPuTTY whatever is picked here.\n\n"
               "OpenPuTTY: PuTTY for AmigaOS 3.2, SSH, Telnet and serial terminals, with key "
               "sign-in (new, version 0.2, off unless picked). It needs a network stack "
-              "(bsdsocket.library: OpenSocket, Roadshow or AmiTCP). In SYS:Utilities/OpenPuTTY.")
+              "(bsdsocket.library: OpenSocket, Roadshow or AmiTCP). In SYS:Utilities/OpenPuTTY.\n\n"
+              "Tata: before a program runs or a file opens, Tata checks it against a list of "
+              "programs and files known to crash, draw wrongly or fail on AmigaOS 3.2.3 or with "
+              "OpenUp, says what is known and what helps, and asks: run it this time, always, "
+              "not this time, or never (new, version 0.x, off unless picked). It never asks while "
+              "the Amiga starts. Its shield sits on the title bar beside the network and sound "
+              "icons; its window is Tata in SYS:Prefs, and Tata OFF in a Shell turns it off.")
         (choices "OpenDemos: three 3D demos in GL (new)"
                  "OpenCrypto: SSH and TLS sums (new)"
-                 "OpenPuTTY: SSH and Telnet (new)")
-        (default (bitand (shiftright #default 27) 7))))
+                 "OpenPuTTY: SSH and Telnet (new)"
+                 "Tata: warns about known problems (new, 0.x)")
+        (default (bitand (shiftright #default 27) 15))))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 ; OpenPuTTY needs OpenCrypto
 (if (bitand #parts 536870912) (set #parts (bitor #parts 268435456)))
@@ -226,6 +235,13 @@
                   "of Picasso96 is touched.")
             (default 1))
         (run (cat #tool " RETIRE LIBS:Picasso96API.library >>T:OpenUp.log"))))
+
+; Tata: early, so its line comes near the top of OpenUp's block in S:User-Startup
+(if (bitand #parts 1073741824)
+    (
+        (working "Installing Tata")
+        (if (> (run (cat #tool " INSTALL Parts/Tata >>T:OpenUp.log")) 5)
+            (message "Tata didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (if (bitand #parts 1)
     (

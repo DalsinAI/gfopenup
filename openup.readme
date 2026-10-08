@@ -108,11 +108,16 @@ choose:
   (SYS:Utilities/OpenPuTTY); it brings OpenCrypto with it and needs a
   network stack;
 - OpenDemos (new, off unless picked): Boing, Chrome Gears and Copper Tunnel,
-  three small 3D demos in GL on OpenGPU (SYS:Utilities/OpenDemos).
+  three small 3D demos in GL on OpenGPU (SYS:Utilities/OpenDemos);
+- Tata (new, off unless picked while it is 0.x): before a program runs or
+  a file opens, Tata checks it against a list of programs and files known
+  to crash, draw wrongly or fail on AmigaOS 3.2.3 or with OpenUp
+  (S:Tata.known), and asks first; its window is SYS:Prefs/Tata, its icon
+  sits on the title bar, and "Tata OFF" in a Shell turns it off.
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,
-OpenTypes, OpenUp Setup). SYS:C/OpenUpMenu keeps them there; "OpenUpMenu
+OpenTypes, Tata, OpenUp Setup). SYS:C/OpenUpMenu keeps them there; "OpenUpMenu
 QUIT" takes them out.
 Every file it adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest;
 replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines

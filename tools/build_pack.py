@@ -7,7 +7,8 @@ archive (DESIGN.md sections 3 and 4).
         [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR]
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
-        [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--no-build] [--lha]
+        [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
+        [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
 the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
@@ -63,6 +64,11 @@ a Part file that C/OpenUpTool reads:
   OpenCrypto/           opencrypto.library 2.0: SSH's and TLS's sums, on x86 or ARM64 cores through
                         AC090 on AmigaChrome, on the 68k elsewhere (--openamigatls)
   OpenPuTTY/            OpenPuTTY 0.2, PuTTY on OpenCrypto, off by default (--openamigaputty)
+  Tata/                 Tata, the file inspector: C:Tata (the hooks, the question and the
+                        Shell command, started from S:User-Startup), its window
+                        SYS:Prefs/Tata, and the list, S:Tata.known (the window's "Update
+                        the list" reads Parts/Tata/S/Tata.known); off by default while
+                        Tata is 0.x (--openamigatata)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
@@ -374,6 +380,9 @@ def build_parts(a):
                                                                 OPENCRYPTO=str(a.openamigatls)))
             run([sys.executable, a.openamigaputty / "tools/make_icons.py", a.amigachrome / "scripts/amiga_icon.py",
                  a.openamigaputty / "build/icons"])
+    # Tata: its own build.sh (os32 stove; its window with this OpenGadTools' lib/)
+    if a.openamigatata:
+        run(["sh", a.openamigatata / "build.sh"], env=dict(os.environ, STOVE=str(STOVE), OGT=str(a.opengadtools)))
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -465,6 +474,8 @@ def main() -> int:
                     help="openamigatls, for the OpenCrypto part (left out without it)")
     ap.add_argument("--openamigaputty", type=Path, default=first(DEV / "openamigaputty", DEV.parent / "openamigaputty"),
                     help="openamigaputty, for the OpenPuTTY part (needs --openamigatls; left out without it)")
+    ap.add_argument("--openamigatata", type=Path, default=first(DEV / "openamigatata", DEV.parent / "openamigatata"),
+                    help="openamigatata, for the Tata part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--no-gorilla", action="store_true", help="leave out the Gorilla icons (they are fetched from AROS's repository)")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
@@ -815,6 +826,24 @@ def main() -> int:
             pt.add(f"{d}/{rel}", data, f"SYS:{d}/{rel}")
         pt.add("Utilities/OpenPuTTY.info", (pi / "Drawer.info").read_bytes(), "SYS:Utilities/OpenPuTTY.info", own=True)
         pt.write()
+
+    # Tata (openamigatata): warns before a program or file known to fail on
+    # AmigaOS 3.2.3 or with OpenUp loads. The list is S:Tata.known (the user,
+    # 8 October 2026: S:, not LIBS:), replaced by each OpenUp, the old one
+    # kept in SYS:Storage; the user's own ENVARC:Tata/Known and decisions are
+    # never touched. The Installer leaves it unticked while Tata is 0.x.
+    if a.openamigatata:
+        tt_src = a.openamigatata
+        tb_os3 = tt_src / "build/os3"
+        tv = re.search(r'TATA_VERSION\s+"([0-9.]+)"', (tt_src / "src/tata_priv.h").read_text(errors="replace"))
+        tt = Part(top, "Tata", tv.group(1) if tv else "0.2",
+                  "Tata: warns before loading programs and files known to fail (off unless picked while 0.x)")
+        tt.add("C/Tata", (tb_os3 / "Tata").read_bytes(), "SYS:C/Tata")
+        tt.add("Prefs/Tata", (tb_os3 / "Tata-Prefs").read_bytes(), "SYS:Prefs/Tata")
+        tt.add("Prefs/Tata.info", (tt_src / "icons/Tata.info").read_bytes(), "SYS:Prefs/Tata.info")
+        tt.add("S/Tata.known", (tt_src / "data/Tata.known").read_bytes(), "S:Tata.known")
+        tt.line("startup Run >NIL: C:Tata START")
+        tt.write()
 
     # GCC 16's FPCR clash (openamigartg tools/fpcr_check.py) must not be in
     # anything the graphics parts ship, whichever stove built it.
