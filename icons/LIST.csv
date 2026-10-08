@@ -1,0 +1,641 @@
+Category,Icon,What it is,Picture,Priority,Start from
+Disks and devices,System,"The boot volume (DH0:, SYS:)","Hard disk, a small badge for ""boots""",P1,Gorilla: Env-Archive/SYS/def_Harddisk
+Disks and devices,Work,The second hard disk partition (DH1:),Hard disk,P1,Gorilla: Env-Archive/SYS/def_Harddisk
+Disks and devices,Hard disk (any),Any other hard disk partition,Hard disk,P1,Gorilla: Env-Archive/SYS/def_Harddisk
+Disks and devices,Ram Disk,"RAM:, the memory disk",Memory stick on a green board,P1,Gorilla: Env-Archive/SYS/def_RAM
+Disks and devices,Recoverable RAM disk,"RAD:, survives a reset",Memory stick with a circular arrow,P2,Gorilla: Env-Archive/SYS/def_RAD
+Disks and devices,Floppy (DD),"DF0:-DF3:, an 880 KB AmigaDOS floppy","3.5"" floppy, label and shutter",P1,Gorilla: Env-Archive/SYS/def_Disk
+Disks and devices,Floppy (HD),A 1.76 MB high-density floppy,Floppy with the HD hole and mark,P2,Gorilla: Env-Archive/SYS/def_Disk
+Disks and devices,Kickstart disk,"A floppy holding a Kickstart (A1000, A3000)",Floppy with a chip badge,P3,Gorilla: Env-Archive/SYS/def_KickDisk
+Disks and devices,Unreadable disk,NDOS: a disk Workbench can't read,Floppy with a question mark,P1,Gorilla: Env-Archive/SYS/def_NDOSDisk
+Disks and devices,Unreadable hard disk,NDOS on a hard disk partition,Hard disk with a question mark,P1,Gorilla: Env-Archive/SYS/def_NDOSHarddisk
+Disks and devices,Unformatted disk,A blank disk waiting to be formatted,"Floppy, empty label",P2,
+Disks and devices,Busy disk,A floppy being validated or written,Floppy with a busy light,P1,Gorilla: Env-Archive/SYS/def_BusyDisk
+Disks and devices,Busy hard disk,A partition being validated,"Hard disk, amber light",P1,Gorilla: Env-Archive/SYS/def_BusyHarddisk
+Disks and devices,CD-ROM,A mounted data CD (CD0:),Silver disc,P1,Gorilla: Env-Archive/SYS/def_CDROM
+Disks and devices,Busy CD-ROM,A CD spinning up,Disc with a busy light,P2,Gorilla: Env-Archive/SYS/def_BusyCDROM
+Disks and devices,Unreadable CD,A CD with no file system we know,Disc with a question mark,P2,Gorilla: Env-Archive/SYS/def_NDOSCDROM
+Disks and devices,Audio CD,CDDA: music CD,Disc with a note,P2,
+Disks and devices,DVD,A mounted DVD,Disc marked DVD,P2,Gorilla: Env-Archive/SYS/def_DVD
+Disks and devices,CD image mounted,"ISO0:, an .iso mounted as a disk",Disc inside a dashed outline,P2,Gorilla: Devs/DOSDrivers/ISO0
+Disks and devices,ADF mounted,A floppy image mounted as a drive,Floppy inside a dashed outline,P2,
+Disks and devices,HDF mounted,A hard disk image mounted,Hard disk inside a dashed outline,P2,
+Disks and devices,CompactFlash,A CF card in a PCMCIA adapter or IDE,CF card,P1,
+Disks and devices,SD card,An SD card,SD card,P2,
+Disks and devices,PCMCIA card,A memory or SRAM card in the A1200/A600 slot (CC0:),PCMCIA card,P2,
+Disks and devices,USB stick,A USB memory stick (Poseidon/Trident),USB stick,P1,Gorilla: Env-Archive/SYS/def_USB
+Disks and devices,USB hard disk,A USB hard disk,Hard disk with a USB plug,P2,
+Disks and devices,Zip disk,Iomega Zip,Zip cartridge,P3,
+Disks and devices,Jaz disk,Iomega Jaz,Jaz cartridge,P3,
+Disks and devices,SyQuest,SyQuest/EZFlyer cartridge,Cartridge,P3,
+Disks and devices,Magneto-optical disk,An MO disk,MO cartridge,P3,
+Disks and devices,Tape,A tape drive (backup),Tape cartridge,P3,
+Disks and devices,PC (FAT) floppy,A CrossDOS/FAT floppy,"Floppy, PC grey",P2,Gorilla: Env-Archive/SYS/def_FATDisk
+Disks and devices,PC (FAT) hard disk,A FAT32 partition or card,"Hard disk, PC grey",P2,Gorilla: Env-Archive/SYS/def_FATHarddisk
+Disks and devices,FFS partition,Fast File System,Hard disk with FFS mark,P3,Gorilla: Env-Archive/SYS/def_FFSHarddisk
+Disks and devices,PFS partition,Professional File System,Hard disk with PFS mark,P3,Gorilla: Env-Archive/SYS/def_PFSDisk
+Disks and devices,SFS partition,Smart File System,Hard disk with SFS mark,P3,Gorilla: Env-Archive/SYS/def_SFSDisk
+Disks and devices,Network share,A shared folder on another computer (SMB),Drive with network cable,P1,Gorilla: Computers/Networked_Generic
+Disks and devices,NFS share,A Unix NFS export,"Drive with network cable, NFS tag",P3,
+Disks and devices,FTP mount,A remote site mounted as a disk,Drive with a globe,P3,
+Disks and devices,This PC (AmigaChrome),The host computer's shared folder through AmigaChrome,PC tower with the AmigaChrome mark,P1,Gorilla: Computers/Generic
+Disks and devices,Emulator folder,A UAE/WinUAE directory mounted as a drive,Folder disk with chip,P3,
+Disks and devices,Parallel link,ParNet / PLIP link to another Amiga,Two machines and a cable,P3,
+Disks and devices,Other computer,"A networked computer (Envoy, SMB host)",Computer,P2,Gorilla: Computers/Networked_Generic
+Disks and devices,Amiga on the network,Another Amiga on the LAN,Amiga computer with network,P3,Gorilla: Computers/Networked_Amiga
+Disks and devices,Trashcan (empty),"SYS:Trashcan, nothing in it","Bin, lid on, empty",P1,Gorilla: Env-Archive/SYS/def_Trashcan
+Disks and devices,Trashcan (full),SYS:Trashcan with files in it,Bin with paper showing,P1,
+Disks and devices,Printer,A printer as a place to drop files,Printer,P2,Gorilla: Env-Archive/SYS/def_Printer
+Disks and devices,Unknown device,A device with no icon of its own,Box with a question mark,P1,Gorilla: Env-Archive/SYS/def_UnknownDevice
+Disks and devices,Pipe,PIPE: the Shell's pipe device,Pipe section,P3,Gorilla: Devs/DOSDrivers/PIPE
+Disks and devices,Audio device,AUDIO: (AHI's DOS device),Speaker on a drive,P3,Gorilla: Devs/DOSDrivers/AUDIO
+Disks and devices,Serial port,"SER:, SER0:",Serial plug,P3,Gorilla: Devs/DOSDrivers/SER
+Disks and devices,Parallel port,PAR:,Parallel plug,P3,Gorilla: Devs/DOSDrivers/PAR
+Disks and devices,Printer port,PRT:,Printer plug,P3,Gorilla: Devs/DOSDrivers/PRT
+Disks and devices,PC floppy driver,"PC0:, PC1: (CrossDOS)",Floppy with PC tag,P3,Gorilla: Devs/DOSDrivers/PC0
+Workbench drawers (SYS:),C,Shell commands,"Drawer with a "">"" badge",P1,
+Workbench drawers (SYS:),Classes,BOOPSI classes,Drawer with a puzzle piece,P1,Gorilla: Libs
+Workbench drawers (SYS:),Classes/Gadgets,Gadget classes,Drawer with a button badge,P2,
+Workbench drawers (SYS:),Classes/Images,Image classes,Drawer with a picture badge,P2,
+Workbench drawers (SYS:),Classes/DataTypes,Datatype classes,Drawer with a type badge,P2,Gorilla: Devs/DataTypes
+Workbench drawers (SYS:),Devs,Devices and drivers,Drawer with gears,P1,Gorilla: Devs
+Workbench drawers (SYS:),Devs/DataTypes,Datatype descriptors,Drawer with a type badge,P1,Gorilla: Devs/DataTypes
+Workbench drawers (SYS:),Devs/DOSDrivers,Mount lists started at boot,Drawer with a drive badge,P1,Gorilla: Devs/DOSDrivers
+Workbench drawers (SYS:),Devs/Keymaps,Keyboard layouts,Drawer with a key,P1,Gorilla: Devs/Keymaps
+Workbench drawers (SYS:),Devs/Monitors,Display drivers,Drawer with a monitor,P1,Gorilla: Devs/Monitors
+Workbench drawers (SYS:),Devs/Printers,Printer drivers,Drawer with a printer,P1,Gorilla: Devs/Printers
+Workbench drawers (SYS:),Devs/AHI,AHI audio drivers,Drawer with a speaker,P2,Gorilla: Devs/Midi
+Workbench drawers (SYS:),Devs/Midi,MIDI drivers,Drawer with a MIDI plug,P3,Gorilla: Devs/Midi
+Workbench drawers (SYS:),Expansion,"Drivers for expansion boards, started at boot",Drawer with a board,P1,
+Workbench drawers (SYS:),Fonts,Bitmap and outline fonts,"Drawer with ""Aa""",P1,Gorilla: Fonts
+Workbench drawers (SYS:),L,Handlers and file systems,Drawer with a cog and disk,P1,
+Workbench drawers (SYS:),Libs,Shared libraries,Drawer with a book,P1,Gorilla: Libs
+Workbench drawers (SYS:),Locale,"Catalogs, countries, languages",Drawer with a globe,P1,Gorilla: Locale
+Workbench drawers (SYS:),Locale/Catalogs,Translations of programs,Drawer with speech bubbles,P2,Gorilla: Locale/Catalogs
+Workbench drawers (SYS:),Locale/Countries,Country settings,Drawer with a flag,P2,Gorilla: Locale/Countries
+Workbench drawers (SYS:),Locale/Languages,Language files,"Drawer with ""A文""",P2,Gorilla: Locale/Languages
+Workbench drawers (SYS:),Locale/Help,AmigaGuide help,Drawer with a lifebuoy,P2,Gorilla: Locale/Help
+Workbench drawers (SYS:),Prefs,Preferences editors,Drawer with a monitor and question mark,P1,Gorilla: Prefs
+Workbench drawers (SYS:),Prefs/Presets,Saved prefs and themes,Drawer with a bookmark,P1,Gorilla: Prefs/Presets
+Workbench drawers (SYS:),Prefs/Presets/Themes,OpenLook themes,Drawer with swatches,P1,Gorilla: Prefs/Presets/Themes
+Workbench drawers (SYS:),Prefs/Presets/Backdrops,Backdrop pictures,Drawer with a landscape,P1,Gorilla: Prefs/Presets/Wallpapers
+Workbench drawers (SYS:),Prefs/Presets/Patterns,Workbench patterns,Drawer with tiles,P2,Gorilla: Prefs/Presets/Patterns
+Workbench drawers (SYS:),Prefs/Env-Archive,Saved settings (ENVARC:),Drawer with a cog,P2,
+Workbench drawers (SYS:),Rexxc,ARexx commands,Drawer with a crown/script,P1,Gorilla: Rexxc
+Workbench drawers (SYS:),S,Startup scripts,Drawer with a script page,P1,
+Workbench drawers (SYS:),Storage,"Things not in use: spare drivers, keymaps",Drawer with a box,P1,Gorilla: Storage
+Workbench drawers (SYS:),Storage/DOSDrivers,Mount lists not started at boot,Drawer with a drive,P2,
+Workbench drawers (SYS:),Storage/Monitors,Spare display drivers,Drawer with a monitor,P2,
+Workbench drawers (SYS:),Storage/Printers,Spare printer drivers,Drawer with a printer,P2,
+Workbench drawers (SYS:),Storage/Keymaps,Spare keymaps,Drawer with a key,P2,
+Workbench drawers (SYS:),Storage/DataTypes,Spare datatypes,Drawer with a type badge,P2,
+Workbench drawers (SYS:),System,"System programs: Format, Shell, DiskCopy",Drawer with a wrench and chip,P1,Gorilla: System
+Workbench drawers (SYS:),T,Temporary files,Drawer with a clock,P1,
+Workbench drawers (SYS:),Tools,"Tools: Calculator, HDToolBox, IconEdit",Drawer with a hammer,P1,Gorilla: Tools
+Workbench drawers (SYS:),Tools/Commodities,Background helpers,Drawer with a cog and lightning,P1,Gorilla: Tools/Commodities
+Workbench drawers (SYS:),Utilities,"Clock, MultiView, Installer",Drawer with a filing cabinet,P1,Gorilla: Utilities
+Workbench drawers (SYS:),WBStartup,Programs started with Workbench,Drawer with a rocket/power,P1,Gorilla: WBStartup
+Workbench drawers (SYS:),Devs/Drivers,Hardware drivers (OpenService and others),Drawer with a chip,P2,Gorilla: Devs/Drivers
+Workbench drawers (SYS:),Trashcan drawer,The trashcan as a drawer window,See Trashcan,P1,
+Your drawers (Work:),Drawer (plain),Any drawer with no picture of its own,"Drawer, empty face",P1,Gorilla: Env-Archive/SYS/def_Drawer
+Your drawers (Work:),Documents,Your documents,Drawer with a page,P1,
+Your drawers (Work:),Pictures,Your pictures,Drawer with a photo,P1,
+Your drawers (Work:),Music,Your music and modules,Drawer with a note,P1,
+Your drawers (Work:),Video,Your films,Drawer with a film frame,P1,
+Your drawers (Work:),Downloads,Files fetched from the internet,Drawer with a down arrow,P1,Gorilla: Drawers/Downloads
+Your drawers (Work:),Games,"Games, WHDLoad installs",Drawer with a joystick,P1,
+Your drawers (Work:),Demos,Demos and intros,Drawer with a star,P1,Gorilla: Demos
+Your drawers (Work:),Programs,Installed programs,Drawer with an app window,P1,
+Your drawers (Work:),Development,"Compilers, sources",Drawer with code brackets,P1,Gorilla: Developer
+Your drawers (Work:),Internet,"Browsers, mail, IRC",Drawer with a globe,P1,
+Your drawers (Work:),Graphics,Paint and image programs,Drawer with a brush,P2,
+Your drawers (Work:),Sound,Audio programs,Drawer with a speaker,P2,
+Your drawers (Work:),Office,"Word processor, spreadsheet",Drawer with a pen,P2,
+Your drawers (Work:),Emulation,Emulators and ROMs,Drawer with two chips,P2,
+Your drawers (Work:),Archives,Archive files,Drawer with a compressed box,P2,
+Your drawers (Work:),Backup,Backups,Drawer with a safe,P2,
+Your drawers (Work:),Home,Your own drawer,Drawer with a house,P2,Gorilla: Env-Archive/SYS/def_Home
+Your drawers (Work:),Shared,A drawer shared with other machines,Drawer with network cable,P2,
+Your drawers (Work:),Send to PC,AmigaChrome's drop drawer to the host,Drawer with an arrow to a PC,P1,
+Your drawers (Work:),Disk images,"ADF, HDF, ISO files",Drawer with a floppy,P2,
+Your drawers (Work:),Kickstarts,ROM files for emulators,Drawer with a chip,P3,
+Your drawers (Work:),Fonts (user),Fonts you added,"Drawer with ""Aa""",P3,Gorilla: Fonts
+Your drawers (Work:),Projects,Work in progress,Drawer with a ruler,P3,
+Your drawers (Work:),Utilities (user),Small tools you added,Drawer with tools,P3,Gorilla: Utilities
+Prefs editors: OS 3.2.3,Asl,File requester size and position,Requester with a folder,P1,Gorilla: Prefs/Asl
+Prefs editors: OS 3.2.3,Font,"Screen, icon and system fonts","""Aa"" on a page",P1,Gorilla: Prefs/Font
+Prefs editors: OS 3.2.3,IControl,"Intuition: screen drag, title bars, gadgets",Window with sliders,P1,Gorilla: Prefs/IControl
+Prefs editors: OS 3.2.3,Input,"Mouse speed, double-click, key repeat",Mouse and keyboard,P1,Gorilla: Prefs/Input
+Prefs editors: OS 3.2.3,Locale,"Country, language, time zone",Globe with a flag,P1,Gorilla: Prefs/Locale
+Prefs editors: OS 3.2.3,Overscan,Visible screen area,Monitor with corner marks,P1,
+Prefs editors: OS 3.2.3,Palette,Screen colours,Colour wheel,P1,Gorilla: Prefs/Palette
+Prefs editors: OS 3.2.3,Pointer,Mouse pointer,Pointer and pencil,P1,Gorilla: Prefs/Pointer
+Prefs editors: OS 3.2.3,Printer,Printer driver and port,Printer,P1,Gorilla: Prefs/Printer
+Prefs editors: OS 3.2.3,PrinterGfx,Printing pictures,Printer with a picture,P1,Gorilla: Prefs/Printer
+Prefs editors: OS 3.2.3,PrinterPS,PostScript printing,"Printer with ""PS""",P1,Gorilla: Prefs/Printer
+Prefs editors: OS 3.2.3,ScreenMode,Resolution and display mode,Monitor with a resolution grid,P1,Gorilla: Prefs/ScreenMode
+Prefs editors: OS 3.2.3,Serial,Serial port speed,Serial plug with a cable,P1,Gorilla: Prefs/Serial
+Prefs editors: OS 3.2.3,Sound,System beep and sound,Speaker,P1,
+Prefs editors: OS 3.2.3,Time,Clock and date,Clock,P1,Gorilla: Prefs/Time
+Prefs editors: OS 3.2.3,WBPattern,Workbench and window backdrops,Tiles and a landscape,P1,Gorilla: Prefs/Presets/Patterns
+Prefs editors: OS 3.2.3,Workbench,Workbench options,Workbench window with a tick,P1,Gorilla: Prefs/Wanderer
+Prefs editors: OS 3.2.3,DefIcons,Default icons by file type (check on 3.2.3),Icons with a tag,P1,
+Prefs editors: OS 3.2.3,Presets,Saved prefs drawer,Bookmark,P2,Gorilla: Prefs/Presets
+Prefs editors: OS 3.2.3,Trackdisk,Floppy drive settings (check on 3.2.3),Floppy drive,P3,Gorilla: Prefs/Trackdisk
+Prefs editors: OpenUp and AmigaChrome,Look,"OpenLook: theme, mode, accent, icons",Window of swatches and a brush,P1,Gorilla: Prefs/Theme
+Prefs editors: OpenUp and AmigaChrome,Windows,"OpenWindows: snapping, edges, places",Three windows stacked,P1,
+Prefs editors: OpenUp and AmigaChrome,Dock,OpenDock: buttons and shelf,Dock with four buttons,P1,
+Prefs editors: OpenUp and AmigaChrome,Menus,OpenMenus: menu bar and right-click menus,Menu with a row lit,P1,
+Prefs editors: OpenUp and AmigaChrome,Title bar,"OpenTitle: logo, memory, clock, cog",Title bar and clock,P1,
+Prefs editors: OpenUp and AmigaChrome,Sound (OpenUp),"Volume, Paula's and AHI's levels",Speaker with waves,P1,Gorilla: Prefs/AHI
+Prefs editors: OpenUp and AmigaChrome,OpenTypes,Which program opens each kind of file,Documents with an arrow to a program,P1,
+Prefs editors: OpenUp and AmigaChrome,OpenUp Setup,First-start wizard and startup switches,Box with a wand,P1,
+Prefs editors: OpenUp and AmigaChrome,OpenPrint,Printers and print queue,Printer with a page out,P1,
+Prefs editors: OpenUp and AmigaChrome,OpenSocket,Network through this PC,Network plug,P1,Gorilla: Prefs/Network
+Prefs editors: OpenUp and AmigaChrome,Classic,Back to the OS's own look,Old Workbench window,P1,
+Prefs editors: OpenUp and AmigaChrome,OpenBlanker,Screen blanker and its shows,Monitor with stars,P1,
+Prefs editors: OpenUp and AmigaChrome,OpenRTG,Screen modes on OpenRTG,Monitor with a graphics card,P1,Gorilla: Prefs/ScreenMode
+Prefs editors: OpenUp and AmigaChrome,All Prefs,"The cog's ""All Prefs..."" entry",Cog with a drawer,P2,
+Prefs editors: OpenUp and AmigaChrome,Wi-Fi,Wireless network (OpenSocket),Wi-Fi fan,P2,Gorilla: Prefs/WiFi
+Prefs editors: OpenUp and AmigaChrome,AmigaChrome Sharing,Clipboard and file sharing with the PC,Two clipboards and arrows,P1,
+Prefs editors: other people's,MUI,MUI's look and settings,MUI window with sliders,P2,Gorilla: Prefs/Zune
+Prefs editors: other people's,Zune,Zune's settings (OpenMUI),Zune window with sliders,P2,Gorilla: Prefs/Zune
+Prefs editors: other people's,AHI,AHI audio modes,Speaker and sound card,P2,Gorilla: Prefs/AHI
+Prefs editors: other people's,Picasso96Mode,Picasso96 screen modes,Monitor with a card,P2,Gorilla: Prefs/ScreenMode
+Prefs editors: other people's,CyberGraphX,CyberGraphX modes,Monitor with a card,P3,Gorilla: Prefs/ScreenMode
+Prefs editors: other people's,ReqTools,ReqTools requesters,Requester,P2,Gorilla: Prefs/ReqTools
+Prefs editors: other people's,Poseidon / Trident,USB stack settings,USB plug with a cog,P2,Gorilla: Prefs/Trident
+Prefs editors: other people's,Roadshow,TCP/IP stack settings,Network plug with a cog,P2,Gorilla: Prefs/Network
+Prefs editors: other people's,Miami,Miami TCP/IP,Network plug with a beach,P3,
+Prefs editors: other people's,Genesis,Genesis TCP/IP,Network plug,P3,
+Prefs editors: other people's,OpenURL,Which browser opens links,Link chain,P2,Gorilla: Prefs/OpenURL
+Prefs editors: other people's,NewIcons,NewIcons settings,Icon with a star,P3,
+Prefs editors: other people's,VisualPrefs,Window frame settings,Window with a pencil,P3,
+Prefs editors: other people's,MCP,MCP tweaks,Cog with many tools,P3,
+Prefs editors: other people's,MagicMenu,MagicMenu settings,Menu with a wand,P3,
+Prefs editors: other people's,Birdie,Window borders and title bars,Window with a bird,P3,
+Prefs editors: other people's,PopupMenu,Pop-up menu settings,Menu,P3,
+Prefs editors: other people's,TurboPrint,TurboPrint drivers,Printer with a lightning,P3,Gorilla: Prefs/Printer
+Prefs editors: other people's,Boot,Boot options (Early Startup),Boot screen,P3,Gorilla: Prefs/Boot
+Prefs editors: other people's,Keymap editor,Edit a keymap,Keyboard with a pencil,P3,Gorilla: Devs/Keymaps
+"Utilities, Tools and System: OS 3.2.3",Shell,"AmigaShell, the command line",Terminal window with a prompt,P1,Gorilla: System/Shell
+"Utilities, Tools and System: OS 3.2.3",Clock,Clock,Analogue clock,P1,Gorilla: Utilities/Clock
+"Utilities, Tools and System: OS 3.2.3",MultiView,Shows any file datatypes know,Picture with a magnifier,P1,Gorilla: Utilities/MultiView
+"Utilities, Tools and System: OS 3.2.3",Installer,Runs installer scripts,Box with a down arrow,P1,Gorilla: Utilities/Installer
+"Utilities, Tools and System: OS 3.2.3",Calculator,Calculator,Calculator,P1,Gorilla: Tools/Calculator
+"Utilities, Tools and System: OS 3.2.3",CMD,Captures printer output to a file,Printer with a disk,P2,
+"Utilities, Tools and System: OS 3.2.3",GraphicDump,Prints the front screen,Printer with a screen,P2,Gorilla: Tools/GraphicDump
+"Utilities, Tools and System: OS 3.2.3",HDToolBox,Partitions hard disks,Hard disk with a wrench,P1,Gorilla: Tools/HDToolBox
+"Utilities, Tools and System: OS 3.2.3",IconEdit,Edits icons,Icon with a pencil,P1,
+"Utilities, Tools and System: OS 3.2.3",InitPrinter,Resets the printer,Printer with a power button,P2,Gorilla: Tools/InitPrinter
+"Utilities, Tools and System: OS 3.2.3",KeyShow,Shows the keymap,Keyboard,P2,Gorilla: Tools/KeyShow
+"Utilities, Tools and System: OS 3.2.3",Lacer,Interlace tool (check on 3.2.3),Monitor with lines,P3,
+"Utilities, Tools and System: OS 3.2.3",PrepCard,Prepares a PCMCIA card,PCMCIA card with a broom,P2,
+"Utilities, Tools and System: OS 3.2.3",PrintFiles,Prints text files,Printer with a page,P2,Gorilla: Tools/PrintFiles
+"Utilities, Tools and System: OS 3.2.3",ShowConfig,Lists the machine's hardware,Board with a magnifier,P2,Gorilla: Tools/ShowConfig
+"Utilities, Tools and System: OS 3.2.3",TextEdit,OS 3.2's text editor,Page with a pencil,P1,Gorilla: Tools/Editor
+"Utilities, Tools and System: OS 3.2.3",UnArc,Unpacks archives (check on 3.2.3),Box opening,P2,
+"Utilities, Tools and System: OS 3.2.3",Format,Formats disks,Floppy with a broom,P1,Gorilla: System/Format
+"Utilities, Tools and System: OS 3.2.3",DiskCopy,Copies floppies,Two floppies and an arrow,P1,
+"Utilities, Tools and System: OS 3.2.3",FixFonts,Rebuilds font contents files,"""Aa"" with a wrench",P2,Gorilla: System/FixFonts
+"Utilities, Tools and System: OS 3.2.3",Intellifont,Installs outline fonts,"""Aa"" outlined",P2,Gorilla: System/FTManager
+"Utilities, Tools and System: OS 3.2.3",NoFastMem,Turns off fast memory for old programs,Memory chip crossed out,P3,
+"Utilities, Tools and System: OS 3.2.3",RexxMast,Starts ARexx,Crown,P2,Gorilla: Rexxc
+"Utilities, Tools and System: OS 3.2.3",Find,Finds files (check on 3.2.3),Magnifier,P2,Gorilla: System/Find
+"Utilities, Tools and System: OS 3.2.3",More,Text viewer (check on 3.2.3),Page with lines,P3,Gorilla: Utilities/More
+"Utilities, Tools and System: OS 3.2.3",Help,AmigaGuide help,Lifebuoy,P2,Gorilla: Utilities/Help
+"Utilities, Tools and System: OS 3.2.3",About,About this system,"Information ""i"" on a computer",P2,Gorilla: System/About
+"Utilities, Tools and System: OS 3.2.3",Screen grabber,Saves the screen as a picture,Camera and monitor,P2,Gorilla: Tools/ScreenGrabber
+"Utilities, Tools and System: OS 3.2.3",Memory monitor,Shows memory and CPU in use,Graph on a monitor,P2,Gorilla: System/SysMon
+Commodities,Exchange,"Lists commodities, turns them on and off",Cogs and a switch,P1,Gorilla: Tools/Commodities/Exchange
+Commodities,AutoPoint,Window follows the pointer,Pointer with a target,P1,Gorilla: Tools/Commodities/AutoPoint
+Commodities,Blanker,Blanks the screen,Monitor going dark,P1,Gorilla: Tools/Commodities/Blanker
+Commodities,ClickToFront,Click brings a window forward,Window and a pointer clicking,P1,Gorilla: Tools/Commodities/ClickToFront
+Commodities,CrossDOS,Reads PC disks,PC floppy,P1,Gorilla: Env-Archive/SYS/def_FATDisk
+Commodities,FKey,Function keys run commands,F key,P1,Gorilla: Tools/Commodities/FKey
+Commodities,MouseBlanker,Hides the pointer while typing,Pointer fading,P2,
+Commodities,NoCapsLock,Turns Caps Lock off,Caps key crossed out,P2,Gorilla: Tools/Commodities/NoCapsLock
+Commodities,DepthMenu,Menu of windows by depth,Stacked windows,P3,Gorilla: Tools/Commodities/DepthMenu
+Commodities,ASCIITable,Character table,Grid of letters,P3,Gorilla: Tools/Commodities/ASCIITable
+Commodities,OpenWindows,OpenUp's window behaviour,Three windows and a magnet,P1,
+Commodities,OpenSocketControl,Network control,Plug with a switch,P1,
+Commodities,ACNetControl,AmigaChrome's network switch,Plug and PC,P1,
+Commodities,ToolsDaemon,Tools menu helper,Menu with tools,P3,
+Commodities,Yak,Yet Another Commodity,Yak,P3,
+Open apps and AmigaChrome,OpenUp,The OpenUp drawer,Blue cabinet with the OpenUp badge,P1,
+Open apps and AmigaChrome,Install-OpenUp,Installs OpenUp,Arrow over a box,P1,Gorilla: Utilities/Installer
+Open apps and AmigaChrome,Uninstall-OpenUp,Puts the system back,Arrow out of a box,P1,
+Open apps and AmigaChrome,OpenFiles,Two-pane file manager,"Two panes, a file chosen",P1,Gorilla: System/WorkBook
+Open apps and AmigaChrome,OpenView,Picture and document viewer,Picture with a magnifier,P1,Gorilla: Utilities/MultiView
+Open apps and AmigaChrome,OpenEdit,Text editor with tabs,Pad and pencil,P1,Gorilla: Tools/Editor
+Open apps and AmigaChrome,OpenWrite,Word processor,Page with a quill,P1,
+Open apps and AmigaChrome,OpenPlay,Media player,Film with a play button,P1,
+Open apps and AmigaChrome,OpenBrowser,Web browser,Globe in a ring,P1,
+Open apps and AmigaChrome,OpenMail,Email,Envelope,P1,
+Open apps and AmigaChrome,OpenCompress,Archives and disk images,Box with an arrow out,P1,
+Open apps and AmigaChrome,OpenPrint queue,Print queue,Page in the tray,P1,Gorilla: Prefs/Printer
+Open apps and AmigaChrome,OpenSocket,Network through the PC,Network plug and PC,P1,
+Open apps and AmigaChrome,OpenService,Board services,Board with a bell,P2,
+Open apps and AmigaChrome,OpenSpeaker,Speaker on the bar,Speaker,P1,
+Open apps and AmigaChrome,ZuneTest,Zune gadget gallery,Window of gadgets,P3,
+Open apps and AmigaChrome,OpenMUI,MUI from Zune,MUI window,P2,
+Open apps and AmigaChrome,Theme Builder,Makes OpenLook themes,Swatches and a ruler,P2,Gorilla: Prefs/Theme
+Open apps and AmigaChrome,ACKitchen,Developer tools for AmigaChrome,Chef's knife and code,P2,
+Open apps and AmigaChrome,OpenRTG,Graphics without Picasso96,Graphics card,P1,
+Open apps and AmigaChrome,OpenGames,Game launcher,Joystick with a play button,P2,
+Open apps and AmigaChrome,ACDrop,Drop files to the PC,Arrow into a PC,P1,
+Open apps and AmigaChrome,ACClip,Shared clipboard,Clipboard with arrows,P1,
+Open apps and AmigaChrome,Send to PC,AmigaChrome's drop icon on the backdrop,PC with an arrow,P1,
+Open apps and AmigaChrome,OpenUp update,An update is ready,Box with a star,P2,
+Open apps and AmigaChrome,Dock buttons: Start,Phase 2 start pop-up,AmigaChrome mark in a circle,P2,
+File types: documents and text,Text,Plain text (def_ascii),Page with lines,P1,Gorilla: Env-Archive/SYS/def_Text
+File types: documents and text,Document,A generic document,Page with a folded corner,P1,Gorilla: Env-Archive/SYS/def_Document
+File types: documents and text,ReadMe,A read-me file,"Page with ""i""",P1,Gorilla: Env-Archive/SYS/def_ReadMe
+File types: documents and text,AmigaGuide,AmigaGuide hypertext,Page with a lifebuoy,P1,
+File types: documents and text,PDF,PDF document,Page with a red ribbon,P1,Gorilla: Env-Archive/SYS/def_PDF
+File types: documents and text,PostScript,PostScript file,"Page with ""PS""",P2,Gorilla: Env-Archive/SYS/def_Postscript
+File types: documents and text,Word document,DOCX/DOC,"Page with ""W""-less blue header",P1,
+File types: documents and text,OpenDocument text,ODT,Page with a blue header,P1,
+File types: documents and text,Rich text,RTF,Page with coloured lines,P2,
+File types: documents and text,Spreadsheet,XLSX/ODS/CSV,Grid page,P1,Gorilla: Env-Archive/SYS/def_Spreadsheet
+File types: documents and text,Presentation,PPTX/ODP,Easel with a chart,P2,Gorilla: Env-Archive/SYS/def_Presentation
+File types: documents and text,CSV,Comma-separated table,Grid with commas,P2,
+File types: documents and text,Markdown,Markdown text,"Page with a ""#""",P2,
+File types: documents and text,Licence,Licence text,Page with a seal,P2,Gorilla: Env-Archive/SYS/def_Legal
+File types: documents and text,Authors,Credits file,Page with people,P3,Gorilla: Env-Archive/SYS/def_Authors
+File types: documents and text,Final Writer / Wordworth document,Amiga word processor files,Page with a quill,P3,
+File types: documents and text,PageStream document,DTP layout,Page with columns,P3,
+File types: documents and text,e-book,EPUB,Book,P3,
+File types: documents and text,Log,A log file,Page with a timeline,P3,
+File types: pictures,Picture,Any picture,Framed landscape,P1,Gorilla: Env-Archive/SYS/def_Picture
+File types: pictures,ILBM,IFF ILBM picture,Landscape with a palette,P1,
+File types: pictures,JPEG,JPEG photo,Photo,P1,
+File types: pictures,PNG,PNG picture,Landscape with transparency checks,P1,
+File types: pictures,GIF,GIF picture,"Landscape, 256 dots",P2,
+File types: pictures,GIF animation,Animated GIF,Landscape with film edge,P2,Gorilla: Env-Archive/SYS/def_GIFAnim
+File types: pictures,BMP,Windows bitmap,Landscape,P3,
+File types: pictures,TIFF,TIFF picture,Landscape with layers,P3,
+File types: pictures,WebP,WebP picture,Landscape,P2,
+File types: pictures,SVG,Vector drawing,Curve with nodes,P2,
+File types: pictures,ICO,Icon file,Small icon,P3,
+File types: pictures,PCX / TGA,Old PC formats,Landscape,P3,
+File types: pictures,XCF,GIMP picture,Layers,P3,Gorilla: Env-Archive/SYS/def_XCF
+File types: pictures,HAM picture,HAM6/HAM8 picture,Landscape with a rainbow,P3,
+File types: pictures,Icon (.info),An icon file itself,Icon with a corner fold,P2,
+File types: pictures,Brush,A DPaint brush,Brush stroke,P3,
+File types: pictures,Font preview,A font shown as a picture,"""Aa""",P3,
+File types: sound and music,Sound,Any sound,Speaker,P1,Gorilla: Env-Archive/SYS/def_Sound
+File types: sound and music,Music,Any music,Notes,P1,Gorilla: Env-Archive/SYS/def_Music
+File types: sound and music,8SVX,IFF sampled sound,Waveform,P1,
+File types: sound and music,AIFF,AIFF sound,Waveform,P2,
+File types: sound and music,WAV,WAVE sound,Waveform,P1,
+File types: sound and music,MP3,MP3 music,"Note with ""MP3""",P1,Gorilla: Env-Archive/SYS/def_MP3
+File types: sound and music,MP3 with tags,MP3 with ID3 tags,Note with a tag,P3,Gorilla: Env-Archive/SYS/def_MP3ID3
+File types: sound and music,Ogg Vorbis,Ogg music,Note,P2,
+File types: sound and music,FLAC,Lossless music,Note with a diamond,P2,Gorilla: Env-Archive/SYS/def_FLAC
+File types: sound and music,AAC / M4A,AAC music,Note,P3,
+File types: sound and music,Module,ProTracker MOD,Pattern grid and note,P1,
+File types: sound and music,MED module,OctaMED/MED,Pattern grid,P2,
+File types: sound and music,XM / S3M / IT,PC tracker modules,Pattern grid,P2,
+File types: sound and music,AHX / HivelyTracker,Synth chip modules,Chip and note,P3,
+File types: sound and music,SID tune,C64 music,Chip and note,P3,
+File types: sound and music,MIDI,MIDI file,Keyboard and note,P2,
+File types: sound and music,Instrument,Sampled instrument,Instrument,P3,Gorilla: Env-Archive/SYS/def_Instrument
+File types: sound and music,Playlist,M3U/PLS playlist,List with notes,P2,Gorilla: Env-Archive/SYS/def_M3U
+File types: sound and music,Speech,Translator/narrator text,Mouth,P3,
+File types: video and animation,Movie,Any film,Film frame,P1,Gorilla: Env-Archive/SYS/def_Movie
+File types: video and animation,ANIM,IFF animation,Flip book,P1,Gorilla: Env-Archive/SYS/def_ANIM
+File types: video and animation,CDXL,CD32 video,Disc and film,P3,Gorilla: Env-Archive/SYS/def_CDXL
+File types: video and animation,MPEG,MPEG video,Film with play,P2,
+File types: video and animation,AVI,AVI video,Film,P2,
+File types: video and animation,MP4,MP4 video,Film,P2,
+File types: video and animation,QuickTime,MOV,Film,P3,
+File types: video and animation,Matroska,MKV,Film,P3,
+File types: video and animation,FLI/FLC,Autodesk animation,Flip book,P3,
+File types: archives and disk images,Archive,Any archive,Compressed box,P1,Gorilla: Env-Archive/SYS/def_Archive
+File types: archives and disk images,LhA,LhA archive,"Box with ""LHA""",P1,Gorilla: Env-Archive/SYS/def_LHA
+File types: archives and disk images,LZX,LZX archive,"Box with ""LZX""",P1,
+File types: archives and disk images,Zip,Zip archive,Box with a zip,P1,
+File types: archives and disk images,7-Zip,7z archive,Box,P2,
+File types: archives and disk images,Tar,Tar archive,Box with tape,P2,
+File types: archives and disk images,gzip / bzip2 / xz,Compressed single file,Squeezed page,P2,
+File types: archives and disk images,DMS,Disk Masher image,Floppy squeezed,P2,
+File types: archives and disk images,ADF,Amiga floppy image,Floppy image,P1,
+File types: archives and disk images,HDF,Amiga hard disk image,Hard disk image,P2,
+File types: archives and disk images,ISO,CD image,Disc image,P1,
+File types: archives and disk images,CUE/BIN,CD image pair,Disc image with a sheet,P3,
+File types: archives and disk images,WHDLoad slave,A WHDLoad game,Joystick with a disk,P2,
+File types: archives and disk images,Patch,A patch file,Plaster,P2,Gorilla: Env-Archive/SYS/def_Patch
+File types: archives and disk images,Installer package,Something to install,Box with an arrow,P1,Gorilla: Env-Archive/SYS/def_Installer
+File types: archives and disk images,Kickstart ROM,ROM image file,Chip,P2,Gorilla: Env-Archive/SYS/def_KickROM
+File types: code and scripts,Program,A program with no icon of its own (def_tool),Window with a cog,P1,Gorilla: Env-Archive/SYS/def_Tool
+File types: code and scripts,Project,A project with no type (def_project),Page with a cog,P1,Gorilla: Env-Archive/SYS/def_Project
+File types: code and scripts,Script,AmigaDOS script (S bit),"Scroll with "">""",P1,
+File types: code and scripts,ARexx script,.rexx,Scroll with a crown,P1,Gorilla: Env-Archive/SYS/def_REXX
+File types: code and scripts,Installer script,Installer language,Scroll with a box,P2,
+File types: code and scripts,C source,.c,"Page with ""C""",P1,
+File types: code and scripts,C header,.h,"Page with ""H""",P1,
+File types: code and scripts,C++ source,.cpp,"Page with ""C++""",P2,
+File types: code and scripts,Assembler,".s, .asm","Page with ""ASM""",P1,
+File types: code and scripts,E source,AmigaE .e,"Page with ""E""",P3,
+File types: code and scripts,AMOS source,AMOS .AMOS,"Page with ""AMOS""",P2,
+File types: code and scripts,Blitz Basic source,.bb2,"Page with ""BB""",P2,
+File types: code and scripts,Hollywood script,.hws,Page with a star,P2,
+File types: code and scripts,Python,.py,"Page with ""Py""",P2,Gorilla: Env-Archive/SYS/def_Python
+File types: code and scripts,Lua,.lua,Page with a moon,P2,Gorilla: Env-Archive/SYS/def_Lua
+File types: code and scripts,Makefile,Build file,Page with gears,P2,
+File types: code and scripts,Object file,.o,Cube,P3,
+File types: code and scripts,Link library,".lib, .a",Books,P3,Gorilla: Developer/Lib
+File types: code and scripts,Include drawer,Header files,"Drawer with ""H""",P3,Gorilla: Developer/Include
+File types: code and scripts,Diff,A patch/diff,Page with plus and minus,P3,
+File types: code and scripts,JavaScript,.js,"Page with ""JS""",P3,
+File types: code and scripts,PowerPC program,WarpOS/PowerUP executable,Window with a PPC chip,P3,
+File types: code and scripts,Linux program,ELF,Window with a penguin,P3,Gorilla: Env-Archive/SYS/def_ELF_EXE_Linux
+File types: code and scripts,Windows program,EXE/MSI,Window with a PC,P3,Gorilla: Env-Archive/SYS/def_MSI
+File types: system files,Library,.library,Book with a cog,P1,Gorilla: Libs
+File types: system files,Device,.device,Chip with a plug,P1,Gorilla: Devs
+File types: system files,Datatype,A datatype descriptor,Type tag,P1,Gorilla: Env-Archive/SYS/def_DataType
+File types: system files,Class,A BOOPSI class,Puzzle piece,P2,
+File types: system files,Handler / file system,L: handler,Cog and disk,P2,
+File types: system files,Bitmap font,A .font,"""Aa"" in pixels",P1,Gorilla: Env-Archive/SYS/def_Bitmap_Font
+File types: system files,Outline font,.otag,"""Aa"" outlined",P1,Gorilla: Env-Archive/SYS/def_Outline_Font
+File types: system files,TrueType font,.ttf,"""Aa"" with ""TT""",P1,Gorilla: Env-Archive/SYS/def_TrueType
+File types: system files,OpenType font,.otf,"""Aa"" with ""O""",P2,Gorilla: Env-Archive/SYS/def_Otag
+File types: system files,Catalog,A translation,Speech bubble,P1,Gorilla: Env-Archive/SYS/def_Catalog
+File types: system files,Country,A country file,Flag,P2,Gorilla: Env-Archive/SYS/def_Country
+File types: system files,Keymap,A keymap,Key,P2,Gorilla: Env-Archive/SYS/def_Keymap
+File types: system files,Prefs file,A saved preferences file,Cog on a page,P1,Gorilla: Env-Archive/SYS/def_Pref
+File types: system files,Preset,A saved preset,Bookmark,P2,
+File types: system files,Theme,An OpenLook .theme,Swatches,P1,
+File types: system files,Desktop profile,An OpenPrefs .profile,Monitor with a person,P2,
+File types: system files,Monitor driver,Devs/Monitors entry,Monitor,P1,Gorilla: Devs/Monitors
+File types: system files,Printer driver,Devs/Printers entry,Printer,P2,Gorilla: Devs/Printers
+File types: system files,Mount list,DOSDrivers entry,Drive with a list,P1,Gorilla: Devs/DOSDrivers
+File types: system files,Startup-Sequence,The boot script,Scroll with a power symbol,P2,
+File types: system files,Commodity,Any commodity with no icon,Cog with lightning,P2,Gorilla: Tools/Commodities
+File types: system files,Docky,An AmiDock docky,Small tile,P3,
+File types: system files,Pointer file,A pointer prefs file,Pointer,P3,Gorilla: Other/Pointer
+File types: system files,Sound prefs sample,Beep sound,Speaker,P3,
+File types: internet and data,Web page,HTML,Page with a globe,P1,Gorilla: Env-Archive/SYS/def_HTML
+File types: internet and data,Stylesheet,CSS,Page with a brush,P3,Gorilla: Env-Archive/SYS/def_CSS
+File types: internet and data,XML,XML file,"Page with ""</>""",P2,
+File types: internet and data,JSON,JSON file,Page with braces,P2,
+File types: internet and data,Link,URL shortcut,Chain link,P2,
+File types: internet and data,Email message,.eml,Envelope,P2,
+File types: internet and data,Mailbox,mbox,Stack of envelopes,P3,
+File types: internet and data,Contact,vCard,Card with a person,P3,
+File types: internet and data,Calendar event,ICS,Calendar page,P3,
+File types: internet and data,Certificate,TLS certificate,Seal,P3,
+File types: internet and data,Torrent,BitTorrent file,Seed,P3,
+File types: internet and data,Download in progress,A partial download,Page with a progress bar,P2,
+States and situations,Selected frame,Every icon's second frame (GlowIcon/PNG): something moves,Per icon,P1,
+States and situations,Disk busy,Validating or writing,Amber light,P1,
+States and situations,Write-protected disk,Floppy with the tab open,Floppy with a lock,P2,
+States and situations,Disk nearly full,Under 5% free,Disk with a red gauge,P3,
+States and situations,Trashcan full,Something to empty,Bin with paper,P1,
+States and situations,AppIcon,A program's icon on the backdrop,Program's own,P1,
+States and situations,Iconified window,A window turned into an icon,Window shrunk to a tile,P2,
+States and situations,Leave Out,An icon left on the backdrop,"Same icon, shortcut mark",P2,
+States and situations,Link,A soft link,Small curved arrow badge,P2,
+States and situations,Read-only file,Protected file,Small lock badge,P3,
+States and situations,No icon / unknown,A file nothing recognises,Page with a question mark,P1,Gorilla: Env-Archive/SYS/def_Project
+States and situations,Network connected,LAN up,Three boxes joined,P1,
+States and situations,Network off,LAN down,"Three boxes, link broken",P1,
+States and situations,Wi-Fi signal,Strength 0-4,Fan with bars,P1,Gorilla: Prefs/WiFi
+States and situations,Mail: new mail,Unread mail waiting,Envelope with a dot,P2,
+States and situations,Mail: none,No new mail,Envelope,P2,
+States and situations,Printing,Print job running,Printer with a page moving,P2,
+States and situations,Print error,"Paper out, offline","Printer with ""!""",P2,
+States and situations,Clipboard synced,ACClip copied to/from the PC,Clipboard with a tick,P2,
+States and situations,Update available,OpenUp has an update,Box with a star,P2,
+States and situations,Running (dock dot),Program running,Small dot,P1,
+States and situations,Sound muted,Volume off,Speaker crossed,P1,
+States and situations,Battery,Laptop/handheld battery,Battery,P3,
+States and situations,Online / offline (dial-up),Miami-style online state,Plug in and out,P3,
+"Title bar, dock and gadget glyphs",Close gadget,Window close,Square with a dot,P1,
+"Title bar, dock and gadget glyphs",Depth gadget (to back),Window in front: send back,"Two squares, back one solid",P1,
+"Title bar, dock and gadget glyphs",Depth gadget (to front),Window behind: bring forward,"Two squares, front one solid",P1,
+"Title bar, dock and gadget glyphs",Screen depth gadget,Screen to back,Same as window depth,P1,
+"Title bar, dock and gadget glyphs",Iconify gadget,Window to an icon (where programs ask),Square with a bar,P2,
+"Title bar, dock and gadget glyphs",Settings cog,OpenTitle's cog,Cog,P1,
+"Title bar, dock and gadget glyphs",Speaker,OpenSpeaker volume,Speaker with waves,P1,
+"Title bar, dock and gadget glyphs",LAN,OpenTitle network icon,Three boxes joined,P1,
+"Title bar, dock and gadget glyphs",Wi-Fi,OpenTitle Wi-Fi icon,Fan,P1,
+"Title bar, dock and gadget glyphs",Checkbox tick,OpenLook tick,Tick,P1,
+"Title bar, dock and gadget glyphs",Radio dot,OpenLook radio,Dot,P1,
+"Title bar, dock and gadget glyphs",Cycle glyph,Cycle gadget,Circular arrow,P1,
+"Title bar, dock and gadget glyphs",Scroller arrows,"Up, down, left, right (when shown)",Chevrons,P1,
+"Title bar, dock and gadget glyphs",Dock separator,Line between groups,Thin line,P1,
+"Title bar, dock and gadget glyphs",Menu check,Menu item ticked,Tick,P1,
+"Title bar, dock and gadget glyphs",Menu submenu,Submenu arrow,Chevron,P1,
+"Title bar, dock and gadget glyphs",Amiga key,Menu shortcut key,"Amiga ""A"" key glyph (our own)",P1,
+"Title bar, dock and gadget glyphs",Busy spinner,Busy pointer's animation frames,Spinner,P1,
+"Title bar, dock and gadget glyphs",Requester icons,"Info, warning, error, question","i, !, x, ?",P1,
+"Title bar, dock and gadget glyphs","Toolbar: back, forward, up",OpenFiles/OpenBrowser toolbar,Arrows,P1,
+"Title bar, dock and gadget glyphs","Toolbar: new, open, save, print",Open apps' toolbars,"Page, folder, disk, printer",P1,
+"Title bar, dock and gadget glyphs","Toolbar: cut, copy, paste, undo",Edit toolbars,"Scissors, pages, clipboard, curved arrow",P1,
+"Title bar, dock and gadget glyphs","Toolbar: find, zoom, settings",Viewers and editors,"Magnifier, plus, cog",P1,
+"Title bar, dock and gadget glyphs","Media: play, pause, stop, next, previous",OpenPlay,Triangles and bars,P1,
+Pointers,Normal pointer,The arrow,Arrow,P1,Gorilla: Other/Pointer
+Pointers,Busy pointer,Waiting,Spinner or clock,P1,
+Pointers,Resize left-right,OpenWindows edge,Double arrow,P1,
+Pointers,Resize up-down,OpenWindows bottom edge,Double arrow,P1,
+Pointers,Resize diagonal,OpenWindows bottom corners,"Double arrow, 45°",P1,
+Pointers,Move,Dragging a window,Four arrows,P2,
+Pointers,Text,Text cursor,I-beam,P2,
+Pointers,Link hand,Over a link,Hand,P2,
+Pointers,Drop here,Dragging onto a target,Arrow with a plus,P2,
+Pointers,No drop,Can't drop here,Arrow with a no sign,P3,
+Apps: desktop and file managers,Directory Opus 4,File manager,Two panes and a disk,P2,
+Apps: desktop and file managers,Directory Opus 5 / Magellan,Workbench replacement,Two panes with a lens,P2,
+Apps: desktop and file managers,DiskMaster,File manager,Two panes,P3,
+Apps: desktop and file managers,FileMaster,File manager,Two panes,P3,
+Apps: desktop and file managers,SID,File manager,Two panes,P3,
+Apps: desktop and file managers,Scalos,Workbench replacement,Workbench window with a star,P2,
+Apps: desktop and file managers,ToolManager,Docks and tools menu,Dock,P2,
+Apps: desktop and file managers,AmiDock,Dock (OS 3.9/4),Dock,P2,
+Apps: desktop and file managers,AmiStart,Start menu,Start button,P2,
+Apps: desktop and file managers,MagicMenu,Menus,Menu with a wand,P3,
+Apps: desktop and file managers,NewIcons,Icon system,Icon with a star,P3,
+Apps: desktop and file managers,ClassAction,Actions by file type,File with arrows,P3,
+Apps: desktop and file managers,PowerWindows,Window tweaks,Window with a lightning,P3,
+Apps: desktop and file managers,iGame,Game launcher,Joystick list,P2,
+Apps: desktop and file managers,TinyLauncher,WHDLoad launcher,Joystick,P3,
+Apps: internet,IBrowse,Web browser,Globe with a sail,P2,
+Apps: internet,AWeb,Web browser,Globe with a web,P2,
+Apps: internet,Voyager,Web browser,Globe with a rocket,P3,
+Apps: internet,NetSurf,Web browser,Globe with a wave,P2,
+Apps: internet,OWB,Origyn Web Browser,Globe,P3,
+Apps: internet,YAM,Email,Envelope with a yam,P2,
+Apps: internet,SimpleMail,Email,Envelope,P2,
+Apps: internet,Thor,Mail and news,Envelope with a hammer,P3,
+Apps: internet,AmIRC,IRC client,Speech bubbles,P2,
+Apps: internet,WookieChat,IRC client,Speech bubbles,P3,
+Apps: internet,AmiFTP,FTP client,Folder with arrows,P2,
+Apps: internet,AmiTradeCenter,FTP client,Folder with arrows,P3,
+Apps: internet,Roadshow,TCP/IP stack,Network plug,P2,
+Apps: internet,Miami,TCP/IP stack,Network plug,P3,
+Apps: internet,AmiTCP / Genesis,TCP/IP stack,Network plug,P3,
+Apps: internet,Term / NComm,Terminal and modem,Terminal and phone,P3,
+Apps: internet,SSH client,Secure shell,Terminal with a key,P3,
+Apps: internet,Telnet,Telnet client,Terminal,P3,
+Apps: internet,News reader,Usenet,Newspaper,P3,
+Apps: internet,Download manager,HTTP downloads,Down arrow into a drawer,P3,
+Apps: internet,Jabber / chat,Instant messaging,Speech bubble,P3,
+Apps: office and text,GoldED / Cubic IDE,Programmer's editor,Page with gold pen,P2,
+Apps: office and text,CygnusEd,Text editor,Page with a swan,P2,
+Apps: office and text,Annotate,Text editor,Page with a pen,P3,
+Apps: office and text,FrexxEd,Text editor,Page,P3,
+Apps: office and text,MicroEmacs,Text editor,Page,P3,
+Apps: office and text,Wordworth,Word processor,Page with a quill,P2,
+Apps: office and text,Final Writer,Word processor,Page with a quill,P2,
+Apps: office and text,PageStream,Desktop publishing,Page with columns,P2,
+Apps: office and text,ProPage,Desktop publishing,Page with columns,P3,
+Apps: office and text,TurboCalc,Spreadsheet,Grid,P2,
+Apps: office and text,Final Calc,Spreadsheet,Grid,P3,
+Apps: office and text,Datastore,Database,Card index,P3,
+Apps: office and text,Organiser,Diary and contacts,Diary,P3,
+Apps: office and text,Calendar,Calendar,Calendar page,P2,
+Apps: office and text,Notepad,Notes,Note pad,P2,
+Apps: office and text,Contacts,Address book,Card with a person,P3,
+Apps: office and text,PDF viewer,Reads PDFs,Page with a ribbon,P2,
+Apps: office and text,Dictionary / spell checker,Spelling,"Book with ""abc""",P3,
+Apps: office and text,Units,Unit converter,Ruler and scales,P3,
+Apps: graphics and 3D,Deluxe Paint,Paint program,Brush and palette,P2,
+Apps: graphics and 3D,Personal Paint,Paint program,Brush,P2,
+Apps: graphics and 3D,Brilliance,Paint program,Brush with a sparkle,P3,
+Apps: graphics and 3D,TVPaint,Paint program,Brush on a monitor,P3,
+Apps: graphics and 3D,ImageFX,Image processing,Photo with a wand,P2,
+Apps: graphics and 3D,ArtEffect,Image editing,Photo with a brush,P3,
+Apps: graphics and 3D,Photogenics,Image editing,Photo with layers,P3,
+Apps: graphics and 3D,ADPro,Image conversion,Photo with arrows,P3,
+Apps: graphics and 3D,Lunapaint,Paint program,Brush and moon,P3,
+Apps: graphics and 3D,Grafx2,Pixel art,Pixel grid,P3,
+Apps: graphics and 3D,Lightwave,3D,Wireframe sphere,P2,
+Apps: graphics and 3D,Imagine,3D,Wireframe cube,P3,
+Apps: graphics and 3D,Cinema 4D,3D,Wireframe,P3,
+Apps: graphics and 3D,Real 3D,3D,Wireframe,P3,
+Apps: graphics and 3D,Sculpt,3D,Wireframe,P3,
+Apps: graphics and 3D,Picture viewer,"Visage, FastView, ViewTek",Photo with an eye,P2,
+Apps: graphics and 3D,Scanner,ScanQuix and others,Scanner,P3,
+Apps: graphics and 3D,Screen grabber,Grabs the screen,Camera,P2,Gorilla: Tools/ScreenGrabber
+Apps: graphics and 3D,Font editor,Edits bitmap fonts,"""Aa"" with a pencil",P3,
+Apps: graphics and 3D,Icon editor,Edits icons,Icon with a pencil,P2,
+Apps: graphics and 3D,Colour picker,Picks colours,Dropper,P3,Gorilla: Prefs/Palette
+Apps: music and audio,ProTracker,Tracker,Pattern grid,P2,
+Apps: music and audio,OctaMED,Tracker,Pattern grid with notes,P2,
+Apps: music and audio,DigiBooster,Tracker,Pattern grid,P3,
+Apps: music and audio,HivelyTracker,Synth tracker,Pattern grid,P3,
+Apps: music and audio,HippoPlayer,Module player,Hippo-free player window,P2,
+Apps: music and audio,EaglePlayer,Module player,Player window,P3,
+Apps: music and audio,DeliTracker,Module player,Player window,P3,
+Apps: music and audio,AmigaAMP,MP3 player,Player with a waveform,P2,
+Apps: music and audio,Bars&Pipes,MIDI sequencer,Pipes and notes,P3,
+Apps: music and audio,Music-X,MIDI sequencer,Keyboard,P3,
+Apps: music and audio,Audio editor,"SoundFX, Samplitude, AudioMaster",Waveform with scissors,P2,
+Apps: music and audio,Audio recorder,Records sound,Microphone,P2,Gorilla: Tools/AHIRecord
+Apps: music and audio,Mixer,Volume levels,Faders,P2,
+Apps: music and audio,CD player,Plays audio CDs,Disc and play,P2,
+Apps: music and audio,Internet radio,Streams,Radio waves,P3,
+Apps: music and audio,Speech,Narrator/translator,Mouth,P3,
+Apps: video and multimedia,Scala,Presentations and titling,Screen with titles,P3,
+Apps: video and multimedia,Video Toaster,Video,Monitor with a slice,P3,
+Apps: video and multimedia,Video player,MooViD and others,Film with play,P2,
+Apps: video and multimedia,Animation player,Plays ANIMs,Flip book,P2,
+Apps: video and multimedia,Genlock / titling,Titles over video,Monitor with letters,P3,
+Apps: video and multimedia,Slide show,Shows pictures in turn,Photo stack,P3,
+Apps: video and multimedia,Webcam,Camera viewer,Camera,P3,
+Apps: development,SAS/C,C compiler,"Book with ""C""",P2,
+Apps: development,StormC,C/C++ IDE,"Storm cloud and ""C""",P3,
+Apps: development,GCC,C compiler (cross or native),"Gnu-free gear and ""C""",P2,
+Apps: development,vbcc,C compiler,"""C"" and a gear",P2,
+Apps: development,DICE,C compiler,Die,P3,
+Apps: development,Devpac,Assembler,"""ASM"" and a gear",P3,
+Apps: development,AsmOne / AsmPro,Assembler,"""ASM""",P2,
+Apps: development,Blitz Basic / AmiBlitz,Basic,"""BB"" and a bolt",P2,
+Apps: development,AMOS,Basic for games,"""AMOS"" star",P2,
+Apps: development,Hollywood,Multimedia programming,Film and code,P2,
+Apps: development,AmigaE,E compiler,"""E""",P3,
+Apps: development,ARexx,Script language,Crown,P2,Gorilla: Rexxc
+Apps: development,Lua,Script language,Moon,P3,Gorilla: Env-Archive/SYS/def_Lua
+Apps: development,Python,Script language,"Snake-free ""Py""",P3,Gorilla: Env-Archive/SYS/def_Python
+Apps: development,Debugger,Source debugger,Bug and magnifier,P2,Gorilla: Developer/Debug
+Apps: development,Enforcer / MuForce,Memory hit checker,Shield,P2,
+Apps: development,SnoopDOS,Watches DOS calls,Magnifier over a disk,P2,Gorilla: System/Snoopy
+Apps: development,Scout,System monitor,Magnifier over a chip,P2,Gorilla: Tools/SysExplorer
+Apps: development,Sashimi,Debug output catcher,Fish-free tray,P3,Gorilla: Developer/Debug/Sashimi
+Apps: development,Hex editor,Edits bytes,Grid of hex,P2,
+Apps: development,Disassembler,Reads machine code,Code with a lens,P3,
+Apps: development,Version control,Git and others,Branches,P3,
+Apps: development,ACKitchen,AmigaChrome developer tools,Chef's knife and code,P2,
+Apps: system and disk tools,SysInfo,Benchmarks and hardware,Speedometer,P2,
+Apps: system and disk tools,WHDLoad,Runs games from hard disk,Joystick and a disk,P2,
+Apps: system and disk tools,JST,Old WHDLoad-style loader,Joystick,P3,
+Apps: system and disk tools,Executive,Task scheduler,Stopwatch,P3,
+Apps: system and disk tools,SnoopDOS,DOS call monitor,Magnifier,P2,Gorilla: System/Snoopy
+Apps: system and disk tools,Task manager,Shows running tasks,List with a stop sign,P2,Gorilla: System/SysMon
+Apps: system and disk tools,Memory monitor,Free memory,Gauge,P2,
+Apps: system and disk tools,CPU monitor,CPU load,Graph,P2,Gorilla: System/SysMon
+Apps: system and disk tools,Partitioner,Partitions disks,Pie of a disk,P2,Gorilla: Tools/QuickPart
+Apps: system and disk tools,Disk salvage,DiskSalv and others,Disk with a lifebuoy,P2,
+Apps: system and disk tools,Backup,"ABackup, Quarterback",Disk to tape,P2,
+Apps: system and disk tools,Disk copier,X-Copy and others,Two floppies,P3,
+Apps: system and disk tools,ADF transfer,ADF to and from floppies,Floppy and arrow,P2,Gorilla: System/DiskImageGUI-1
+Apps: system and disk tools,Disk image mounter,Mounts ADF/HDF/ISO,Disc in a drive,P2,Gorilla: System/DiskImageGUI-1
+Apps: system and disk tools,File system tools,PFS/SFS tools,Disk with a wrench,P3,
+Apps: system and disk tools,Defragmenter,Defragments,Disk with blocks,P3,
+Apps: system and disk tools,Virus checker,Checks for viruses,Shield with a bug,P2,
+Apps: system and disk tools,Boot selector,Chooses what to boot,Menu over a disk,P3,Gorilla: Prefs/Boot
+Apps: system and disk tools,Early Startup,Boot menu,Menu,P3,
+Apps: system and disk tools,Mounter,Mounts devices,Plug into a drive,P2,
+Apps: system and disk tools,Log viewer,System log,Page with a timeline,P3,Gorilla: System/LogView
+Apps: system and disk tools,Virtual memory,VMM and others,Memory with a disk,P3,Gorilla: System/VMM
+Apps: system and disk tools,Clipboard viewer,Shows the clipboard,Clipboard,P3,
+Apps: system and disk tools,Screen blanker,Garshneblanker and others,Monitor with stars,P3,Gorilla: Tools/Commodities/Blanker
+Apps: system and disk tools,Keyboard viewer,Shows keys,Keyboard,P3,Gorilla: Tools/KeyShow
+Apps: archives and transfer,LhA,Archiver,"Box with ""LHA""",P2,Gorilla: Env-Archive/SYS/def_LHA
+Apps: archives and transfer,LZX,Archiver,Box,P3,
+Apps: archives and transfer,UnZip / Zip,Archiver,Box with a zip,P3,
+Apps: archives and transfer,XAD tools,Unpacks almost anything,Box with arrows,P2,
+Apps: archives and transfer,DMS,Disk masher,Squeezed floppy,P3,
+Apps: archives and transfer,Aminet browser,Browses Aminet,Globe with a box,P2,
+Apps: archives and transfer,Package installer,Installs packages,Box with an arrow,P2,Gorilla: Utilities/Installer
+Apps: archives and transfer,Update tool,Fetches updates,Box with a circular arrow,P2,
+Apps: emulation and games,UAE,Amiga emulator,Amiga computer on a screen,P3,Gorilla: Computers/Amiga
+Apps: emulation and games,ShapeShifter,Mac emulator,Classic Mac-free box,P3,
+Apps: emulation and games,Fusion,Mac emulator,Box,P3,
+Apps: emulation and games,PC-Task,PC emulator,PC tower,P3,Gorilla: Computers/Generic
+Apps: emulation and games,C64 emulator,"Frodo, A64",Breadbox computer,P3,
+Apps: emulation and games,ScummVM,Adventure games,Joystick with a speech bubble,P2,
+Apps: emulation and games,DOSBox,DOS games,PC with a joystick,P3,
+Apps: emulation and games,MAME,Arcade machines,Arcade cabinet,P3,
+Apps: emulation and games,Spectrum emulator,ZX Spectrum,Rubber-key computer,P3,
+Apps: emulation and games,Game (WHDLoad install),A game installed with WHDLoad,Joystick with a disk,P1,
+Apps: emulation and games,Game (disk image),A game on an ADF,Floppy with a joystick,P2,
+Apps: emulation and games,Game (CD32),A CD32 game,Disc with a pad,P2,
+Apps: emulation and games,Demo,A demo,Star burst,P2,Gorilla: Demos
+Apps: emulation and games,Intro / cracktro,A small intro,Small star,P3,
+Apps: emulation and games,Disk magazine,A diskmag,Magazine,P3,
+Apps: emulation and games,Saved game,A game's save file,Floppy with a star,P3,
+Apps: hardware and drivers,Picasso96,RTG drivers,Graphics card,P2,
+Apps: hardware and drivers,CyberGraphX,RTG drivers,Graphics card,P3,
+Apps: hardware and drivers,Graphics card tools,Monitor settings for cards,Card with a monitor,P3,
+Apps: hardware and drivers,AHI,Sound card drivers,Sound card,P2,Gorilla: Prefs/AHI
+Apps: hardware and drivers,Poseidon,USB stack,USB plug,P2,Gorilla: Prefs/Trident
+Apps: hardware and drivers,Network card,Ethernet driver,Network card,P2,
+Apps: hardware and drivers,Accelerator card,"CPU board tools (Blizzard, Warp, PiStorm)",CPU board,P2,
+Apps: hardware and drivers,PiStorm,PiStorm settings,Raspberry-free board,P2,
+Apps: hardware and drivers,CPU control,"CPU caches and MMU (CPU, SetPatch tools)",CPU chip,P2,
+Apps: hardware and drivers,MMU tools,"MMULib, MuTools",Chip with a map,P3,
+Apps: hardware and drivers,Real-time clock,Sets the battery clock,Clock with a battery,P3,
+Apps: hardware and drivers,Printer driver tool,TurboPrint and others,Printer with a cog,P3,
+Apps: hardware and drivers,Joystick / gamepad,Gamepad settings,Gamepad,P2,
+Apps: hardware and drivers,Mouse,Mouse settings,Mouse,P2,Gorilla: Other/Mouse
+Apps: hardware and drivers,Tablet,Graphics tablet,Tablet and pen,P3,
+Apps: hardware and drivers,Scanner,Scanner driver,Scanner,P3,
+Apps: hardware and drivers,Modem,Modem setup,Modem,P3,
+Apps: hardware and drivers,Monitor,Monitor setup,Monitor,P2,Gorilla: Devs/Monitors
+Apps: hardware and drivers,Keyboard,Keyboard setup,Keyboard,P2,Gorilla: Prefs/Input
+Apps: hardware and drivers,Gotek / floppy emulator,USB floppy emulator,Floppy drive with a screen,P3,
+Apps: hardware and drivers,IDE / SCSI,Hard disk controller tools,Controller board,P3,
+Apps: hardware and drivers,AmigaChrome board,Dalsin board services,Board with the AmigaChrome mark,P1,

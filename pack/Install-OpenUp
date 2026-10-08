@@ -123,8 +123,9 @@
                  "OpenWrite: a word processor (new)"
                  "OpenMail: a mail reader (preview, needs AmiSSL 5)"
                  "OpenBrowser: a web browser (preview, its own archive)"
-                 "OpenMulticore: work on the cores board's other cores")
-        (default (if #ac 10419711 10419706))))
+                 "OpenMulticore: work on the cores board's other cores"
+                 "Icons: Gorilla's pictures on the system's icons (new)")
+        (default (if #ac 27196927 27196922))))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -134,18 +135,24 @@
         (select
             (askchoice
                 (prompt "Which look?")
-                (help "Open: light grey with blue, in the AmigaOS 4 style.\n"
+                (help "Open: calm and flat, with one blue accent: OpenUp's own look.\n"
+                      "Glass: steel-blue glass, in the AmigaOS 4 style.\n"
                       "Graphite: graphite and steel, in the AmiKit style.\n"
                       "Ember: flat warm greys with orange, in the Ubuntu style.\n"
                       "Clear: flat, light and rounded, in the Windows 11 style.\n"
                       "Classic: the OS's own look, drawn as it always was.\n\n"
                       "You can change it later with OpenLook THEME <name> SAVE.")
-                (choices "Open" "Graphite" "Ember" "Clear" "Classic")
+                (choices "Open" "Glass" "Graphite" "Ember" "Clear" "Classic")
                 (default 0))
-            "Open" "Graphite" "Ember" "Clear" "Classic")))
-(set #look (cat #theme " light"))
+            "Open" "Glass" "Graphite" "Ember" "Clear" "Classic")))
+; with a look, the windows of the look approved on 8 October 2026: no zoom or
+; size gadget (OpenWindows resizes from the edges), scroll bars only when needed.
+; *N is a new line inside a quoted AmigaDOS argument.
+(set #look (cat #theme " light*Nzoom off*Nsizegadget off*Nscrollers auto"))
 (set #back (cat #theme "-light"))
-(if (= #theme "Classic") (set #back ""))
+; on AmigaChrome, its own backdrop: the theme's colours with chrome sweeps
+(if #ac (set #back (cat #theme "-light-chrome")))
+(if (= #theme "Classic") ((set #look "Classic light") (set #back "")))
 
 ; Each part: OpenUpTool INSTALL, its messages in T:OpenUp.log.
 (run "Delete >NIL: T:OpenUp.log")
@@ -207,6 +214,12 @@
             (message "The backgrounds didn't install completely. T:OpenUp.log says why; nothing else changed."))
         (if (<> #back "")
             (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/OpenUp/" #back " >>T:OpenUp.log")))))
+
+(if (bitand #parts 16777216)
+    (
+        (working "Giving the system's icons Gorilla's pictures")
+        (if (> (run (cat #tool " INSTALL Parts/GorillaIcons >>T:OpenUp.log")) 5)
+            (message "Some icons kept their old pictures. T:OpenUp.log says why; nothing else changed."))))
 
 (if (bitand #parts 32)
     (
