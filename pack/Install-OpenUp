@@ -50,7 +50,7 @@
               "AmigaChrome instances only.\n\n"
               "OpenPrint and OpenView: print to PDF and to printers on your network, "
               "and view pictures and documents.\n\n"
-              "AmigaChrome sharing: the clipboard and files, shared with the desktop. "
+              "AmigaChrome sharing: the clipboard and files, shared in and out of the Amiga. "
               "AmigaChrome instances only.\n\n"
               "OpenLook: one look for every GadTools program, on RTG screens: title bars, "
               "borders, gadgets, scrollers and window backgrounds, with a clear screen font "
@@ -139,8 +139,8 @@
               "OpenMulticore: lets programs hand work to the other cores of AmigaChrome's "
               "cores board, so the main CPU stays free; without a cores board the work runs "
               "on the main CPU, so it is safe on every Amiga (new).\n\n"
-              "OpenGPU: opengpu.library, so programs' drawing, SDL 2 games and GL (Mesa) run "
-              "on the GPU through AmigaChrome's graphics board; where there is "
+              "OpenGPU: opengpu.library, so programs' drawing and SDL 2 games run on the x86 or "
+              "ARM64 cores and GL (Mesa) on the GPU, through AmigaChrome's graphics board; where there is "
               "no board they run on the Amiga's own CPU, as before (new). SDL 2 and GL are in "
               "LIBS:OpenGPU and load only when a program asks. OpenGPUCheck in a Shell checks it.\n\n"
               "Icons: Gorilla, AROS's icon set, as new pictures for the system's own drawers, "
@@ -158,7 +158,7 @@
                  "OpenBrowser: a web browser (preview)"
                  "OpenMulticore: work on a cores board"
                  "Icons: Gorilla's pictures on the system's icons"
-                 "OpenGPU: SDL and GL on the GPU (new)"
+                 "OpenGPU: SDL on the cores, GL on the GPU (new)"
                  "Warp3D and MiniGL: 3D on OpenGPU (new, 68040)")
         (default (bitand (shiftright #default 18) 511))))
 (set #g4

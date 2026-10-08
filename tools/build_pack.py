@@ -112,6 +112,10 @@ ROOT = Path(__file__).resolve().parents[1]
 DEV = ROOT.parent
 STOVE = Path(os.environ.get("STOVE", Path.home() / "AmigaChrome/stoves/os32"))
 CC = STOVE / "prefix/bin/m68k-amigaos-gcc"
+# Every 68k compile here: address 0 is real memory on the Amiga, and without
+# this GCC puts TRAP #7 (80000027) where it can prove a pointer null
+# (amigachrome #320). The parts' own scripts carry it too.
+NULL_OK = "-fno-delete-null-pointer-checks"
 
 # OpenSocket's files that must be ours, or absent: never another stack's (DESIGN.md section 3).
 OPENSOCKET_MARKERS = ["OpenSocket (AmigaChrome)", "ACNet (AmigaChrome)", "AmigaChrome ACNet"]
@@ -328,9 +332,9 @@ def build_parts(a):
     """Each part's own build, into its own build folder."""
     env = dict(os.environ, AMIGA_CC=str(CC), PATH=f"{CC.parent}:{os.environ['PATH']}")
     (ROOT / "build/os3").mkdir(parents=True, exist_ok=True)   # a fresh checkout has no build folder
-    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", "-fno-common",
+    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
-    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", "-fno-common",
+    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
@@ -338,8 +342,8 @@ def build_parts(a):
     out = g / "build/guest/os32"
     run(["sh", g / "devices/accontrol.device/build.sh", out], env=env)
     inc = g / "devices/accontrol.device/include"
-    run([CC, "-noixemul", "-m68020", "-O2", "-Wall", f"-I{inc}", g / "tools/acclip/acclip.c", "-o", out / "ACClip"], env=env)
-    run([CC, "-noixemul", "-m68020", "-O2", "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
+    run([CC, "-noixemul", "-m68020", "-O2", NULL_OK, "-Wall", f"-I{inc}", g / "tools/acclip/acclip.c", "-o", out / "ACClip"], env=env)
+    run([CC, "-noixemul", "-m68020", "-O2", NULL_OK, "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
     run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=env)        # OpenGPU's driver for the ACRTG board
     # opengfx.library 1.2: the stub that sends opengfx.library's calls to opengpu.library 0.6 (GCC 16)
@@ -738,7 +742,7 @@ def main() -> int:
     # files, and whichever installs last leaves the same bytes.
     rtg = a.openamigartg / "build"
     acrtg_gpu = (a.guest / "build/guest/os32/ACRTG.gpu").read_bytes()
-    rt = Part(top, "OpenRTG", "0.11", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
+    rt = Part(top, "OpenRTG", "0.13", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
     rt.line("needs AmigaChrome")
     rt.line("needs ACRTG")
     rt.line('retire "DEVS:Monitors/acrtg"')
@@ -761,7 +765,7 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the OpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "OpenGPU", "0.7", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp = Part(top, "OpenGPU", "0.8", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
     gp.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
     gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
