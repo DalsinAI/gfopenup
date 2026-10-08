@@ -158,7 +158,7 @@ Archives = drawer + box
 Backup = drawer + safe
 Home = drawer + house
 Shared = drawer + netplug
-Send to PC = drawer + pctower
+Send Out = drawer + pctower
 Disk images = drawer + floppy
 Kickstarts = drawer + chip(label=ROM)
 Fonts (user) = drawer + text(s=Aa,tint=blue)
@@ -299,7 +299,7 @@ OpenRTG = card(kind=graphics)
 OpenGames = joystick + play
 ACDrop = pctower + arrow(dir=down)
 ACClip = clipboard + arrows
-Send to PC = pctower + arrow(dir=right)
+Send Out = pctower + arrow(dir=right)
 OpenUp update = box + star
 Dock buttons: Start = mark
 
