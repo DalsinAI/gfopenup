@@ -8,6 +8,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
+        [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR]
         [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
@@ -69,6 +70,14 @@ a Part file that C/OpenUpTool reads:
                         SYS:Prefs/Tata, and the list, S:Tata.known (the window's "Update
                         the list" reads Parts/Tata/S/Tata.known); off by default while
                         Tata is 0.x (--openamigatata)
+  OpenFTP/              OpenFTP, FTP and FTPS in SYS:Utilities/OpenFTP, off by default;
+                        FTPS needs AmiSSL 5, which OpenUp doesn't include (--openamigaftp)
+  Telegram/             Unofficial Telegram for Amiga (Open), SYS:Utilities/UnofficialTelegram,
+                        off by default; it needs setting up: the user's own Telegram API
+                        key and the telegram.td/1 service (--openamigatelegram)
+  OpenGPUDev/           the OpenGPU developer files (openamigartg tools/make_sdk.py's kit) in
+                        SYS:Developer/OpenGPU-SDK with the OpenGPU-SDK: assign, off by
+                        default (--opengpu-sdk DIR: the kit is made in, or read from, DIR)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
@@ -374,7 +383,7 @@ def build_parts(a):
     # os32-gcc16 it passes jobs the wrong arguments, 8 October 2026)
     omc_env = {k: v for k, v in env.items() if k not in ("CC", "AMIGA_CC")}
     run(["sh", a.openamigamulticore / "library/build.sh"],
-        env=dict(omc_env, STOVE=str(Path.home() / "AmigaChrome/stoves/os32"), OPENSERVICE=str(a.openamigaservice)))
+        env=dict(omc_env, STOVE=str(STOVE), OPENSERVICE=str(a.openamigaservice)))
     # OpenCrypto and OpenPuTTY (GCC 16), OpenPuTTY linked with this OpenCrypto's headers
     if a.openamigatls:
         run(["sh", a.openamigatls / "build-amiga.sh"],
@@ -387,6 +396,18 @@ def build_parts(a):
     # Tata: its own build.sh (os32 stove; its window with this OpenGadTools' lib/)
     if a.openamigatata:
         run(["sh", a.openamigatata / "build.sh"], env=dict(os.environ, STOVE=str(STOVE), OGT=str(a.opengadtools)))
+    # OpenFTP: GCC 16, OpenGadTools' lib/, and the AmiSSL SDK's headers (build only:
+    # AmiSSL itself is not shipped; FTPS needs it installed, plain FTP doesn't)
+    if a.openamigaftp:
+        run(["sh", a.openamigaftp / "build-os3.sh"], env=dict(os.environ, OS32_GCC16=gcc16_root, OGT=str(a.opengadtools),
+                                                             AMISSL=str(a.amissl), FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
+    # Unofficial Telegram for Amiga (Open): the Amiga program (os32 stove)
+    if a.openamigatelegram:
+        run(["sh", a.openamigatelegram / "build-os3.sh"], env=dict(os.environ, STOVE=str(STOVE)))
+    # The OpenGPU developer files: openamigartg's kit, from this build's libraries
+    if a.opengpu_sdk:
+        run([sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
+             "--gl", gl_out, a.opengpu_sdk], env=dict(os.environ))
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -480,6 +501,12 @@ def main() -> int:
                     help="openamigaputty, for the OpenPuTTY part (needs --openamigatls; left out without it)")
     ap.add_argument("--openamigatata", type=Path, default=first(DEV / "openamigatata", DEV.parent / "openamigatata"),
                     help="openamigatata, for the Tata part (left out without it)")
+    ap.add_argument("--openamigaftp", type=Path, default=first(DEV / "openamigaftp", DEV.parent / "openamigaftp"),
+                    help="openamigaftp, for the OpenFTP part (left out without it)")
+    ap.add_argument("--openamigatelegram", type=Path, default=first(DEV / "openamigatelegram", DEV.parent / "openamigatelegram"),
+                    help="openamigatelegram, for the Telegram part (left out without it)")
+    ap.add_argument("--opengpu-sdk", type=Path, default=None,
+                    help="where the OpenGPU developer kit is made (or, with --no-build, read): the OpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--no-gorilla", action="store_true", help="leave out the Gorilla icons (they are fetched from AROS's repository)")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
@@ -571,7 +598,7 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.5", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too, and its editor")
+    look = Part(top, "OpenLook", "0.6", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
@@ -715,7 +742,7 @@ def main() -> int:
     # files, and whichever installs last leaves the same bytes.
     rtg = a.openamigartg / "build"
     acrtg_gpu = (a.guest / "build/guest/os32/ACRTG.gpu").read_bytes()
-    rt = Part(top, "OpenRTG", "0.11", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
+    rt = Part(top, "OpenRTG", "0.13", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
     rt.line("needs AmigaChrome")
     rt.line("needs ACRTG")
     rt.line('retire "DEVS:Monitors/acrtg"')
@@ -738,7 +765,7 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the OpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "OpenGPU", "0.6", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp = Part(top, "OpenGPU", "0.8", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
     gp.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
     gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
@@ -849,12 +876,65 @@ def main() -> int:
         tt.line("startup Run >NIL: C:Tata START")
         tt.write()
 
+    # OpenFTP (openamigaftp), in a drawer in SYS:Utilities. Its FTPS needs
+    # AmiSSL 5, which OpenUp doesn't include: plain FTP works without it, and
+    # OpenFTP says in words that encryption needs AmiSSL. Off by default.
+    ftp = None
+    if a.openamigaftp:
+        fs = a.openamigaftp
+        fv = re.search(r'#define VERSION_STRING "([0-9.]+)"', (fs / "app/openftp.c").read_text(errors="replace"))
+        ftp = Part(top, "OpenFTP", fv.group(1) if fv else "0.1",
+                   "OpenFTP: FTP and FTPS in two panes (FTPS needs AmiSSL 5, not included)")
+        d = "Utilities/OpenFTP"
+        for rel, data in (("OpenFTP", (fs / "build/os3/OpenFTP").read_bytes()), ("OpenFTP.info", (fs / "package/OpenFTP.info").read_bytes()),
+                          ("ReadMe", (fs / "README.md").read_bytes()), ("ReadMe.info", (fs / "package/ReadMe.info").read_bytes()),
+                          ("LICENSE", (fs / "LICENSE").read_bytes()), ("LICENSE.info", (fs / "package/ReadMe.info").read_bytes())):
+            ftp.add(f"{d}/{rel}", data, f"SYS:{d}/{rel}")
+        ftp.add("Utilities/OpenFTP.info", (fs / "package/Drawer.info").read_bytes(), "SYS:Utilities/OpenFTP.info", own=True)
+        ftp.write()
+
+    # Unofficial Telegram for Amiga (Open) (openamigatelegram): the Amiga
+    # program only. It needs setting up: the user's own Telegram API key
+    # (never shipped) and the telegram.td/1 service on the x86 or ARM64 cores
+    # or a Cradle; without them it says so in its window. Off by default.
+    tg = None
+    if a.openamigatelegram:
+        ts = a.openamigatelegram
+        gv = re.search(r'#define APP_VERSION "([0-9.]+)"', (ts / "app/otg_main.c").read_text(errors="replace"))
+        tg = Part(top, "Telegram", gv.group(1) if gv else "0.1",
+                  "Unofficial Telegram for Amiga (Open): needs setting up, with your own Telegram API key")
+        tg.add("Utilities/UnofficialTelegram", (ts / "build/os3/UnofficialTelegram").read_bytes(), "SYS:Utilities/UnofficialTelegram")
+        tg.add("Utilities/UnofficialTelegram.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/UnofficialTelegram.info")
+        tg.add("Utilities/OpenUp/Licences/UnofficialTelegram.txt", (ts / "LICENSE").read_bytes(),
+               "SYS:Utilities/OpenUp/Licences/UnofficialTelegram.txt")
+        tg.write()
+
+    # The OpenGPU developer files (openamigartg tools/make_sdk.py): the kit as
+    # it is, in SYS:Developer/OpenGPU-SDK, with an assign (amigachrome
+    # docs/design/Design-OpenUp-OpenGPU-Developer-Files.md). Off by default.
+    dev = None
+    if a.opengpu_sdk:
+        kits = sorted(a.opengpu_sdk.glob("OpenGPU-SDK-*/"))
+        if not kits:
+            raise SystemExit(f"no OpenGPU-SDK-* kit in {a.opengpu_sdk}")
+        kit = kits[-1]
+        dev = Part(top, "OpenGPUDev", kit.name.rsplit("-", 1)[1],
+                   "OpenGPU developer files: SDL 2, OpenGL and GLA headers and libraries for building programs")
+        for f in sorted(p for p in kit.rglob("*") if p.is_file()):
+            rel = f.relative_to(kit).as_posix()
+            dev.add(f"Developer/OpenGPU-SDK/{rel}", f.read_bytes(), f"SYS:Developer/OpenGPU-SDK/{rel}")
+        dev.add("Developer/OpenGPU-SDK.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)),
+                "SYS:Developer/OpenGPU-SDK.info", own=True)
+        dev.add("Developer.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)), "SYS:Developer.info", default=True)
+        dev.line("startup Assign OpenGPU-SDK: SYS:Developer/OpenGPU-SDK")
+        dev.write()
+
     # GCC 16's FPCR clash (openamigartg tools/fpcr_check.py) must not be in
     # anything the graphics parts ship, whichever stove built it.
     objdump = next((p for p in (Path.home() / "AmigaChrome/stoves/os32-gcc16/prefix/bin/m68k-amigaos-objdump",
                                 STOVE / "prefix/bin/m68k-amigaos-objdump") if p.is_file()), None)
     if objdump:
-        shipped = [f for part in (rt, gp, w3, dm, cr, pt) if part for f in sorted(part.dir.rglob("*"))
+        shipped = [f for part in (rt, gp, w3, dm, cr, pt, ftp) if part for f in sorted(part.dir.rglob("*"))
                    if f.is_file() and f.name != "Part" and not f.name.endswith((".info", ".prefs")) and f.read_bytes()[:4] == b"\0\0\x03\xf3"]
         run([sys.executable, a.openamigartg / "tools/fpcr_check.py", objdump] + shipped)
 
@@ -874,7 +954,7 @@ def main() -> int:
 
     # OpenTitle: the title bar's logo, free memory, clock and settings cog, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.5", "OpenTitle: AmigaChrome's logo, free memory, a clock and the settings cog on the title bar")
+    tb = Part(top, "OpenTitle", "0.6", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
     tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
     tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
     tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
@@ -1020,7 +1100,9 @@ def main() -> int:
                                              (a.out / "OpenUp.info", None)]
                     + ([(w3.dir / "Tools/MGLTest.info", "install")] if (w3.dir / "Tools/MGLTest.info").is_file() else [])
                     + ([(dm.dir / f"Utilities/OpenDemos/{n}.info", "page") for n in ("Boing", "Chrome Gears", "Copper Tunnel")]
-                       + [(dm.dir / "Utilities/OpenDemos.info", None)] if dm else []))
+                       + [(dm.dir / "Utilities/OpenDemos.info", None)] if dm else [])
+                    + ([(tg.dir / "Utilities/UnofficialTelegram.info", "page")] if tg else [])
+                    + ([(dev.dir / "Developer/OpenGPU-SDK.info", None), (dev.dir / "Developer.info", None)] if dev else []))
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
     except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
         print(f"  (OS 3.2-style icons not made: {e}; the classic ones stay)")

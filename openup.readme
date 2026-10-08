@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.6.17
+Version:      0.7.0
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -20,11 +20,12 @@ choose:
   4.2);
 - OpenPrint and OpenView: printing to PDF and network printers, and viewing;
 - AmigaChrome sharing: the clipboard and files, shared in and out of the
-  Amiga;
+  Amiga, and an optional Send Out icon to drop files on;
 - OpenLook: one look for every GadTools program, title bars and borders too
   (Open, Graphite, Ember, Clear or Classic), with a clear screen font and a
   little more room in the title bars; Look in SYS:Prefs changes it (dark by
-  the clock, accent, Lite for a real 68040, desktop profiles);
+  the clock, accent, Lite for a real 68040, desktop profiles); its frames
+  are drawn through OpenGfx, so OpenLook patches nothing in graphics.library;
 - Backgrounds: the look's desktop as Workbench's backdrop, for your screen;
 - OpenTypes: which program opens each kind of file (SYS:Prefs/OpenTypes);
 - OpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
@@ -56,7 +57,8 @@ choose:
   playlist and a slideshow (SYS:Utilities);
 - OpenTitle (new): AmigaChrome's logo, the free chip and fast memory, a
   clock, and a cog at the right end that opens any settings editor, on the
-  title bar, set in SYS:Prefs/TitleBar;
+  title bar, set in SYS:Prefs/TitleBar; beside the cog, the taskspace holds
+  other programs' icons (Tata's first);
 - Sound (new): the volume, Amiga sound (Paula) and AHI sound in one editor,
   and a speaker on the menu bar; the old Sound editor is kept in
   SYS:Prefs/Classic;
@@ -84,8 +86,8 @@ choose:
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
-  openrtg.library 0.11, with opengpu.library 0.5 and the board's driver;
-- OpenGPU (new): opengpu.library 0.6, so programs' drawing and SDL 2 games
+  openrtg.library 0.13, with opengpu.library 0.8 and the board's driver;
+- OpenGPU (new): opengpu.library 0.8, so programs' drawing and SDL 2 games
   run on the x86 or ARM64 cores and GL (Mesa) on the GPU, through
   AmigaChrome's graphics board, and on the Amiga's own CPU where there is no
   board; OpenGfx, the faster graphics.library drawing, is inside it now
@@ -113,7 +115,19 @@ choose:
   a file opens, Tata checks it against a list of programs and files known
   to crash, draw wrongly or fail on AmigaOS 3.2.3 or with OpenUp
   (S:Tata.known), and asks first; its window is SYS:Prefs/Tata, its icon
-  sits on the title bar, and "Tata OFF" in a Shell turns it off.
+  sits on the title bar, and "Tata OFF" in a Shell turns it off;
+- OpenFTP (new, off unless picked): FTP and FTPS in two panes, with a site
+  manager (SYS:Utilities/OpenFTP); plain FTP works as it is, and FTPS needs
+  AmiSSL 5, which OpenUp doesn't include (Aminet util/libs);
+- Unofficial Telegram for Amiga (Open) (new, a preview, off unless picked):
+  Telegram chats in a window (SYS:Utilities/UnofficialTelegram); it isn't
+  made by Telegram, and it needs setting up first: your own Telegram API key
+  (free, from my.telegram.org) and Telegram's service on AmigaChrome's x86 or
+  ARM64 cores or a paired Cradle; until then its window says what is missing;
+- OpenGPU developer files (new, off unless picked): SDL 2's, OpenGL's and
+  GLA's headers and link libraries, with examples, in
+  SYS:Developer/OpenGPU-SDK (assign OpenGPU-SDK:), for building programs on
+  the Amiga.
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,
