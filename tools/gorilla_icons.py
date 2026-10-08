@@ -180,6 +180,16 @@ def fetch(cache: Path) -> Path:
     return root
 
 
+DRAWER = "AROS/Prefs/Env-Archive/SYS/def_Drawer.png"     # our drawers' badges go on it (build_pack, open_icons)
+
+
+def drawer_png(cache: Path) -> bytes:
+    """Gorilla's drawer, fetched and checked against the lock."""
+    root = fetch(cache)
+    check(root)
+    return (root / MEDIUM / DRAWER).read_bytes()
+
+
 def used_files() -> list[str]:
     return sorted({f"{MEDIUM}/{p}" for _, p in FACES} | {f"{SET}/LEGAL", "LICENSE.GPL"})
 
