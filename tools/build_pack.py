@@ -8,7 +8,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
-        [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR]
+        [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
         [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
@@ -78,6 +78,9 @@ a Part file that C/OpenUpTool reads:
   OpenGPUDev/           the OpenGPU developer files (openamigartg tools/make_sdk.py's kit) in
                         SYS:Developer/OpenGPU-SDK with the OpenGPU-SDK: assign, off by
                         default (--opengpu-sdk DIR: the kit is made in, or read from, DIR)
+  OpenInput/            openinput.library (game controllers for every program), C:OIList,
+                        OpenPrefs Gamepads in SYS:Prefs and the docs; off by default; its
+                        startup line is Gamepads USE (--openamigainput)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
@@ -405,6 +408,11 @@ def build_parts(a):
     if a.openamigatelegram:
         run(["sh", a.openamigatelegram / "build-os3.sh"], env=dict(os.environ, STOVE=str(STOVE)))
     # The OpenGPU developer files: openamigartg's kit, from this build's libraries
+    # OpenInput (openamigainput): openinput.library and OIList (os32 stove), and
+    # OpenPrefs Gamepads, its editor (openamigaprefs, with OpenInput's headers)
+    if a.openamigainput:
+        run(["sh", a.openamigainput / "library/build.sh", a.openamigainput / "build"], env=dict(env, STOVE=str(STOVE)))
+        run(["sh", a.openamigaprefs / "Gamepads/build.sh"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
         run([sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
              "--gl", gl_out, a.opengpu_sdk], env=dict(os.environ))
@@ -505,6 +513,8 @@ def main() -> int:
                     help="openamigaftp, for the OpenFTP part (left out without it)")
     ap.add_argument("--openamigatelegram", type=Path, default=first(DEV / "openamigatelegram", DEV.parent / "openamigatelegram"),
                     help="openamigatelegram, for the Telegram part (left out without it)")
+    ap.add_argument("--openamigainput", type=Path, default=first(DEV / "openamigainput", DEV.parent / "openamigainput"),
+                    help="openamigainput, for the OpenInput part (left out without it)")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the OpenGPU developer kit is made (or, with --no-build, read): the OpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -933,6 +943,35 @@ def main() -> int:
         dev.line("startup Assign OpenGPU-SDK: SYS:Developer/OpenGPU-SDK")
         dev.write()
 
+    # OpenInput (openamigainput): openinput.library, every game controller in one
+    # standard layout; C:OIList; OpenPrefs Gamepads (openamigaprefs) to test, map
+    # and choose ports; the docs. "Gamepads USE" at boot applies the saved settings
+    # (the ReadJoyPort patch too, when the user switched it on). Off by default.
+    # On AmigaChrome the cores' pad window (amigachrome #352) is still to come, so
+    # an instance sees only the Amiga's ports until it is there.
+    oin = None
+    if a.openamigainput:
+        oib = a.openamigainput / "build"
+        oil = (oib / "openinput.library").read_bytes()
+        oiv = re.search(rb"openinput\.library ([0-9]+\.[0-9]+)", oil)
+        oin = Part(top, "OpenInput", oiv.group(1).decode() if oiv else "1.2",
+                   "OpenInput: game controllers for every program, and Gamepads in Prefs (on AmigaChrome: the Amiga's ports for now)")
+        oin.add("Libs/openinput.library", oil, "LIBS:openinput.library")
+        oin.add("C/OIList", (oib / "OIList").read_bytes(), "SYS:C/OIList")
+        oin.add("Prefs/Gamepads", (a.openamigaprefs / "Gamepads/build/os3/Gamepads").read_bytes(), "SYS:Prefs/Gamepads")
+        oin.add("Prefs/Gamepads.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Gamepads.info")
+        d = "Utilities/OpenUp/Docs"
+        for name, src in (("OpenInput.txt", a.openamigainput / "README.md"),
+                          ("Design-OpenInput.txt", a.openamigainput / "Design-OpenInput.md"),
+                          ("Gamepads.txt", a.openamigaprefs / "Gamepads/gamepads.readme")):
+            oin.add(f"{d}/{name}", src.read_bytes(), f"SYS:{d}/{name}")
+            oin.add(f"{d}/{name}.info", icons.icon(icons.WBPROJECT, "page", "SYS:Utilities/MultiView", stack=16384), f"SYS:{d}/{name}.info")
+        oin.add("Utilities/OpenUp/Docs.info", icons.icon(icons.WBDRAWER, "drawer", window=(320, 120)), "SYS:Utilities/OpenUp/Docs.info", default=True)
+        oin.add("Utilities/OpenUp/Licences/OpenInput.txt", (a.openamigainput / "LICENSE").read_bytes(),
+                "SYS:Utilities/OpenUp/Licences/OpenInput.txt")
+        oin.line("startup SYS:Prefs/Gamepads USE")
+        oin.write()
+
     # GCC 16's FPCR clash (openamigartg tools/fpcr_check.py) must not be in
     # anything the graphics parts ship, whichever stove built it.
     objdump = next((p for p in (Path.home() / "AmigaChrome/stoves/os32-gcc16/prefix/bin/m68k-amigaos-objdump",
@@ -1106,7 +1145,10 @@ def main() -> int:
                     + ([(dm.dir / f"Utilities/OpenDemos/{n}.info", "page") for n in ("Boing", "Chrome Gears", "Copper Tunnel")]
                        + [(dm.dir / "Utilities/OpenDemos.info", None)] if dm else [])
                     + ([(tg.dir / "Utilities/UnofficialTelegram.info", "page")] if tg else [])
-                    + ([(dev.dir / "Developer/OpenGPU-SDK.info", None), (dev.dir / "Developer.info", None)] if dev else []))
+                    + ([(dev.dir / "Developer/OpenGPU-SDK.info", None), (dev.dir / "Developer.info", None)] if dev else [])
+                    + ([(oin.dir / "Prefs/Gamepads.info", "page"), (oin.dir / "Utilities/OpenUp/Docs.info", None)]
+                       + [(oin.dir / f"Utilities/OpenUp/Docs/{n}.info", "page") for n in ("OpenInput.txt", "Design-OpenInput.txt", "Gamepads.txt")]
+                       if oin else []))
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
     except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
         print(f"  (OS 3.2-style icons not made: {e}; the classic ones stay)")
