@@ -14,7 +14,7 @@ It finds what it is running on (a real Amiga with its cards, a PiStorm, or
 AmigaChrome) and installs the Open family to match. Anything it replaces is
 kept, and one uninstaller puts everything back.
 
-Version 0.6 is for AmigaChrome instances. Its Installer installs, as you
+Version 0.7 is for AmigaChrome instances. Its Installer installs, as you
 choose:
 - OpenSocket: the network, through the x86 or ARM64 cores (bsdsocket.library
   4.2);
@@ -86,14 +86,14 @@ choose:
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
-  openrtg.library 0.13, with opengpu.library 0.8 and the board's driver;
-- OpenGPU (new): opengpu.library 0.8, so programs' drawing and SDL 2 games
+  openrtg.library 0.13, with opengpu.library 0.9 and the board's driver;
+- OpenGPU (new): opengpu.library 0.9, so programs' drawing and SDL 2 games
   run on the x86 or ARM64 cores and GL (Mesa) on the GPU, through
   AmigaChrome's graphics board, and on the Amiga's own CPU where there is no
   board; OpenGfx, the faster graphics.library drawing, is inside it now
   (opengfx.library 1.2 stays for programs that open it); SDL 2 and GL are
-  modules in LIBS:OpenGPU, loaded once and shared by every program that
-  asks, and C:OpenGPUCheck checks it;
+  modules in LIBS:OpenGPU, loaded once, kept resident and shared by every
+  program that asks, and C:OpenGPUCheck checks it;
 - Warp3D and MiniGL (new): Warp3D.library 5.0 and minigl.library 29
   (OpenGL 1.1) on OpenGPU, for Warp3D and MiniGL games and programs; they
   need a 68040 or 68060 with its FPU; a Warp3D.library already there
