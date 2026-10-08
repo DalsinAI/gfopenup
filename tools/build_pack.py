@@ -25,8 +25,9 @@ a Part file that C/OpenUpTool reads:
   OpenCompress/         OpenCompress, its window and command (openamigacompress)
   OpenService/          openservice.device and Nursery: services from boards and
                         paired Cradles (openamigaservice)
-  OpenImage/            datatypes: WebP and WebM on the 68k, and AVIF, HEIC, SVG,
-                        FLAC, MP4, DOCX and more through OpenService (openamigaimage)
+  OpenImage/            datatypes: WebP, WebM and music modules (MOD, MED, XM...) on
+                        the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
+                        through OpenService (openamigaimage)
   OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
   OpenWindows/          snapping, Amiga+Tab, the wheel under the pointer and window
                         places, with its editor, OpenPrefs Windows (openamigaprefs)
@@ -501,14 +502,17 @@ def main() -> int:
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
     sv.write()
 
-    # OpenImage: datatypes (openamigaimage). WebP and WebM decode on the 68k;
-    # the rest ask media.decode/1 or doc.render/1 through OpenService. A
+    # OpenImage: datatypes (openamigaimage). WebP, WebM and music modules
+    # (openmodule.datatype: MOD, MED, Oktalyzer, DigiBooster, XM, S3M, IT,
+    # played by libxmp on the Amiga itself) decode on the 68k; the rest ask
+    # media.decode/1 or doc.render/1 through OpenService. Every class and
+    # descriptor Datatypes/build.sh makes goes in. A
     # datatype or descriptor already there (Aminet's flac.datatype, say)
     # stays: ours only go where nothing is or where OpenUp put them (so a
     # newer pack updates them), and a machine without a Cradle keeps what it
     # had. Their own classes have names nobody else uses.
     dt = a.openamigaimage / "Datatypes/out"
-    img = Part(top, "OpenImage", "0.1", "OpenImage: datatypes for today's pictures, sounds, documents and video")
+    img = Part(top, "OpenImage", "0.2", "OpenImage: datatypes for today's pictures, sounds, music modules, documents and video")
     for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
         img.add(f"Classes/DataTypes/{c.name}", c.read_bytes(), f"SYS:Classes/DataTypes/{c.name}",
                 own=c.name in ("webp.datatype", "webm.datatype"))
