@@ -106,9 +106,16 @@ static void say(const char *a, const char *b, const char *c)
     PutStr((STRPTR)"\n");
 }
 
+/* No "Please insert volume" requester: a volume the machine hasn't got (a
+ * face line's Work:, say) is simply not there. */
 static int exists(const char *path)
 {
-    BPTR l = Lock((STRPTR)path, ACCESS_READ);
+    struct Process *me = (struct Process *)FindTask(NULL);
+    APTR win = me->pr_WindowPtr;
+    BPTR l;
+    me->pr_WindowPtr = (APTR)-1;
+    l = Lock((STRPTR)path, ACCESS_READ);
+    me->pr_WindowPtr = win;
     if (l) UnLock(l);
     return l != 0;
 }
@@ -520,7 +527,7 @@ static int face_icon(const char *from, const char *dest)
         STRPTR tool = pic->do_DefaultTool, *tts = pic->do_ToolTypes;
         LONG stack = pic->do_StackSize, cx = pic->do_CurrentX, cy = pic->do_CurrentY;
         struct DrawerData *dd = pic->do_DrawerData;
-        char *tw = pic->do_ToolWindow;
+        STRPTR tw = pic->do_ToolWindow;
         pic->do_Type = old->do_Type; pic->do_DefaultTool = old->do_DefaultTool; pic->do_ToolTypes = old->do_ToolTypes;
         pic->do_StackSize = old->do_StackSize; pic->do_CurrentX = old->do_CurrentX; pic->do_CurrentY = old->do_CurrentY;
         pic->do_DrawerData = old->do_DrawerData; pic->do_ToolWindow = old->do_ToolWindow;

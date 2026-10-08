@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.6.15
+Version:      0.6.17
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -33,7 +33,8 @@ choose:
 - OpenImage: datatypes for WebP and WebM on the Amiga itself, and through
   OpenService for AVIF, HEIC, JPEG XL, camera RAW, SVG, FLAC, Ogg, MP3, MIDI,
   MP4 and other video, and office documents, and music modules: MOD, MED,
-  Oktalyzer, DigiBooster, XM, S3M, IT, played on the Amiga itself;
+  Oktalyzer, DigiBooster, XM, S3M, IT, played on the Amiga itself through
+  AHI, with the mixing on another core when there is one;
   datatypes already there stay;
 - OpenWindows: windows snap to edges and to each other, Amiga+Tab switches
   between them, a double-click in a title bar brings the window to the
@@ -81,7 +82,31 @@ choose:
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
-  opengpu.library 0.2 too (drawing on the CPU for now).
+  openrtg.library 0.11, with opengpu.library 0.5 and the board's driver;
+- OpenGPU (new): opengpu.library 0.6, so programs' drawing, SDL 2 games and
+  GL (Mesa) run on the PC's graphics chip through AmigaChrome's graphics
+  board, and on the Amiga's own CPU where there is no board; OpenGfx, the
+  faster graphics.library drawing, is inside it now (opengfx.library 1.2
+  stays for programs that open it); SDL 2 and GL are modules in
+  LIBS:OpenGPU, loaded once and shared by every program that asks, and
+  C:OpenGPUCheck checks it;
+- Warp3D and MiniGL (new): Warp3D.library 5.0 and minigl.library 29
+  (OpenGL 1.1) on OpenGPU, for Warp3D and MiniGL games and programs; they
+  need a 68040 or 68060 with its FPU; a Warp3D.library already there
+  (Wazp3D's) is kept, and Wazp3D's settings are taken over (C:Warp3DPrefs
+  changes them; W3DTest and MGLTest in SYS:Tools show them working);
+- Icons (new): Gorilla, AROS's icon set (GPL), as new pictures for the
+  system's own drawers, programs and default icons; the old pictures are
+  kept and come back with the uninstaller;
+- OpenCrypto (new): opencrypto.library 2.0, the sums behind secure
+  connections (SSH's key exchanges, host keys, SHA-2, AES), on the PC on
+  AmigaChrome and on the Amiga's own CPU elsewhere;
+- OpenPuTTY (new, off unless picked): PuTTY 0.85 for AmigaOS 3.2 on
+  OpenCrypto, with SSH, Telnet and serial terminals and key sign-in
+  (SYS:Utilities/OpenPuTTY); it brings OpenCrypto with it and needs a
+  network stack;
+- OpenDemos (new, off unless picked): Boing, Chrome Gears and Copper Tunnel,
+  three small 3D demos in GL on OpenGPU (SYS:Utilities/OpenDemos).
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,

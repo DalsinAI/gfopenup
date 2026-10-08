@@ -7,7 +7,14 @@ archive (DESIGN.md sections 3 and 4).
         [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR]
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
-        [--no-build] [--lha]
+        [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--no-build] [--lha]
+
+GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
+the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
+is built against it. The GCC 16 builds (OpenService, the datatypes, SDL 2, GL,
+OpenDemos, opengfx.library, OpenCrypto, OpenPuTTY) take their stove from
+OS32_GCC16 / STOVE16 / SDL2_STOVE; the 0.6.17 pack used a stove whose gcc adds
+-fno-tree-loop-distribute-patterns (GCC 16.2.0b's loop-shift miscompile).
 
 Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
@@ -42,7 +49,20 @@ a Part file that C/OpenUpTool reads:
                         (openamigaprefs)
   OpenRTG/              Workbench on OpenRTG's own 16-bit screen, without Picasso96:
                         openrtg.library, its monitor driver and CyberGraphX
-                        compatibility (openamigartg; AmigaChrome's ACRTG board)
+                        compatibility, with opengpu.library and ACRTG.gpu
+                        (openamigartg; AmigaChrome's ACRTG board)
+  OpenGPU/              opengpu.library and LIBS:OpenGPU/: ACRTG.gpu (the ACRTG
+                        board's ring, amigachrome-guest), SDL2.module and GL.module
+                        (Mesa), loaded when a program first asks; C:OpenGPUCheck.
+                        On the CPU where there is no driver (openamigartg)
+  Warp3D/               Warp3D.library 5.0 over OpenGPU or the CPU, C:Warp3DPrefs,
+                        W3DTest and W3DCheck; Wazp3D's settings are taken over
+                        (openamigartg; needs a 68040 or 68060 with its FPU)
+  OpenDemos/            Boing, Chrome Gears and Copper Tunnel on GL.module, off
+                        by default (--openamigamesa)
+  OpenCrypto/           opencrypto.library 2.0: SSH's and TLS's sums, on the PC through
+                        AC090 on AmigaChrome, on the 68k elsewhere (--openamigatls)
+  OpenPuTTY/            OpenPuTTY 0.2, PuTTY on OpenCrypto, off by default (--openamigaputty)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
@@ -306,6 +326,10 @@ def build_parts(a):
     run([CC, "-noixemul", "-m68020", "-O2", "-Wall", f"-I{inc}", g / "tools/acclip/acclip.c", "-o", out / "ACClip"], env=env)
     run([CC, "-noixemul", "-m68020", "-O2", "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
+    run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=env)        # OpenGPU's driver for the ACRTG board
+    # opengfx.library 1.2: the stub that sends opengfx.library's calls to opengpu.library 0.6 (GCC 16)
+    gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmigaChrome/stoves/os32-gcc16"))
+    run(["sh", g / "libraries/opengfx/build-amiga.sh"], env=dict(os.environ, STOVE=gcc16_root))
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Look/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Windows/build.sh"], env=env)
@@ -319,7 +343,16 @@ def build_parts(a):
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
-    run(["sh", a.openamigartg / "library/build.sh"], env=env)
+    run(["sh", a.openamigartg / "library/build.sh"], env=env)   # also Warp3D and, with the GCC 16 stove, SDL2.module
+    run(["sh", a.openamigartg / "tools/build.sh"], env=env)     # OpenGPUCheck
+    # GL.module (Mesa) with the GCC 16 stove, which its script puts first on PATH; then OpenDemos on it
+    gl_out = a.openamigartg / "build/gl"
+    run(["sh", a.openamigartg / "library/modules/gl/module/build.sh", gl_out], env=dict(os.environ))
+    if a.openamigamesa:                     # the GCC 16 stove first on PATH, as demos/README.md says
+        stove16 = Path(os.environ.get("STOVE16", Path.home() / "AmigaChrome/stoves/os32-gcc16/prefix"))
+        run(["sh", a.openamigamesa / "demos/build.sh"],
+            env=dict(os.environ, RTG=str(a.openamigartg), CROSS="mesa/cross/m68k-amigaos.ini", GL_OUT=str(gl_out),
+                     PATH=f"{stove16 / 'bin'}:{os.environ['PATH']}"))
     run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamui / "os3/build.sh"], env=env)
@@ -332,6 +365,15 @@ def build_parts(a):
     omc_env = {k: v for k, v in env.items() if k not in ("CC", "AMIGA_CC")}
     run(["sh", a.openamigamulticore / "library/build.sh"],
         env=dict(omc_env, STOVE=str(Path.home() / "AmigaChrome/stoves/os32"), OPENSERVICE=str(a.openamigaservice)))
+    # OpenCrypto and OpenPuTTY (GCC 16), OpenPuTTY linked with this OpenCrypto's headers
+    if a.openamigatls:
+        run(["sh", a.openamigatls / "build-amiga.sh"],
+            env=dict(os.environ, STOVE=gcc16_root, FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
+        if a.openamigaputty:
+            run(["sh", a.openamigaputty / "build.sh"], env=dict(os.environ, OS32_GCC16=gcc16_root, CPU="020",
+                                                                OPENCRYPTO=str(a.openamigatls)))
+            run([sys.executable, a.openamigaputty / "tools/make_icons.py", a.amigachrome / "scripts/amiga_icon.py",
+                 a.openamigaputty / "build/icons"])
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -417,6 +459,12 @@ def main() -> int:
                     "makes OpenUp-<version>-OpenBrowser.lha beside the pack")
     ap.add_argument("--zlib", type=Path, help="zlib 1.3 source for OpenWrite's DOCX and ODT (Chromium's, as the 1.0 release)",
                     default=first(DEV / "webkit-os32/deps/src/zlib", Path(os.environ.get("ZLIB_SRC", "/nonexistent"))))
+    ap.add_argument("--openamigamesa", type=Path, default=first(DEV / "openamigamesa", DEV.parent / "openamigamesa"),
+                    help="openamigamesa, for the OpenDemos part (left out without it)")
+    ap.add_argument("--openamigatls", type=Path, default=first(DEV / "openamigatls", DEV.parent / "openamigatls"),
+                    help="openamigatls, for the OpenCrypto part (left out without it)")
+    ap.add_argument("--openamigaputty", type=Path, default=first(DEV / "openamigaputty", DEV.parent / "openamigaputty"),
+                    help="openamigaputty, for the OpenPuTTY part (needs --openamigatls; left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
     ap.add_argument("--no-gorilla", action="store_true", help="leave out the Gorilla icons (they are fetched from AROS's repository)")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
@@ -508,7 +556,7 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.4", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too, and its editor")
+    look = Part(top, "OpenLook", "0.5", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too, and its editor")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
@@ -537,6 +585,15 @@ def main() -> int:
         gi = Part(top, "GorillaIcons", "0.1", "Gorilla, AROS's icon set (GPL): new pictures for the system's drawers, programs and default icons")
         for text in gorilla_icons.build(gi.dir, a.amigachrome, ROOT / "build" / "cache"):
             gi.line(text)
+        # beside Mesa's and SDL's: where the pictures come from and under what licence
+        gi.add("Utilities/OpenUp/Licences/Gorilla.txt", (
+            "Gorilla, the icon set of AROS (images/IconSets/Gorilla), is distributed under the\n"
+            "GNU General Public License, as its LEGAL file says; AROS ships version 2 of the\n"
+            "GPL with it, and so does OpenUp, in SYS:Storage/Icons/Gorilla/COPYING.\n\n"
+            f"Source: {gorilla_icons.AROS_URL}, commit {gorilla_icons.AROS_COMMIT}.\n"
+            "The PNG pictures the new icon faces were made from are in\n"
+            "SYS:Storage/Icons/Gorilla, with Gorilla's LEGAL file.\n").encode("latin-1"),
+            "SYS:Utilities/OpenUp/Licences/Gorilla.txt")
         gi.write()
 
     # OpenTypes: which program opens each kind of file (openamigaprefs)
@@ -569,7 +626,7 @@ def main() -> int:
     # newer pack updates them), and a machine without a Cradle keeps what it
     # had. Their own classes have names nobody else uses.
     dt = a.openamigaimage / "Datatypes/out"
-    img = Part(top, "OpenImage", "0.2", "OpenImage: datatypes for today's pictures, sounds, music modules, documents and video")
+    img = Part(top, "OpenImage", "0.3", "OpenImage: datatypes for today's pictures, sounds, music modules, documents and video")
     for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
         img.add(f"Classes/DataTypes/{c.name}", c.read_bytes(), f"SYS:Classes/DataTypes/{c.name}",
                 own=c.name in ("webp.datatype", "webm.datatype"))
@@ -638,14 +695,19 @@ def main() -> int:
     # AmigaChrome's ACRTG board. LoadMonDrvs runs its monitor driver; the
     # Picasso96 monitor for the same board is moved aside (UNINSTALL puts it
     # back), and Workbench's screen mode becomes OpenRTG.1 800x600 16-bit.
+    # opengpu.library and ACRTG.gpu come with it, so OpenRTG's drawing goes
+    # to the board's ring without the OpenGPU part; that part has the same
+    # files, and whichever installs last leaves the same bytes.
     rtg = a.openamigartg / "build"
-    rt = Part(top, "OpenRTG", "0.10", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
+    acrtg_gpu = (a.guest / "build/guest/os32/ACRTG.gpu").read_bytes()
+    rt = Part(top, "OpenRTG", "0.11", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
     rt.line("needs AmigaChrome")
     rt.line("needs ACRTG")
     rt.line('retire "DEVS:Monitors/acrtg"')
     rt.line('retire "DEVS:Monitors/acrtg.info"')
     rt.add("Libs/openrtg.library", (rtg / "openrtg.library").read_bytes(), "LIBS:openrtg.library")
     rt.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
+    rt.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
     rt.add("Libs/OpenRTG/cybergraphics.library", (rtg / "cybergraphics.library").read_bytes(), "LIBS:OpenRTG/cybergraphics.library")
     rt.add("C/OpenRTG", (rtg / "OpenRTG").read_bytes(), "C:OpenRTG")
     rt.add("Devs/Monitors/OpenRTG", (rtg / "OpenRTG-Monitor").read_bytes(), "DEVS:Monitors/OpenRTG")
@@ -653,6 +715,115 @@ def main() -> int:
     rt.add("Prefs/ScreenMode.prefs", mode, "ENVARC:Sys/ScreenMode.prefs")
     rt.add("Prefs/ScreenMode-ENV.prefs", mode, "ENV:Sys/ScreenMode.prefs")
     rt.write()
+
+    # OpenGPU: opengpu.library (openamigartg) and its drivers and modules in
+    # LIBS:OpenGPU/. ACRTG.gpu (amigachrome-guest) puts the work on the ACRTG
+    # board's ring, so the PC draws it; with no board it steps aside and
+    # opengpu.library draws on the CPU. SDL2.module and GL.module (Mesa) load
+    # when a program linked with libSDL2.a or libGL.a first calls them.
+    # Picasso96 screens too: it doesn't need the OpenRTG part.
+    gl = rtg / "gl"
+    gp = Part(top, "OpenGPU", "0.6", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
+    gp.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
+    gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
+    gp.add("Libs/OpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:OpenGPU/GL.module")
+    gp.add("C/OpenGPUCheck", (rtg / "OpenGPUCheck").read_bytes(), "C:OpenGPUCheck")
+    # opengfx.library 1.2 (amigachrome-guest): OpenGfx is inside opengpu.library 0.6, and the
+    # stub hands a program that opens opengfx.library the same calls there
+    gp.add("Libs/opengfx.library", (a.guest / "libraries/opengfx/build-amiga/lib/opengfx.library").read_bytes(),
+           "LIBS:opengfx.library")
+    # The modules' third-party licences (Mesa: MIT; SDL 2 and its Amiga back ends:
+    # Zlib), in OpenUp's drawer: not in LIBS:OpenGPU/, where the library looks for drivers
+    gl_work = Path(os.environ.get("GL_WORK", a.openamigartg / "library/modules/gl/build"))
+    sdl = rtg / "sdl2-work"
+    for name, f in (("Mesa.txt", next(gl_work.glob("mesa-*/docs/license.rst"), None)),
+                    ("SDL2.txt", next(sdl.glob("SDL2-*/LICENSE.txt"), None)),
+                    ("libSDL2-amigaos3.txt", next(sdl.glob("SDL2-*/LICENSE.libSDL2-amigaos3.txt"), None))):
+        if not f:
+            raise SystemExit(f"OpenGPU: {name}'s licence text wasn't found (GL_WORK, {sdl})")
+        gp.add(f"Utilities/OpenUp/Licences/{name}", f.read_bytes(), f"SYS:Utilities/OpenUp/Licences/{name}")
+    gp.write()
+
+    # Warp3D: Warp3D.library 5.0 (openamigartg), drawing through OpenGPU or
+    # on the CPU. Another Warp3D.library (Wazp3D's, say) is kept in
+    # SYS:Storage/OpenUp-Superseded, and the Installer takes Wazp3D's
+    # settings over once with Warp3DPrefs FROMWAZP3D SAVE. Needs a 68040 or
+    # 68060 with its FPU, as Warp3D always has: the Installer checks.
+    w3 = Part(top, "Warp3D", "5.0", "Warp3D 5.0 on OpenGPU, with Warp3DPrefs, W3DTest and W3DCheck")
+    w3.add("Libs/Warp3D.library", (rtg / "Warp3D.library").read_bytes(), "LIBS:Warp3D.library")
+    w3.add("C/Warp3DPrefs", (rtg / "Warp3DPrefs").read_bytes(), "C:Warp3DPrefs")
+    w3.add("C/W3DCheck", (rtg / "W3DCheck").read_bytes(), "C:W3DCheck")
+    w3.add("Tools/W3DTest", (rtg / "W3DTest").read_bytes(), "SYS:Tools/W3DTest")
+    w3.add("Tools/W3DTest.info", icons.icon(icons.WBTOOL, "install", stack=65536), "SYS:Tools/W3DTest.info")
+    # MiniGL (openamigartg #37): minigl.library 29, OpenGL 1.1 on the same 3D
+    # core, with its MGLTest demo, when the openamigartg checkout builds them
+    if (rtg / "minigl.library").is_file():
+        w3.lines[1] = "; Warp3D 5.0 and MiniGL on OpenGPU, with Warp3DPrefs, W3DTest, W3DCheck and MGLTest"
+        w3.add("Libs/minigl.library", (rtg / "minigl.library").read_bytes(), "LIBS:minigl.library")
+        if (rtg / "MGLTest").is_file():
+            w3.add("Tools/MGLTest", (rtg / "MGLTest").read_bytes(), "SYS:Tools/MGLTest")
+            w3.add("Tools/MGLTest.info", icons.icon(icons.WBTOOL, "install", stack=65536), "SYS:Tools/MGLTest.info")
+    w3.write()
+
+    # OpenDemos (openamigamesa): Boing, Chrome Gears and Copper Tunnel, linked
+    # with libGL.a, so GL comes from the OpenGPU part's GL.module: on the PC's
+    # graphics chip on AmigaChrome, on the 68k elsewhere. One icon a demo, a
+    # script IconX runs without a window.
+    dm = None
+    if a.openamigamesa:
+        demos = gl_work / "mesa-build-m68k-amigaos/OpenDemos.stripped"
+        dm = Part(top, "OpenDemos", "0.1", "OpenDemos: Boing, Chrome Gears and Copper Tunnel, in GL on OpenGPU")
+        dm.add("Utilities/OpenDemos/OpenDemos", demos.read_bytes(), "SYS:Utilities/OpenDemos/OpenDemos")
+        for name, demo in (("Boing", "boing"), ("Chrome Gears", "gears"), ("Copper Tunnel", "tunnel")):
+            dm.add(f"Utilities/OpenDemos/{name}", f"Run >NIL: SYS:Utilities/OpenDemos/OpenDemos {demo}\n".encode(),
+                   f"SYS:Utilities/OpenDemos/{name}")
+            dm.add(f"Utilities/OpenDemos/{name}.info", icons.icon(icons.WBPROJECT, "page", "C:IconX", ["WINDOW=NIL:"], stack=8192),
+                   f"SYS:Utilities/OpenDemos/{name}.info")
+        dm.add("Utilities/OpenDemos.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)), "SYS:Utilities/OpenDemos.info", own=True)
+        dm.write()
+
+    # OpenCrypto (openamigatls): opencrypto.library 2.0. On AmigaChrome its sums run
+    # on the PC (AC090's magic functions); elsewhere its own 68k code runs.
+    oc = None
+    if a.openamigatls:
+        ocl = (a.openamigatls / "build-amiga/lib/opencrypto.library").read_bytes()
+        ocv = re.search(rb"opencrypto\.library ([0-9]+\.[0-9]+)", ocl)
+        oc = Part(top, "OpenCrypto", ocv.group(1).decode() if ocv else "2.0",
+                  "OpenCrypto: opencrypto.library, SSH's and TLS's sums, on the PC on AmigaChrome")
+        oc.add("Libs/opencrypto.library", ocl, "LIBS:opencrypto.library")
+        oc.write()
+
+    # OpenPuTTY (openamigaputty), as its release lays it out, in a drawer in
+    # SYS:Utilities; its opencrypto.library is the OpenCrypto part's
+    pt = None
+    if a.openamigatls and a.openamigaputty:
+        pu = a.openamigaputty
+        pv = re.search(r'OPENPUTTY_VERSION "([0-9.]+)"', (pu / "amiga/main.c").read_text(errors="replace"))
+        stripped = pu / "build/os3-020/OpenPuTTY.stripped"
+        gcc16 = Path(os.environ.get("OS32_GCC16", Path.home() / "AmigaChrome/stoves/os32-gcc16"))
+        run([gcc16 / "prefix/bin/m68k-amigaos-strip", "-o", stripped, pu / "build/os3-020/OpenPuTTY"])
+        pi = pu / "build/icons"
+        pt = Part(top, "OpenPuTTY", pv.group(1) if pv else "0.2", "OpenPuTTY: PuTTY's SSH, Telnet and serial terminal, on OpenCrypto")
+        d = "Utilities/OpenPuTTY"
+        for rel, data in (("OpenPuTTY", stripped.read_bytes()), ("OpenPuTTY.info", (pi / "OpenPuTTY.info").read_bytes()),
+                          ("ReadMe", (pu / "docs/ReadMe.txt").read_bytes()), ("ReadMe.info", (pi / "Document.info").read_bytes()),
+                          ("LICENSE", (pu / "LICENSE").read_bytes()), ("LICENSE.info", (pi / "Document.info").read_bytes()),
+                          ("Licences/PuTTY.txt", (pu / "upstream/putty/LICENCE").read_bytes()),
+                          ("Licences/PuTTY.txt.info", (pi / "Document.info").read_bytes()),
+                          ("Licences.info", (pi / "Drawer.info").read_bytes())):
+            pt.add(f"{d}/{rel}", data, f"SYS:{d}/{rel}")
+        pt.add("Utilities/OpenPuTTY.info", (pi / "Drawer.info").read_bytes(), "SYS:Utilities/OpenPuTTY.info", own=True)
+        pt.write()
+
+    # GCC 16's FPCR clash (openamigartg tools/fpcr_check.py) must not be in
+    # anything the graphics parts ship, whichever stove built it.
+    objdump = next((p for p in (Path.home() / "AmigaChrome/stoves/os32-gcc16/prefix/bin/m68k-amigaos-objdump",
+                                STOVE / "prefix/bin/m68k-amigaos-objdump") if p.is_file()), None)
+    if objdump:
+        shipped = [f for part in (rt, gp, w3, dm, oc, pt) if part for f in sorted(part.dir.rglob("*"))
+                   if f.is_file() and f.name != "Part" and not f.name.endswith((".info", ".prefs")) and f.read_bytes()[:4] == b"\0\0\x03\xf3"]
+        run([sys.executable, a.openamigartg / "tools/fpcr_check.py", objdump] + shipped)
 
     # OpenFiles: the file manager (openamigafilemanager). Double-click opens
     # files with their icon's program, else OpenView (the OpenPrint part).
@@ -812,7 +983,11 @@ def main() -> int:
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (of.dir / "Utilities/OpenFiles.info", files_art),
                                              (op.dir / "Utilities/OpenPlay.info", play_art),
-                                             (a.out / "OpenUp.info", None)])
+                                             (w3.dir / "Tools/W3DTest.info", "install"),
+                                             (a.out / "OpenUp.info", None)]
+                    + ([(w3.dir / "Tools/MGLTest.info", "install")] if (w3.dir / "Tools/MGLTest.info").is_file() else [])
+                    + ([(dm.dir / f"Utilities/OpenDemos/{n}.info", "page") for n in ("Boing", "Chrome Gears", "Copper Tunnel")]
+                       + [(dm.dir / "Utilities/OpenDemos.info", None)] if dm else []))
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
     except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
         print(f"  (OS 3.2-style icons not made: {e}; the classic ones stay)")
