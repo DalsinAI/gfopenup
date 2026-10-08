@@ -116,7 +116,7 @@ Your drawers (Work:),Archives,Archive files,Drawer with a compressed box,P2,,png
 Your drawers (Work:),Backup,Backups,Drawer with a safe,P2,,png/drawers/Backup.info
 Your drawers (Work:),Home,Your own drawer,Drawer with a house,P2,Gorilla: Env-Archive/SYS/def_Home,png/drawers/Home.info
 Your drawers (Work:),Shared,A drawer shared with other machines,Drawer with network cable,P2,,png/drawers/Shared.info
-Your drawers (Work:),Send to PC,AmigaChrome's drop drawer to the host,Drawer with an arrow to a PC,P1,,png/drawers/Send to PC.info
+Your drawers (Work:),Send Out,AmigaChrome's drop drawer out of the Amiga,Drawer with an arrow to a computer,P1,,png/drawers/Send Out.info
 Your drawers (Work:),Disk images,"ADF, HDF, ISO files",Drawer with a floppy,P2,,png/drawers/Disk images.info
 Your drawers (Work:),Kickstarts,ROM files for emulators,Drawer with a chip,P3,,png/drawers/Kickstarts.info
 Your drawers (Work:),Fonts (user),Fonts you added,"Drawer with ""Aa""",P3,Gorilla: Fonts,png/drawers/Fonts (user).info
@@ -245,7 +245,7 @@ Open apps and AmigaChrome,OpenRTG,Graphics without Picasso96,Graphics card,P1,,p
 Open apps and AmigaChrome,OpenGames,Game launcher,Joystick with a play button,P2,,png/open/OpenGames.info
 Open apps and AmigaChrome,ACDrop,Drop files to the PC,Arrow into a PC,P1,,png/open/ACDrop.info
 Open apps and AmigaChrome,ACClip,Shared clipboard,Clipboard with arrows,P1,,png/open/ACClip.info
-Open apps and AmigaChrome,Send to PC,AmigaChrome's drop icon on the backdrop,PC with an arrow,P1,,png/open/Send to PC.info
+Open apps and AmigaChrome,Send Out,AmigaChrome's drop icon on the backdrop,Computer with an arrow,P1,,png/open/Send Out.info
 Open apps and AmigaChrome,OpenUp update,An update is ready,Box with a star,P2,,png/open/OpenUp update.info
 Open apps and AmigaChrome,Dock buttons: Start,Phase 2 start pop-up,AmigaChrome mark in a circle,P2,,png/open/Dock buttons- Start.info
 File types: documents and text,Text,Plain text (def_ascii),Page with lines,P1,Gorilla: Env-Archive/SYS/def_Text,png/filetypes/Text.info
