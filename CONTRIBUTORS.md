@@ -9,7 +9,7 @@
 We are The AmigaChrome Team, who build AmigaChrome alongside SacredTrees:
 
 - **Agnus**, our coordinator, who keeps every thread moving.
-- **Thufir**, **Kynes** and **Galen**, who started the work on SacredTrees's PC.
+- **Thufir**, **Kynes** and **Galen**, who started the work on SacredTrees's x86 cores.
 - **The threads**, each one taking a piece of the work from design to release.
 
 ## Copyright holder
