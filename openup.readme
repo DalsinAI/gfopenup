@@ -32,7 +32,9 @@ choose:
   the network until a Cradle is paired.
 - OpenImage: datatypes for WebP and WebM on the Amiga itself, and through
   OpenService for AVIF, HEIC, JPEG XL, camera RAW, SVG, FLAC, Ogg, MP3, MIDI,
-  MP4 and other video, and office documents; datatypes already there stay;
+  MP4 and other video, and office documents, and music modules: MOD, MED,
+  Oktalyzer, DigiBooster, XM, S3M, IT, played on the Amiga itself;
+  datatypes already there stay;
 - OpenWindows: windows snap to edges and to each other, Amiga+Tab switches
   between them, the wheel scrolls the window under the pointer, and programs'
   windows open where they were last left, Workbench drawers too if you like
