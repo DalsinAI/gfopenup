@@ -67,6 +67,8 @@ static const struct entry entries[] = {
     { M_OPENUP, HOW_WB,  "OpenCompress", "SYS:Utilities/OpenCompress",           NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "OpenMail",     "SYS:Utilities/OpenMail/OpenMail",      NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "OpenBrowser",  "SYS:Utilities/OpenBrowser/OpenBrowser", NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "OpenFTP",      "SYS:Utilities/OpenFTP/OpenFTP",        NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "Telegram (unofficial)", "SYS:Utilities/UnofficialTelegram", NULL, NULL, NULL },
     { M_OPENUP, HOW_SEP, "---",          NULL, NULL, NULL, NULL },
     /* only with an OpenUpTool that has UPDATE (OpenUp Update, DESIGN.md section 5) */
     { M_OPENUP, HOW_CON, "OpenUp Update...", NULL, "SYS:C/OpenUpTool UPDATE", "SYS:C/OpenUpTool", "UPDATE [CHECK" },
