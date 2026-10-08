@@ -796,14 +796,14 @@ def main() -> int:
 
     # OpenCrypto (openamigatls): opencrypto.library 2.0. On AmigaChrome its sums run
     # on the PC (AC090's magic functions); elsewhere its own 68k code runs.
-    oc = None
+    cr = None
     if a.openamigatls:
         ocl = (a.openamigatls / "build-amiga/lib/opencrypto.library").read_bytes()
         ocv = re.search(rb"opencrypto\.library ([0-9]+\.[0-9]+)", ocl)
-        oc = Part(top, "OpenCrypto", ocv.group(1).decode() if ocv else "2.0",
+        cr = Part(top, "OpenCrypto", ocv.group(1).decode() if ocv else "2.0",
                   "OpenCrypto: opencrypto.library, SSH's and TLS's sums, on x86 or ARM64 cores on AmigaChrome")
-        oc.add("Libs/opencrypto.library", ocl, "LIBS:opencrypto.library")
-        oc.write()
+        cr.add("Libs/opencrypto.library", ocl, "LIBS:opencrypto.library")
+        cr.write()
 
     # OpenPuTTY (openamigaputty), as its release lays it out, in a drawer in
     # SYS:Utilities; its opencrypto.library is the OpenCrypto part's
@@ -850,7 +850,7 @@ def main() -> int:
     objdump = next((p for p in (Path.home() / "AmigaChrome/stoves/os32-gcc16/prefix/bin/m68k-amigaos-objdump",
                                 STOVE / "prefix/bin/m68k-amigaos-objdump") if p.is_file()), None)
     if objdump:
-        shipped = [f for part in (rt, gp, w3, dm, oc, pt) if part for f in sorted(part.dir.rglob("*"))
+        shipped = [f for part in (rt, gp, w3, dm, cr, pt) if part for f in sorted(part.dir.rglob("*"))
                    if f.is_file() and f.name != "Part" and not f.name.endswith((".info", ".prefs")) and f.read_bytes()[:4] == b"\0\0\x03\xf3"]
         run([sys.executable, a.openamigartg / "tools/fpcr_check.py", objdump] + shipped)
 
