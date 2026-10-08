@@ -181,10 +181,26 @@ default icons), soft-shaded, at 60 pixels.
   (our drawers on Gorilla's drawer), are GPL and live apart from our own
   icons (MIT). The GPL covers the pictures only, not the programs beside them.
 
-**What is still to draw** is in `icons/LIST.csv`: 640 icons, every Amiga
-thing that wants one (disks, drawers, prefs, the OS's tools and commodities,
-our apps, file types, situations, glyphs, pointers, and the programs people
+**The icon library** is `icons/LIST.csv`: 640 rows, every Amiga thing that
+wants an icon (disks, drawers, prefs, the OS's tools and commodities, our
+apps, file types, situations, glyphs, pointers, and the programs people
 install), with what each is, what to draw, a priority (P1 ships with OpenUp
-on 3.2.3) and the Gorilla picture to start from where there is one. The
-names follow what Aminet's icon packs (pix/icon) cover. A row ticked off is
-an icon drawn both frames and in the pack.
+on 3.2.3) and the Gorilla picture it corresponds to. The names follow what
+Aminet's icon packs (pix/icon) cover.
+
+On 8 October 2026 every row that is an icon was drawn in the house style
+(602 rows, 621 icons with the "A / B" names): `tools/icon_library_art.py`
+draws each from a recipe of things in `tools/gvocab.py` (a page, a drawer,
+a globe, about 170 of them, each an icon of its own or a badge on another),
+both frames, and writes them as PNG icons for AmigaChrome's icon library
+(`resources/icons/collections/openup-gorilla-style`, rank 3, so the new icon
+set picks them before Boxie's). The `Library` column says where each went.
+The title bar glyphs and pointers are drawn by OpenLook and OpenWindows, not
+as icons; four situations (the selected frame, an AppIcon, Leave Out, the
+dock's dot) are not pictures of their own.
+
+```bash
+python3 tools/icon_library_art.py OUT --sheet   # needs Pillow, numpy and an amigachrome checkout beside this one
+```
+
+Programs that aren't ours get a picture of what they do, not their logo.
