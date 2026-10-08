@@ -681,6 +681,14 @@ def main() -> int:
     w3.add("C/W3DCheck", (rtg / "W3DCheck").read_bytes(), "C:W3DCheck")
     w3.add("Tools/W3DTest", (rtg / "W3DTest").read_bytes(), "SYS:Tools/W3DTest")
     w3.add("Tools/W3DTest.info", icons.icon(icons.WBTOOL, "install", stack=65536), "SYS:Tools/W3DTest.info")
+    # MiniGL (openamigartg #37): minigl.library 29, OpenGL 1.1 on the same 3D
+    # core, with its MGLTest demo, when the openamigartg checkout builds them
+    if (rtg / "minigl.library").is_file():
+        w3.lines[1] = "; Warp3D 5.0 and MiniGL on OpenGPU, with Warp3DPrefs, W3DTest, W3DCheck and MGLTest"
+        w3.add("Libs/minigl.library", (rtg / "minigl.library").read_bytes(), "LIBS:minigl.library")
+        if (rtg / "MGLTest").is_file():
+            w3.add("Tools/MGLTest", (rtg / "MGLTest").read_bytes(), "SYS:Tools/MGLTest")
+            w3.add("Tools/MGLTest.info", icons.icon(icons.WBTOOL, "install", stack=65536), "SYS:Tools/MGLTest.info")
     w3.write()
 
     # OpenDemos (openamigamesa): Boing, Chrome Gears and Copper Tunnel, linked
@@ -869,6 +877,7 @@ def main() -> int:
                                              (op.dir / "Utilities/OpenPlay.info", play_art),
                                              (w3.dir / "Tools/W3DTest.info", "install"),
                                              (a.out / "OpenUp.info", None)]
+                    + ([(w3.dir / "Tools/MGLTest.info", "install")] if (w3.dir / "Tools/MGLTest.info").is_file() else [])
                     + ([(dm.dir / f"Utilities/OpenDemos/{n}.info", "page") for n in ("Boing", "Chrome Gears", "Copper Tunnel")]
                        + [(dm.dir / "Utilities/OpenDemos.info", None)] if dm else []))
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
