@@ -554,7 +554,7 @@ def main() -> int:
     # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
     # Installer runs "SYS:Prefs/Dock SAVE" once, on a first install, so the
     # dock starts with the buttons of a dock already there.
-    dock = Part(top, "OpenDock", "0.2", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "OpenDock", "0.3", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     dock.add("Prefs/Dock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/Dock")
     dock.add("Prefs/Dock.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Dock.info")
