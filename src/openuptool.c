@@ -46,6 +46,9 @@
  *                                        put it there; another program's stays)
  *   retire <dest>                       (moved to SYS:Storage/OpenUp-Superseded,
  *                                        so it no longer runs; UNINSTALL puts it back)
+ *   face <icon in the drawer> <dest .info>  (0.6: the icon's picture only; dest keeps
+ *                                        its type, tools, tool types and window;
+ *                                        left alone when the machine hasn't got it)
  *   startup <the rest of the line>
  * Words with spaces are quoted.
  *
@@ -63,13 +66,17 @@
 #include <proto/expansion.h>
 #include <proto/intuition.h>
 #include <intuition/screens.h>
+#include <workbench/workbench.h>
+#include <workbench/icon.h>
+#include <proto/icon.h>
 
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] = "$VER: OpenUpTool 0.5 (7.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] = "$VER: OpenUpTool 0.6 (8.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
+struct Library *IconBase;
 
 static int same_word(const char *a, const char *b)
 {
@@ -473,6 +480,68 @@ static int retire_file(const char *dest)
     return 1;
 }
 
+/* A new face for an icon that stays the system's (Gorilla's pictures on SYS:'s
+ * drawers and programs and on the default icons, ICONS.md section 8): the
+ * picture comes from the part's icon, and everything else (type, default
+ * tool, tool types, stack, the drawer's window, its place) stays the icon's
+ * own. The original goes to SYS:Storage/OpenUp-Superseded the first time, as
+ * for a replaced file, so UNINSTALL puts it back. An icon the machine hasn't
+ * got is left alone. 1 changed, 0 nothing to do, -1 failed (said why). */
+static int face_icon(const char *from, const char *dest)
+{
+    char backup[260], dir[260], fname[260], dname[260];
+    struct DiskObject *pic, *old;
+    entry *e;
+    int ok = 0, n;
+    if (!exists(dest))
+        return 0;
+    strncpy(fname, from, sizeof fname - 1); fname[sizeof fname - 1] = 0;
+    strncpy(dname, dest, sizeof dname - 1); dname[sizeof dname - 1] = 0;
+    if ((n = strlen(fname)) > 5 && same_word(fname + n - 5, ".info")) fname[n - 5] = 0;
+    if ((n = strlen(dname)) > 5 && same_word(dname + n - 5, ".info")) dname[n - 5] = 0;
+    backup_path(dest, backup, sizeof backup);
+    e = find_entry(NULL, dest);
+    if (!e || !strcmp(e->kind, "same")) {          /* the first time: keep the original */
+        parent_of(backup, dir, sizeof dir);
+        if (!exists(backup) && (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0))) {
+            say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; its picture wasn't changed. Is SYS: full or write-protected?");
+            return -1;
+        }
+    }
+    if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) {
+        say("OpenUp: icon.library 44 or later is needed to give ", dest, " its new picture.");
+        return -1;
+    }
+    pic = GetIconTags((STRPTR)fname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    old = GetIconTags((STRPTR)dname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    if (pic && old) {
+        /* the new picture with the old icon's own: lent for the write, then given back */
+        UBYTE type = pic->do_Type;
+        STRPTR tool = pic->do_DefaultTool, *tts = pic->do_ToolTypes;
+        LONG stack = pic->do_StackSize, cx = pic->do_CurrentX, cy = pic->do_CurrentY;
+        struct DrawerData *dd = pic->do_DrawerData;
+        char *tw = pic->do_ToolWindow;
+        pic->do_Type = old->do_Type; pic->do_DefaultTool = old->do_DefaultTool; pic->do_ToolTypes = old->do_ToolTypes;
+        pic->do_StackSize = old->do_StackSize; pic->do_CurrentX = old->do_CurrentX; pic->do_CurrentY = old->do_CurrentY;
+        pic->do_DrawerData = old->do_DrawerData; pic->do_ToolWindow = old->do_ToolWindow;
+        ok = PutIconTags((STRPTR)dname, pic, ICONPUTA_NotifyWorkbench, TRUE, TAG_DONE) != 0;
+        pic->do_Type = type; pic->do_DefaultTool = tool; pic->do_ToolTypes = tts;
+        pic->do_StackSize = stack; pic->do_CurrentX = cx; pic->do_CurrentY = cy;
+        pic->do_DrawerData = dd; pic->do_ToolWindow = tw;
+    }
+    if (pic) FreeDiskObject(pic);
+    if (old) FreeDiskObject(old);
+    CloseLibrary(IconBase);
+    IconBase = NULL;
+    if (!ok) {
+        say("OpenUp: can't give ", dest, " its new picture. Is the disk write-protected?");
+        return -1;
+    }
+    if (!e) add_entry("replaced", dest, backup);
+    else if (!strcmp(e->kind, "same")) { strcpy(e->kind, "replaced"); strncpy(e->b, backup, sizeof e->b - 1); }
+    return 1;
+}
+
 static int install(const char *drawer)
 {
     char path[220], from[260], *text, *p, *line, partname[64] = "", partver[32] = "";
@@ -521,6 +590,13 @@ static int install(const char *drawer)
                     say("OpenUp: ", w[1], " belongs to another program, so OpenUp leaves it and this part out.");
                     say("        To use ", partname, ", remove that program first, then run OpenUp again.");
                     refused = 1;
+                }
+            } else if (pass == 1 && !strcmp(w[0], "face") && n >= 3) {
+                strcpy(from, drawer);
+                AddPart((STRPTR)from, (STRPTR)w[1], sizeof from);
+                switch (face_icon(from, w[2])) {
+                case 1: files++; break;
+                case -1: errors++; break;
                 }
             } else if (pass == 1 && !strcmp(w[0], "retire") && n >= 2) {
                 switch (retire_file(w[1])) {
