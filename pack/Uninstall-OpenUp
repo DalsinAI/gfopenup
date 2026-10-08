@@ -21,6 +21,9 @@
             (run "SYS:Prefs/OpenTypes UNDO >T:OpenUp-uninstall.log"))
         (if (exists "ENVARC:OpenAmiga/OpenView-switched")
             (delete "ENVARC:OpenAmiga/OpenView-switched"))
+        ; OpenUp's entries leave the Tools menu now, before their programs go
+        (if (exists "SYS:C/OpenUpMenu")
+            (run "SYS:C/OpenUpMenu >NIL: QUIT"))
         (set #rc (run (cat #tool " UNINSTALL >>T:OpenUp-uninstall.log")))
         (if (> #rc 5)
             (message "Some files couldn't be put back. T:OpenUp-uninstall.log "
