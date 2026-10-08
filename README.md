@@ -8,6 +8,11 @@ AmigaChrome's sharing tools, OpenLook and the background pack, and its uninstall
 back exactly as it was: validated on a scratch OS 3.2.3 instance
 (`docs/history/VALIDATION.md`).
 
+OpenUp's programs and their settings are in Workbench's Tools menu, under
+OpenUp and Preferences (`src/openupmenu.c`, `DESIGN.md` section 7):
+
+![Tools > OpenUp](docs/tools-menu-openup.png)
+
 **Building it:** `python3 tools/build_pack.py --lha` builds every part with
 its own repository's scripts (checkouts beside this one, or given with
 `--amigachrome`, `--openamigaprint`, `--opengadtools`, `--guest`) and makes
