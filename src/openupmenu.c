@@ -82,6 +82,7 @@ static const struct entry entries[] = {
     { M_PREFS,  HOW_WB,  "Sound",        "SYS:Prefs/Sound",                      NULL, "SYS:C/OpenSpeaker", NULL },
     { M_PREFS,  HOW_WB,  "OpenTypes",    "SYS:Prefs/OpenTypes",                  NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Tata",         "SYS:Prefs/Tata",                       NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Gamepads",     "SYS:Prefs/Gamepads",                   NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "OpenUp Setup", "SYS:Prefs/OpenUp-Setup",               NULL, NULL, NULL },
 };
 #define NENTRIES (sizeof entries / sizeof entries[0])
