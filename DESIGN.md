@@ -146,7 +146,7 @@ to `SYS:C/OpenUpMenu`) puts two sub-menus in Workbench's Tools menu:
 | Tools > | Holds |
 | --- | --- |
 | OpenUp | OpenFiles, OpenEdit, OpenWrite, OpenPlay, OpenView, OpenCompress, OpenMail, OpenBrowser; then "OpenUp Update..." |
-| Preferences | Look, Windows, Dock, Menus, Title bar, Sound, OpenTypes, OpenUp Setup |
+| Preferences | Look, Windows, Dock, Menus, Title bar, Sound, OpenTypes, Tata, OpenUp Setup |
 
 - **Only what is installed shows.** Each entry is shown when its program is
   where the pack puts it (`tools/build_pack.py`), so a part left out leaves
