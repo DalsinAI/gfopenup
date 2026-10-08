@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       Dalsin Limited
 Type:         util/misc
-Version:      0.6.17
+Version:      0.6.18
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -20,11 +20,12 @@ choose:
   4.2);
 - OpenPrint and OpenView: printing to PDF and network printers, and viewing;
 - AmigaChrome sharing: the clipboard and files, shared with the x86 or ARM64
-  cores;
+  cores, and an optional Send Out icon to drop files on;
 - OpenLook: one look for every GadTools program, title bars and borders too
   (Open, Graphite, Ember, Clear or Classic), with a clear screen font and a
   little more room in the title bars; Look in SYS:Prefs changes it (dark by
-  the clock, accent, Lite for a real 68040, desktop profiles);
+  the clock, accent, Lite for a real 68040, desktop profiles); its frames
+  are drawn through OpenGfx, so OpenLook patches nothing in graphics.library;
 - Backgrounds: the look's desktop as Workbench's backdrop, for your screen;
 - OpenTypes: which program opens each kind of file (SYS:Prefs/OpenTypes);
 - OpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
@@ -56,7 +57,8 @@ choose:
   playlist and a slideshow (SYS:Utilities);
 - OpenTitle (new): AmigaChrome's logo, the free chip and fast memory, a
   clock, and a cog at the right end that opens any settings editor, on the
-  title bar, set in SYS:Prefs/TitleBar;
+  title bar, set in SYS:Prefs/TitleBar; beside the cog, the taskspace holds
+  other programs' icons (Tata's first);
 - Sound (new): the volume, Amiga sound (Paula) and AHI sound in one editor,
   and a speaker on the menu bar; the old Sound editor is kept in
   SYS:Prefs/Classic;
@@ -84,8 +86,8 @@ choose:
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
-  openrtg.library 0.11, with opengpu.library 0.5 and the board's driver;
-- OpenGPU (new): opengpu.library 0.6, so programs' drawing, SDL 2 games and
+  openrtg.library 0.11, with opengpu.library 0.7 and the board's driver;
+- OpenGPU (new): opengpu.library 0.7, so programs' drawing, SDL 2 games and
   GL (Mesa) run on the GPU through AmigaChrome's graphics
   board, and on the Amiga's own CPU where there is no board; OpenGfx, the
   faster graphics.library drawing, is inside it now (opengfx.library 1.2
