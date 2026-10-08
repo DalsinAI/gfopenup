@@ -771,6 +771,10 @@ def main() -> int:
     gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
     gp.add("Libs/OpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:OpenGPU/GL.module")
     gp.add("C/OpenGPUCheck", (rtg / "OpenGPUCheck").read_bytes(), "C:OpenGPUCheck")
+    # tinygl.library 53 (openamigartg library/tinygl, from #50): the stand-in TinyGL programs
+    # open; their calls are in the program (libtinygl.a) and run on GL.module
+    if (rtg / "tinygl.library").is_file():
+        gp.add("Libs/tinygl.library", (rtg / "tinygl.library").read_bytes(), "LIBS:tinygl.library")
     # opengfx.library 1.2 (amigachrome-guest): OpenGfx is inside opengpu.library 0.6, and the
     # stub hands a program that opens opengfx.library the same calls there
     gp.add("Libs/opengfx.library", (a.guest / "libraries/opengfx/build-amiga/lib/opengfx.library").read_bytes(),
