@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       Dalsin Limited
 Type:         util/misc
-Version:      0.6.18
+Version:      0.7.0
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -115,7 +115,19 @@ choose:
   a file opens, Tata checks it against a list of programs and files known
   to crash, draw wrongly or fail on AmigaOS 3.2.3 or with OpenUp
   (S:Tata.known), and asks first; its window is SYS:Prefs/Tata, its icon
-  sits on the title bar, and "Tata OFF" in a Shell turns it off.
+  sits on the title bar, and "Tata OFF" in a Shell turns it off;
+- OpenFTP (new, off unless picked): FTP and FTPS in two panes, with a site
+  manager (SYS:Utilities/OpenFTP); plain FTP works as it is, and FTPS needs
+  AmiSSL 5, which OpenUp doesn't include (Aminet util/libs);
+- Unofficial Telegram for Amiga (Open) (new, a preview, off unless picked):
+  Telegram chats in a window (SYS:Utilities/UnofficialTelegram); it isn't
+  made by Telegram, and it needs setting up first: your own Telegram API key
+  (free, from my.telegram.org) and Telegram's service on AmigaChrome's x86 or
+  ARM64 cores or a paired Cradle; until then its window says what is missing;
+- OpenGPU developer files (new, off unless picked): SDL 2's, OpenGL's and
+  GLA's headers and link libraries, with examples, in
+  SYS:Developer/OpenGPU-SDK (assign OpenGPU-SDK:), for building programs on
+  the Amiga.
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,

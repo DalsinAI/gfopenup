@@ -31,18 +31,21 @@
 ; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle, 262144 Sound, 524288 OpenEdit,
 ; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser, 8388608 OpenMulticore, 16777216 Icons (Gorilla),
 ; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY,
-; 1073741824 Tata (the last bit of this word: one more part needs a second word).
+; 1073741824 Tata (the last bit of this word).
+; The second word, #parts2 (OpenUp 0.7.0): 1 OpenFTP, 2 Unofficial Telegram, 4 OpenGPU developer files.
+; None of them is ticked by default, on any machine.
 ; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos, OpenPuTTY
 ; and Tata (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D
 ; (295632378). Tata stays unticked while it is 0.x (the user, 8 October 2026), and is ticked from 1.0.
-; Four questions of at most nine parts: the 3.2 Installer shows nine choices a page,
+; Five questions of at most nine parts: the 3.2 Installer shows nine choices a page,
 ; and a longer askoptions comes back with the defaults of its first pages mixed up
 ; (8 October 2026, on a scratch instance: 60751359 came back as 30265063). Each
-; group is bits 0-8, 9-17, 18-26 and 27-30 of #parts, so the bits above keep their meaning.
+; group is bits 0-8, 9-17, 18-26 and 27-30 of #parts, so the bits above keep their meaning;
+; the fifth is #parts2.
 (set #default (if #ac 396295679 295632378))
 (set #g1
     (askoptions
-        (prompt "Which parts should OpenUp install? (1 of 4)")
+        (prompt "Which parts should OpenUp install? (1 of 5)")
         (help "OpenSocket: the Amiga's network (bsdsocket.library 4.2), through the x86 or ARM64 cores. "
               "AmigaChrome instances only.\n\n"
               "OpenPrint and OpenView: print to PDF and to printers on your network, "
@@ -77,7 +80,7 @@
         (default (bitand #default 511))))
 (set #g2
     (askoptions
-        (prompt "Which parts should OpenUp install? (2 of 4)")
+        (prompt "Which parts should OpenUp install? (2 of 5)")
         (help "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
               "on AmigaChrome's graphics board. Picasso96's monitor for that board is put "
               "aside in SYS:Storage, and Uninstall puts it back. New: off unless you pick it.\n\n"
@@ -117,7 +120,7 @@
         (default (bitand (shiftright #default 9) 511))))
 (set #g3
     (askoptions
-        (prompt "Which parts should OpenUp install? (3 of 4)")
+        (prompt "Which parts should OpenUp install? (3 of 5)")
         (help "Sound: one place for the volume, Amiga sound (Paula) and AHI sound, with Test "
               "buttons, and a speaker on the menu bar: click for the levels, the wheel turns it "
               "up and down (new). The old Sound editor moves to SYS:Prefs/Classic.\n\n"
@@ -160,7 +163,7 @@
         (default (bitand (shiftright #default 18) 511))))
 (set #g4
     (askoptions
-        (prompt "Which parts should OpenUp install? (4 of 4)")
+        (prompt "Which parts should OpenUp install? (4 of 5)")
         (help "OpenDemos: Boing, Chrome Gears and Copper Tunnel, three small 3D demos in GL "
               "(new, off unless picked; needs OpenGPU and an FPU). In SYS:Utilities/OpenDemos.\n\n"
               "OpenCrypto: opencrypto.library 2.0, the sums behind secure connections (SSH's key "
@@ -181,7 +184,28 @@
                  "OpenPuTTY: SSH and Telnet (new)"
                  "Tata: warns about known problems (new, 0.x)")
         (default (bitand (shiftright #default 27) 15))))
+(set #g5
+    (askoptions
+        (prompt "Which parts should OpenUp install? (5 of 5)")
+        (help "OpenFTP: FTP and FTPS in two panes, with a site manager and the Open family's "
+              "look (new, off unless picked). In SYS:Utilities/OpenFTP. Plain FTP works as it is. "
+              "FTPS (encrypted FTP) needs AmiSSL 5, which OpenUp doesn't include: install it from "
+              "Aminet (util/libs). It needs a network stack (OpenSocket, Roadshow or AmiTCP).\n\n"
+              "Unofficial Telegram for Amiga (Open): Telegram chats in a window on the Amiga (new, "
+              "a preview, off unless picked). It isn't made by Telegram. It needs setting up before "
+              "it can reach Telegram: your own Telegram API key (free, from my.telegram.org), and "
+              "Telegram's service on AmigaChrome's x86 or ARM64 cores or on a paired Cradle. Until "
+              "then it says what is missing, and its demo shows a made-up account. "
+              "In SYS:Utilities/UnofficialTelegram.\n\n"
+              "OpenGPU developer files: SDL 2's, OpenGL's and GLA's headers and link libraries, "
+              "with examples, in SYS:Developer/OpenGPU-SDK (assign OpenGPU-SDK:). For building "
+              "programs on this Amiga; the programs need the OpenGPU part to run. About 7 MB.")
+        (choices "OpenFTP: FTP and FTPS (new)"
+                 "Telegram, unofficial: needs setting up (new)"
+                 "OpenGPU developer files (new)")
+        (default 0)))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
+(set #parts2 #g5)
 ; OpenPuTTY needs OpenCrypto
 (if (bitand #parts 536870912) (set #parts (bitor #parts 268435456)))
 
@@ -471,6 +495,34 @@
                 (working "Installing OpenBrowser")
                 (if (> (run (cat #tool " INSTALL Parts/OpenBrowser >>T:OpenUp.log")) 5)
                     (message "OpenBrowser didn't install completely. T:OpenUp.log says why; nothing else changed."))))))
+
+(if (bitand #parts2 1)
+    (if (exists "Parts/OpenFTP/Part")
+        (
+            (working "Installing OpenFTP")
+            (if (> (run (cat #tool " INSTALL Parts/OpenFTP >>T:OpenUp.log")) 5)
+                (message "OpenFTP didn't install completely. T:OpenUp.log says why; nothing else changed."))
+            (if (not (exists "LIBS:amisslmaster.library"))
+                (message "OpenFTP is installed, and plain FTP works now.\n\n"
+                         "For FTPS (encrypted FTP) it needs AmiSSL 5, which isn't on this Amiga "
+                         "and isn't part of OpenUp. Install AmiSSL 5 for OS 3 (Aminet: util/libs) "
+                         "when you want it.")))))
+(if (bitand #parts2 2)
+    (if (exists "Parts/Telegram/Part")
+        (
+            (working "Installing Unofficial Telegram for Amiga (Open)")
+            (if (> (run (cat #tool " INSTALL Parts/Telegram >>T:OpenUp.log")) 5)
+                (message "Unofficial Telegram didn't install completely. T:OpenUp.log says why; nothing else changed.")
+                (message "Unofficial Telegram for Amiga (Open) is installed, in SYS:Utilities.\n\n"
+                         "It needs setting up before it can reach Telegram: your own Telegram API key "
+                         "(free, from my.telegram.org), and Telegram's service on AmigaChrome or a "
+                         "paired Cradle. Until then its window says what is missing.")))))
+(if (bitand #parts2 4)
+    (if (exists "Parts/OpenGPUDev/Part")
+        (
+            (working "Installing the OpenGPU developer files")
+            (if (> (run (cat #tool " INSTALL Parts/OpenGPUDev >>T:OpenUp.log")) 5)
+                (message "The OpenGPU developer files didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
 
 ; OpenView opens what MultiView opened (pictures, text, guides, documents;
 ; sounds, video and fonts stay), once, so a kind someone moves back later
