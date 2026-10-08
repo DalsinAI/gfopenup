@@ -8,7 +8,7 @@ OpenUp: install AmigaOS 3.2.3, run one pack, and it's ready, on a real Amiga, a 
 
 ## Where it stands
 
-_Updated 7 October 2026, late._ OpenUp 0.6.14 is the first release on GitHub (tag v0.6.14, `OpenUp-0.6.14.lha`), built from every part's main. Since 0.6.13 it has gained the animated GlowIcons and the icon standard (#32), Workbench as a backdrop with OpenDock 0.2 (#33), OpenFiles 0.2.2, OpenWrite 1.0.2 (#34, #36) and OpenBlanker (#35, always installed).
+_Updated 8 October 2026._ OpenUp 0.6.15 is on GitHub (tag v0.6.15, `OpenUp-0.6.15.lha` and `OpenUp-0.6.15-OpenBrowser.lha`), built from every part's main and registered with Cradle. Since 0.6.14: OpenMail and OpenBrowser as parts left unticked (#39); OpenUp Update, `OpenUpTool UPDATE` (#40); the Tools menu's OpenUp and Preferences sub-menus (#42); OpenDock's see-through shelf, the title bar's settings cog, double-click to front and editors without a stray console (openamigaprefs #31-#33, #43); music modules in OpenPlay through openmodule.datatype (OpenImage 0.2, #44).
 
 Phases (DESIGN.md section 5): 1 done for AmigaChrome (Setup 0.1 and the startup switches included); 2 under way (OpenBrowser and OpenMail next, as parts left unticked); 3 (PiStorm, real A1200) waits; 4 (Cradle's OS 3.2.3 recipes apply the pack) is live in Cradle (8 October 2026, with 0.6.14 registered); 5's OpenUp Update is built (Cradle first; the GitHub step next). OpenUp Picks is no longer a requirement.
 
