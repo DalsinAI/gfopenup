@@ -29,10 +29,18 @@
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
 ; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus,
 ; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle, 262144 Sound, 524288 OpenEdit,
-; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser, 8388608 OpenMulticore
-(set #parts
+; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser, 8388608 OpenMulticore, 16777216 Icons (Gorilla),
+; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY.
+; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos and OpenPuTTY
+; (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D (295632378).
+; Four questions of at most nine parts: the 3.2 Installer shows nine choices a page,
+; and a longer askoptions comes back with the defaults of its first pages mixed up
+; (8 October 2026, on a scratch instance: 60751359 came back as 30265063). Each
+; group is bits 0-8, 9-17, 18-26 and 27-29 of #parts, so the bits above keep their meaning.
+(set #default (if #ac 396295679 295632378))
+(set #g1
     (askoptions
-        (prompt "Which parts should OpenUp install?")
+        (prompt "Which parts should OpenUp install? (1 of 4)")
         (help "OpenSocket: the Amiga's network (bsdsocket.library 4.2), through this PC. "
               "AmigaChrome instances only.\n\n"
               "OpenPrint and OpenView: print to PDF and to printers on your network, "
@@ -54,13 +62,31 @@
               "OpenImage: datatypes, so MultiView and every program that uses datatypes "
               "open WebP and WebM, and, through OpenService, AVIF and HEIC photos, JPEG XL, "
               "camera RAW, SVG, FLAC, Ogg, MP3, MIDI, MP4 and other video, Word and other "
-              "office documents. Datatypes you already have are kept.\n\n"
+              "office documents. Datatypes you already have are kept.")
+        (choices "OpenSocket: networking"
+                 "OpenPrint and OpenView: printing"
+                 "AmigaChrome sharing: clipboard and files"
+                 "OpenLook: the look"
+                 "Backgrounds: the look's desktop"
+                 "OpenTypes: which program opens what"
+                 "OpenCompress: archives and disk images"
+                 "OpenService: services from boards and Cradles"
+                 "OpenImage: datatypes for today's files")
+        (default (bitand #default 511))))
+(set #g2
+    (askoptions
+        (prompt "Which parts should OpenUp install? (2 of 4)")
+        (help "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
+              "on AmigaChrome's graphics board. Picasso96's monitor for that board is put "
+              "aside in SYS:Storage, and Uninstall puts it back. New: off unless you pick it.\n\n"
               "OpenWindows: windows snap to edges and to each other, Amiga+Tab switches "
               "between them, the mouse wheel goes to the window under the pointer, and "
               "programs' windows open where you last left them. Windows in SYS:Prefs sets it.\n\n"
               "OpenDock: a dock at the bottom of Workbench for your programs. It starts "
               "with the buttons of ToolManager, AmiDock or AmiStart if you have one. Dock in "
               "SYS:Prefs sets it.\n\n"
+              "OpenUp Setup: a few questions at the next start (theme, what starts with the "
+              "machine), and in SYS:Prefs afterwards.\n\n"
               "OpenMenus: menus in the look of the theme, from the screen bar or at the pointer, "
               "and a menu for each icon and for the desktop on the right button. MagicMenu's "
               "settings are taken over; take MagicMenu out of WBStartup if you pick this. "
@@ -76,8 +102,21 @@
               "SYS:Tools shows it working.\n\n"
               "OpenTitle: AmigaChrome's logo at the title bar's left, the free chip and "
               "fast memory after Workbench's title, and the day, date and time at the right "
-              "(new). Title bar in SYS:Prefs switches each, and a black border around the screen.\n\n"
-              "Sound: one place for the volume, Amiga sound (Paula) and AHI sound, with Test "
+              "(new). Title bar in SYS:Prefs switches each, and a black border around the screen.")
+        (choices "OpenRTG: Workbench without Picasso96"
+                 "OpenWindows: snapping, Amiga+Tab, wheel"
+                 "OpenDock: a dock for your programs"
+                 "OpenUp Setup: the first-start questions"
+                 "OpenMenus: menus, and right-click menus"
+                 "OpenFiles: a file manager"
+                 "OpenPlay: a media player"
+                 "OpenMUI: MUI from Zune (preview)"
+                 "OpenTitle: logo, memory and clock")
+        (default (bitand (shiftright #default 9) 511))))
+(set #g3
+    (askoptions
+        (prompt "Which parts should OpenUp install? (3 of 4)")
+        (help "Sound: one place for the volume, Amiga sound (Paula) and AHI sound, with Test "
               "buttons, and a speaker on the menu bar: click for the levels, the wheel turns it "
               "up and down (new). The old Sound editor moves to SYS:Prefs/Classic.\n\n"
               "OpenEdit: a text editor with tabs, find and replace, and colours for scripts, "
@@ -89,43 +128,53 @@
               "OpenMail: a mail reader for IMAP mail over TLS, with Gmail, Outlook and others "
               "set up from the address (new, a preview: reading only; off unless you pick it). "
               "It needs AmiSSL 5, which AmigaOS 3.2.3 doesn't include.\n\n"
-              "OpenMulticore: lets programs hand work to the other cores of AmigaChrome's "
-              "cores board, so the main CPU stays free; without a cores board the work runs "
-              "on the main CPU, so it is safe on every Amiga (new).\n\n"
               "OpenBrowser: a web browser built on WebKit (new, a preview; off unless you pick "
               "it). It needs an FPU and is best on a 68040. It comes in its own archive, "
               "OpenUp-" #version "-OpenBrowser.lha, because it is large.\n\n"
-              "OpenUp Setup: a few questions at the next start (theme, what starts with the "
-              "machine), and in SYS:Prefs afterwards.\n\n"
-              "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
-              "on AmigaChrome's graphics board. Picasso96's monitor for that board is put "
-              "aside in SYS:Storage, and Uninstall puts it back. New: off unless you pick it.")
-        (choices "OpenSocket: networking"
-                 "OpenPrint and OpenView: printing"
-                 "AmigaChrome sharing: clipboard and files"
-                 "OpenLook: the look"
-                 "Backgrounds: the look's desktop"
-                 "OpenTypes: which program opens what"
-                 "OpenCompress: archives and disk images"
-                 "OpenService: services from boards and Cradles"
-                 "OpenImage: datatypes for today's files"
-                 "OpenRTG: Workbench without Picasso96 (new)"
-                 "OpenWindows: snapping, Amiga+Tab, wheel"
-                 "OpenDock: a dock for your programs"
-                 "OpenUp Setup: the first-start questions"
-                 "OpenMenus: menus, and right-click menus on icons"
-                 "OpenFiles: a file manager (new)"
-                 "OpenPlay: a media player (new)"
-                 "OpenMUI: MUI from Zune (preview)"
-                 "OpenTitle: logo, memory, clock on the title bar (new)"
-                 "Sound: levels and a menu bar speaker (new)"
-                 "OpenEdit: a text editor (new)"
-                 "OpenWrite: a word processor (new)"
-                 "OpenMail: a mail reader (preview, needs AmiSSL 5)"
-                 "OpenBrowser: a web browser (preview, its own archive)"
-                 "OpenMulticore: work on the cores board's other cores"
-                 "Icons: Gorilla's pictures on the system's icons (new)")
-        (default (if #ac 27196927 27196922))))
+              "OpenMulticore: lets programs hand work to the other cores of AmigaChrome's "
+              "cores board, so the main CPU stays free; without a cores board the work runs "
+              "on the main CPU, so it is safe on every Amiga (new).\n\n"
+              "OpenGPU: opengpu.library, so programs' drawing, SDL 2 games and GL (Mesa) run "
+              "on this PC's graphics chip through AmigaChrome's graphics board; where there is "
+              "no board they run on the Amiga's own CPU, as before (new). SDL 2 and GL are in "
+              "LIBS:OpenGPU and load only when a program asks. OpenGPUCheck in a Shell checks it.\n\n"
+              "Icons: Gorilla, AROS's icon set, as new pictures for the system's own drawers, "
+              "programs and default icons (new). Each icon keeps what it does; the old "
+              "pictures are kept in SYS:Storage, and Uninstall-OpenUp puts them back.\n\n"
+              "Warp3D and MiniGL: Warp3D.library 5.0 and minigl.library (OpenGL 1.1) for Warp3D "
+              "and MiniGL games and programs, drawn through OpenGPU "
+              "(new). It needs a 68040 or 68060 with its FPU. A Warp3D.library already there "
+              "(Wazp3D's, say) is kept in SYS:Storage, and Wazp3D's settings are taken over; "
+              "Warp3DPrefs in a Shell changes them. W3DTest and MGLTest in SYS:Tools show them working.")
+        (choices "Sound: levels and a menu bar speaker"
+                 "OpenEdit: a text editor"
+                 "OpenWrite: a word processor"
+                 "OpenMail: mail (preview, needs AmiSSL 5)"
+                 "OpenBrowser: a web browser (preview)"
+                 "OpenMulticore: work on a cores board"
+                 "Icons: Gorilla's pictures on the system's icons"
+                 "OpenGPU: SDL and GL on the PC's chip (new)"
+                 "Warp3D and MiniGL: 3D on OpenGPU (new, 68040)")
+        (default (bitand (shiftright #default 18) 511))))
+(set #g4
+    (askoptions
+        (prompt "Which parts should OpenUp install? (4 of 4)")
+        (help "OpenDemos: Boing, Chrome Gears and Copper Tunnel, three small 3D demos in GL "
+              "(new, off unless picked; needs OpenGPU and an FPU). In SYS:Utilities/OpenDemos.\n\n"
+              "OpenCrypto: opencrypto.library 2.0, the sums behind secure connections (SSH's key "
+              "exchanges, host keys, SHA-2, AES) for the Open programs (new). On AmigaChrome they "
+              "run on the PC, elsewhere on the Amiga's own CPU. OpenPuTTY needs it, so it comes "
+              "with OpenPuTTY whatever is picked here.\n\n"
+              "OpenPuTTY: PuTTY for AmigaOS 3.2, SSH, Telnet and serial terminals, with key "
+              "sign-in (new, version 0.2, off unless picked). It needs a network stack "
+              "(bsdsocket.library: OpenSocket, Roadshow or AmiTCP). In SYS:Utilities/OpenPuTTY.")
+        (choices "OpenDemos: three 3D demos in GL (new)"
+                 "OpenCrypto: SSH and TLS sums (new)"
+                 "OpenPuTTY: SSH and Telnet (new)")
+        (default (bitand (shiftright #default 27) 7))))
+(set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
+; OpenPuTTY needs OpenCrypto
+(if (bitand #parts 536870912) (set #parts (bitor #parts 268435456)))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -264,6 +313,49 @@
         (working "Installing OpenRTG")
         (if (> (run (cat #tool " INSTALL Parts/OpenRTG >>T:OpenUp.log")) 5)
             (message "OpenRTG didn't install completely. T:OpenUp.log says why."))))
+
+(if (bitand #parts 33554432)
+    (
+        (working "Installing OpenGPU")
+        (if (> (run (cat #tool " INSTALL Parts/OpenGPU >>T:OpenUp.log")) 5)
+            (message "OpenGPU didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+; Warp3D, as it always has, needs a 68040 or 68060 and its FPU. Wazp3D's
+; settings are taken over once (ENVARC:OpenAmiga/Wazp3D-taken says so), and
+; Wazp3D's own files stay where they are.
+(if (bitand #parts 67108864)
+    (if (or (= (database "fpu") "NOFPU") (and (<> (database "cpu") "68040") (<> (database "cpu") "68060")))
+        (message "Warp3D needs a 68040 or 68060 with its FPU, and this Amiga doesn't have one, "
+                 "so it was left out. Nothing else changed.")
+        (
+            (working "Installing Warp3D")
+            (if (> (run (cat #tool " INSTALL Parts/Warp3D >>T:OpenUp.log")) 5)
+                (message "Warp3D didn't install completely. T:OpenUp.log says why; nothing else changed.")
+                (if (and (or (or (exists "ENVARC:Wazp3D.cfg") (exists "ENV:Wazp3D.cfg")) (exists "LIBS:soft3d.library"))
+                         (not (exists "ENVARC:OpenAmiga/Wazp3D-taken")))
+                    (if (< (run "C:Warp3DPrefs FROMWAZP3D SAVE >>T:OpenUp.log") 10)
+                        (textfile (dest "ENVARC:OpenAmiga/Wazp3D-taken") (append "OpenUp took Wazp3D's settings over for Warp3D.\n"))))))))
+
+(if (bitand #parts 134217728)
+    (
+        (working "Installing OpenDemos")
+        (if (> (run (cat #tool " INSTALL Parts/OpenDemos >>T:OpenUp.log")) 5)
+            (message "OpenDemos didn't install completely. T:OpenUp.log says why; nothing else changed."))
+        (if (not (exists "LIBS:OpenGPU/GL.module"))
+            (message "OpenDemos draws with GL, which comes with OpenGPU. Run Install-OpenUp "
+                     "again and pick OpenGPU too."))))
+
+(if (bitand #parts 268435456)
+    (
+        (working "Installing OpenCrypto")
+        (if (> (run (cat #tool " INSTALL Parts/OpenCrypto >>T:OpenUp.log")) 5)
+            (message "OpenCrypto didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 536870912)
+    (
+        (working "Installing OpenPuTTY")
+        (if (> (run (cat #tool " INSTALL Parts/OpenPuTTY >>T:OpenUp.log")) 5)
+            (message "OpenPuTTY didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (if (bitand #parts 1024)
     (
