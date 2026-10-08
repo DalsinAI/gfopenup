@@ -93,7 +93,8 @@ choose:
   board; OpenGfx, the faster graphics.library drawing, is inside it now
   (opengfx.library 1.2 stays for programs that open it); SDL 2 and GL are
   modules in LIBS:OpenGPU, loaded once, kept resident and shared by every
-  program that asks, and C:OpenGPUCheck checks it;
+  program that asks; TinyGL programs run on GL too (LIBS:tinygl.library),
+  and C:OpenGPUCheck checks it;
 - Warp3D and MiniGL (new): Warp3D.library 5.0 and minigl.library 29
   (OpenGL 1.1) on OpenGPU, for Warp3D and MiniGL games and programs; they
   need a 68040 or 68060 with its FPU; a Warp3D.library already there
