@@ -443,15 +443,18 @@ def flashcard(p, sel=False, kind="cf", **kw):
             p.detail(p.rect(17 + i * 6, 6, 21 + i * 6, 13), GOLDPIN)
         p.add(p.rect(18, 22, 46, 54), p.lin((0, 22), (0, 54), g.BLUE, g.BLUE_LO), outline=1.0)
         p.detail(p.text(32, 38, 9, "SD"), WHITE)
+        p.add(p.ellipse(39, 47, 44, 52), LED_ON if sel else LED_OFF, outline=0.7)
         return slots(face=(18, 22, 0.42))
     if kind == "pcmcia":
         p.add(p.rrect(6, 4, 58, 60, 2), p.lin((6, 4), (58, 60), METAL_HI, METAL_LO), gloss=0.25)
         p.detail(p.rect(8, 54, 56, 59), CHIP_LO)
         p.add(p.rect(12, 12, 52, 46), p.lin((0, 12), (0, 46), lighter(g.BLUE, 0.2), g.BLUE_LO), outline=1.0)
+        p.add(p.ellipse(46, 48, 51, 53), LED_ON if sel else LED_OFF, outline=0.7)
         return slots(face=(14, 12, 0.55))
     p.add(p.rrect(6, 10, 58, 56, 2), p.lin((6, 10), (58, 56), rgb('#4A5562'), rgb('#20252C')), gloss=0.2)
     p.add(p.rect(11, 16, 53, 44), p.lin((0, 16), (0, 44), METAL_HI, METAL_LO), outline=1.0)
     p.detail(p.text(32, 30, 11, "CF"), INK)
+    p.add(p.ellipse(48, 37, 52, 41), LED_ON if sel else LED_OFF, outline=0.7)
     for i in range(14):
         p.detail(p.rect(9 + i * 3.4, 50, 10.4 + i * 3.4, 55), GOLDPIN)
     return slots(face=(16, 16, 0.45))
@@ -525,8 +528,11 @@ def window(p, sel=False, active=True, tint="blue", body=None, **kw):
     bar = p.lin((0, 6), (0, 15), lighter(c, 0.25), lo) if on else p.lin((0, 6), (0, 15), rgb('#E2E5E9'), rgb('#B6BBC2'))
     p.detail(g.inter(p.rrect(3, 6, 61, 58, 2.5), p.rect(3, 6, 61, 15)), bar)
     p.detail(p.rect(3, 15, 61, 16), INK)
-    p.detail(p.rect(53, 8.5, 58, 13.5), WHITE if on else rgb('#7C8088'))
-    p.detail(p.rect(6, 8.5, 10, 12.5), WHITE if on else rgb('#7C8088'))
+    glyph = WHITE if on else rgb('#7C8088')
+    back, front = ((51, 8), (54, 10.5)) if not sel else ((54, 10.5), (51, 8))
+    p.detail(g.cut(p.rect(back[0], back[1], back[0] + 4.6, back[1] + 3.6), p.rect(back[0] + 0.8, back[1] + 0.8, back[0] + 3.8, back[1] + 2.8)), glyph)
+    p.detail(p.rect(front[0], front[1], front[0] + 4.6, front[1] + 3.6), glyph)
+    p.detail(p.rect(6, 8.5, 10, 12.5), glyph)
     return slots(face=(18, 22, 0.44), badge=(30, 30, 0.52))
 
 
@@ -1677,6 +1683,8 @@ def moon(p, sel=False, **kw):
 def cloud(p, sel=False, storm=False, **kw):
     if storm:
         bolt(p.sub(18, 26, 0.55), sel=sel)
+    if sel and not storm:
+        p = p.sub(3, -1, 1.0)                        # chosen: it has drifted
     p.add(g.union(p.ellipse(4, 22, 30, 46), p.ellipse(16, 8, 46, 38), p.ellipse(34, 18, 60, 44), p.rrect(10, 30, 54, 46, 8)),
           p.lin((4, 8), (60, 46), (WHITE if not storm else rgb('#9AA2AD')), (rgb('#BFD4EA') if not storm else rgb('#4A515B'))), gloss=0.3)
     return slots(badge=(32, 32, 0.5))
@@ -1784,6 +1792,8 @@ def penguin(p, sel=False, **kw):
         p.detail(p.ellipse(x - 3, 14, x + 3, 20), WHITE)
         p.detail(p.ellipse(x - 1.4, 15.6, x + 1.4, 18.4), INK)
     p.add(p.poly([(26, 22), (38, 22), (32, 30)]), g.GOLD, outline=1.0)
+    lift = -8 if sel else 0                          # chosen: it waves a flipper
+    p.add(p.poly([(50, 30), (60, 40 + lift), (52, 46)]), rgb('#14171B'), outline=1.2)
     return slots(badge=(32, 32, 0.5))
 
 
@@ -1813,6 +1823,9 @@ def target(p, sel=False, **kw):
     for i, c in enumerate((g.RED, WHITE, g.RED, WHITE, g.RED)):
         r = 28 - i * 5.5
         p.add(p.ellipse(32 - r, 32 - r, 32 + r, 32 + r), c, outline=1.2 if i == 0 else 0)
+    if sel:                                          # chosen: a dart in the middle
+        p.add(p.stroke([(32, 32), (54, 10)], 2.4), p.lin((32, 32), (54, 10), STEEL_HI, STEEL_LO), outline=1.0)
+        p.add(p.poly([(50, 8), (58, 6), (56, 14)]), g.BLUE, outline=1.0)
     return slots(badge=(32, 32, 0.5))
 
 
@@ -2085,8 +2098,10 @@ def plusminus(p, sel=False, **kw):
     p.add(p.rrect(4, 4, 30, 30, 4), g.GREEN, outline=1.4)
     p.detail(p.stroke([(17, 9), (17, 25)], 4), WHITE)
     p.detail(p.stroke([(9, 17), (25, 17)], 4), WHITE)
-    p.add(p.rrect(34, 34, 60, 60, 4), g.RED, outline=1.4)
+    p.add(p.rrect(34, 34, 60, 60, 4), lighter(g.RED, 0.3) if sel else g.RED, outline=1.4)
     p.detail(p.stroke([(39, 47), (55, 47)], 4), WHITE)
+    if sel:
+        p.detail(p.stroke([(30, 12), (52, 12), (52, 30)], 1.6), g.DARK)
     return slots()
 
 
