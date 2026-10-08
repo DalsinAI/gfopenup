@@ -83,15 +83,28 @@ choose:
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
   openrtg.library 0.11, with opengpu.library 0.5 and the board's driver;
-- OpenGPU (new): opengpu.library 0.5, so programs' drawing, SDL 2 games and
+- OpenGPU (new): opengpu.library 0.6, so programs' drawing, SDL 2 games and
   GL (Mesa) run on the PC's graphics chip through AmigaChrome's graphics
-  board, and on the Amiga's own CPU where there is no board; SDL 2 and GL
-  are modules in LIBS:OpenGPU, loaded only when a program asks, and
+  board, and on the Amiga's own CPU where there is no board; OpenGfx, the
+  faster graphics.library drawing, is inside it now (opengfx.library 1.2
+  stays for programs that open it); SDL 2 and GL are modules in
+  LIBS:OpenGPU, loaded once and shared by every program that asks, and
   C:OpenGPUCheck checks it;
-- Warp3D (new): Warp3D.library 5.0 on OpenGPU, for Warp3D games and
-  programs; it needs a 68040 or 68060 with its FPU; a Warp3D.library already
-  there (Wazp3D's) is kept, and Wazp3D's settings are taken over
-  (C:Warp3DPrefs changes them; W3DTest in SYS:Tools shows it working);
+- Warp3D and MiniGL (new): Warp3D.library 5.0 and minigl.library 29
+  (OpenGL 1.1) on OpenGPU, for Warp3D and MiniGL games and programs; they
+  need a 68040 or 68060 with its FPU; a Warp3D.library already there
+  (Wazp3D's) is kept, and Wazp3D's settings are taken over (C:Warp3DPrefs
+  changes them; W3DTest and MGLTest in SYS:Tools show them working);
+- Icons (new): Gorilla, AROS's icon set (GPL), as new pictures for the
+  system's own drawers, programs and default icons; the old pictures are
+  kept and come back with the uninstaller;
+- OpenCrypto (new): opencrypto.library 2.0, the sums behind secure
+  connections (SSH's key exchanges, host keys, SHA-2, AES), on the PC on
+  AmigaChrome and on the Amiga's own CPU elsewhere;
+- OpenPuTTY (new, off unless picked): PuTTY 0.85 for AmigaOS 3.2 on
+  OpenCrypto, with SSH, Telnet and serial terminals and key sign-in
+  (SYS:Utilities/OpenPuTTY); it brings OpenCrypto with it and needs a
+  network stack;
 - OpenDemos (new, off unless picked): Boing, Chrome Gears and Copper Tunnel,
   three small 3D demos in GL on OpenGPU (SYS:Utilities/OpenDemos).
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open

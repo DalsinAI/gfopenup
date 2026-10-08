@@ -7,11 +7,14 @@ archive (DESIGN.md sections 3 and 4).
         [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR]
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
-        [--openamigamesa DIR] [--no-build] [--lha]
+        [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
 the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
-is built against it.
+is built against it. The GCC 16 builds (OpenService, the datatypes, SDL 2, GL,
+OpenDemos, opengfx.library, OpenCrypto, OpenPuTTY) take their stove from
+OS32_GCC16 / STOVE16 / SDL2_STOVE; the 0.6.17 pack used a stove whose gcc adds
+-fno-tree-loop-distribute-patterns (GCC 16.2.0b's loop-shift miscompile).
 
 Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
@@ -26,6 +29,8 @@ a Part file that C/OpenUpTool reads:
   OpenLook/             the look and its themes (opengadtools), and its editor,
                         OpenPrefs Look, with the desktop profiles (openamigaprefs)
   Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
+  GorillaIcons/         AROS's Gorilla icon set (GPL) as new pictures for the system's
+                        icons, fetched at a pinned AROS commit (tools/gorilla_icons.py)
   OpenTypes/            which program opens each kind of file (openamigaprefs)
   OpenCompress/         OpenCompress, its window and command (openamigacompress)
   OpenService/          openservice.device and Nursery: services from boards and
@@ -55,6 +60,9 @@ a Part file that C/OpenUpTool reads:
                         (openamigartg; needs a 68040 or 68060 with its FPU)
   OpenDemos/            Boing, Chrome Gears and Copper Tunnel on GL.module, off
                         by default (--openamigamesa)
+  OpenCrypto/           opencrypto.library 2.0: SSH's and TLS's sums, on the PC through
+                        AC090 on AmigaChrome, on the 68k elsewhere (--openamigatls)
+  OpenPuTTY/            OpenPuTTY 0.2, PuTTY on OpenCrypto, off by default (--openamigaputty)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
@@ -182,35 +190,59 @@ def os32_icons(oap: Path, icons_mod, jobs: list[tuple[Path, str | None]]) -> Non
 
 
 OPEN_ART = ROOT / "icons" / "open"     # the Open apps' pictures, 64 x 64 (tools/open_icons_art.py draws them)
+ICON_SCALE = 0.85                      # shown at 85 per cent, as Gorilla's are (the approved look)
 
 
-def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Path, list[Path]]) -> None:
+def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Path, list[Path]],
+               gorilla_drawer: bytes | None = None) -> None:
     """The Open apps' own icons: each job's icon keeps what it is (type,
     default tool, tool types, stack) and gets its picture from icons/open as
     a GlowIcon, dithered for a 16-bit screen. Icons in drawers we share with
     the system (Prefs, Utilities, Tools) are left unplaced, so Workbench puts
     them where there is room; `drawers` maps each drawer icon of our own to
     the icons in it, which are laid out on a grid with the window sized to
-    them (amigachrome's icon_theme, as Cradle's new icon set does)."""
+    them (amigachrome's icon_theme, as Cradle's new icon set does).
+
+    Every picture is shown at ICON_SCALE. A drawer of our own (drawer-NAME)
+    is its badge (badge-NAME) on Gorilla's drawer when the pack ships Gorilla
+    (gorilla_drawer: its PNG, GPL like the rest of the set), else on our own
+    drawer (drawer-NAME.png)."""
+    import io
+    from PIL import Image
     sys.path.insert(0, str(amigachrome / "scripts"))
     import amiga_icon
     import icon_theme
 
-    def frame(path: Path) -> tuple[int, int, bytes]:
-        w, h, rgba = amiga_icon.png_decode(path.read_bytes())
-        hard = bytearray(rgba)
-        for i in range(0, len(hard), 4):              # GlowIcons: every pixel solid or see-through
-            hard[i:i + 4] = hard[i:i + 3] + b"\xff" if hard[i + 3] >= 110 else b"\0\0\0\0"
-        return w, h, bytes(hard)
+    def picture(name: str) -> Image.Image:
+        return Image.open(OPEN_ART / f"{name}.png").convert("RGBA")
+
+    def frames(name: str) -> list[Image.Image]:
+        """NAME.png at rest and NAME-selected.png chosen (ICONS.md), or a drawer's badge on Gorilla's drawer."""
+        if name.startswith("drawer-") and gorilla_drawer:
+            badge = name[len("drawer-"):]
+            out = []
+            for suffix in ("", "-selected"):
+                f = Image.open(io.BytesIO(gorilla_drawer)).convert("RGBA")
+                f.alpha_composite(picture(f"badge-{badge}{suffix}").resize(f.size, Image.LANCZOS))
+                out.append(f)
+            return out
+        rest = picture(name)
+        chosen = picture(f"{name}-selected") if (OPEN_ART / f"{name}-selected.png").exists() else rest
+        if chosen.size != rest.size:
+            raise SystemExit(f"{name}-selected.png: {chosen.size}, but {name}.png is {rest.size}")
+        return [rest, chosen]
+
+    def hard(im: Image.Image) -> tuple[int, int, bytes]:
+        """At ICON_SCALE, every pixel solid or see-through (a GlowIcon)."""
+        im = im.resize((max(1, round(im.width * ICON_SCALE)), max(1, round(im.height * ICON_SCALE))), Image.LANCZOS)
+        rgba = bytearray(im.tobytes())
+        for i in range(0, len(rgba), 4):
+            rgba[i:i + 4] = rgba[i:i + 3] + b"\xff" if rgba[i + 3] >= 110 else b"\0\0\0\0"
+        return im.width, im.height, bytes(rgba)
 
     def art(name: str) -> list[tuple[int, int, bytes]]:
-        """The icon's two frames (docs/ICONS.md): NAME.png at rest, and NAME-selected.png,
-        its second frame, with the glow round it, shown while the icon is chosen."""
-        w, h, rest = frame(OPEN_ART / f"{name}.png")
-        chosen = OPEN_ART / f"{name}-selected.png"
-        sw, sh, sel = frame(chosen) if chosen.exists() else (w, h, rest)
-        if (sw, sh) != (w, h):
-            raise SystemExit(f"{chosen.name}: {sw}x{sh}, but {name}.png is {w}x{h}")
+        """The icon's two frames, dithered for a 16-bit screen, the glow round the chosen one."""
+        (w, h, rest), (_, _, sel) = (hard(f) for f in frames(name))
         return [(w, h, amiga_icon.dither_rgb565(w, h, rest)),
                 (w, h, amiga_icon.dither_rgb565(w, h, amiga_icon.glow_selected(w, h, sel)))]
 
@@ -295,6 +327,9 @@ def build_parts(a):
     run([CC, "-noixemul", "-m68020", "-O2", "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
     run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=env)        # OpenGPU's driver for the ACRTG board
+    # opengfx.library 1.2: the stub that sends opengfx.library's calls to opengpu.library 0.6 (GCC 16)
+    gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmigaChrome/stoves/os32-gcc16"))
+    run(["sh", g / "libraries/opengfx/build-amiga.sh"], env=dict(os.environ, STOVE=gcc16_root))
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Look/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Windows/build.sh"], env=env)
@@ -330,6 +365,15 @@ def build_parts(a):
     omc_env = {k: v for k, v in env.items() if k not in ("CC", "AMIGA_CC")}
     run(["sh", a.openamigamulticore / "library/build.sh"],
         env=dict(omc_env, STOVE=str(Path.home() / "AmigaChrome/stoves/os32"), OPENSERVICE=str(a.openamigaservice)))
+    # OpenCrypto and OpenPuTTY (GCC 16), OpenPuTTY linked with this OpenCrypto's headers
+    if a.openamigatls:
+        run(["sh", a.openamigatls / "build-amiga.sh"],
+            env=dict(os.environ, STOVE=gcc16_root, FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
+        if a.openamigaputty:
+            run(["sh", a.openamigaputty / "build.sh"], env=dict(os.environ, OS32_GCC16=gcc16_root, CPU="020",
+                                                                OPENCRYPTO=str(a.openamigatls)))
+            run([sys.executable, a.openamigaputty / "tools/make_icons.py", a.amigachrome / "scripts/amiga_icon.py",
+                 a.openamigaputty / "build/icons"])
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -417,7 +461,12 @@ def main() -> int:
                     default=first(DEV / "webkit-os32/deps/src/zlib", Path(os.environ.get("ZLIB_SRC", "/nonexistent"))))
     ap.add_argument("--openamigamesa", type=Path, default=first(DEV / "openamigamesa", DEV.parent / "openamigamesa"),
                     help="openamigamesa, for the OpenDemos part (left out without it)")
+    ap.add_argument("--openamigatls", type=Path, default=first(DEV / "openamigatls", DEV.parent / "openamigatls"),
+                    help="openamigatls, for the OpenCrypto part (left out without it)")
+    ap.add_argument("--openamigaputty", type=Path, default=first(DEV / "openamigaputty", DEV.parent / "openamigaputty"),
+                    help="openamigaputty, for the OpenPuTTY part (needs --openamigatls; left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
+    ap.add_argument("--no-gorilla", action="store_true", help="leave out the Gorilla icons (they are fetched from AROS's repository)")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
@@ -507,7 +556,7 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.4", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too, and its editor")
+    look = Part(top, "OpenLook", "0.5", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too, and its editor")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
@@ -524,6 +573,19 @@ def main() -> int:
     for png in sorted((o / "build/backdrops").glob("*.png")):
         bd.add(f"Backdrops/{png.name}", png.read_bytes(), f"SYS:Prefs/Presets/Backdrops/OpenUp/{png.name}")
     bd.write()
+
+    # Gorilla: AROS's icon set (GPL) as new pictures for the system's own icons
+    # (ICONS.md section 8). Fetched at the AROS commit pinned in
+    # tools/gorilla_icons.py and checked against tools/gorilla.lock; never committed.
+    gorilla_drawer = None                   # with Gorilla, our drawers' badges go on its drawer (open_icons)
+    if not a.no_gorilla:
+        sys.path.insert(0, str(ROOT / "tools"))
+        import gorilla_icons
+        gorilla_drawer = gorilla_icons.drawer_png(ROOT / "build" / "cache")
+        gi = Part(top, "GorillaIcons", "0.1", "Gorilla, AROS's icon set (GPL): new pictures for the system's drawers, programs and default icons")
+        for text in gorilla_icons.build(gi.dir, a.amigachrome, ROOT / "build" / "cache"):
+            gi.line(text)
+        gi.write()
 
     # OpenTypes: which program opens each kind of file (openamigaprefs)
     ty = Part(top, "OpenTypes", "0.2", "OpenTypes: which program opens each kind of file")
@@ -652,12 +714,16 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the OpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "OpenGPU", "0.5", "OpenGPU: opengpu.library, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp = Part(top, "OpenGPU", "0.6", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
     gp.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
     gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
     gp.add("Libs/OpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:OpenGPU/GL.module")
     gp.add("C/OpenGPUCheck", (rtg / "OpenGPUCheck").read_bytes(), "C:OpenGPUCheck")
+    # opengfx.library 1.2 (amigachrome-guest): OpenGfx is inside opengpu.library 0.6, and the
+    # stub hands a program that opens opengfx.library the same calls there
+    gp.add("Libs/opengfx.library", (a.guest / "libraries/opengfx/build-amiga/lib/opengfx.library").read_bytes(),
+           "LIBS:opengfx.library")
     # The modules' third-party licences (Mesa: MIT; SDL 2 and its Amiga back ends:
     # Zlib), in OpenUp's drawer: not in LIBS:OpenGPU/, where the library looks for drivers
     gl_work = Path(os.environ.get("GL_WORK", a.openamigartg / "library/modules/gl/build"))
@@ -708,12 +774,45 @@ def main() -> int:
         dm.add("Utilities/OpenDemos.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)), "SYS:Utilities/OpenDemos.info", own=True)
         dm.write()
 
+    # OpenCrypto (openamigatls): opencrypto.library 2.0. On AmigaChrome its sums run
+    # on the PC (AC090's magic functions); elsewhere its own 68k code runs.
+    oc = None
+    if a.openamigatls:
+        ocl = (a.openamigatls / "build-amiga/lib/opencrypto.library").read_bytes()
+        ocv = re.search(rb"opencrypto\.library ([0-9]+\.[0-9]+)", ocl)
+        oc = Part(top, "OpenCrypto", ocv.group(1).decode() if ocv else "2.0",
+                  "OpenCrypto: opencrypto.library, SSH's and TLS's sums, on the PC on AmigaChrome")
+        oc.add("Libs/opencrypto.library", ocl, "LIBS:opencrypto.library")
+        oc.write()
+
+    # OpenPuTTY (openamigaputty), as its release lays it out, in a drawer in
+    # SYS:Utilities; its opencrypto.library is the OpenCrypto part's
+    pt = None
+    if a.openamigatls and a.openamigaputty:
+        pu = a.openamigaputty
+        pv = re.search(r'OPENPUTTY_VERSION "([0-9.]+)"', (pu / "amiga/main.c").read_text(errors="replace"))
+        stripped = pu / "build/os3-020/OpenPuTTY.stripped"
+        gcc16 = Path(os.environ.get("OS32_GCC16", Path.home() / "AmigaChrome/stoves/os32-gcc16"))
+        run([gcc16 / "prefix/bin/m68k-amigaos-strip", "-o", stripped, pu / "build/os3-020/OpenPuTTY"])
+        pi = pu / "build/icons"
+        pt = Part(top, "OpenPuTTY", pv.group(1) if pv else "0.2", "OpenPuTTY: PuTTY's SSH, Telnet and serial terminal, on OpenCrypto")
+        d = "Utilities/OpenPuTTY"
+        for rel, data in (("OpenPuTTY", stripped.read_bytes()), ("OpenPuTTY.info", (pi / "OpenPuTTY.info").read_bytes()),
+                          ("ReadMe", (pu / "docs/ReadMe.txt").read_bytes()), ("ReadMe.info", (pi / "Document.info").read_bytes()),
+                          ("LICENSE", (pu / "LICENSE").read_bytes()), ("LICENSE.info", (pi / "Document.info").read_bytes()),
+                          ("Licences/PuTTY.txt", (pu / "upstream/putty/LICENCE").read_bytes()),
+                          ("Licences/PuTTY.txt.info", (pi / "Document.info").read_bytes()),
+                          ("Licences.info", (pi / "Drawer.info").read_bytes())):
+            pt.add(f"{d}/{rel}", data, f"SYS:{d}/{rel}")
+        pt.add("Utilities/OpenPuTTY.info", (pi / "Drawer.info").read_bytes(), "SYS:Utilities/OpenPuTTY.info", own=True)
+        pt.write()
+
     # GCC 16's FPCR clash (openamigartg tools/fpcr_check.py) must not be in
     # anything the graphics parts ship, whichever stove built it.
     objdump = next((p for p in (Path.home() / "AmigaChrome/stoves/os32-gcc16/prefix/bin/m68k-amigaos-objdump",
                                 STOVE / "prefix/bin/m68k-amigaos-objdump") if p.is_file()), None)
     if objdump:
-        shipped = [f for part in (rt, gp, w3, dm) if part for f in sorted(part.dir.rglob("*"))
+        shipped = [f for part in (rt, gp, w3, dm, oc, pt) if part for f in sorted(part.dir.rglob("*"))
                    if f.is_file() and f.name != "Part" and not f.name.endswith((".info", ".prefs")) and f.read_bytes()[:4] == b"\0\0\x03\xf3"]
         run([sys.executable, a.openamigartg / "tools/fpcr_check.py", objdump] + shipped)
 
@@ -886,8 +985,8 @@ def main() -> int:
     try:
         open_icons(a.amigachrome, [
             (a.out / "OpenUp.info", "drawer-OpenUp"), (top / "Install-OpenUp.info", "Install-OpenUp"),
-            (top / "Uninstall-OpenUp.info", "Install-OpenUp"), (core.dir / "Utilities/OpenUp.info", "drawer-OpenUp"),
-            (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "Install-OpenUp"),
+            (top / "Uninstall-OpenUp.info", "Uninstall-OpenUp"), (core.dir / "Utilities/OpenUp.info", "drawer-OpenUp"),
+            (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "Uninstall-OpenUp"),
             (pr.dir / "Icons/OpenPrint.info", "drawer-OpenPrint"), (pr.dir / "Drawer/OpenView.info", "OpenView"),
             (pr.dir / "Drawer/Printers and Queue.info", "Printers and Queue"),
             (ty.dir / "Prefs/OpenTypes.info", "OpenTypes"), (look.dir / "Prefs/Look.info", "Look"),
@@ -902,7 +1001,8 @@ def main() -> int:
             drawers={a.out / "OpenUp.info": [top / "Install-OpenUp.info", top / "Uninstall-OpenUp.info"],
                      core.dir / "Utilities/OpenUp.info": [core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info"],
                      pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info")),
-                     wr.dir / "Utilities/OpenWrite.info": [wr.dir / "Utilities/OpenWrite/OpenWrite.info"]})
+                     wr.dir / "Utilities/OpenWrite.info": [wr.dir / "Utilities/OpenWrite/OpenWrite.info"]},
+            gorilla_drawer=gorilla_drawer)
     except Exception as e:                  # an amigachrome checkout without amiga_icon (before #153): the icons above stay
         print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
