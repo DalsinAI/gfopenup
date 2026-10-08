@@ -828,6 +828,7 @@ def main(argv=None) -> int:
     import amiga_icon
 
     recipes = parse_recipes(RECIPES)
+    a.out.mkdir(parents=True, exist_ok=True)
     made, skipped, missing = {}, [], []
     by_folder: dict[str, list] = {}
     for r in rows():
