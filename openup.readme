@@ -14,7 +14,7 @@ It finds what it is running on (a real Amiga with its cards, a PiStorm, or
 AmigaChrome) and installs the Open family to match. Anything it replaces is
 kept, and one uninstaller puts everything back.
 
-Version 0.6 is for AmigaChrome instances. Its Installer installs, as you
+Version 0.7 is for AmigaChrome instances. Its Installer installs, as you
 choose:
 - OpenSocket: the network, through the x86 or ARM64 cores (bsdsocket.library
   4.2);
