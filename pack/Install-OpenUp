@@ -29,18 +29,18 @@
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook, 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
 ; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus,
 ; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle, 262144 Sound, 524288 OpenEdit,
-; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser, 8388608 OpenMulticore, 16777216 OpenGPU,
-; 33554432 Warp3D, 67108864 OpenDemos. Kept for parts still to come: 134217728 OpenPuTTY, 268435456 OpenCrypto.
-; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser and OpenDemos (60751359);
-; elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D (10419706).
-; Three questions of nine parts each: the 3.2 Installer shows nine choices a page,
+; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser, 8388608 OpenMulticore, 16777216 Icons (Gorilla),
+; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY.
+; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos and OpenPuTTY
+; (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D (295632378).
+; Four questions of at most nine parts: the 3.2 Installer shows nine choices a page,
 ; and a longer askoptions comes back with the defaults of its first pages mixed up
 ; (8 October 2026, on a scratch instance: 60751359 came back as 30265063). Each
-; group is bits 0-8, 9-17 and 18-26 of #parts, so the bits above keep their meaning.
-(set #default (if #ac 60751359 10419706))
+; group is bits 0-8, 9-17, 18-26 and 27-29 of #parts, so the bits above keep their meaning.
+(set #default (if #ac 396295679 295632378))
 (set #g1
     (askoptions
-        (prompt "Which parts should OpenUp install? (1 of 3)")
+        (prompt "Which parts should OpenUp install? (1 of 4)")
         (help "OpenSocket: the Amiga's network (bsdsocket.library 4.2), through this PC. "
               "AmigaChrome instances only.\n\n"
               "OpenPrint and OpenView: print to PDF and to printers on your network, "
@@ -75,7 +75,7 @@
         (default (bitand #default 511))))
 (set #g2
     (askoptions
-        (prompt "Which parts should OpenUp install? (2 of 3)")
+        (prompt "Which parts should OpenUp install? (2 of 4)")
         (help "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
               "on AmigaChrome's graphics board. Picasso96's monitor for that board is put "
               "aside in SYS:Storage, and Uninstall puts it back. New: off unless you pick it.\n\n"
@@ -115,7 +115,7 @@
         (default (bitand (shiftright #default 9) 511))))
 (set #g3
     (askoptions
-        (prompt "Which parts should OpenUp install? (3 of 3)")
+        (prompt "Which parts should OpenUp install? (3 of 4)")
         (help "Sound: one place for the volume, Amiga sound (Paula) and AHI sound, with Test "
               "buttons, and a speaker on the menu bar: click for the levels, the wheel turns it "
               "up and down (new). The old Sound editor moves to SYS:Prefs/Classic.\n\n"
@@ -138,23 +138,43 @@
               "on this PC's graphics chip through AmigaChrome's graphics board; where there is "
               "no board they run on the Amiga's own CPU, as before (new). SDL 2 and GL are in "
               "LIBS:OpenGPU and load only when a program asks. OpenGPUCheck in a Shell checks it.\n\n"
-              "Warp3D: Warp3D.library 5.0 for Warp3D games and programs, drawn through OpenGPU "
+              "Icons: Gorilla, AROS's icon set, as new pictures for the system's own drawers, "
+              "programs and default icons (new). Each icon keeps what it does; the old "
+              "pictures are kept in SYS:Storage, and Uninstall-OpenUp puts them back.\n\n"
+              "Warp3D and MiniGL: Warp3D.library 5.0 and minigl.library (OpenGL 1.1) for Warp3D "
+              "and MiniGL games and programs, drawn through OpenGPU "
               "(new). It needs a 68040 or 68060 with its FPU. A Warp3D.library already there "
               "(Wazp3D's, say) is kept in SYS:Storage, and Wazp3D's settings are taken over; "
-              "Warp3DPrefs in a Shell changes them. W3DTest in SYS:Tools shows it working.\n\n"
-              "OpenDemos: Boing, Chrome Gears and Copper Tunnel, three small 3D demos in GL "
-              "(new, off unless picked; needs OpenGPU and an FPU). In SYS:Utilities/OpenDemos.")
+              "Warp3DPrefs in a Shell changes them. W3DTest and MGLTest in SYS:Tools show them working.")
         (choices "Sound: levels and a menu bar speaker"
                  "OpenEdit: a text editor"
                  "OpenWrite: a word processor"
                  "OpenMail: mail (preview, needs AmiSSL 5)"
                  "OpenBrowser: a web browser (preview)"
                  "OpenMulticore: work on a cores board"
+                 "Icons: Gorilla's pictures on the system's icons"
                  "OpenGPU: SDL and GL on the PC's chip (new)"
-                 "Warp3D: Warp3D 5.0 (new, needs a 68040)"
-                 "OpenDemos: three 3D demos in GL (new)")
+                 "Warp3D and MiniGL: 3D on OpenGPU (new, 68040)")
         (default (bitand (shiftright #default 18) 511))))
-(set #parts (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)))
+(set #g4
+    (askoptions
+        (prompt "Which parts should OpenUp install? (4 of 4)")
+        (help "OpenDemos: Boing, Chrome Gears and Copper Tunnel, three small 3D demos in GL "
+              "(new, off unless picked; needs OpenGPU and an FPU). In SYS:Utilities/OpenDemos.\n\n"
+              "OpenCrypto: opencrypto.library 2.0, the sums behind secure connections (SSH's key "
+              "exchanges, host keys, SHA-2, AES) for the Open programs (new). On AmigaChrome they "
+              "run on the PC, elsewhere on the Amiga's own CPU. OpenPuTTY needs it, so it comes "
+              "with OpenPuTTY whatever is picked here.\n\n"
+              "OpenPuTTY: PuTTY for AmigaOS 3.2, SSH, Telnet and serial terminals, with key "
+              "sign-in (new, version 0.2, off unless picked). It needs a network stack "
+              "(bsdsocket.library: OpenSocket, Roadshow or AmiTCP). In SYS:Utilities/OpenPuTTY.")
+        (choices "OpenDemos: three 3D demos in GL (new)"
+                 "OpenCrypto: SSH and TLS sums (new)"
+                 "OpenPuTTY: SSH and Telnet (new)")
+        (default (bitand (shiftright #default 27) 7))))
+(set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
+; OpenPuTTY needs OpenCrypto
+(if (bitand #parts 536870912) (set #parts (bitor #parts 268435456)))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -164,18 +184,26 @@
         (select
             (askchoice
                 (prompt "Which look?")
-                (help "Open: light grey with blue, in the AmigaOS 4 style.\n"
+                (help "Open: calm and flat, with one blue accent: OpenUp's own look.\n"
+                      "Glass: steel-blue glass, in the AmigaOS 4 style.\n"
                       "Graphite: graphite and steel, in the AmiKit style.\n"
                       "Ember: flat warm greys with orange, in the Ubuntu style.\n"
                       "Clear: flat, light and rounded, in the Windows 11 style.\n"
                       "Classic: the OS's own look, drawn as it always was.\n\n"
                       "You can change it later with OpenLook THEME <name> SAVE.")
-                (choices "Open" "Graphite" "Ember" "Clear" "Classic")
+                (choices "Open" "Glass" "Graphite" "Ember" "Clear" "Classic")
                 (default 0))
-            "Open" "Graphite" "Ember" "Clear" "Classic")))
-(set #look (cat #theme " light"))
+            "Open" "Glass" "Graphite" "Ember" "Clear" "Classic")))
+; with a look, the windows of the look approved on 8 October 2026: no zoom
+; gadget, scroll bars only when needed, and no size gadget when OpenWindows is
+; picked too (it resizes from the edges; without it the size gadget stays).
+; *N is a new line inside a quoted AmigaDOS argument.
+(set #look (cat #theme " light*Nzoom off*Nscrollers auto"))
+(if (bitand #parts 1024) (set #look (cat #look "*Nsizegadget off")))
 (set #back (cat #theme "-light"))
-(if (= #theme "Classic") (set #back ""))
+; on AmigaChrome, its own backdrop: the theme's colours with chrome sweeps
+(if #ac (set #back (cat #theme "-light-chrome")))
+(if (= #theme "Classic") ((set #look "Classic light") (set #back "")))
 
 ; Each part: OpenUpTool INSTALL, its messages in T:OpenUp.log.
 (run "Delete >NIL: T:OpenUp.log")
@@ -238,6 +266,15 @@
         (if (<> #back "")
             (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/OpenUp/" #back " >>T:OpenUp.log")))))
 
+; a pack built with --no-gorilla has no Parts/GorillaIcons: the icons keep their pictures
+(if (bitand #parts 16777216)
+    (if (exists "Parts/GorillaIcons/Part")
+        (
+            (working "Giving the system's icons Gorilla's pictures")
+            (if (> (run (cat #tool " INSTALL Parts/GorillaIcons >>T:OpenUp.log")) 5)
+                (message "Some icons kept their old pictures. T:OpenUp.log says why; nothing else changed.")))
+        (message "This pack was made without Gorilla's icons, so the system's icons keep their pictures.")))
+
 (if (bitand #parts 32)
     (
         (working "Installing OpenTypes")
@@ -277,7 +314,7 @@
         (if (> (run (cat #tool " INSTALL Parts/OpenRTG >>T:OpenUp.log")) 5)
             (message "OpenRTG didn't install completely. T:OpenUp.log says why."))))
 
-(if (bitand #parts 16777216)
+(if (bitand #parts 33554432)
     (
         (working "Installing OpenGPU")
         (if (> (run (cat #tool " INSTALL Parts/OpenGPU >>T:OpenUp.log")) 5)
@@ -286,7 +323,7 @@
 ; Warp3D, as it always has, needs a 68040 or 68060 and its FPU. Wazp3D's
 ; settings are taken over once (ENVARC:OpenAmiga/Wazp3D-taken says so), and
 ; Wazp3D's own files stay where they are.
-(if (bitand #parts 33554432)
+(if (bitand #parts 67108864)
     (if (or (= (database "fpu") "NOFPU") (and (<> (database "cpu") "68040") (<> (database "cpu") "68060")))
         (message "Warp3D needs a 68040 or 68060 with its FPU, and this Amiga doesn't have one, "
                  "so it was left out. Nothing else changed.")
@@ -299,7 +336,7 @@
                     (if (< (run "C:Warp3DPrefs FROMWAZP3D SAVE >>T:OpenUp.log") 10)
                         (textfile (dest "ENVARC:OpenAmiga/Wazp3D-taken") (append "OpenUp took Wazp3D's settings over for Warp3D.\n"))))))))
 
-(if (bitand #parts 67108864)
+(if (bitand #parts 134217728)
     (
         (working "Installing OpenDemos")
         (if (> (run (cat #tool " INSTALL Parts/OpenDemos >>T:OpenUp.log")) 5)
@@ -307,6 +344,18 @@
         (if (not (exists "LIBS:OpenGPU/GL.module"))
             (message "OpenDemos draws with GL, which comes with OpenGPU. Run Install-OpenUp "
                      "again and pick OpenGPU too."))))
+
+(if (bitand #parts 268435456)
+    (
+        (working "Installing OpenCrypto")
+        (if (> (run (cat #tool " INSTALL Parts/OpenCrypto >>T:OpenUp.log")) 5)
+            (message "OpenCrypto didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 536870912)
+    (
+        (working "Installing OpenPuTTY")
+        (if (> (run (cat #tool " INSTALL Parts/OpenPuTTY >>T:OpenUp.log")) 5)
+            (message "OpenPuTTY didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (if (bitand #parts 1024)
     (
