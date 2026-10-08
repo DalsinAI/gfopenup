@@ -170,35 +170,59 @@ def os32_icons(oap: Path, icons_mod, jobs: list[tuple[Path, str | None]]) -> Non
 
 
 OPEN_ART = ROOT / "icons" / "open"     # the Open apps' pictures, 64 x 64 (tools/open_icons_art.py draws them)
+ICON_SCALE = 0.85                      # shown at 85 per cent, as Gorilla's are (the approved look)
 
 
-def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Path, list[Path]]) -> None:
+def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Path, list[Path]],
+               gorilla_drawer: bytes | None = None) -> None:
     """The Open apps' own icons: each job's icon keeps what it is (type,
     default tool, tool types, stack) and gets its picture from icons/open as
     a GlowIcon, dithered for a 16-bit screen. Icons in drawers we share with
     the system (Prefs, Utilities, Tools) are left unplaced, so Workbench puts
     them where there is room; `drawers` maps each drawer icon of our own to
     the icons in it, which are laid out on a grid with the window sized to
-    them (amigachrome's icon_theme, as Cradle's new icon set does)."""
+    them (amigachrome's icon_theme, as Cradle's new icon set does).
+
+    Every picture is shown at ICON_SCALE. A drawer of our own (drawer-NAME)
+    is its badge (badge-NAME) on Gorilla's drawer when the pack ships Gorilla
+    (gorilla_drawer: its PNG, GPL like the rest of the set), else on our own
+    drawer (drawer-NAME.png)."""
+    import io
+    from PIL import Image
     sys.path.insert(0, str(amigachrome / "scripts"))
     import amiga_icon
     import icon_theme
 
-    def frame(path: Path) -> tuple[int, int, bytes]:
-        w, h, rgba = amiga_icon.png_decode(path.read_bytes())
-        hard = bytearray(rgba)
-        for i in range(0, len(hard), 4):              # GlowIcons: every pixel solid or see-through
-            hard[i:i + 4] = hard[i:i + 3] + b"\xff" if hard[i + 3] >= 110 else b"\0\0\0\0"
-        return w, h, bytes(hard)
+    def picture(name: str) -> Image.Image:
+        return Image.open(OPEN_ART / f"{name}.png").convert("RGBA")
+
+    def frames(name: str) -> list[Image.Image]:
+        """NAME.png at rest and NAME-selected.png chosen (ICONS.md), or a drawer's badge on Gorilla's drawer."""
+        if name.startswith("drawer-") and gorilla_drawer:
+            badge = name[len("drawer-"):]
+            out = []
+            for suffix in ("", "-selected"):
+                f = Image.open(io.BytesIO(gorilla_drawer)).convert("RGBA")
+                f.alpha_composite(picture(f"badge-{badge}{suffix}").resize(f.size, Image.LANCZOS))
+                out.append(f)
+            return out
+        rest = picture(name)
+        chosen = picture(f"{name}-selected") if (OPEN_ART / f"{name}-selected.png").exists() else rest
+        if chosen.size != rest.size:
+            raise SystemExit(f"{name}-selected.png: {chosen.size}, but {name}.png is {rest.size}")
+        return [rest, chosen]
+
+    def hard(im: Image.Image) -> tuple[int, int, bytes]:
+        """At ICON_SCALE, every pixel solid or see-through (a GlowIcon)."""
+        im = im.resize((max(1, round(im.width * ICON_SCALE)), max(1, round(im.height * ICON_SCALE))), Image.LANCZOS)
+        rgba = bytearray(im.tobytes())
+        for i in range(0, len(rgba), 4):
+            rgba[i:i + 4] = rgba[i:i + 3] + b"\xff" if rgba[i + 3] >= 110 else b"\0\0\0\0"
+        return im.width, im.height, bytes(rgba)
 
     def art(name: str) -> list[tuple[int, int, bytes]]:
-        """The icon's two frames (docs/ICONS.md): NAME.png at rest, and NAME-selected.png,
-        its second frame, with the glow round it, shown while the icon is chosen."""
-        w, h, rest = frame(OPEN_ART / f"{name}.png")
-        chosen = OPEN_ART / f"{name}-selected.png"
-        sw, sh, sel = frame(chosen) if chosen.exists() else (w, h, rest)
-        if (sw, sh) != (w, h):
-            raise SystemExit(f"{chosen.name}: {sw}x{sh}, but {name}.png is {w}x{h}")
+        """The icon's two frames, dithered for a 16-bit screen, the glow round the chosen one."""
+        (w, h, rest), (_, _, sel) = (hard(f) for f in frames(name))
         return [(w, h, amiga_icon.dither_rgb565(w, h, rest)),
                 (w, h, amiga_icon.dither_rgb565(w, h, amiga_icon.glow_selected(w, h, sel)))]
 
@@ -505,9 +529,11 @@ def main() -> int:
     # Gorilla: AROS's icon set (GPL) as new pictures for the system's own icons
     # (ICONS.md section 8). Fetched at the AROS commit pinned in
     # tools/gorilla_icons.py and checked against tools/gorilla.lock; never committed.
+    gorilla_drawer = None                   # with Gorilla, our drawers' badges go on its drawer (open_icons)
     if not a.no_gorilla:
         sys.path.insert(0, str(ROOT / "tools"))
         import gorilla_icons
+        gorilla_drawer = gorilla_icons.drawer_png(ROOT / "build" / "cache")
         gi = Part(top, "GorillaIcons", "0.1", "Gorilla, AROS's icon set (GPL): new pictures for the system's drawers, programs and default icons")
         for text in gorilla_icons.build(gi.dir, a.amigachrome, ROOT / "build" / "cache"):
             gi.line(text)
@@ -793,8 +819,8 @@ def main() -> int:
     try:
         open_icons(a.amigachrome, [
             (a.out / "OpenUp.info", "drawer-OpenUp"), (top / "Install-OpenUp.info", "Install-OpenUp"),
-            (top / "Uninstall-OpenUp.info", "Install-OpenUp"), (core.dir / "Utilities/OpenUp.info", "drawer-OpenUp"),
-            (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "Install-OpenUp"),
+            (top / "Uninstall-OpenUp.info", "Uninstall-OpenUp"), (core.dir / "Utilities/OpenUp.info", "drawer-OpenUp"),
+            (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "Uninstall-OpenUp"),
             (pr.dir / "Icons/OpenPrint.info", "drawer-OpenPrint"), (pr.dir / "Drawer/OpenView.info", "OpenView"),
             (pr.dir / "Drawer/Printers and Queue.info", "Printers and Queue"),
             (ty.dir / "Prefs/OpenTypes.info", "OpenTypes"), (look.dir / "Prefs/Look.info", "Look"),
@@ -809,7 +835,8 @@ def main() -> int:
             drawers={a.out / "OpenUp.info": [top / "Install-OpenUp.info", top / "Uninstall-OpenUp.info"],
                      core.dir / "Utilities/OpenUp.info": [core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info"],
                      pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info")),
-                     wr.dir / "Utilities/OpenWrite.info": [wr.dir / "Utilities/OpenWrite/OpenWrite.info"]})
+                     wr.dir / "Utilities/OpenWrite.info": [wr.dir / "Utilities/OpenWrite/OpenWrite.info"]},
+            gorilla_drawer=gorilla_drawer)
     except Exception as e:                  # an amigachrome checkout without amiga_icon (before #153): the icons above stay
         print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
