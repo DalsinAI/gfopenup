@@ -414,6 +414,11 @@ def build_parts(a):
         run(["sh", a.openamigainput / "library/build.sh", a.openamigainput / "build"], env=dict(env, STOVE=str(STOVE)))
         run(["sh", a.openamigaprefs / "Gamepads/build.sh"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
+        # make_sdk.py won't write over a kit: a rebuild's old one goes to archive/ beside it
+        for old in Path(a.opengpu_sdk).glob("OpenGPU-SDK-*/"):
+            arch = Path(a.opengpu_sdk) / "archive"
+            arch.mkdir(parents=True, exist_ok=True)
+            old.rename(arch / f"{old.name}-{time.strftime('%Y%m%dT%H%M%S')}")
         run([sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
              "--gl", gl_out, a.opengpu_sdk], env=dict(os.environ))
     p = a.openamigaprint
