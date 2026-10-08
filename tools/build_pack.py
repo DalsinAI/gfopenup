@@ -471,7 +471,7 @@ def main() -> int:
     # AmigaChrome sharing: the control device, the clipboard and the files tools
     gout = a.guest / "build/guest/os32"
     icondir = a.amigachrome / "resources/icons/collections/amigachrome-guest/os3"
-    sh = Part(top, "AmigaChromeSharing", "1.2", "accontrol.device, ACClip and ACDrop: the clipboard and files, with this PC")
+    sh = Part(top, "AmigaChromeSharing", "1.3", "accontrol.device, ACClip and ACDrop: the clipboard and files, with this PC (Send to PC icon optional)")
     sh.line("needs AmigaChrome")
     sh.add("Devs/accontrol.device", (gout / "accontrol.device").read_bytes(), "SYS:Devs/accontrol.device")
     for tool_name in ("ACClip", "ACDrop"):
