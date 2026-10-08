@@ -8,7 +8,7 @@ OpenUp: install AmigaOS 3.2.3, run one pack, and it's ready, on a real Amiga, a 
 
 ## Where it stands
 
-_Updated 8 October 2026._ OpenUp 0.6.17 is on GitHub (tag v0.6.17). The next release is 0.7.0 (the user, 8 October 2026: 0.6.18 grew into it), built from this branch after #55's icon fix and not yet published: OpenGPU 0.7 (opengpu.library 0.7, OpenGfx's look hook) with OpenLook 0.6, which must ship together, so only OpenGfx patches RectFill and Text; OpenTitle 0.6 with the taskspace; Tata 0.2 unticked while 0.x (bit 1073741824, the first parts word's last bit); a second parts word and a fifth question for OpenFTP (1; FTPS needs AmiSSL 5, not included), Unofficial Telegram (2; needs the user's own API key and the telegram.td/1 service) and the OpenGPU developer files (4), none ticked; AmigaChromeSharing 1.4 (ACDrop 1.3, Send Out); SDL2.module 3; the installer's wording; and the OS 3.2-style icons, which 0.6.17 left out because build_pack.py gave OpenCrypto's part OpenCompress's name. It waits for GL and SDL 2 resident, every drawing patch under OpenGfx, and the null-pointer fixes.
+_Updated 8 October 2026._ OpenUp 0.6.17 is on GitHub (tag v0.6.17). The next release is 0.7.0 (the user, 8 October 2026: 0.6.18 grew into it), built from this branch and not yet published: OpenGPU 0.8 (opengpu.library 0.8: OpenGfx owns every graphics.library drawing call, 22 of them) with OpenRTG 0.13 and OpenLook 0.6, which must ship together, so only OpenGfx patches the drawing calls; OpenTitle 0.6 with the taskspace; Tata 0.2 unticked while 0.x (bit 1073741824, the first parts word's last bit); a second parts word and a fifth question for OpenFTP (1; FTPS needs AmiSSL 5, not included), Unofficial Telegram (2; needs the user's own API key and the telegram.td/1 service) and the OpenGPU developer files (4), none ticked; AmigaChromeSharing 1.4 (ACDrop 1.3, Send Out); SDL2.module 3; the installer's wording; every 68k part built with -fno-delete-null-pointer-checks; and the OS 3.2-style icons, which 0.6.17 left out (#55). It waits for GL and SDL 2 truly resident.
 
 Phases (DESIGN.md section 5): 1 done for AmigaChrome (Setup 0.1 and the startup switches included); 2 under way (OpenBrowser and OpenMail next, as parts left unticked); 3 (PiStorm, real A1200) waits; 4 (Cradle's OS 3.2.3 recipes apply the pack) is live in Cradle (8 October 2026, with 0.6.14 registered); 5's OpenUp Update is built (Cradle first; the GitHub step next). OpenUp Picks is no longer a requirement.
 
@@ -32,7 +32,7 @@ Phases (DESIGN.md section 5): 1 done for AmigaChrome (Setup 0.1 and the startup 
 
 ## Waiting on @SacredTrees
 
-- The word that OpenPuTTY 0.2 (on OpenCrypto) is ready, then the 0.6.17 release.
+- GL and SDL 2 truly resident, then the word to publish 0.7.0.
 
 ## Who owns it
 
