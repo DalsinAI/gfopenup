@@ -8,7 +8,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
-        [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR]
+        [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
         [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
@@ -78,6 +78,9 @@ a Part file that C/OpenUpTool reads:
   OpenGPUDev/           the OpenGPU developer files (openamigartg tools/make_sdk.py's kit) in
                         SYS:Developer/OpenGPU-SDK with the OpenGPU-SDK: assign, off by
                         default (--opengpu-sdk DIR: the kit is made in, or read from, DIR)
+  OpenInput/            openinput.library (game controllers for every program), C:OIList,
+                        OpenPrefs Gamepads in SYS:Prefs and the docs; off by default; its
+                        startup line is Gamepads USE (--openamigainput)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
@@ -405,7 +408,17 @@ def build_parts(a):
     if a.openamigatelegram:
         run(["sh", a.openamigatelegram / "build-os3.sh"], env=dict(os.environ, STOVE=str(STOVE)))
     # The OpenGPU developer files: openamigartg's kit, from this build's libraries
+    # OpenInput (openamigainput): openinput.library and OIList (os32 stove), and
+    # OpenPrefs Gamepads, its editor (openamigaprefs, with OpenInput's headers)
+    if a.openamigainput:
+        run(["sh", a.openamigainput / "library/build.sh", a.openamigainput / "build"], env=dict(env, STOVE=str(STOVE)))
+        run(["sh", a.openamigaprefs / "Gamepads/build.sh"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
+        # make_sdk.py won't write over a kit: a rebuild's old one goes to archive/ beside it
+        for old in Path(a.opengpu_sdk).glob("OpenGPU-SDK-*/"):
+            arch = Path(a.opengpu_sdk) / "archive"
+            arch.mkdir(parents=True, exist_ok=True)
+            old.rename(arch / f"{old.name}-{time.strftime('%Y%m%dT%H%M%S')}")
         run([sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
              "--gl", gl_out, a.opengpu_sdk], env=dict(os.environ))
     p = a.openamigaprint
@@ -465,6 +478,76 @@ def play_art() -> bytes:
     return img.tobytes()
 
 
+def binary_version(data: bytes, name: str) -> str | None:
+    """The version a program's $VER (or a library's or device's ID string)
+    gives for name: "$VER: OpenDock 0.4 (...)" or "opengpu.library 0.9 (...)"."""
+    n = re.escape(name.encode("latin-1"))
+    m = re.search(rb"\$VER: ?" + n + rb" ([0-9][0-9.]*[0-9])", data) or re.search(rb"(?<![A-Za-z0-9_.])" + n + rb" ([0-9]+\.[0-9][0-9.]*) \(", data)
+    return m.group(1).decode() if m else None
+
+
+# Each part's main binary: the part's declared version (its Part file, the
+# Installer's log, the manifest) must be that binary's $VER version.
+PART_MAIN = {
+    "OpenUp": ("Utilities/OpenUp/Uninstall-OpenUp", "Uninstall-OpenUp"),
+    "OpenBlanker": ("Tools/Commodities/OpenBlanker", "OpenBlanker"),
+    "OpenSocket": ("Libs/bsdsocket.library", "bsdsocket.library"),
+    "OpenPrint": ("C/OpenPrint", "OpenPrint"),
+    "OpenLook": ("C/OpenLook", "OpenLook"),
+    "OpenTypes": ("Prefs/OpenTypes", "OpenTypes"),
+    "OpenCompress": ("Utilities/OpenCompress", "OpenCompress"),
+    "OpenService": ("Devs/openservice.device", "openservice.device"),
+    "OpenMulticore": ("Libs/openmulticore.library", "openmulticore.library"),
+    "OpenRTG": ("Libs/openrtg.library", "openrtg.library"),
+    "OpenGPU": ("Libs/opengpu.library", "opengpu.library"),
+    "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
+    "OpenCrypto": ("Libs/opencrypto.library", "opencrypto.library"),
+    "OpenPuTTY": ("Utilities/OpenPuTTY/OpenPuTTY", "OpenPuTTY"),
+    "Tata": ("C/Tata", "Tata"),
+    "OpenFTP": ("Utilities/OpenFTP/OpenFTP", "OpenFTP"),
+    "Telegram": ("Utilities/UnofficialTelegram", "UnofficialTelegram"),
+    "OpenInput": ("Libs/openinput.library", "openinput.library"),
+    "OpenWindows": ("Tools/Commodities/OpenWindows", "OpenWindows"),
+    "OpenDock": ("C/OpenDock", "OpenDock"),
+    "OpenUpSetup": ("Prefs/OpenUp-Setup", "OpenUp-Setup"),
+    "OpenMenus": ("C/OpenMenus", "OpenMenus"),
+    "OpenFiles": ("Utilities/OpenFiles", "OpenFiles"),
+    "OpenPlay": ("Utilities/OpenPlay", "OpenPlay"),
+    "OpenTitle": ("C/OpenTitle", "OpenTitle"),
+    "Sound": ("Prefs/Sound", "Sound"),
+    "OpenEdit": ("C/OpenEdit", "OpenEdit"),
+    "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
+    "OpenMUI": ("Libs/zunemaster.library", "zunemaster.library"),
+    "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
+    "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
+}
+# Parts with a version of their own: bundles of several programs, or files
+# without a binary of their own to read.
+PART_OWN_VERSION = {"AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev"}
+
+
+def check_part_versions(parts: Path) -> None:
+    """Stops the build when a part's declared version is not its main
+    binary's $VER, or when a part says neither which binary that is nor
+    that it has a version of its own."""
+    wrong = []
+    for pf in sorted(parts.glob("*/Part")):
+        name, version = pf.read_text(encoding="latin-1").split("\n", 1)[0].split()[1:3]
+        if name in PART_OWN_VERSION:
+            continue
+        if name not in PART_MAIN:
+            wrong.append(f"{name} {version}: no main binary in PART_MAIN (or add it to PART_OWN_VERSION)")
+            continue
+        rel, vername = PART_MAIN[name]
+        f = pf.parent / rel
+        got = binary_version(f.read_bytes(), vername) if f.is_file() else None
+        if got != version:
+            wrong.append(f"{name}: the part says {version}, {rel} says {got or 'no version'}")
+    if wrong:
+        raise SystemExit("part versions don't match what they ship:\n  " + "\n  ".join(wrong))
+    print(f"  part versions: all {sum(1 for _ in parts.glob('*/Part'))} match their programs")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--version", default="0.1")
@@ -505,6 +588,8 @@ def main() -> int:
                     help="openamigaftp, for the OpenFTP part (left out without it)")
     ap.add_argument("--openamigatelegram", type=Path, default=first(DEV / "openamigatelegram", DEV.parent / "openamigatelegram"),
                     help="openamigatelegram, for the Telegram part (left out without it)")
+    ap.add_argument("--openamigainput", type=Path, default=first(DEV / "openamigainput", DEV.parent / "openamigainput"),
+                    help="openamigainput, for the OpenInput part (left out without it)")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the OpenGPU developer kit is made (or, with --no-build, read): the OpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -571,7 +656,7 @@ def main() -> int:
 
     # OpenPrint and OpenView: openamigaprint's own package, laid out as its Installer does
     pkg = a.openamigaprint / "build/package/OpenPrint"
-    pr = Part(top, "OpenPrint", "0.4", "OpenPrint and OpenView: printing to PDF and IPP, and viewing")
+    pr = Part(top, "OpenPrint", "0.3", "OpenPrint and OpenView: printing to PDF and IPP, and viewing")
     for p in sorted(pkg.rglob("*")):
         if not p.is_file():
             continue
@@ -653,7 +738,7 @@ def main() -> int:
 
     # OpenService: the services device and Nursery (openamigaservice). It
     # does nothing on the LAN until ENV:OpenService/Paired lists a Cradle.
-    sv = Part(top, "OpenService", "0.1", "OpenService: services from AutoConfig boards and paired Cradles")
+    sv = Part(top, "OpenService", "1.1", "OpenService: services from AutoConfig boards and paired Cradles")
     sv.add("Devs/openservice.device", (a.openamigaservice / "bin/openservice.device").read_bytes(), "DEVS:openservice.device")
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
     sv.write()
@@ -678,7 +763,7 @@ def main() -> int:
     img.write()
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
-    ow = Part(top, "OpenWindows", "0.4", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
+    ow = Part(top, "OpenWindows", "0.5", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
     ow.add("Prefs/Windows", (a.openamigaprefs / "Windows/build/os3/Windows").read_bytes(), "SYS:Prefs/Windows")
     ow.add("Prefs/Windows.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Windows.info")
     ow.add("Tools/Commodities/OpenWindows", (a.openamigaprefs / "Windows/build/os3/OpenWindows").read_bytes(),
@@ -701,7 +786,7 @@ def main() -> int:
     # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
     # Installer runs "SYS:Prefs/Dock SAVE" once, on a first install, so the
     # dock starts with the buttons of a dock already there.
-    dock = Part(top, "OpenDock", "0.3", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "OpenDock", "0.4", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     dock.add("Prefs/Dock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/Dock")
     dock.add("Prefs/Dock.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Dock.info")
@@ -716,7 +801,7 @@ def main() -> int:
 
     # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "OpenMenus", "0.5", "OpenMenus: our own menus, the menu bar at any edge, right-click menus on Workbench, and their editor")
+    menus = Part(top, "OpenMenus", "0.4", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
     menus.add("Prefs/Menus", (a.openamigaprefs / "Menus/build/os3/Menus").read_bytes(), "SYS:Prefs/Menus")
     menus.add("Prefs/Menus.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Menus.info")
@@ -933,6 +1018,35 @@ def main() -> int:
         dev.line("startup Assign OpenGPU-SDK: SYS:Developer/OpenGPU-SDK")
         dev.write()
 
+    # OpenInput (openamigainput): openinput.library, every game controller in one
+    # standard layout; C:OIList; OpenPrefs Gamepads (openamigaprefs) to test, map
+    # and choose ports; the docs. "Gamepads USE" at boot applies the saved settings
+    # (the ReadJoyPort patch too, when the user switched it on). Off by default.
+    # On AmigaChrome the cores' pad window (amigachrome #352) is still to come, so
+    # an instance sees only the Amiga's ports until it is there.
+    oin = None
+    if a.openamigainput:
+        oib = a.openamigainput / "build"
+        oil = (oib / "openinput.library").read_bytes()
+        oiv = re.search(rb"openinput\.library ([0-9]+\.[0-9]+)", oil)
+        oin = Part(top, "OpenInput", oiv.group(1).decode() if oiv else "1.2",
+                   "OpenInput: game controllers for every program, and Gamepads in Prefs (on AmigaChrome: the Amiga's ports for now)")
+        oin.add("Libs/openinput.library", oil, "LIBS:openinput.library")
+        oin.add("C/OIList", (oib / "OIList").read_bytes(), "SYS:C/OIList")
+        oin.add("Prefs/Gamepads", (a.openamigaprefs / "Gamepads/build/os3/Gamepads").read_bytes(), "SYS:Prefs/Gamepads")
+        oin.add("Prefs/Gamepads.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Gamepads.info")
+        d = "Utilities/OpenUp/Docs"
+        for name, src in (("OpenInput.txt", a.openamigainput / "README.md"),
+                          ("Design-OpenInput.txt", a.openamigainput / "Design-OpenInput.md"),
+                          ("Gamepads.txt", a.openamigaprefs / "Gamepads/gamepads.readme")):
+            oin.add(f"{d}/{name}", src.read_bytes(), f"SYS:{d}/{name}")
+            oin.add(f"{d}/{name}.info", icons.icon(icons.WBPROJECT, "page", "SYS:Utilities/MultiView", stack=16384), f"SYS:{d}/{name}.info")
+        oin.add("Utilities/OpenUp/Docs.info", icons.icon(icons.WBDRAWER, "drawer", window=(320, 120)), "SYS:Utilities/OpenUp/Docs.info", default=True)
+        oin.add("Utilities/OpenUp/Licences/OpenInput.txt", (a.openamigainput / "LICENSE").read_bytes(),
+                "SYS:Utilities/OpenUp/Licences/OpenInput.txt")
+        oin.line("startup SYS:Prefs/Gamepads USE")
+        oin.write()
+
     # GCC 16's FPCR clash (openamigartg tools/fpcr_check.py) must not be in
     # anything the graphics parts ship, whichever stove built it.
     objdump = next((p for p in (Path.home() / "AmigaChrome/stoves/os32-gcc16/prefix/bin/m68k-amigaos-objdump",
@@ -944,7 +1058,7 @@ def main() -> int:
 
     # OpenFiles: the file manager (openamigafilemanager). Double-click opens
     # files with their icon's program, else OpenView (the OpenPrint part).
-    of = Part(top, "OpenFiles", "0.2", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
+    of = Part(top, "OpenFiles", "0.2.2", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
     of.add("Utilities/OpenFiles", (a.openamigafilemanager / "build/os3/OpenFiles").read_bytes(), "SYS:Utilities/OpenFiles")
     of.add("Utilities/OpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenFiles.info")
     of.write()
@@ -1022,8 +1136,7 @@ def main() -> int:
     # there is none, so programs that offload (openmodule.datatype) work on
     # every machine; OMCTest checks it.
     mcb = a.openamigamulticore / "build"
-    mcv = next((l.split(":", 1)[1].strip() for l in (a.openamigamulticore / "openmulticore.readme").read_text(errors="replace").splitlines()
-                if l.startswith("Version:")), "0.1")
+    mcv = binary_version((mcb / "openmulticore.library").read_bytes(), "openmulticore.library") or "0.2"
     mc = Part(top, "OpenMulticore", mcv, "OpenMulticore: openmulticore.library, jobs on the cores board's other cores, and OMCTest")
     mc.add("Libs/openmulticore.library", (mcb / "openmulticore.library").read_bytes(), "LIBS:openmulticore.library")
     mc.add("Tools/OMCTest", (mcb / "OMCTest").read_bytes(), "SYS:Tools/OMCTest")
@@ -1106,7 +1219,10 @@ def main() -> int:
                     + ([(dm.dir / f"Utilities/OpenDemos/{n}.info", "page") for n in ("Boing", "Chrome Gears", "Copper Tunnel")]
                        + [(dm.dir / "Utilities/OpenDemos.info", None)] if dm else [])
                     + ([(tg.dir / "Utilities/UnofficialTelegram.info", "page")] if tg else [])
-                    + ([(dev.dir / "Developer/OpenGPU-SDK.info", None), (dev.dir / "Developer.info", None)] if dev else []))
+                    + ([(dev.dir / "Developer/OpenGPU-SDK.info", None), (dev.dir / "Developer.info", None)] if dev else [])
+                    + ([(oin.dir / "Prefs/Gamepads.info", "page"), (oin.dir / "Utilities/OpenUp/Docs.info", None)]
+                       + [(oin.dir / f"Utilities/OpenUp/Docs/{n}.info", "page") for n in ("OpenInput.txt", "Design-OpenInput.txt", "Gamepads.txt")]
+                       if oin else []))
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
     except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
         print(f"  (OS 3.2-style icons not made: {e}; the classic ones stay)")
@@ -1134,6 +1250,9 @@ def main() -> int:
     except Exception as e:                  # an amigachrome checkout without amiga_icon (before #153): the icons above stay
         print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
+    check_part_versions(top / "Parts")
+    if browser_top:
+        check_part_versions(browser_top / "Parts")
     if a.lha:
         arc = a.out / f"OpenUp-{a.version}.lha"
         arc.unlink(missing_ok=True)
