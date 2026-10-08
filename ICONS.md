@@ -54,7 +54,27 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 
 ## 3. Style
 
-Our look is AmigaOS 4.1's, in our own artwork, so the icons sit with the
+**From 8 October 2026 the house style is Gorilla's** (section 8): the set
+OpenUp ships for the system's own icons. Our icons are redrawn to sit with
+it, in our own drawing (nothing traced from Gorilla), and new ones are drawn
+that way:
+
+- **A bold black outline** round every shape, about two pixels at 64.
+- **Light from the top left**, soft gradients, a gentle gloss on the upper part.
+- **A soft shadow** below and to the right.
+- **Mostly front-on** pages and windows; things that stand (disks, the
+  trashcan, drawers) a little from above. Drawers of our own are Gorilla's
+  drawer with our badge at its foot (those are GPL, as Gorilla's drawer is).
+- **Prefs editors** carry the prefs mark: a small blue monitor with a
+  question mark, bottom left.
+- **85 per cent** of 64 when shown (the look approved on the canvas).
+
+The pilot (twelve icons, both frames, on the "OpenLook default theme
+candidates" canvas) was drawn this way with a small kit of our own; its
+approval starts the redraw. Until then the rules below stay for the icons
+already in `icons/open`.
+
+The style until 8 October 2026: AmigaOS 4.1's, in our own artwork, so the icons sat with the
 modern icon set (amigachrome's Boxie and OS4 pack):
 
 - **2:1 isometric.** Objects stand on the ground, seen from the front left;
@@ -124,3 +144,39 @@ OpenBrowser draws its own the same way in openamigabrowser's
 4. Build the pack and look at both frames (ACBuild's Icons tab, or
    `amiga_icon.pictures()` on the built `.info`).
 5. Put the new icon in the table in section 1.
+
+## 8. Gorilla: the system's icons, and what is still to draw
+
+**Gorilla** is AROS's icon set (`images/IconSets/Gorilla` in the AROS
+repository), under the GNU General Public License. It was chosen on
+8 October 2026 for OpenUp's look ("ship gorilla"): complete for a Workbench
+(a drawer for every SYS: drawer, the disks, RAM, the Shell, the prefs, the
+default icons), soft-shaded, at 60 pixels.
+
+- **Fetched, never committed.** `tools/gorilla_icons.py` fetches it at the
+  AROS commit it pins, checks every file it uses against `tools/gorilla.lock`
+  (SHA-256), and the pack build (`build_pack.py`, `--no-gorilla` to leave it
+  out) makes the GorillaIcons part.
+- **New faces, the icons' own selves.** For each icon the system has (the
+  SYS: drawers, OS 3.2.3's programs and prefs editors, the default icons in
+  `ENVARC:Sys`), the part holds a GlowIcon with only the picture, at 85 per
+  cent, and a `face` line: OpenUpTool 0.6 keeps the icon's type, default
+  tool, tool types, stack and drawer window and changes only its picture,
+  keeping the original in `SYS:Storage/OpenUp-Superseded` for UNINSTALL. An
+  icon the machine hasn't got is left alone.
+- **GlowIcons for now.** A GlowIcon has no partial transparency, so the soft
+  shadows end as a solid edge or nothing. The PNGs go in too
+  (`SYS:Storage/Icons/Gorilla`), with Gorilla's LEGAL and the GPL (COPYING):
+  they are the set's source under the GPL, and the pictures OpenUp will use
+  when it draws PNG icons (openworkbench.library, to come).
+- **Licences kept apart.** Gorilla's pictures, and anything drawn from them
+  (our drawers on Gorilla's drawer), are GPL and live apart from our own
+  icons (MIT). The GPL covers the pictures only, not the programs beside them.
+
+**What is still to draw** is in `icons/LIST.csv`: 640 icons, every Amiga
+thing that wants one (disks, drawers, prefs, the OS's tools and commodities,
+our apps, file types, situations, glyphs, pointers, and the programs people
+install), with what each is, what to draw, a priority (P1 ships with OpenUp
+on 3.2.3) and the Gorilla picture to start from where there is one. The
+names follow what Aminet's icon packs (pix/icon) cover. A row ticked off is
+an icon drawn both frames and in the pack.

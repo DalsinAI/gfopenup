@@ -22,6 +22,8 @@ a Part file that C/OpenUpTool reads:
   OpenLook/             the look and its themes (opengadtools), and its editor,
                         OpenPrefs Look, with the desktop profiles (openamigaprefs)
   Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
+  GorillaIcons/         AROS's Gorilla icon set (GPL) as new pictures for the system's
+                        icons, fetched at a pinned AROS commit (tools/gorilla_icons.py)
   OpenTypes/            which program opens each kind of file (openamigaprefs)
   OpenCompress/         OpenCompress, its window and command (openamigacompress)
   OpenService/          openservice.device and Nursery: services from boards and
@@ -392,6 +394,7 @@ def main() -> int:
     ap.add_argument("--zlib", type=Path, help="zlib 1.3 source for OpenWrite's DOCX and ODT (Chromium's, as the 1.0 release)",
                     default=first(DEV / "webkit-os32/deps/src/zlib", Path(os.environ.get("ZLIB_SRC", "/nonexistent"))))
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
+    ap.add_argument("--no-gorilla", action="store_true", help="leave out the Gorilla icons (they are fetched from AROS's repository)")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
@@ -498,6 +501,17 @@ def main() -> int:
     for png in sorted((o / "build/backdrops").glob("*.png")):
         bd.add(f"Backdrops/{png.name}", png.read_bytes(), f"SYS:Prefs/Presets/Backdrops/OpenUp/{png.name}")
     bd.write()
+
+    # Gorilla: AROS's icon set (GPL) as new pictures for the system's own icons
+    # (ICONS.md section 8). Fetched at the AROS commit pinned in
+    # tools/gorilla_icons.py and checked against tools/gorilla.lock; never committed.
+    if not a.no_gorilla:
+        sys.path.insert(0, str(ROOT / "tools"))
+        import gorilla_icons
+        gi = Part(top, "GorillaIcons", "0.1", "Gorilla, AROS's icon set (GPL): new pictures for the system's drawers, programs and default icons")
+        for text in gorilla_icons.build(gi.dir, a.amigachrome, ROOT / "build" / "cache"):
+            gi.line(text)
+        gi.write()
 
     # OpenTypes: which program opens each kind of file (openamigaprefs)
     ty = Part(top, "OpenTypes", "0.2", "OpenTypes: which program opens each kind of file")
