@@ -91,7 +91,7 @@ a Part file that C/OpenUpTool reads:
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs)
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
-  OpenMUI/              zunemaster.library, MUI from Zune for OS 3.x, and ZuneTest (openamigamui)
+  OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
   OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, and OMCTest (openamigamulticore)
   OpenMail/             OpenMail, the mail reader, and C:OpenMailCheck; needs AmiSSL 5 (openamigamail)
@@ -1185,9 +1185,15 @@ def main() -> int:
 
     # OpenMUI: zunemaster.library, MUI from Zune for OS 3.x (openamigamui), a
     # preview beside MUI, which it doesn't replace; ZuneTest shows it working.
+    # muimaster.library (0.2) is the face MUI programs open, a forwarder to
+    # zunemaster.library at MUI 3.8's version. It goes only where
+    # LIBS:muimaster.library is absent ("add": a real MUI, or any other
+    # program's file, stays; OpenUp's own copy is kept up to date and the
+    # uninstaller removes it).
     mui = a.openamigamui / "build/os3"
-    om = Part(top, "OpenMUI", "0.1", "OpenMUI: zunemaster.library, MUI from Zune (preview), and ZuneTest")
+    om = Part(top, "OpenMUI", "0.2", "OpenMUI: zunemaster.library, a muimaster.library face where there is no MUI (preview), and ZuneTest")
     om.add("Libs/zunemaster.library", (mui / "zunemaster.library").read_bytes(), "LIBS:zunemaster.library")
+    om.add("Libs/muimaster.library", (mui / "muimaster.library").read_bytes(), "LIBS:muimaster.library", own=True)
     om.add("Tools/ZuneTest", (mui / "ZuneTest").read_bytes(), "SYS:Tools/ZuneTest")
     om.add("Tools/ZuneTest.info", icons.icon(icons.WBTOOL, "install", stack=16384), "SYS:Tools/ZuneTest.info")
     om.write()
