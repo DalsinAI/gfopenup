@@ -4,6 +4,8 @@
  *   OpenUpTool INSTALL <part drawer>  installs one part, as its Part file says
  *   OpenUpTool STARTUP                writes the marked block in S:User-Startup
  *   OpenUpTool UNINSTALL              puts everything back
+ *   OpenUpTool FIXTOOLS <table> [ALL] puts back default tools that OpenUp 0.6.14 to 0.7.0 changed
+ *                                     to OpenView by mistake (see FIXTOOLS below)
  *   OpenUpTool LIST                   what is installed
  *   OpenUpTool SETTING <dest> <text>  a setting the Installer asked for, as a file
  *   OpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-strip-<H>.png for the
@@ -73,7 +75,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6 (8.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.1 (9.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -766,6 +768,191 @@ static int write_startup(int remove_only)
     return i;
 }
 
+/* ---- FIXTOOLS: default tools OpenTypes' SWITCH changed that it should not have --------------- */
+
+/* OpenUp 0.6.14 to 0.7.0 ran "OpenTypes SWITCH MultiView TO OpenView IN SYS:". A bug in OpenTypes (its
+ * Stricmp was called with A6 still holding dos.library) made it see every icon and every kind of file as
+ * MultiView's, so about 40 of AmigaOS 3.2.3's own icons (the datatype descriptors', the pointer presets',
+ * DOSDrivers', the Picasso96 guides', Help...) and 16 default icons opened OpenView. FIXTOOLS puts the
+ * default tool back. It changes an icon only when that icon's default tool is OpenView now and its
+ * original is known, from, in this order:
+ *   1. OpenTypes' own record, ENVARC:OpenTypes/Changes and the icon it kept in Backup (exact);
+ *   2. the table, StockDefaultTools: "<icon without .info><TAB><default tool>" for AmigaOS 3.2.3's icons.
+ * The kinds of file OpenTypes switched on purpose (ENVARC:Sys/def_<kind> that named MultiView) stay on
+ * OpenView, unless ALL is given (UNINSTALL gives it). Every change is logged. */
+#define OT_CHANGES "ENVARC:OpenTypes/Changes"
+#define STOCK_TOOLS "ENVARC:OpenAmiga/StockDefaultTools"
+#define REPAIR_LOG "ENVARC:OpenAmiga/DefaultTools-repair.log"
+#define REPAIRED_MARK "ENVARC:OpenAmiga/DefaultTools-repaired"
+
+static char fix_log[20000];
+static int fix_log_len;
+static int fix_checked, fix_restored, fix_kept, fix_failed, fix_nkept;
+static char fix_kept_paths[64][48];
+
+static void fix_say(const char *a, const char *b, const char *c, const char *d)
+{
+    const char *part[4];
+    int i;
+    part[0] = a; part[1] = b; part[2] = c; part[3] = d;
+    for (i = 0; i < 4; i++) {
+        int n;
+        if (!part[i]) continue;
+        n = strlen(part[i]);
+        if (fix_log_len + n + 2 < (int)sizeof fix_log) { memcpy(fix_log + fix_log_len, part[i], n); fix_log_len += n; }
+    }
+    if (fix_log_len + 2 < (int)sizeof fix_log) fix_log[fix_log_len++] = '\n';
+    fix_log[fix_log_len] = 0;
+}
+
+/* The program a tool names: the part after the last ':' or '/'. */
+static const char *tool_base(const char *tool)
+{
+    const char *p, *b = tool;
+    for (p = tool; *p; p++) if (*p == ':' || *p == '/') b = p + 1;
+    return b;
+}
+
+static int same_program(const char *a, const char *b)
+{
+    return same_word(tool_base(a), tool_base(b));
+}
+
+static int starts_with(const char *s, const char *prefix)
+{
+    for (; *prefix; s++, prefix++)
+        if (!*s || (*s | 0x20) != (*prefix | 0x20)) return 0;
+    return 1;
+}
+
+static int is_default_icon(const char *path)
+{
+    return starts_with(path, "ENVARC:Sys/def_") || starts_with(path, "ENV:Sys/def_");
+}
+
+/* One icon (path without .info): its default tool goes back to orig when it is OpenView now. */
+static void fix_icon(const char *path, const char *orig, int all, const char *why)
+{
+    struct DiskObject *dob;
+    STRPTR cur;
+    char info[ENTRY_PATH];
+    if (strlen(path) + 6 > sizeof info || !orig[0]) return;
+    strcpy(info, path); strcat(info, ".info");
+    if (!exists(info)) return;
+    dob = GetIconTags((STRPTR)path, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    if (!dob) return;
+    fix_checked++;
+    cur = dob->do_DefaultTool;
+    if (cur && same_program((const char *)cur, "OpenView") && !same_program(orig, "OpenView")) {
+        if (!all && is_default_icon(path) && same_program(orig, "MultiView")) {
+            int i, seen = 0;
+            for (i = 0; i < fix_nkept; i++) if (same_word(fix_kept_paths[i], path)) seen = 1;     /* once, not for the table too */
+            if (!seen) {
+                fix_kept++;
+                if (fix_nkept < 64 && strlen(path) < sizeof fix_kept_paths[0]) strcpy(fix_kept_paths[fix_nkept++], path);
+                fix_say("kept: ", path, " opens with OpenView, as the switch of kinds of file made it", NULL);
+            }
+        } else {
+            int ok;
+            dob->do_DefaultTool = (STRPTR)orig;
+            ok = PutIconTags((STRPTR)path, dob, ICONPUTA_NotifyWorkbench, TRUE, TAG_DONE) != 0;
+            dob->do_DefaultTool = cur;
+            if (ok) {
+                fix_restored++;
+                fix_say("restored: ", path, ": OpenView -> ", orig);
+                if (why) fix_say("   (", why, ")", NULL);
+            } else {
+                fix_failed++;
+                fix_say("FAILED: ", path, ": couldn't write it; the disk may be write-protected", NULL);
+            }
+        }
+    }
+    FreeDiskObject(dob);
+    /* the kinds of file live in ENV: too */
+    if (starts_with(path, "ENVARC:Sys/def_")) {
+        char env[ENTRY_PATH];
+        if (strlen(path) + 1 < sizeof env) { strcpy(env, "ENV:Sys/"); strcat(env, path + 11); fix_icon(env, orig, all, NULL); }
+    }
+}
+
+/* The default tool of an icon file (path without .info), into buf; 0 when it has none. */
+static int icon_tool(const char *path, char *buf, int size)
+{
+    struct DiskObject *dob = GetIconTags((STRPTR)path, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    int ok = 0;
+    if (!dob) return 0;
+    if (dob->do_DefaultTool && ((const char *)dob->do_DefaultTool)[0] && strlen((const char *)dob->do_DefaultTool) < (size_t)size) {
+        strcpy(buf, (const char *)dob->do_DefaultTool);
+        ok = 1;
+    }
+    FreeDiskObject(dob);
+    return ok;
+}
+
+static int fix_tools(const char *table, int all)
+{
+    char *text;
+    static char line_copy[ENTRY_PATH * 2], orig[200], path[ENTRY_PATH];
+    char *p, *line;
+    fix_log_len = 0; fix_log[0] = 0;
+    fix_checked = fix_restored = fix_kept = fix_failed = fix_nkept = 0;
+    if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) {
+        say("OpenUp: icon.library 44 or later is needed to check the icons' default tools.", NULL, NULL);
+        return RETURN_WARN;
+    }
+    fix_say("FIXTOOLS", all ? " ALL" : "", NULL, NULL);
+    /* 1. what OpenTypes recorded */
+    if ((text = read_file(OT_CHANGES, NULL))) {
+        fix_say("from ", OT_CHANGES, NULL, NULL);
+        for (p = text; *p; ) {
+            char *tab, *bk;
+            line = p;
+            while (*p && *p != '\n') p++;
+            if (*p) *p++ = 0;
+            if (!(tab = strchr(line, '\t'))) continue;
+            *tab = 0; bk = tab + 1;
+            if (strlen(line) < 6 || strlen(bk) < 6 || strlen(line) >= sizeof path || strlen(bk) >= sizeof line_copy) continue;
+            if (!same_word(line + strlen(line) - 5, ".info") || !same_word(bk + strlen(bk) - 5, ".info")) continue;
+            strcpy(path, line); path[strlen(path) - 5] = 0;
+            strcpy(line_copy, bk); line_copy[strlen(line_copy) - 5] = 0;
+            if (icon_tool(line_copy, orig, sizeof orig))
+                fix_icon(path, orig, all, "its original, kept by OpenTypes");
+        }
+        FreeVec(text);
+    }
+    /* 2. the table of AmigaOS 3.2.3's own icons */
+    if (!(text = read_file(table, NULL))) fix_say("no table: ", table, NULL, NULL);
+    else {
+        fix_say("from ", table, NULL, NULL);
+        for (p = text; *p; ) {
+            char *tab;
+            line = p;
+            while (*p && *p != '\n') p++;
+            if (*p) *p++ = 0;
+            if (*line == ';' || !*line) continue;
+            if (!(tab = strchr(line, '\t'))) continue;
+            *tab = 0;
+            if (strlen(line) >= sizeof path || strlen(tab + 1) >= sizeof orig) continue;
+            strcpy(path, line); strcpy(orig, tab + 1);
+            fix_icon(path, orig, all, "its stock default tool, from AmigaOS 3.2.3");
+        }
+        FreeVec(text);
+    }
+    CloseLibrary(IconBase);
+    IconBase = NULL;
+    Printf((STRPTR)"OpenUp: default tools: %ld icon%s checked, %ld put back, %ld kept on OpenView (kinds of file), %ld failed\n",
+           (LONG)fix_checked, (LONG)(fix_checked == 1 ? "" : "s"), (LONG)fix_restored, (LONG)fix_kept, (LONG)fix_failed);
+    /* the log, kept: what was put back is there to read, and the Installer's T:OpenUp.log has it too */
+    if (fix_restored || fix_kept || fix_failed) {
+        PutStr((STRPTR)fix_log);
+        if (exists("ENVARC:OpenAmiga")) {
+            BPTR fh = Open((STRPTR)REPAIR_LOG, MODE_READWRITE);
+            if (fh) { Seek(fh, 0, OFFSET_END); Write(fh, fix_log, fix_log_len); Close(fh); }
+        }
+    }
+    return fix_failed ? RETURN_WARN : RETURN_OK;
+}
+
 /* ---- UNINSTALL ----------------------------------------------------------------------------- */
 
 static int uninstall(void)
@@ -776,6 +963,9 @@ static int uninstall(void)
         say("OpenUp isn't installed here: there is no list of its files (" MANIFEST ").", NULL, NULL);
         return RETURN_WARN;
     }
+    /* default tools still on OpenView (OpenTypes' UNDO has run before this when the Uninstall-OpenUp script
+     * does it): put back, with the kinds of file too, before OpenView goes */
+    if (exists(STOCK_TOOLS)) fix_tools(STOCK_TOOLS, 1);
     if (!write_startup(1)) {
         say("OpenUp: can't take its block out of S:User-Startup. Remove the lines from \"" BLOCK_BEGIN "\" to \"" BLOCK_END "\" by hand.", NULL, NULL);
         problems++;
@@ -823,6 +1013,8 @@ static int uninstall(void)
         }
     DeleteFile((STRPTR)SUPERSEDED);
     if (!problems) {
+        DeleteFile((STRPTR)REPAIRED_MARK);
+        DeleteFile((STRPTR)REPAIR_LOG);
         DeleteFile((STRPTR)MANIFEST);
         DeleteFile((STRPTR)MANIFEST_ENV);
         DeleteFile((STRPTR)"ENVARC:OpenAmiga");
@@ -1228,7 +1420,7 @@ int main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | UPDATE [CHECK|YES]\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | UPDATE [CHECK|YES]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -1240,6 +1432,7 @@ int main(void)
     else if (same_word(cmd, "INSTALL") && args[1]) rc = install((const char *)args[1]);
     else if (same_word(cmd, "STARTUP")) rc = write_startup(0) ? RETURN_OK : (say("OpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL), RETURN_ERROR);
     else if (same_word(cmd, "UNINSTALL")) rc = uninstall();
+    else if (same_word(cmd, "FIXTOOLS") && args[1]) rc = fix_tools((const char *)args[1], args[2] && same_word((const char *)args[2], "ALL"));
     else if (same_word(cmd, "LIST")) rc = list();
     else if (same_word(cmd, "BACKDROP") && args[1]) rc = backdrop((const char *)args[1]);
     else if (same_word(cmd, "FONT") && args[1] && args[2]) rc = set_font((const char *)args[1], atol((const char *)args[2]));
@@ -1274,7 +1467,7 @@ int main(void)
         rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;

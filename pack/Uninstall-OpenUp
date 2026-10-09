@@ -16,7 +16,9 @@
         (default 1))
     (
         ; every icon OpenTypes changed (OpenView in MultiView's place among them)
-        ; goes back first, while OpenTypes is still there to do it
+        ; goes back first, while OpenTypes is still there to do it. OpenUpTool
+        ; UNINSTALL then puts back any default tool still on OpenView (FIXTOOLS ALL),
+        ; for an Amiga where the record of OpenTypes' changes is gone.
         (if (exists "SYS:Prefs/OpenTypes")
             (run "SYS:Prefs/OpenTypes UNDO >T:OpenUp-uninstall.log"))
         (if (exists "ENVARC:OpenAmiga/OpenView-switched")
