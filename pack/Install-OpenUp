@@ -198,7 +198,7 @@
               "Telegram's service on AmigaChrome's x86 or ARM64 cores or on a paired Cradle. Until "
               "then it says what is missing, and its demo shows a made-up account. "
               "In SYS:Utilities/UnofficialTelegram.\n\n"
-              "OpenGPU developer files: SDL 2's, OpenGL's and GLA's headers and link libraries, "
+              "OpenGPU developer files: SDL 2's, SDL 1.2's, OpenGL's and GLA's headers and link libraries, "
               "with examples, in SYS:Developer/OpenGPU-SDK (assign OpenGPU-SDK:). For building "
               "programs on this Amiga; the programs need the OpenGPU part to run. About 7 MB.\n\n"
               "OpenInput: game controllers for every program (openinput.library, new, off unless "

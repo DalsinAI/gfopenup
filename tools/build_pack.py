@@ -683,7 +683,7 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.6", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
+    look = Part(top, "OpenLook", "0.7", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
@@ -854,6 +854,11 @@ def main() -> int:
     gp.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
     gp.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
     gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
+    # SDL2_image and SDL2_mixer (openamigartg #54): resident modules beside SDL2.module,
+    # decoding on the x86 or ARM64 cores first; their licences go in OpenUp's drawer
+    sats = [n for n in ("SDL2_image", "SDL2_mixer") if (rtg / f"{n}.module").is_file()]
+    for n in sats:
+        gp.add(f"Libs/OpenGPU/{n}.module", (rtg / f"{n}.module").read_bytes(), f"LIBS:OpenGPU/{n}.module")
     gp.add("Libs/OpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:OpenGPU/GL.module")
     gp.add("C/OpenGPUCheck", (rtg / "OpenGPUCheck").read_bytes(), "C:OpenGPUCheck")
     # tinygl.library 53 (openamigartg library/tinygl, from #50): the stand-in TinyGL programs
@@ -868,9 +873,13 @@ def main() -> int:
     # Zlib), in OpenUp's drawer: not in LIBS:OpenGPU/, where the library looks for drivers
     gl_work = Path(os.environ.get("GL_WORK", a.openamigartg / "library/modules/gl/build"))
     sdl = rtg / "sdl2-work"
-    for name, f in (("Mesa.txt", next(gl_work.glob("mesa-*/docs/license.rst"), None)),
+    for name, f in ((("Mesa.txt", next(gl_work.glob("mesa-*/docs/license.rst"), None)),
                     ("SDL2.txt", next(sdl.glob("SDL2-*/LICENSE.txt"), None)),
-                    ("libSDL2-amigaos3.txt", next(sdl.glob("SDL2-*/LICENSE.libSDL2-amigaos3.txt"), None))):
+                    ("libSDL2-amigaos3.txt", next(sdl.glob("SDL2-*/LICENSE.libSDL2-amigaos3.txt"), None)))
+                   + ((("SDL2_image.txt", next(sdl.rglob("SDL2_image-*/LICENSE.txt"), None)),) if "SDL2_image" in sats else ())
+                   + ((("SDL2_mixer.txt", next(sdl.rglob("SDL2_mixer-*/LICENSE.txt"), None)),
+                       ("libxmp.txt", next((f for f in sdl.rglob("libxmp-*/*") if f.name in ("COPYING", "LICENSE", "LICENSE.txt", "README")), None)))
+                      if "SDL2_mixer" in sats else ())):
         if not f:
             raise SystemExit(f"OpenGPU: {name}'s licence text wasn't found (GL_WORK, {sdl})")
         gp.add(f"Utilities/OpenUp/Licences/{name}", f.read_bytes(), f"SYS:Utilities/OpenUp/Licences/{name}")
