@@ -47,6 +47,21 @@ with its notices.
   These are the rules of OpenSocket, OpenRTG and OpenMUI.
 - **Novice and Expert.** A Novice user gets the recommended answer to every
   question; an Expert sees each choice.
+- **An icon that is already there keeps its default tool.** OpenUp offers
+  OpenView for pictures, text, guides and documents through OpenTypes' kinds
+  of file (the default icons, `ENVARC:Sys/def_<kind>`; `OpenTypes SWITCH`
+  without `IN`), never by rewriting the `.info` files of existing files. 0.6.14
+  to 0.7.0 did (`SWITCH ... IN SYS:`, with an OpenTypes bug that changed about
+  40 of 3.2.3's own icons: datatype descriptors, pointer presets, DOSDrivers,
+  Picasso96 guides, Help). `OpenUpTool FIXTOOLS <table> [ALL]` puts them back,
+  once, in 0.7.1's upgrade: an icon is changed only if its default tool is
+  OpenView now and its original is known, from OpenTypes' own record
+  (`ENVARC:OpenTypes/Changes` and the icons it kept in `Backup`) first, else
+  from `pack/StockDefaultTools` (names and tool strings of 3.2.3's icons, made
+  by `tools/stock_default_tools.py` from a clean install). The kinds of file
+  that named MultiView stay on OpenView (that is the offer); `ALL`, which
+  UNINSTALL gives, puts those back too. `ENVARC:OpenAmiga/DefaultTools-repair.log`
+  says what changed; `DefaultTools-repaired` marks that it ran.
 - **Startup changes are marked.** They go in a marked block in `S:User-Startup`.
   The one exception is `C:OpenRTG`, early in `S:Startup-Sequence` on
   machines whose board has no boot ROM. It too is marked, with the old file

@@ -677,6 +677,9 @@ def main() -> int:
     core.add("C/OpenUpTool", tool, "SYS:C/OpenUpTool")
     core.add("C/OpenUpMenu", (ROOT / "build/os3/OpenUpMenu").read_bytes(), "SYS:C/OpenUpMenu")
     core.line("startup Run >NIL: C:OpenUpMenu")
+    # AmigaOS 3.2.3's own icons and their default tools (names and tool strings): FIXTOOLS puts back the ones
+    # OpenUp 0.6.14 to 0.7.0 changed to OpenView by mistake, on the 0.7.1 upgrade and on UNINSTALL
+    core.add("StockDefaultTools", (ROOT / "pack/StockDefaultTools").read_bytes(), "ENVARC:OpenAmiga/StockDefaultTools")
     un = (top / "Uninstall-OpenUp").read_bytes()
     core.add("Utilities/OpenUp/Uninstall-OpenUp", un, "SYS:Utilities/OpenUp/Uninstall-OpenUp")
     core.add("Utilities/OpenUp/Uninstall-OpenUp.info", (top / "Uninstall-OpenUp.info").read_bytes(),
@@ -765,7 +768,7 @@ def main() -> int:
         gi.write()
 
     # OpenTypes: which program opens each kind of file (openamigaprefs)
-    ty = Part(top, "OpenTypes", "0.2", "OpenTypes: which program opens each kind of file")
+    ty = Part(top, "OpenTypes", "0.2.1", "OpenTypes: which program opens each kind of file")
     ty.add("Prefs/OpenTypes", (a.openamigaprefs / "OpenTypes/build/os3/OpenTypes").read_bytes(), "SYS:Prefs/OpenTypes")
     ty.add("Prefs/OpenTypes.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenTypes.info")
     ty.write()
