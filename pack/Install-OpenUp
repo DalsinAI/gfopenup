@@ -312,11 +312,11 @@
         ; the Open programs (OpenCompress, OpenMail) draw in the same theme
         (run (cat #tool " SETTING ENVARC:OpenGadTools/Theme \"" #theme "\" >>T:OpenUp.log"))
         (run (cat #tool " SETTING ENV:OpenGadTools/Theme \"" #theme "\" >>T:OpenUp.log"))
-        ; with a look: a clear screen font, and title bars a pixel taller at the top and bottom
+        ; with a look: a clear screen font, and window title bars a little taller (the screen's own bar keeps the standard height)
         (if (<> #theme "Classic")
             (
                 (run (cat #tool " FONT CGTriumvirate.font 13 >>T:OpenUp.log"))
-                (run (cat #tool " TITLEBARS 2 2 >>T:OpenUp.log"))))))
+                (run (cat #tool " TITLEBARS 0 2 >>T:OpenUp.log"))))))
 
 (if (bitand #parts 16)
     (
