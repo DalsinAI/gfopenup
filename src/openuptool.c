@@ -162,14 +162,34 @@ static int write_file(const char *path, const char *data, LONG len)
  *   same <dest>   dir <path>   bdir <path>   startup <part> <line>
  *   newfile <path> (a file OpenUp made, such as S:User-Startup) */
 #define MAXE 1024
-typedef struct { char kind[10]; char a[160]; char b[200]; } entry;
+/* a and b are whole paths, each in an allocation of its own length (libnix
+ * gives them all back at exit): a path is never cut short in the manifest,
+ * where a cut path would send UNINSTALL to the wrong file, and the table
+ * stays small. Neither is ever NULL: "" is no_text. */
+#define ENTRY_PATH 260                       /* the install code's path buffers */
+typedef struct { char kind[10]; char *a; char *b; } entry;
 static entry ents[MAXE];
 static int nents;
+static char no_text[] = "";
+static int manifest_short;                   /* out of memory while loading: never save a short list */
+
+/* Sets a or b to a copy of s; 0 (and the field as it was) when out of memory. */
+static int set_text(char **field, const char *s)
+{
+    char *d;
+    if (!*s) d = no_text;
+    else if (!(d = malloc(strlen(s) + 1))) return 0;
+    else strcpy(d, s);
+    if (*field && *field != no_text) free(*field);
+    *field = d;
+    return 1;
+}
 
 static void manifest_load(void)
 {
     char *text = read_file(MANIFEST, NULL), *p, *line;
     nents = 0;
+    manifest_short = 0;
     if (!text)
         return;
     for (p = text; *p && nents < MAXE; ) {
@@ -183,9 +203,11 @@ static void manifest_load(void)
             if (*q == '\t') { *q = 0; f[n++] = q + 1; }
         if (!strcmp(f[0], "OpenUp") || !f[0][0])
             continue;
-        strncpy(ents[nents].kind, f[0], sizeof ents[0].kind - 1);
-        strncpy(ents[nents].a, f[1] ? f[1] : "", sizeof ents[0].a - 1);
-        strncpy(ents[nents].b, f[2] ? f[2] : "", sizeof ents[0].b - 1);
+        strlcpy(ents[nents].kind, f[0], sizeof ents[0].kind);
+        if (!set_text(&ents[nents].a, f[1] ? f[1] : "") || !set_text(&ents[nents].b, f[2] ? f[2] : "")) {
+            manifest_short = 1;
+            break;
+        }
         nents++;
     }
     FreeVec(text);
@@ -198,6 +220,8 @@ static int manifest_save(void)
     LONG size = 32, len = 0;
     char *buf, *p;
     int i, ok;
+    if (manifest_short)
+        return 0;                           /* a list loaded short would lose files */
     for (i = 0; i < nents; i++)
         size += strlen(ents[i].kind) + strlen(ents[i].a) + strlen(ents[i].b) + 3;
     if (!(buf = AllocVec(size, MEMF_ANY)))
@@ -236,11 +260,11 @@ static entry *add_entry(const char *kind, const char *a, const char *b)
     entry *e;
     if (nents >= MAXE)
         return NULL;
-    e = &ents[nents++];
-    memset(e, 0, sizeof *e);
-    strncpy(e->kind, kind, sizeof e->kind - 1);
-    strncpy(e->a, a, sizeof e->a - 1);
-    if (b) strncpy(e->b, b, sizeof e->b - 1);
+    e = &ents[nents];
+    if (!set_text(&e->a, a) || !set_text(&e->b, b ? b : ""))
+        return NULL;
+    strlcpy(e->kind, kind, sizeof e->kind);
+    nents++;
     return e;
 }
 
@@ -249,10 +273,9 @@ static entry *add_entry(const char *kind, const char *a, const char *b)
 /* Makes the directories up to path (not a volume), noting those it made. */
 static int ensure_dir(const char *path, int record)
 {
-    char buf[200];
+    char buf[ENTRY_PATH];
     char *p;
-    strncpy(buf, path, sizeof buf - 1);
-    buf[sizeof buf - 1] = 0;
+    strlcpy(buf, path, sizeof buf);
     for (p = strchr(buf, ':') ? strchr(buf, ':') + 1 : buf; ; p++) {
         if (*p == '/' || *p == 0) {
             char c = *p;
@@ -452,8 +475,11 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
             say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; it wasn't replaced. Is SYS: full or write-protected?");
             return -1;
         }
-        if (e) { strcpy(e->kind, "replaced"); strncpy(e->b, backup, sizeof e->b - 1); }
-        else add_entry("replaced", dest, backup);
+        if (e ? !set_text(&e->b, backup) : !add_entry("replaced", dest, backup)) {
+            say("OpenUp: out of memory noting ", dest, "; it wasn't replaced.");
+            return -1;
+        }
+        if (e) strcpy(e->kind, "replaced");
     } else if (!e) {
         add_entry("new", dest, NULL);
     }
@@ -544,8 +570,11 @@ static int face_icon(const char *from, const char *dest)
         say("OpenUp: can't give ", dest, " its new picture. Is the disk write-protected?");
         return -1;
     }
-    if (!e) add_entry("replaced", dest, backup);
-    else if (!strcmp(e->kind, "same")) { strcpy(e->kind, "replaced"); strncpy(e->b, backup, sizeof e->b - 1); }
+    if (!e) { if (!add_entry("replaced", dest, backup)) { say("OpenUp: out of memory noting ", dest, "'s new picture."); return -1; } }
+    else if (!strcmp(e->kind, "same")) {
+        if (!set_text(&e->b, backup)) { say("OpenUp: out of memory noting ", dest, "'s new picture."); return -1; }
+        strcpy(e->kind, "replaced");
+    }
     return 1;
 }
 
@@ -627,8 +656,10 @@ static int install(const char *drawer)
         return RETURN_WARN;
     {
         entry *pe = find_entry("part", partname);
-        if (pe) strncpy(pe->b, partver, sizeof pe->b - 1);
-        else add_entry("part", partname, partver);
+        if (pe ? !set_text(&pe->b, partver) : !add_entry("part", partname, partver)) {
+            say("OpenUp: out of memory noting ", partname, "; run the install again.");
+            return RETURN_ERROR;
+        }
     }
     if (!manifest_save()) {
         say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
@@ -781,8 +812,8 @@ static int uninstall(void)
     /* The originals' drawers, deepest first: they go once empty. */
     for (i = nents - 1; i >= 0; i--)
         if (!strcmp(ents[i].kind, "replaced")) {
-            char dir[260];
-            strcpy(dir, ents[i].b);
+            char dir[ENTRY_PATH];
+            if (strlcpy(dir, ents[i].b, sizeof dir) >= sizeof dir) continue;   /* too long to be OpenUp's */
             for (;;) {
                 char *s = strrchr(dir, '/');
                 if (!s || strlen(dir) <= strlen(SUPERSEDED)) break;
@@ -1144,7 +1175,7 @@ static int update(const char *how)
     int check = how && same_word(how, "CHECK"), yes = how && same_word(how, "YES");
     manifest_load();
     if ((e = find_entry("part", "OpenUp")) != NULL)
-        strncpy(installed, e->b, sizeof installed - 1);
+        strlcpy(installed, e->b, sizeof installed);
     if (!installed[0]) {
         say("OpenUp isn't installed here, so there is nothing to update. Run Install-OpenUp to install it.", NULL, NULL);
         return RETURN_WARN;
