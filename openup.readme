@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.7.1
+Version:      0.7.2
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -18,7 +18,8 @@ Version 0.7 is for AmigaChrome instances. Its Installer installs, as you
 choose:
 - OpenSocket: the network, through the x86 or ARM64 cores (bsdsocket.library
   4.2);
-- OpenPrint and OpenView: printing to PDF and network printers, and viewing;
+- OpenPrint and OpenView: printing to PDF and network printers, and viewing; OpenView takes
+  MultiView's place, so whatever opened MultiView opens OpenView (MultiView is kept);
 - AmigaChrome sharing: the clipboard and files, shared in and out of the
   Amiga, and an optional Send Out icon to drop files on;
 - OpenLook: one look for every GadTools program, title bars and borders too
