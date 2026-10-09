@@ -73,7 +73,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] = "$VER: OpenUpTool 0.6 (8.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6 (8.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
