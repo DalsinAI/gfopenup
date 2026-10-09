@@ -107,6 +107,11 @@ choose:
 - OpenCrypto (new): opencrypto.library 2.0, the sums behind secure
   connections (SSH's key exchanges, host keys, SHA-2, AES), on the x86 or
   ARM64 cores on AmigaChrome and on the Amiga's own CPU elsewhere;
+- OpenTLS (new, off unless picked; it comes with OpenFTP): opentls.library,
+  secure connections (TLS 1.2) for the Open programs, OpenFTP's FTPS first,
+  with its sums through OpenCrypto; the server's certificate is checked
+  against Mozilla's list of certificate authorities (S:OpenTLS, MPL-2.0,
+  its licence beside it; your own go in ENVARC:OpenTLS/certs);
 - OpenPuTTY (new, off unless picked): PuTTY 0.85 for AmigaOS 3.2 on
   OpenCrypto, with SSH, Telnet and serial terminals and key sign-in
   (SYS:Utilities/OpenPuTTY); it brings OpenCrypto with it and needs a

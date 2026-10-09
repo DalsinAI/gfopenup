@@ -64,6 +64,10 @@ a Part file that C/OpenUpTool reads:
                         by default (--openamigamesa)
   OpenCrypto/           opencrypto.library 2.0: SSH's and TLS's sums, on x86 or ARM64 cores through
                         AC090 on AmigaChrome, on the 68k elsewhere (--openamigatls)
+  OpenTLS/              opentls.library (a TLS client on BearSSL, its maths through OpenCrypto)
+                        and S:OpenTLS/: Mozilla's CA list (MPL-2.0) from this machine's
+                        ca-certificates package, with its licence; off by default, picked with
+                        OpenFTP (--openamigatls)
   OpenPuTTY/            OpenPuTTY 0.2, PuTTY on OpenCrypto, off by default (--openamigaputty)
   Tata/                 Tata, the file inspector: C:Tata (the hooks, the question and the
                         Shell command, started from S:User-Startup), its window
@@ -391,6 +395,13 @@ def build_parts(a):
     if a.openamigatls:
         run(["sh", a.openamigatls / "build-amiga.sh"],
             env=dict(os.environ, STOVE=gcc16_root, FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
+        # OpenTLS: opentls.library (GCC 16), and its CA bundle from this
+        # machine's ca-certificates package (Mozilla's list, MPL-2.0; only the
+        # package's own files: make_ca_bundle.py refuses anything else)
+        if (a.openamigatls / "build-amiga-tls.sh").is_file():
+            run(["sh", a.openamigatls / "build-amiga-tls.sh"],
+                env=dict(os.environ, STOVE=gcc16_root, FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
+            run([sys.executable, a.openamigatls / "tools/make_ca_bundle.py", a.openamigatls / "build-ca-bundle"])
         if a.openamigaputty:
             run(["sh", a.openamigaputty / "build.sh"], env=dict(os.environ, OS32_GCC16=gcc16_root, CPU="020",
                                                                 OPENCRYPTO=str(a.openamigatls)))
@@ -503,6 +514,7 @@ PART_MAIN = {
     "OpenGPU": ("Libs/opengpu.library", "opengpu.library"),
     "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
     "OpenCrypto": ("Libs/opencrypto.library", "opencrypto.library"),
+    "OpenTLS": ("Libs/opentls.library", "opentls.library"),
     "OpenPuTTY": ("Utilities/OpenPuTTY/OpenPuTTY", "OpenPuTTY"),
     "Tata": ("C/Tata", "Tata"),
     "OpenFTP": ("Utilities/OpenFTP/OpenFTP", "OpenFTP"),
@@ -525,6 +537,34 @@ PART_MAIN = {
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read.
 PART_OWN_VERSION = {"AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev"}
+
+
+def opentls_part(top: Path, tls_src: Path):
+    """The OpenTLS part from an openamigatls checkout built by
+    build-amiga-tls.sh and tools/make_ca_bundle.py (build-ca-bundle/), or
+    None when it has no opentls.library."""
+    lib = tls_src / "build-amiga-tls/lib/opentls.library"
+    if not lib.is_file():
+        return None
+    otl = lib.read_bytes()
+    bundle = tls_src / "build-ca-bundle"
+    tls = Part(top, "OpenTLS", binary_version(otl, "opentls.library") or "1.2",
+               "OpenTLS: opentls.library, secure connections for the Open programs, with Mozilla's CA list")
+    tls.add("Libs/opentls.library", otl, "LIBS:opentls.library")
+    # the bundle in S:, not ENVARC: (copied into ENV:, in RAM, at every boot);
+    # "add": an upgrade replaces OpenUp's own copy, never someone else's
+    lic = (bundle / "ca-bundle.LICENSE").read_bytes()
+    tls.add("S/OpenTLS/ca-bundle.pem", (bundle / "ca-bundle.pem").read_bytes(), "S:OpenTLS/ca-bundle.pem", own=True)
+    tls.add("S/OpenTLS/ca-bundle.LICENSE", lic, "S:OpenTLS/ca-bundle.LICENSE", own=True)
+    # the licences with the others: Mozilla's list (MPL-2.0), and OpenTLS's
+    # own (MIT) with BearSSL's (MIT) from its THIRD_PARTY_NOTICES
+    tls.add("Utilities/OpenUp/Licences/OpenTLS-CA-bundle.txt", lic,
+            "SYS:Utilities/OpenUp/Licences/OpenTLS-CA-bundle.txt")
+    tls.add("Utilities/OpenUp/Licences/OpenTLS.txt",
+            (tls_src / "LICENSE").read_bytes() + b"\n\n" + (tls_src / "THIRD_PARTY_NOTICES.md").read_bytes(),
+            "SYS:Utilities/OpenUp/Licences/OpenTLS.txt")
+    tls.write()
+    return tls
 
 
 def check_part_versions(parts: Path) -> None:
@@ -580,7 +620,7 @@ def main() -> int:
     ap.add_argument("--openamigamesa", type=Path, default=first(DEV / "openamigamesa", DEV.parent / "openamigamesa"),
                     help="openamigamesa, for the OpenDemos part (left out without it)")
     ap.add_argument("--openamigatls", type=Path, default=first(DEV / "openamigatls", DEV.parent / "openamigatls"),
-                    help="openamigatls, for the OpenCrypto part (left out without it)")
+                    help="openamigatls, for the OpenCrypto and OpenTLS parts (left out without it)")
     ap.add_argument("--openamigaputty", type=Path, default=first(DEV / "openamigaputty", DEV.parent / "openamigaputty"),
                     help="openamigaputty, for the OpenPuTTY part (needs --openamigatls; left out without it)")
     ap.add_argument("--openamigatata", type=Path, default=first(DEV / "openamigatata", DEV.parent / "openamigatata"),
@@ -935,6 +975,13 @@ def main() -> int:
         cr.add("Libs/opencrypto.library", ocl, "LIBS:opencrypto.library")
         cr.write()
 
+    # OpenTLS (openamigatls): opentls.library, the TLS client the Open programs
+    # use (OpenFTP's FTPS first), with its maths through OpenCrypto; and the
+    # CA bundle in S:OpenTLS/ with its licence (MPL-2.0), refreshed by each
+    # OpenUp ("add": only OpenUp's own copy is replaced). The user's own CAs
+    # go in ENVARC:OpenTLS/certs/, which OpenUp never touches.
+    tls = opentls_part(top, a.openamigatls) if a.openamigatls else None
+
     # OpenPuTTY (openamigaputty), as its release lays it out, in a drawer in
     # SYS:Utilities; its opencrypto.library is the OpenCrypto part's
     pt = None
@@ -1063,7 +1110,7 @@ def main() -> int:
     objdump = next((p for p in (Path.home() / "AmigaChrome/stoves/os32-gcc16/prefix/bin/m68k-amigaos-objdump",
                                 STOVE / "prefix/bin/m68k-amigaos-objdump") if p.is_file()), None)
     if objdump:
-        shipped = [f for part in (rt, gp, w3, dm, cr, pt, ftp) if part for f in sorted(part.dir.rglob("*"))
+        shipped = [f for part in (rt, gp, w3, dm, cr, tls, pt, ftp) if part for f in sorted(part.dir.rglob("*"))
                    if f.is_file() and f.name != "Part" and not f.name.endswith((".info", ".prefs")) and f.read_bytes()[:4] == b"\0\0\x03\xf3"]
         run([sys.executable, a.openamigartg / "tools/fpcr_check.py", objdump] + shipped)
 
