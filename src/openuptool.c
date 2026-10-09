@@ -52,6 +52,7 @@
  *                                        its type, tools, tool types and window;
  *                                        left alone when the machine hasn't got it)
  *   startup <the rest of the line>
+ *   when AmigaChrome <copy|default|add|face|retire line>  (0.6.3: the line only on an AmigaChrome instance)
  * Words with spaces are quoted.
  *
  * MIT, Copyright (c) 2026 Dalsin Limited. */
@@ -75,7 +76,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.2 (9.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.3 (9.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -611,6 +612,11 @@ static int install(const char *drawer)
             }
             n = words(line, w, 12);
             if (!n) continue;
+            if (!strcmp(w[0], "when") && n >= 4 && !strcmp(w[1], "AmigaChrome")) {
+                if (!is_amigachrome()) continue;        /* the line is for AmigaChrome only */
+                n -= 2;
+                memmove(w, w + 2, n * sizeof w[0]);
+            }
             if (!strcmp(w[0], "part") && n >= 3) {
                 strncpy(partname, w[1], sizeof partname - 1);
                 strncpy(partver, w[2], sizeof partver - 1);
