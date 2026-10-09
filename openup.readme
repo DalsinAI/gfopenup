@@ -81,8 +81,11 @@ choose:
   the other cores of AmigaChrome's cores board (music modules in OpenPlay
   do), or to the main CPU where there is no board;
 - OpenMUI (preview, off unless picked): zunemaster.library, MUI built from
-  AROS's Zune for OS 3.x, beside MUI and replacing nothing, with ZuneTest
-  (SYS:Tools);
+  AROS's Zune for OS 3.x, beside MUI, with ZuneTest (SYS:Tools). Where
+  LIBS:muimaster.library is absent it also installs a muimaster.library
+  (version 19, MUI 3.8's) that passes every call to Zune, so MUI programs
+  run; a MUI you installed is never touched, and the uninstaller removes the
+  face;
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings

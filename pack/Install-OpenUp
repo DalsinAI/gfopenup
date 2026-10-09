@@ -104,8 +104,9 @@
               "OpenPlay: a media player for everything the datatypes open (new): pictures as "
               "a slideshow, sounds, tunes and films, with a playlist. In SYS:Utilities.\n\n"
               "OpenMUI: zunemaster.library, MUI built from AROS's Zune for OS 3.x (a preview, "
-              "off unless picked). It sits beside MUI and replaces nothing; ZuneTest in "
-              "SYS:Tools shows it working.\n\n"
+              "off unless picked). It sits beside MUI and replaces nothing: where there is no "
+              "muimaster.library it adds one that passes every call to Zune, so MUI programs "
+              "run, and an installed MUI is never touched. ZuneTest in SYS:Tools shows it working.\n\n"
               "OpenTitle: AmigaChrome's logo at the title bar's left, the free chip and "
               "fast memory after Workbench's title, and the day, date and time at the right "
               "(new). Title bar in SYS:Prefs switches each, and a black border around the screen.")
