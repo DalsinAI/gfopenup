@@ -15,8 +15,9 @@
               "so files OpenUp didn't install are left alone.")
         (default 1))
     (
-        ; every icon OpenTypes changed (OpenView in MultiView's place among them)
-        ; goes back first, while OpenTypes is still there to do it. OpenUpTool
+        ; every icon OpenTypes changed (OpenUp 0.7.1 moved the kinds of file to
+        ; OpenView) goes back first, while OpenTypes is still there to do it.
+        ; MultiView itself comes back with the files OpenUp replaced. OpenUpTool
         ; UNINSTALL then puts back any default tool still on OpenView (FIXTOOLS ALL),
         ; for an Amiga where the record of OpenTypes' changes is gone.
         (if (exists "SYS:Prefs/OpenTypes")
