@@ -91,10 +91,11 @@ choose:
   run on the x86 or ARM64 cores and GL (Mesa) on the GPU, through
   AmigaChrome's graphics board, and on the Amiga's own CPU where there is no
   board; OpenGfx, the faster graphics.library drawing, is inside it now
-  (opengfx.library 1.2 stays for programs that open it); SDL 2 and GL are
-  modules in LIBS:OpenGPU, loaded once, kept resident and shared by every
-  program that asks; TinyGL programs run on GL too (LIBS:tinygl.library),
-  and C:OpenGPUCheck checks it;
+  (opengfx.library 1.2 stays for programs that open it); SDL 2 (with
+  SDL2_image and SDL2_mixer) and GL are modules in LIBS:OpenGPU, loaded
+  once, kept resident and shared by every program that asks; TinyGL
+  programs run on GL too (LIBS:tinygl.library), and C:OpenGPUCheck checks
+  it;
 - Warp3D and MiniGL (new): Warp3D.library 5.0 and minigl.library 29
   (OpenGL 1.1) on OpenGPU, for Warp3D and MiniGL games and programs; they
   need a 68040 or 68060 with its FPU; a Warp3D.library already there
@@ -125,8 +126,8 @@ choose:
   made by Telegram, and it needs setting up first: your own Telegram API key
   (free, from my.telegram.org) and Telegram's service on AmigaChrome's x86 or
   ARM64 cores or a paired Cradle; until then its window says what is missing;
-- OpenGPU developer files (new, off unless picked): SDL 2's, OpenGL's and
-  GLA's headers and link libraries, with examples, in
+- OpenGPU developer files (new, off unless picked): SDL 2's, SDL 1.2's,
+  OpenGL's and GLA's headers and link libraries, with examples, in
   SYS:Developer/OpenGPU-SDK (assign OpenGPU-SDK:), for building programs on
   the Amiga;
 - OpenInput (new, off unless picked): openinput.library, game controllers
