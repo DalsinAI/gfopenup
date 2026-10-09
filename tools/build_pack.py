@@ -1168,11 +1168,14 @@ def main() -> int:
     acb = ROOT / "build/acaudio"
     sys.path.insert(0, str(a.amigachrome / "vendor/amigachrome-guest/devices/acaudio.audio"))
     import mkahiprefs
+    # Each of the four lines is "when AmigaChrome" (OpenUpTool 0.6.3): the board is AmigaChrome's, so nothing
+    # lands on a real Amiga or a PiStorm, where Sound is installed too.
     snd.add("Devs/AHI/acaudio.audio", (acb / "AHI/acaudio.audio").read_bytes(), "DEVS:AHI/acaudio.audio")
     snd.add("Devs/AudioModes/ACAUDIO", (acb / "AudioModes/ACAUDIO").read_bytes(), "DEVS:AudioModes/ACAUDIO")
     prefs = mkahiprefs.prefs()
     snd.add("Prefs/ahi.prefs", prefs, "ENVARC:Sys/ahi.prefs", default=True)
     snd.add("Prefs/ahi.prefs", prefs, "ENV:Sys/ahi.prefs", default=True)
+    snd.lines[-4:] = ["when AmigaChrome " + l for l in snd.lines[-4:]]
     snd.line("startup SYS:Prefs/Sound USE")
     snd.write()
 
