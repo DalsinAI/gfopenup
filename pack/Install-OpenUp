@@ -33,7 +33,7 @@
 ; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY,
 ; 1073741824 Tata (the last bit of this word).
 ; The second word, #parts2 (OpenUp 0.7.0): 1 OpenFTP, 2 Unofficial Telegram, 4 OpenGPU developer files,
-; 8 OpenInput.
+; 8 OpenInput, 16 OpenTLS.
 ; None of them is ticked by default, on any machine.
 ; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos, OpenPuTTY
 ; and Tata (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D
@@ -206,14 +206,23 @@
               "mappings for common pads, and Gamepads in SYS:Prefs to test them, map them and "
               "choose which pad drives which port; an opt-in patch there lets older games see a "
               "modern pad. OIList in a Shell lists them. On AmigaChrome it sees the Amiga's ports "
-              "for now: the pads on the x86 or ARM64 cores come with a later AmigaChrome.")
+              "for now: the pads on the x86 or ARM64 cores come with a later AmigaChrome.\n\n"
+              "OpenTLS: secure connections for the Open programs (opentls.library, new): TLS 1.2 "
+              "with the server's certificate checked against Mozilla's list of certificate "
+              "authorities, in S:OpenTLS (put your own in ENVARC:OpenTLS/certs). OpenFTP's FTPS "
+              "uses it, so it comes with OpenFTP whatever is picked here; it brings OpenCrypto, "
+              "which does its sums on the x86 or ARM64 cores on AmigaChrome.")
         (choices "OpenFTP: FTP and FTPS (new)"
                  "Telegram, unofficial: needs setting up (new)"
                  "OpenGPU developer files (new)"
-                 "OpenInput: game controllers (new)")
+                 "OpenInput: game controllers (new)"
+                 "OpenTLS: secure connections (new)")
         (default 0)))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
+; OpenFTP's FTPS needs OpenTLS, and OpenTLS does its sums with OpenCrypto
+(if (bitand #parts2 1) (set #parts2 (bitor #parts2 16)))
+(if (bitand #parts2 16) (set #parts (bitor #parts 268435456)))
 ; OpenPuTTY needs OpenCrypto
 (if (bitand #parts 536870912) (set #parts (bitor #parts 268435456)))
 
@@ -504,6 +513,13 @@
                 (if (> (run (cat #tool " INSTALL Parts/OpenBrowser >>T:OpenUp.log")) 5)
                     (message "OpenBrowser didn't install completely. T:OpenUp.log says why; nothing else changed."))))))
 
+; OpenTLS before OpenFTP, which looks for it
+(if (bitand #parts2 16)
+    (if (exists "Parts/OpenTLS/Part")
+        (
+            (working "Installing OpenTLS")
+            (if (> (run (cat #tool " INSTALL Parts/OpenTLS >>T:OpenUp.log")) 5)
+                (message "OpenTLS didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
 (if (bitand #parts2 1)
     (if (exists "Parts/OpenFTP/Part")
         (
