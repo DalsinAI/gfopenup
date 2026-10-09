@@ -504,7 +504,6 @@ PART_MAIN = {
     "OpenUp": ("Utilities/OpenUp/Uninstall-OpenUp", "Uninstall-OpenUp"),
     "OpenBlanker": ("Tools/Commodities/OpenBlanker", "OpenBlanker"),
     "OpenSocket": ("Libs/bsdsocket.library", "bsdsocket.library"),
-    "OpenPrint": ("C/OpenPrint", "OpenPrint"),
     "OpenLook": ("C/OpenLook", "OpenLook"),
     "OpenTypes": ("Prefs/OpenTypes", "OpenTypes"),
     "OpenCompress": ("Utilities/OpenCompress", "OpenCompress"),
@@ -530,13 +529,15 @@ PART_MAIN = {
     "Sound": ("Prefs/Sound", "Sound"),
     "OpenEdit": ("C/OpenEdit", "OpenEdit"),
     "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
-    "OpenMUI": ("Libs/zunemaster.library", "zunemaster.library"),
     "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
 }
 # Parts with a version of their own: bundles of several programs, or files
-# without a binary of their own to read.
-PART_OWN_VERSION = {"AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev"}
+# without a binary of their own to read. OpenPrint 0.4 is OpenPrint (0.3) with
+# OpenView 0.5 and the copy at SYS:Utilities/MultiView; OpenMUI 0.2 is
+# zunemaster.library (0.1) with the muimaster.library face (19.1).
+PART_OWN_VERSION = {"AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev",
+                    "OpenPrint", "OpenMUI"}
 
 
 def opentls_part(top: Path, tls_src: Path):
