@@ -39,7 +39,7 @@
 
 #include <string.h>
 
-static const char version[] = "$VER: OpenUpMenu 0.1 (7.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1 (7.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct Library *WorkbenchBase, *IconBase;
 
