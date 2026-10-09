@@ -553,14 +553,29 @@
             (if (> (run (cat #tool " INSTALL Parts/OpenInput >>T:OpenUp.log")) 5)
                 (message "OpenInput didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
 
+; OpenUp 0.6.14 to 0.7.0 changed the default tool of about 40 of AmigaOS 3.2.3's own
+; icons (datatype descriptors, pointer presets, DOSDrivers, the Picasso96 guides...) to
+; OpenView by mistake. Once, put each one back: from the original OpenTypes kept, else
+; from the table of 3.2.3's own icons. Only an icon that opens OpenView now and whose
+; original is known is touched. ENVARC:OpenAmiga/DefaultTools-repair.log says what.
+(if (and (exists "Parts/OpenUp/StockDefaultTools")
+         (not (exists "ENVARC:OpenAmiga/DefaultTools-repaired")))
+    (
+        (working "Putting back default tools that OpenUp changed by mistake")
+        (if (= 0 (run (cat #tool " FIXTOOLS Parts/OpenUp/StockDefaultTools >>T:OpenUp.log")))
+            (textfile (dest "ENVARC:OpenAmiga/DefaultTools-repaired") (append "OpenUp put back the default tools that 0.6.14 to 0.7.0 changed by mistake.\n")))))
+
 ; OpenView opens what MultiView opened (pictures, text, guides, documents;
 ; sounds, video and fonts stay), once, so a kind someone moves back later
-; stays moved. MultiView stays installed; OpenTypes UNDO puts it all back.
+; stays moved. It is done by the kinds of file (OpenTypes' own default icons),
+; never by changing icons that are already there: a file with its own icon
+; keeps its own default tool. MultiView stays installed; OpenTypes UNDO puts
+; it all back.
 (if (and (exists "SYS:Prefs/OpenTypes") (exists "SYS:Utilities/OpenPrint/OpenView")
          (not (exists "ENVARC:OpenAmiga/OpenView-switched")))
     (
         (working "Making OpenView open pictures, text and guides")
-        (if (< (run "SYS:Prefs/OpenTypes SWITCH MultiView TO SYS:Utilities/OpenPrint/OpenView SAVE IN SYS: >>T:OpenUp.log") 10)
+        (if (< (run "SYS:Prefs/OpenTypes SWITCH MultiView TO SYS:Utilities/OpenPrint/OpenView SAVE >>T:OpenUp.log") 10)
             (textfile (dest "ENVARC:OpenAmiga/OpenView-switched") (append "OpenUp switched MultiView's kinds of file to OpenView.\n")))))
 
 ; OpenFiles and OpenView on the dock, also a dock someone already has; the
