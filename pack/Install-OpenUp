@@ -190,8 +190,8 @@
         (prompt "Which parts should OpenUp install? (5 of 5)")
         (help "OpenFTP: FTP and FTPS in two panes, with a site manager and the Open family's "
               "look (new, off unless picked). In SYS:Utilities/OpenFTP. Plain FTP works as it is. "
-              "FTPS (encrypted FTP) needs AmiSSL 5, which OpenUp doesn't include: install it from "
-              "Aminet (util/libs). It needs a network stack (OpenSocket, Roadshow or AmiTCP).\n\n"
+              "FTPS (encrypted FTP) works with OpenTLS (opentls.library); AmiSSL 5 is still used "
+              "if present. It needs a network stack (OpenSocket, Roadshow or AmiTCP).\n\n"
               "Unofficial Telegram for Amiga (Open): Telegram chats in a window on the Amiga (new, "
               "a preview, off unless picked). It isn't made by Telegram. It needs setting up before "
               "it can reach Telegram: your own Telegram API key (free, from my.telegram.org), and "
@@ -510,11 +510,10 @@
             (working "Installing OpenFTP")
             (if (> (run (cat #tool " INSTALL Parts/OpenFTP >>T:OpenUp.log")) 5)
                 (message "OpenFTP didn't install completely. T:OpenUp.log says why; nothing else changed."))
-            (if (not (exists "LIBS:amisslmaster.library"))
+            (if (and (not (exists "LIBS:opentls.library")) (not (exists "LIBS:amisslmaster.library")))
                 (message "OpenFTP is installed, and plain FTP works now.\n\n"
-                         "For FTPS (encrypted FTP) it needs AmiSSL 5, which isn't on this Amiga "
-                         "and isn't part of OpenUp. Install AmiSSL 5 for OS 3 (Aminet: util/libs) "
-                         "when you want it.")))))
+                         "For FTPS (encrypted FTP) it needs OpenTLS (opentls.library) or AmiSSL 5, "
+                         "and neither is on this Amiga yet. Install either when you want FTPS.")))))
 (if (bitand #parts2 2)
     (if (exists "Parts/Telegram/Part")
         (

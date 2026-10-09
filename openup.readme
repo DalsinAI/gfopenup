@@ -119,8 +119,8 @@ choose:
   (S:Tata.known), and asks first; its window is SYS:Prefs/Tata, its icon
   sits on the title bar, and "Tata OFF" in a Shell turns it off;
 - OpenFTP (new, off unless picked): FTP and FTPS in two panes, with a site
-  manager (SYS:Utilities/OpenFTP); plain FTP works as it is, and FTPS needs
-  AmiSSL 5, which OpenUp doesn't include (Aminet util/libs);
+  manager (SYS:Utilities/OpenFTP); plain FTP works as it is; FTPS works with
+  OpenTLS (opentls.library), and AmiSSL 5 is still used if present;
 - Unofficial Telegram for Amiga (Open) (new, a preview, off unless picked):
   Telegram chats in a window (SYS:Utilities/UnofficialTelegram); it isn't
   made by Telegram, and it needs setting up first: your own Telegram API key

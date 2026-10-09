@@ -71,7 +71,7 @@ a Part file that C/OpenUpTool reads:
                         the list" reads Parts/Tata/S/Tata.known); off by default while
                         Tata is 0.x (--openamigatata)
   OpenFTP/              OpenFTP, FTP and FTPS in SYS:Utilities/OpenFTP, off by default;
-                        FTPS needs AmiSSL 5, which OpenUp doesn't include (--openamigaftp)
+                        FTPS works with OpenTLS; AmiSSL is still used if present (--openamigaftp)
   Telegram/             Unofficial Telegram for Amiga (Open), SYS:Utilities/UnofficialTelegram,
                         off by default; it needs setting up: the user's own Telegram API
                         key and the telegram.td/1 service (--openamigatelegram)
@@ -400,7 +400,8 @@ def build_parts(a):
     if a.openamigatata:
         run(["sh", a.openamigatata / "build.sh"], env=dict(os.environ, STOVE=str(STOVE), OGT=str(a.opengadtools)))
     # OpenFTP: GCC 16, OpenGadTools' lib/, and the AmiSSL SDK's headers (build only:
-    # AmiSSL itself is not shipped; FTPS needs it installed, plain FTP doesn't)
+    # AmiSSL itself is not shipped). opentls.library's headers come with openamigaftp.
+    # FTPS works with OpenTLS, and with AmiSSL if that is what is installed.
     if a.openamigaftp:
         run(["sh", a.openamigaftp / "build-os3.sh"], env=dict(os.environ, OS32_GCC16=gcc16_root, OGT=str(a.opengadtools),
                                                              AMISSL=str(a.amissl), FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
@@ -974,15 +975,16 @@ def main() -> int:
         tt.line("startup Run >NIL: C:Tata START")
         tt.write()
 
-    # OpenFTP (openamigaftp), in a drawer in SYS:Utilities. Its FTPS needs
-    # AmiSSL 5, which OpenUp doesn't include: plain FTP works without it, and
-    # OpenFTP says in words that encryption needs AmiSSL. Off by default.
+    # OpenFTP (openamigaftp), in a drawer in SYS:Utilities. FTPS works with
+    # OpenTLS (opentls.library); AmiSSL is still used if present. Plain FTP
+    # works with neither, and OpenFTP says in words that FTPS needs OpenTLS
+    # (or AmiSSL). Off by default.
     ftp = None
     if a.openamigaftp:
         fs = a.openamigaftp
         fv = re.search(r'#define VERSION_STRING "([0-9.]+)"', (fs / "app/openftp.c").read_text(errors="replace"))
         ftp = Part(top, "OpenFTP", fv.group(1) if fv else "0.1",
-                   "OpenFTP: FTP and FTPS in two panes (FTPS needs AmiSSL 5, not included)")
+                   "OpenFTP: FTP and FTPS in two panes (FTPS works with OpenTLS; AmiSSL is still used if present)")
         d = "Utilities/OpenFTP"
         for rel, data in (("OpenFTP", (fs / "build/os3/OpenFTP").read_bytes()), ("OpenFTP.info", (fs / "package/OpenFTP.info").read_bytes()),
                           ("ReadMe", (fs / "README.md").read_bytes()), ("ReadMe.info", (fs / "package/ReadMe.info").read_bytes()),
