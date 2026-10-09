@@ -88,7 +88,10 @@ a Part file that C/OpenUpTool reads:
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
-  Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs)
+  Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs), and
+                        OpenAHI's files for the ACAHI sound board: acaudio.audio, its modes file
+                        and AHI's settings on Host mix (amigachrome's vendor/amigachrome-guest;
+                        ahi.device comes with OpenAHI's own, in progress)
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
@@ -366,6 +369,9 @@ def build_parts(a):
     run(["sh", a.openamigaprefs / "Menus/engine/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "TitleBar/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Sound/build.sh"], env=env)
+    # acaudio.audio, the AHI driver for the ACAHI board, and its modes file (amigachrome's vendored guest tree)
+    run(["sh", a.amigachrome / "vendor/amigachrome-guest/devices/acaudio.audio/build.sh", ROOT / "build/acaudio"],
+        env=dict(env, STOVE=str(STOVE)))
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
@@ -1155,6 +1161,21 @@ def main() -> int:
     snd.add("Prefs/Sound", (so / "Sound").read_bytes(), "SYS:Prefs/Sound")
     snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")
     snd.add("Prefs/Sound.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Sound.info")
+    # OpenAHI, folded into Sound (the user, 9 Oct 2026): the Team's pieces for the ACAHI board, acaudio.audio and
+    # DEVS:AudioModes/ACAUDIO (amigachrome's vendor/amigachrome-guest/devices/acaudio.audio, built here) and
+    # AHI's settings on the board's Host mix mode (mkahiprefs.py there; "default": a user's own stay). No
+    # ahi.device yet: it comes with OpenAHI's own, which the Team is writing.
+    acb = ROOT / "build/acaudio"
+    sys.path.insert(0, str(a.amigachrome / "vendor/amigachrome-guest/devices/acaudio.audio"))
+    import mkahiprefs
+    # Each of the four lines is "when AmigaChrome" (OpenUpTool 0.6.3): the board is AmigaChrome's, so nothing
+    # lands on a real Amiga or a PiStorm, where Sound is installed too.
+    snd.add("Devs/AHI/acaudio.audio", (acb / "AHI/acaudio.audio").read_bytes(), "DEVS:AHI/acaudio.audio")
+    snd.add("Devs/AudioModes/ACAUDIO", (acb / "AudioModes/ACAUDIO").read_bytes(), "DEVS:AudioModes/ACAUDIO")
+    prefs = mkahiprefs.prefs()
+    snd.add("Prefs/ahi.prefs", prefs, "ENVARC:Sys/ahi.prefs", default=True)
+    snd.add("Prefs/ahi.prefs", prefs, "ENV:Sys/ahi.prefs", default=True)
+    snd.lines[-4:] = ["when AmigaChrome " + l for l in snd.lines[-4:]]
     snd.line("startup SYS:Prefs/Sound USE")
     snd.write()
 
