@@ -75,7 +75,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.1 (9.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.2 (9.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1413,7 +1413,40 @@ static int update(const char *how)
     }
 }
 
+static int real_main(void);
+
+/* OpenUpTool needs a big stack: FIXTOOLS reads and writes icons through icon.library, which takes far more
+ * than the 4096 bytes a Shell, an Installer's Run Program step or an Execute script has by default (it did its
+ * work and then never returned). When the stack is smaller than 32 KB, the whole program runs on one of 64 KB.
+ * The swap's own variables are static: after StackSwap() the old stack can't be reached from the stack pointer. */
+static struct StackSwapStruct big_stack;
+static APTR big_stack_mem;
+static int big_stack_rc;
+
+static void run_on_big_stack(void)
+{
+    big_stack.stk_Lower = big_stack_mem;
+    big_stack.stk_Upper = (ULONG)big_stack_mem + 65536;
+    big_stack.stk_Pointer = (APTR)big_stack.stk_Upper;
+    StackSwap(&big_stack);
+    big_stack_rc = real_main();
+    StackSwap(&big_stack);
+}
+
 int main(void)
+{
+    struct Task *me = FindTask(NULL);
+    if ((ULONG)me->tc_SPUpper - (ULONG)me->tc_SPLower < 32768 && (big_stack_mem = AllocVec(65536, MEMF_PUBLIC))) {
+        int rc;
+        run_on_big_stack();
+        rc = big_stack_rc;
+        FreeVec(big_stack_mem);
+        return rc;
+    }
+    return real_main();
+}
+
+static int real_main(void)
 {
     LONG args[3] = { 0, 0, 0 };
     struct RDArgs *rda = ReadArgs((STRPTR)"COMMAND/A,DRAWER,TEXT", args, NULL);
