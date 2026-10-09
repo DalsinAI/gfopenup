@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.7.2
+Version:      0.7.3
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -62,7 +62,10 @@ choose:
   other programs' icons (Tata's first);
 - Sound (new): the volume, Amiga sound (Paula) and AHI sound in one editor,
   and a speaker on the menu bar; the old Sound editor is kept in
-  SYS:Prefs/Classic;
+  SYS:Prefs/Classic; it also carries OpenAHI's files for AmigaChrome's ACAHI
+  sound board: the board's AHI driver acaudio.audio and its modes in DEVS:, and
+  AHI's settings on the Host mix mode (kept if you have your own). ahi.device
+  comes with OpenAHI's own ahi.device (in progress), not yet in this pack;
 - OpenEdit (new): a text editor with tabs, find and replace, and colours
   for scripts and code (C:OpenEdit);
 - OpenBlanker (new, always installed): the screen blanker; after five minutes
