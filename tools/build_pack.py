@@ -700,7 +700,7 @@ def main() -> int:
 
     # OpenPrint and OpenView: openamigaprint's own package, laid out as its Installer does
     pkg = a.openamigaprint / "build/package/OpenPrint"
-    pr = Part(top, "OpenPrint", "0.3", "OpenPrint and OpenView: printing to PDF and IPP, and viewing")
+    pr = Part(top, "OpenPrint", "0.4", "OpenPrint and OpenView: printing to PDF and IPP, and viewing; OpenView is MultiView's replacement")
     for p in sorted(pkg.rglob("*")):
         if not p.is_file():
             continue
@@ -712,6 +712,12 @@ def main() -> int:
         elif rel == "Icons/OpenPrint.info": dest = "SYS:Utilities/OpenPrint.info"
         else: continue                    # its own Installer script and ReadMe
         pr.add(rel, p.read_bytes(), dest)
+    # OpenView stands in MultiView's place (OpenUp 0.7.2): a copy at SYS:Utilities/MultiView. Everything that runs
+    # MultiView (default tools, Help, programs, scripts) then runs OpenView, and no icon is edited. The original is
+    # kept by the usual rule for a replaced file (SYS:Storage/OpenUp-Superseded) and Uninstall-OpenUp puts it back.
+    # A copy, not a launcher or a link: it works on every file system, passes Workbench's and the Shell's arguments
+    # untouched, and needs no second program.
+    pr.add("Drawer/MultiView", (pkg / "Drawer/OpenView").read_bytes(), "SYS:Utilities/MultiView")
     pr.write()
 
     # AmigaChrome sharing: the control device, the clipboard and the files tools

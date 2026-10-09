@@ -50,7 +50,9 @@
         (help "OpenSocket: the Amiga's network (bsdsocket.library 4.2), through the x86 or ARM64 cores. "
               "AmigaChrome instances only.\n\n"
               "OpenPrint and OpenView: print to PDF and to printers on your network, "
-              "and view pictures and documents.\n\n"
+              "and view pictures and documents. OpenView takes MultiView's place: whatever "
+              "opened MultiView opens OpenView, and the original is kept in "
+              "SYS:Storage/OpenUp-Superseded.\n\n"
               "AmigaChrome sharing: the clipboard and files, shared in and out of the Amiga. "
               "AmigaChrome instances only.\n\n"
               "OpenLook: one look for every GadTools program, on RTG screens: title bars, "
@@ -565,18 +567,16 @@
         (if (= 0 (run (cat #tool " FIXTOOLS Parts/OpenUp/StockDefaultTools >>T:OpenUp.log")))
             (textfile (dest "ENVARC:OpenAmiga/DefaultTools-repaired") (append "OpenUp put back the default tools that 0.6.14 to 0.7.0 changed by mistake.\n")))))
 
-; OpenView opens what MultiView opened (pictures, text, guides, documents;
-; sounds, video and fonts stay), once, so a kind someone moves back later
-; stays moved. It is done by the kinds of file (OpenTypes' own default icons),
-; never by changing icons that are already there: a file with its own icon
-; keeps its own default tool. MultiView stays installed; OpenTypes UNDO puts
-; it all back.
-(if (and (exists "SYS:Prefs/OpenTypes") (exists "SYS:Utilities/OpenPrint/OpenView")
-         (not (exists "ENVARC:OpenAmiga/OpenView-switched")))
+; OpenView stands in MultiView's place (the OpenPrint part puts it at SYS:Utilities/MultiView and keeps
+; the original in SYS:Storage/OpenUp-Superseded), so everything that runs MultiView (default tools, Help,
+; programs, scripts) runs OpenView, for every kind of file a datatype reads. No icon is changed for that.
+; OpenUp 0.7.1 did it the other way, by moving the kinds of file (ENVARC:Sys/def_<kind>) from MultiView
+; to OpenView and leaving a marker; on this upgrade those go back to MultiView, which is OpenView now.
+(if (and (exists "ENVARC:OpenAmiga/OpenView-switched") (exists "Parts/OpenUp/StockDefaultTools"))
     (
-        (working "Making OpenView open pictures, text and guides")
-        (if (< (run "SYS:Prefs/OpenTypes SWITCH MultiView TO SYS:Utilities/OpenPrint/OpenView SAVE >>T:OpenUp.log") 10)
-            (textfile (dest "ENVARC:OpenAmiga/OpenView-switched") (append "OpenUp switched MultiView's kinds of file to OpenView.\n")))))
+        (working "Putting back the kinds of file that 0.7.1 moved to OpenView")
+        (if (= 0 (run (cat #tool " FIXTOOLS Parts/OpenUp/StockDefaultTools ALL >>T:OpenUp.log")))
+            (delete "ENVARC:OpenAmiga/OpenView-switched"))))
 
 ; OpenFiles and OpenView on the dock, also a dock someone already has; the
 ; rest of it is left alone, and a button already there isn't added twice.
