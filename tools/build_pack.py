@@ -9,7 +9,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
-        [--ahi DIR] [--no-build] [--lha]
+        [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
 the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
@@ -88,10 +88,10 @@ a Part file that C/OpenUpTool reads:
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
-  Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs)
-  OpenAHI/              AHI for AmigaChrome's ACAHI sound board: ahi.device 6.6 (AHI 6.0, LGPL, from the
-                        m68k user archive, --ahi), acaudio.audio and its modes file (amigachrome's
-                        vendor/amigachrome-guest) and AHI's settings on the board's Host mix mode
+  Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs), and
+                        OpenAHI's files for the ACAHI sound board: acaudio.audio, its modes file
+                        and AHI's settings on Host mix (amigachrome's vendor/amigachrome-guest;
+                        ahi.device comes with OpenAHI's own, in progress)
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
@@ -543,7 +543,7 @@ PART_MAIN = {
 # OpenView 0.5 and the copy at SYS:Utilities/MultiView; OpenMUI 0.2 is
 # zunemaster.library (0.1) with the muimaster.library face (19.1).
 PART_OWN_VERSION = {"AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev",
-                    "OpenPrint", "OpenMUI", "OpenAHI"}
+                    "OpenPrint", "OpenMUI"}
 
 
 def opentls_part(top: Path, tls_src: Path):
@@ -638,8 +638,6 @@ def main() -> int:
                     help="openamigatelegram, for the Telegram part (left out without it)")
     ap.add_argument("--openamigainput", type=Path, default=first(DEV / "openamigainput", DEV.parent / "openamigainput"),
                     help="openamigainput, for the OpenInput part (left out without it)")
-    ap.add_argument("--ahi", type=Path, default=first(DEV / "ahi", Path.home() / "AmigaChrome-dev/downloads/ahiusr/m68k-amigaos-ahi"),
-                    help="AHI 6.0's m68k user archive, unpacked (Aminet driver/audio/m68k-amigaos-ahiusr), for the OpenAHI part (left out without it)")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the OpenGPU developer kit is made (or, with --no-build, read): the OpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -1163,46 +1161,20 @@ def main() -> int:
     snd.add("Prefs/Sound", (so / "Sound").read_bytes(), "SYS:Prefs/Sound")
     snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")
     snd.add("Prefs/Sound.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Sound.info")
+    # OpenAHI, folded into Sound (the user, 9 Oct 2026): the Team's pieces for the ACAHI board, acaudio.audio and
+    # DEVS:AudioModes/ACAUDIO (amigachrome's vendor/amigachrome-guest/devices/acaudio.audio, built here) and
+    # AHI's settings on the board's Host mix mode (mkahiprefs.py there; "default": a user's own stay). No
+    # ahi.device yet: it comes with OpenAHI's own, which the Team is writing.
+    acb = ROOT / "build/acaudio"
+    sys.path.insert(0, str(a.amigachrome / "vendor/amigachrome-guest/devices/acaudio.audio"))
+    import mkahiprefs
+    snd.add("Devs/AHI/acaudio.audio", (acb / "AHI/acaudio.audio").read_bytes(), "DEVS:AHI/acaudio.audio")
+    snd.add("Devs/AudioModes/ACAUDIO", (acb / "AudioModes/ACAUDIO").read_bytes(), "DEVS:AudioModes/ACAUDIO")
+    prefs = mkahiprefs.prefs()
+    snd.add("Prefs/ahi.prefs", prefs, "ENVARC:Sys/ahi.prefs", default=True)
+    snd.add("Prefs/ahi.prefs", prefs, "ENV:Sys/ahi.prefs", default=True)
     snd.line("startup SYS:Prefs/Sound USE")
     snd.write()
-
-    # OpenAHI: AHI for AmigaChrome's ACAHI sound board. ahi.device is AHI 6.0's (ahi.device 6.6, LGPL) from the
-    # m68k user archive; acaudio.audio and its modes file are the Team's own (amigachrome's vendored guest
-    # tree, devices/acaudio.audio, built here); ahi.prefs puts AHI's units 0 to 3 and its default on the board's
-    # Host mix mode, as mkahiprefs.py writes it. An AHI the user has stays ("add"), and so do their settings
-    # ("default"). The board is AmigaChrome's, so the part is left out elsewhere.
-    ahi_part = None
-    if a.ahi and (a.ahi / "User/Devs/ahi.device").is_file():
-        acb = ROOT / "build/acaudio"
-        ahi_dev = (a.ahi / "User/Devs/ahi.device").read_bytes()
-        ahi_ver = binary_version(ahi_dev, "ahi.device") or "6.6"
-        sys.path.insert(0, str(a.amigachrome / "vendor/amigachrome-guest/devices/acaudio.audio"))
-        import mkahiprefs
-        ahi_part = Part(top, "OpenAHI", "0.1", "OpenAHI: AHI for the ACAHI sound board: ahi.device, acaudio.audio, its modes and AHI's settings on Host mix")
-        ahi_part.line("needs AmigaChrome")
-        ahi_part.add("Devs/ahi.device", ahi_dev, "DEVS:ahi.device", own=True)
-        ahi_part.add("Devs/AHI/acaudio.audio", (acb / "AHI/acaudio.audio").read_bytes(), "DEVS:AHI/acaudio.audio")
-        ahi_part.add("Devs/AudioModes/ACAUDIO", (acb / "AudioModes/ACAUDIO").read_bytes(), "DEVS:AudioModes/ACAUDIO")
-        prefs = mkahiprefs.prefs()
-        ahi_part.add("Prefs/ahi.prefs", prefs, "ENVARC:Sys/ahi.prefs", default=True)
-        ahi_part.add("Prefs/ahi.prefs", prefs, "ENV:Sys/ahi.prefs", default=True)
-        legal = (
-            f"AHI, the audio system for AmigaOS: ahi.device {ahi_ver}, from AHI 6.0 (20 November 2005), (C) 1994-2005 Martin Blom.\n"
-            "OpenAHI's ahi.device is the m68k-amigaos user archive's, byte for byte: Aminet driver/audio/m68k-amigaos-ahiusr.lha\n"
-            "(https://aminet.net/package/driver/audio/m68k-amigaos-ahiusr), sha256 of the archive\n"
-            "b0e8540185ad9f6cd57e90e18b020bec93e9fca206f0893d35f2d8599cb194d5.\n\n"
-            "Licence: ahi.device is free software under the GNU Library General Public License, version 2\n"
-            "(COPYING.LIB, kept in SYS:Storage/AHI). AHI's programs are under the GNU General Public License\n"
-            "and its sound card drivers under the exception in COPYING.DRIVERS; OpenAHI ships neither.\n"
-            "Source code: AHI 6.0's, Aminet driver/audio/ahisrc (https://aminet.net/package/driver/audio/ahisrc),\n"
-            "and https://arp2.sourceforge.net/ahi/.\n\n"
-            "acaudio.audio and ACAUDIO (the modes file) are the Team's own, MIT, Copyright (c) 2026 Dalsin Limited:\n"
-            "https://github.com/DalsinAI/amigachrome, vendor/amigachrome-guest/devices/acaudio.audio.\n"
-            "An ahi.device already in DEVS: is left alone (OpenUp only replaces its own copy).\n").encode("latin-1")
-        ahi_part.add("LEGAL", legal, "SYS:Storage/AHI/LEGAL")
-        ahi_part.add("COPYING.LIB", (a.ahi / "COPYING.LIB").read_bytes(), "SYS:Storage/AHI/COPYING.LIB")
-        ahi_part.add("Utilities/OpenUp/Licences/AHI.txt", legal, "SYS:Utilities/OpenUp/Licences/AHI.txt")
-        ahi_part.write()
 
     # OpenEdit: the text editor (openamigaedit), with its kinds of file in ENVARC:
     oe = a.openamigaedit / "build/os3"

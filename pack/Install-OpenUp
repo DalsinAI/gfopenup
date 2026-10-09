@@ -33,8 +33,8 @@
 ; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY,
 ; 1073741824 Tata (the last bit of this word).
 ; The second word, #parts2 (OpenUp 0.7.0): 1 OpenFTP, 2 Unofficial Telegram, 4 OpenGPU developer files,
-; 8 OpenInput, 16 OpenTLS, 32 OpenAHI (OpenUp 0.7.3).
-; Only OpenAHI is ticked by default, and only on AmigaChrome (32): it is AHI for AmigaChrome's sound board.
+; 8 OpenInput, 16 OpenTLS.
+; None of them is ticked by default, on any machine.
 ; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos, OpenPuTTY
 ; and Tata (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D
 ; (295632378). Tata stays unticked while it is 0.x (the user, 8 October 2026), and is ticked from 1.0.
@@ -214,20 +214,13 @@
               "with the server's certificate checked against Mozilla's list of certificate "
               "authorities, in S:OpenTLS (put your own in ENVARC:OpenTLS/certs). OpenFTP's FTPS "
               "uses it, so it comes with OpenFTP whatever is picked here; it brings OpenCrypto, "
-              "which does its sums on the x86 or ARM64 cores on AmigaChrome.\n\n"
-              "OpenAHI: AHI for AmigaChrome's sound board (new, on by default there). AHI is the "
-              "Amiga's sound system for players, trackers, games and SDL programs; this puts "
-              "ahi.device 6 (LGPL; an AHI you have is kept), the board's driver, acaudio.audio, and "
-              "its modes in DEVS:, and sets AHI's units to Host mix, where the x86 or ARM64 cores do "
-              "the mixing and the sound reaches your speakers beside Paula's. Sound and OpenGPU's "
-              "SDL2_mixer use AHI, so they bring it with them on AmigaChrome. AmigaChrome instances only.")
+              "which does its sums on the x86 or ARM64 cores on AmigaChrome.")
         (choices "OpenFTP: FTP and FTPS (new)"
                  "Telegram, unofficial: needs setting up (new)"
                  "OpenGPU developer files (new)"
                  "OpenInput: game controllers (new)"
-                 "OpenTLS: secure connections (new)"
-                 "OpenAHI: AHI sound on AmigaChrome (new)")
-        (default (if #ac 32 0))))
+                 "OpenTLS: secure connections (new)")
+        (default 0)))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
 ; OpenFTP's FTPS needs OpenTLS, and OpenTLS does its sums with OpenCrypto
@@ -235,8 +228,6 @@
 (if (bitand #parts2 16) (set #parts (bitor #parts 268435456)))
 ; OpenPuTTY needs OpenCrypto
 (if (bitand #parts 536870912) (set #parts (bitor #parts 268435456)))
-; Sound's AHI levels and OpenGPU's SDL2_mixer play through AHI: on AmigaChrome that is OpenAHI's
-(if (and #ac (or (bitand #parts 262144) (bitand #parts 33554432))) (set #parts2 (bitor #parts2 32)))
 
 (set #look "Open light")
 (set #theme "Open")
@@ -487,13 +478,6 @@
                 (copyfiles (source "SYS:Prefs/Sound") (dest "SYS:Prefs/Classic") (infos) (nogauge))))
         (if (> (run (cat #tool " INSTALL Parts/Sound >>T:OpenUp.log")) 5)
             (message "Sound didn't install completely. T:OpenUp.log says why; nothing else changed."))))
-
-(if (bitand #parts2 32)
-    (if (exists "Parts/OpenAHI/Part")
-        (
-            (working "Installing OpenAHI")
-            (if (> (run (cat #tool " INSTALL Parts/OpenAHI >>T:OpenUp.log")) 5)
-                (message "OpenAHI didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
 
 (if (bitand #parts 524288)
     (
