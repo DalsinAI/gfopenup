@@ -137,6 +137,23 @@ def openview(sel):
     return ic
 
 
+def openmonitor(sel):
+    """A screen with three live graphs (CPU blue, memory green, GPU orange); chosen, they climb."""
+    ic = Icon()
+    ic.add(rrect(4, 8, 56, 46, 3), linear((4, 8), (56, 46), rgb('#4A5160'), rgb('#1C2028')), gloss=0.15)
+    ic.add(rect(8, 12, 52, 42), linear((0, 12), (0, 42), rgb('#10161F'), rgb('#26303D')), outline=0.9)
+    for i in range(1, 4):
+        ic.detail(rect(9, 12 + i * 7.5, 51, 12.5 + i * 7.5), rgb('#3A4656'))
+    lift = 5 if sel else 0
+    lines = [((61, 143, 214), [(9, 34), (15, 30), (21, 32), (27, 24), (33, 27), (39, 19 - lift), (45, 22 - lift), (51, 15 - lift)]),
+             ((76, 175, 80), [(9, 28), (15, 27), (21, 27), (27, 26), (33, 26), (39, 25), (45, 25), (51, 24 - lift)]),
+             ((240, 140, 40), [(9, 39), (15, 36), (21, 38), (27, 33), (33, 35), (39, 30 - lift), (45, 31 - lift), (51, 27 - lift)])]
+    for c, pts in lines:
+        ic.detail(stroke(pts, 1.6), c)
+    ic.add(poly([(24, 46), (36, 46), (39, 54), (21, 54)]), linear((0, 46), (0, 54), rgb('#9AA1AC'), rgb('#5D6470')), outline=1.2)
+    return ic
+
+
 def openedit(sel):
     """A notepad and a pencil; chosen, the pencil has written a line more."""
     ic = Icon()
@@ -546,7 +563,7 @@ ICONS = {
     "OpenFiles": openfiles, "OpenView": openview, "OpenEdit": openedit, "OpenWrite": openwrite,
     "OpenPlay": openplay, "OpenBrowser": openbrowser, "OpenCompress": opencompress,
     "Printers and Queue": printer, "Install-OpenUp": install, "Uninstall-OpenUp": uninstall,
-    "OpenUp-Setup": setup, "ZuneTest": zunetest,
+    "OpenUp-Setup": setup, "ZuneTest": zunetest, "OpenMonitor": openmonitor,
     "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
     "Gamepads": gamepads,
 }
