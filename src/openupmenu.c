@@ -39,7 +39,7 @@
 
 #include <string.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.2 (10.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.3 (10.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct Library *WorkbenchBase, *IconBase;
 
@@ -72,15 +72,14 @@ static const struct entry entries[] = {
     { M_OPENUP, HOW_SEP, "---",          NULL, NULL, NULL, NULL },
     /* only with an OpenUpTool that has UPDATE (OpenUp Update, DESIGN.md section 5) */
     { M_OPENUP, HOW_CON, "OpenUp Update...", NULL, "SYS:C/OpenUpTool UPDATE", "SYS:C/OpenUpTool", "UPDATE [CHECK" },
-    { M_PREFS,  HOW_WB,  "Look",         "SYS:Prefs/Look",                       NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Windows",      "SYS:Prefs/Windows",                    NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Look",         "SYS:Prefs/OpenLook",                   NULL, NULL, NULL },   /* 0.1.3: Windows, Title bar, Menus are its pages */
     { M_PREFS,  HOW_WB,  "Dock",         "SYS:Prefs/Dock",                       NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Menus",        "SYS:Prefs/Menus",                      NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Title bar",    "SYS:Prefs/TitleBar",                   NULL, NULL, NULL },
     /* SYS:Prefs/Sound is OS 3.2's own editor until OpenUp's Sound part
      * replaces it; OpenSpeaker comes with OpenUp's */
     { M_PREFS,  HOW_WB,  "Sound",        "SYS:Prefs/Sound",                      NULL, "SYS:C/OpenSpeaker", NULL },
     { M_PREFS,  HOW_WB,  "Date and time", "SYS:Prefs/OpenDateTime",              NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Input",        "SYS:Prefs/OpenInput",                  NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Serial",       "SYS:Prefs/OpenSerial",                 NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Printers",     "SYS:Utilities/OpenPrint/Printers and Queue", NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Network",      "SYS:Tools/Commodities/OpenSocketControl", NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "OpenTypes",    "SYS:Prefs/OpenTypes",                  NULL, NULL, NULL },
