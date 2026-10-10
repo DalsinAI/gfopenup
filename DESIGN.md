@@ -165,8 +165,10 @@ to `SYS:C/OpenUpMenu`) puts two sub-menus in Workbench's Tools menu:
 
 - **Only what is installed shows.** Each entry is shown when its program is
   where the pack puts it (`tools/build_pack.py`), so a part left out leaves
-  no dead entry. Sound needs `C:OpenSpeaker` as well, since `SYS:Prefs/Sound`
-  is OS 3.2's own editor until the Sound part replaces it. "OpenUp
+  no dead entry. Since 10 October 2026 every editor of ours in SYS:Prefs is
+  Open... (OpenLook, OpenDock, OpenSound, OpenDateTime, OpenInput, OpenSerial,
+  OpenTypes, OpenTata, OpenUp-Setup; the user: "either all are Open x or none
+  are"), and the OS's own editors we replace are in SYS:Prefs/Classic. "OpenUp
   Update..." needs an OpenUpTool with `UPDATE`. OpenBlanker has no editor
   yet, so it has no entry.
 - **Choosing one is a double-click:** `OpenWorkbenchObjectA`, so the icon's
