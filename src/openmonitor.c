@@ -486,7 +486,7 @@ static int gui(void)
         graph_pen[i] = ObtainBestPen(scr->ViewPort.ColorMap, (graph_rgb[i] >> 16) * 0x01010101UL,
                                      ((graph_rgb[i] >> 8) & 255) * 0x01010101UL, (graph_rgb[i] & 255) * 0x01010101UL,
                                      OBP_Precision, PRECISION_GUI, TAG_DONE);
-    lv_hook.h_Entry = (HOOKFUNC)lv_render;
+    lv_hook.h_Entry = (__typeof__(lv_hook.h_Entry))lv_render;   /* whatever type this NDK gives h_Entry */
     list_init(&rowlist);
 
     g = CreateContext(&glist);
