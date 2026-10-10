@@ -40,7 +40,7 @@ static const char version[] __attribute__((used)) = "$VER: OpenClock 0.1 (10.10.
 enum { V_ANALOGUE, V_DIGITAL, V_BOTH };
 enum { M_ANALOGUE = 1, M_DIGITAL, M_BOTH, M_SECONDS, M_H24, M_DATE, M_SAVE, M_QUIT };
 
-static struct Library *UtilityBase;
+struct Library *UtilityBase;              /* proto/utility.h declares it: not static */
 static struct Window *win;
 static struct Screen *scr;
 static APTR vi;
