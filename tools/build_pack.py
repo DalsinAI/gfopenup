@@ -895,7 +895,9 @@ def main() -> int:
     rt.add("Libs/OpenRTG/cybergraphics.library", (rtg / "cybergraphics.library").read_bytes(), "LIBS:OpenRTG/cybergraphics.library")
     rt.add("C/OpenRTG", (rtg / "OpenRTG").read_bytes(), "C:OpenRTG")
     rt.add("Devs/Monitors/OpenRTG", (rtg / "OpenRTG-Monitor").read_bytes(), "DEVS:Monitors/OpenRTG")
-    mode = screenmode_prefs(0x61011100, 800, 600, 16)
+    # Width and Height on Default (0xFFFF, as ScreenMode prefs writes it): the screen is the size of whichever mode is
+    # chosen. A fixed 800 x 600 kept Workbench at 800 x 600 after the user picked 1920 x 1080 (10 Oct 2026).
+    mode = screenmode_prefs(0x61011100, 0xFFFF, 0xFFFF, 16)
     rt.add("Prefs/ScreenMode.prefs", mode, "ENVARC:Sys/ScreenMode.prefs")
     rt.add("Prefs/ScreenMode-ENV.prefs", mode, "ENV:Sys/ScreenMode.prefs")
     rt.write()
