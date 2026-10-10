@@ -72,11 +72,8 @@ static const struct entry entries[] = {
     { M_OPENUP, HOW_SEP, "---",          NULL, NULL, NULL, NULL },
     /* only with an OpenUpTool that has UPDATE (OpenUp Update, DESIGN.md section 5) */
     { M_OPENUP, HOW_CON, "OpenUp Update...", NULL, "SYS:C/OpenUpTool UPDATE", "SYS:C/OpenUpTool", "UPDATE [CHECK" },
-    { M_PREFS,  HOW_WB,  "Look",         "SYS:Prefs/Look",                       NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Windows",      "SYS:Prefs/Windows",                    NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Look",         "SYS:Prefs/OpenLook",                   NULL, NULL, NULL },   /* 0.1.3: Windows, Title bar, Menus are its pages */
     { M_PREFS,  HOW_WB,  "Dock",         "SYS:Prefs/Dock",                       NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Menus",        "SYS:Prefs/Menus",                      NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Title bar",    "SYS:Prefs/TitleBar",                   NULL, NULL, NULL },
     /* SYS:Prefs/Sound is OS 3.2's own editor until OpenUp's Sound part
      * replaces it; OpenSpeaker comes with OpenUp's */
     { M_PREFS,  HOW_WB,  "Sound",        "SYS:Prefs/Sound",                      NULL, "SYS:C/OpenSpeaker", NULL },
