@@ -39,7 +39,7 @@
 
 #include <string.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.2 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.3 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct Library *WorkbenchBase, *IconBase;
 
@@ -81,6 +81,8 @@ static const struct entry entries[] = {
      * replaces it; OpenSpeaker comes with OpenUp's */
     { M_PREFS,  HOW_WB,  "Sound",        "SYS:Prefs/Sound",                      NULL, "SYS:C/OpenSpeaker", NULL },
     { M_PREFS,  HOW_WB,  "Date and time", "SYS:Prefs/OpenDateTime",              NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Input",        "SYS:Prefs/OpenInput",                  NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Serial",       "SYS:Prefs/OpenSerial",                 NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Printers",     "SYS:Utilities/OpenPrint/Printers and Queue", NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Network",      "SYS:Tools/Commodities/OpenSocketControl", NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "OpenTypes",    "SYS:Prefs/OpenTypes",                  NULL, NULL, NULL },
