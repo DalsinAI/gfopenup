@@ -25,6 +25,8 @@
  *   OpenUpTool RECONCILE [CHECK|APPLY [ONCE]|UNDO]  one desktop, the Open one: old prefs editors to
  *                                     SYS:Prefs/Classic, replaced tools retired, settings OpenUp owns kept in
  *                                     step; CHECK says what it would do (see the RECONCILE section)
+ *   OpenUpTool TIDY [ONCE]            the system's drawers cleaned up, sized to fit (at most 800 x 600) and
+ *                                     snapshotted by Workbench itself, so they open neat (see TIDY)
  *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
  *                                     come back with UNINSTALL
  *   OpenUpTool UPDATE [CHECK|YES]     a newer pack Cradle put in DH1:OpenUp: CHECK says
@@ -76,6 +78,9 @@
 #include <datatypes/datatypesclass.h>
 #include <datatypes/pictureclass.h>
 #include <proto/datatypes.h>
+#include <rexx/storage.h>
+#include <rexx/rxslib.h>
+#include <proto/rexxsyslib.h>
 #include <libraries/configvars.h>
 #include <libraries/expansionbase.h>
 #include <proto/exec.h>
@@ -1785,6 +1790,155 @@ static int reconcile(const char *how, const char *once)
     return failed ? RETURN_WARN : RETURN_OK;
 }
 
+/* ---- TIDY: drawers that open looking finished --------------------------------------------- */
+
+/* The user, 10 October 2026: "the windows look pants when opening because we haven't sized them and made them
+ * pretty". TIDY has Workbench itself clean up each of the system's drawers (by name), size the window to fit
+ * its icons (never larger than 800 x 600 or the screen), and snapshot it all, so every drawer opens neat, in
+ * the screen's own font. Through Workbench's ARexx port (WORKBENCH), as OpenMenus talks to it; nothing of
+ * Workbench's is patched.
+ *   OpenUpTool TIDY [ONCE]    ONCE (at boot): waits for Workbench, and does it once per tidy version */
+#define TIDY_VERSION "1"
+#define TIDY_DONE "ENVARC:OpenAmiga/Tidy.done"
+struct RxsLib *RexxSysBase;
+
+/* One command to Workbench; 0 is RC_OK. Waits up to ticks fiftieths of a second for the answer. */
+static LONG wb_cmd(const char *cmd, char *out, int size, int ticks)
+{
+    struct MsgPort *wb, *rp;
+    struct RexxMsg *rm;
+    LONG rc = 20;
+    if (out && size) out[0] = 0;
+    if (!RexxSysBase && !(RexxSysBase = (struct RxsLib *)OpenLibrary((STRPTR)"rexxsyslib.library", 36))) return 20;
+    if (!(rp = CreateMsgPort())) return 20;
+    if ((rm = CreateRexxMsg(rp, NULL, NULL))) {
+        rm->rm_Action = RXCOMM | RXFF_RESULT;
+        if ((rm->rm_Args[0] = (STRPTR)CreateArgstring((STRPTR)cmd, strlen(cmd)))) {
+            Forbid();
+            if ((wb = FindPort((STRPTR)"WORKBENCH"))) PutMsg(wb, (struct Message *)rm);
+            Permit();
+            if (wb) {
+                int t;
+                struct Message *got = NULL;
+                for (t = 0; t < ticks && !(got = GetMsg(rp)); t++) Delay(1);
+                if (!got) return 20;                 /* no answer: the message and port stay, for a late reply */
+                rc = rm->rm_Result1;
+                if (!rc && rm->rm_Result2) {
+                    if (out) strlcpy(out, (const char *)rm->rm_Result2, size);
+                    DeleteArgstring((UBYTE *)rm->rm_Result2);
+                }
+            }
+            DeleteArgstring((UBYTE *)rm->rm_Args[0]);
+        }
+        DeleteRexxMsg(rm);
+    }
+    DeleteMsgPort(rp);
+    return rc;
+}
+
+/* "verb "name" rest" into buf */
+static const char *wb_line(char *buf, int size, const char *verb, const char *name, const char *rest)
+{
+    strlcpy(buf, verb, size);
+    if (name) { strlcat(buf, " \"", size); strlcat(buf, name, size); strlcat(buf, "\"", size); }
+    if (rest) { strlcat(buf, " ", size); strlcat(buf, rest, size); }
+    return buf;
+}
+
+static LONG wb_num(const char *attr, const char *name)
+{
+    char cmd[300], out[32];
+    strlcpy(cmd, "GETATTR ", sizeof cmd);
+    strlcat(cmd, attr, sizeof cmd);
+    strlcat(cmd, " NAME \"", sizeof cmd);
+    strlcat(cmd, name, sizeof cmd);
+    strlcat(cmd, "\"", sizeof cmd);
+    if (wb_cmd(cmd, out, sizeof out, 250)) return -1;
+    return atol(out);
+}
+
+/* The drawer's name as Workbench knows its windows: the volume's name, not SYS:. */
+static int wb_name(const char *path, char *out, int size)
+{
+    BPTR l = Lock((STRPTR)path, ACCESS_READ);
+    LONG ok;
+    if (!l) return 0;
+    ok = NameFromLock(l, (STRPTR)out, size);
+    UnLock(l);
+    return ok != 0;
+}
+
+static int tidy(const char *once)
+{
+    static const char *const drawers[] = {
+        "SYS:", "SYS:Prefs", "SYS:Prefs/Classic", "SYS:Prefs/Presets", "SYS:Tools", "SYS:Tools/Commodities",
+        "SYS:Utilities", "SYS:System", "SYS:WBStartup", "SYS:Storage", "SYS:Developer", "SYS:Expansion", "Work:",
+    };
+    char name[256], cmd[400], num[16];
+    LONG scrw = 640, scrh = 480, w, h;
+    int i, done = 0, t;
+    if (once && same_word(once, "ONCE")) {
+        LONG len = 0;
+        char *d = read_file(TIDY_DONE, &len);
+        int same = d && len >= 1 && d[0] == TIDY_VERSION[0];
+        if (d) FreeVec(d);
+        if (same) return RETURN_OK;
+        for (t = 0; t < 90; t++) {                   /* at boot: Workbench comes after S:User-Startup */
+            struct MsgPort *wb;
+            Forbid();
+            wb = FindPort((STRPTR)"WORKBENCH");
+            Permit();
+            if (wb) break;
+            Delay(50);
+        }
+        Delay(250);                                  /* let Workbench open its windows and read its icons */
+    }
+    if (wb_cmd("GETATTR SCREEN.WIDTH", num, sizeof num, 250) == 0) scrw = atol(num);
+    if (wb_cmd("GETATTR SCREEN.HEIGHT", num, sizeof num, 250) == 0) scrh = atol(num);
+    if (scrw <= 0 || scrh <= 0) { say("OpenUp: Workbench isn't answering; nothing tidied.", NULL, NULL); return RETURN_WARN; }
+    for (i = 0; i < (int)(sizeof drawers / sizeof drawers[0]); i++) {
+        if (!exists(drawers[i]) || !wb_name(drawers[i], name, sizeof name)) continue;
+        if (wb_cmd(wb_line(cmd, sizeof cmd, "WINDOW", name, "OPEN"), NULL, 0, 500)) continue;
+        wb_cmd(wb_line(cmd, sizeof cmd, "WINDOW", name, "ACTIVATE"), NULL, 0, 250);
+        wb_cmd("MENU INVOKE WINDOW.CLEANUPBY.NAME", NULL, 0, 500);
+        wb_cmd("MENU INVOKE WINDOW.RESIZETOFIT", NULL, 0, 500);
+        w = wb_num("WINDOW.WIDTH", name);
+        h = wb_num("WINDOW.HEIGHT", name);
+        if (w > 0 && h > 0) {
+            LONG mw = scrw < 800 ? scrw : 800, mh = scrh - 40 < 600 ? scrh - 40 : 600;
+            if (w > mw || h > mh) {
+                char size[32];
+                LONG nw = w > mw ? mw : w, nh = h > mh ? mh : h;
+                size[0] = 0;
+                {   /* "w h" without stdio */
+                    char a[12], b[12];
+                    int k = 0, j;
+                    LONG v = nw;
+                    do { a[k++] = (char)('0' + v % 10); v /= 10; } while (v && k < 11);
+                    for (j = 0; j < k; j++) size[j] = a[k - 1 - j];
+                    size[k] = ' ';
+                    v = nh; j = 0;
+                    do { b[j++] = (char)('0' + v % 10); v /= 10; } while (v && j < 11);
+                    for (t = 0; t < j; t++) size[k + 1 + t] = b[j - 1 - t];
+                    size[k + 1 + j] = 0;
+                }
+                wb_cmd(wb_line(cmd, sizeof cmd, "SIZEWINDOW", name, size), NULL, 0, 250);
+            }
+        }
+        wb_cmd("MENU INVOKE WINDOW.SNAPSHOT.ALL", NULL, 0, 500);
+        if (strcmp(drawers[i], "SYS:") && strcmp(drawers[i], "Work:"))
+            wb_cmd(wb_line(cmd, sizeof cmd, "WINDOW", name, "CLOSE"), NULL, 0, 250);
+        Printf((STRPTR)"  tidied: %s\n", (LONG)name);
+        done++;
+    }
+    if (RexxSysBase) { CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL; }
+    if (!done) { say("OpenUp: Workbench didn't open any drawer for TIDY; nothing tidied, it tries again next time.", NULL, NULL); return RETURN_WARN; }
+    ensure_dir("ENVARC:OpenAmiga", 1);
+    write_file(TIDY_DONE, TIDY_VERSION "\n", strlen(TIDY_VERSION) + 1);
+    Printf((STRPTR)"OpenUp: %ld drawers tidied: cleaned up by name, sized to fit, snapshotted\n", (LONG)done);
+    return RETURN_OK;
+}
+
 static int list(void)
 {
     int i, files = 0;
@@ -1969,7 +2123,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | UPDATE [CHECK|YES]\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | UPDATE [CHECK|YES]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -1989,6 +2143,7 @@ static int real_main(void)
     else if (same_word(cmd, "WBBACKDROP")) rc = set_wb_backdrop();
     else if (same_word(cmd, "WBGAUGE")) rc = set_wb_gauge();
     else if (same_word(cmd, "RECONCILE")) rc = reconcile((const char *)args[1], (const char *)args[2]);
+    else if (same_word(cmd, "TIDY")) rc = tidy((const char *)args[1]);
     else if (same_word(cmd, "SETTING") && args[1] && args[2]) {
         /* The text goes through T: so it is installed like any file. */
         char line[200];
@@ -2019,7 +2174,7 @@ static int real_main(void)
         rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
