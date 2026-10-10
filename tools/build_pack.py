@@ -844,12 +844,13 @@ def main() -> int:
     bl.write()
 
     # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
-    # Installer runs "SYS:Prefs/Dock SAVE" once, on a first install, so the
+    # Installer runs "SYS:Prefs/OpenDock SAVE" once, on a first install, so the
     # dock starts with the buttons of a dock already there.
     dock = Part(top, "OpenDock", "0.5", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
-    dock.add("Prefs/Dock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/Dock")
-    dock.add("Prefs/Dock.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Dock.info")
+    # 10 October 2026: every editor of ours in SYS:Prefs is Open... (the user: "either all are Open x or none are")
+    dock.add("Prefs/OpenDock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/OpenDock")
+    dock.add("Prefs/OpenDock.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenDock.info")
     # Workbench as a backdrop: OpenDock sits just above it, so Workbench's own
     # window would cover the dock. A stock 3.2.3 opens Workbench as a window;
     # the backdrop flag is the word at offset 16 of WBConfig.prefs' WBCF chunk
@@ -1037,8 +1038,8 @@ def main() -> int:
         tt = Part(top, "Tata", tv.group(1) if tv else "0.2",
                   "Tata: warns before loading programs and files known to fail (off unless picked while 0.x)")
         tt.add("C/Tata", (tb_os3 / "Tata").read_bytes(), "SYS:C/Tata")
-        tt.add("Prefs/Tata", (tb_os3 / "Tata-Prefs").read_bytes(), "SYS:Prefs/Tata")
-        tt.add("Prefs/Tata.info", (tt_src / "icons/Tata.info").read_bytes(), "SYS:Prefs/Tata.info")
+        tt.add("Prefs/OpenTata", (tb_os3 / "Tata-Prefs").read_bytes(), "SYS:Prefs/OpenTata")
+        tt.add("Prefs/OpenTata.info", (tt_src / "icons/Tata.info").read_bytes(), "SYS:Prefs/OpenTata.info")
         tt.add("S/Tata.known", (tt_src / "data/Tata.known").read_bytes(), "S:Tata.known")
         tt.line("startup Run >NIL: C:Tata START")
         tt.write()
@@ -1112,8 +1113,8 @@ def main() -> int:
                    "OpenInput: game controllers for every program, and Gamepads in Prefs (on AmigaChrome: the Amiga's ports for now)")
         oin.add("Libs/openinput.library", oil, "LIBS:openinput.library")
         oin.add("C/OIList", (oib / "OIList").read_bytes(), "SYS:C/OIList")
-        oin.add("Prefs/Gamepads", (a.openamigaprefs / "Gamepads/build/os3/Gamepads").read_bytes(), "SYS:Prefs/Gamepads")
-        oin.add("Prefs/Gamepads.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Gamepads.info")
+        # no icon: OpenGamepads lives under OpenInput (its Gamepads... button), the user, 10 October 2026
+        oin.add("Prefs/OpenGamepads", (a.openamigaprefs / "Gamepads/build/os3/Gamepads").read_bytes(), "SYS:Prefs/OpenGamepads")
         d = "Utilities/OpenUp/Docs"
         for name, src in (("OpenInput.txt", a.openamigainput / "README.md"),
                           ("Design-OpenInput.txt", a.openamigainput / "Design-OpenInput.md"),
@@ -1123,7 +1124,7 @@ def main() -> int:
         oin.add("Utilities/OpenUp/Docs.info", icons.icon(icons.WBDRAWER, "drawer", window=(320, 120)), "SYS:Utilities/OpenUp/Docs.info", default=True)
         oin.add("Utilities/OpenUp/Licences/OpenInput.txt", (a.openamigainput / "LICENSE").read_bytes(),
                 "SYS:Utilities/OpenUp/Licences/OpenInput.txt")
-        oin.line("startup SYS:Prefs/Gamepads USE")
+        oin.line("startup SYS:Prefs/OpenGamepads USE")
         oin.write()
 
     # GCC 16's FPCR clash (openamigartg tools/fpcr_check.py) must not be in
@@ -1159,13 +1160,13 @@ def main() -> int:
     tb.write()
 
     # Sound: OpenPrefs Sound (the volume, Paula's and AHI's levels, the beep)
-    # in SYS:Prefs/Sound, whose old editor the Installer copies to
-    # SYS:Prefs/Classic first, and OpenSpeaker on the menu bar (openamigaprefs).
+    # in SYS:Prefs/OpenSound (the OS's Sound goes to SYS:Prefs/Classic:
+    # OpenUpTool RECONCILE), and OpenSpeaker on the menu bar (openamigaprefs).
     so = a.openamigaprefs / "Sound/build/os3"
     snd = Part(top, "Sound", "0.2", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and OpenAHI on AmigaChrome")
-    snd.add("Prefs/Sound", (so / "Sound").read_bytes(), "SYS:Prefs/Sound")
+    snd.add("Prefs/OpenSound", (so / "Sound").read_bytes(), "SYS:Prefs/OpenSound")
     snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")
-    snd.add("Prefs/Sound.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Sound.info")
+    snd.add("Prefs/OpenSound.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenSound.info")
     # OpenAHI, folded into Sound (the user, 9 Oct 2026), is the Team's own AHI for the ACAHI board: ahi.device
     # (devices/ahi.device, MIT, no Aminet code), acaudio.audio and DEVS:AudioModes/ACAUDIO (amigachrome's
     # vendor/amigachrome-guest/devices/acaudio.audio, built here) and AHI's settings on the board's Host mix
@@ -1193,7 +1194,7 @@ def main() -> int:
             "use AHI work unchanged. MIT licence, as follows.\n\n" + lic)
     snd.add("Utilities/OpenUp/Licences/OpenAHI.txt", note.encode("latin-1", "replace"), "SYS:Utilities/OpenUp/Licences/OpenAHI.txt")
     snd.lines[n_before:] = ["when AmigaChrome " + l for l in snd.lines[n_before:]]
-    snd.line("startup SYS:Prefs/Sound USE")
+    snd.line("startup SYS:Prefs/OpenSound USE")
     snd.write()
 
     # OpenEdit: the text editor (openamigaedit), with its kinds of file in ENVARC:
@@ -1318,7 +1319,7 @@ def main() -> int:
                                              (ty.dir / "Prefs/OpenTypes.info", "page"),
                                              (look.dir / "Prefs/Look.info", "page"),
                                              (ow.dir / "Prefs/Windows.info", "page"),
-                                             (dock.dir / "Prefs/Dock.info", "page"),
+                                             (dock.dir / "Prefs/OpenDock.info", "page"),
                                              (menus.dir / "Prefs/Menus.info", "page"),
                                              (tb.dir / "Prefs/TitleBar.info", "page"),
                                              (setup.dir / "Prefs/OpenUp-Setup.info", "page"),
@@ -1332,7 +1333,7 @@ def main() -> int:
                        + [(dm.dir / "Utilities/OpenDemos.info", None)] if dm else [])
                     + ([(tg.dir / "Utilities/UnofficialTelegram.info", "page")] if tg else [])
                     + ([(dev.dir / "Developer/OpenGPU-SDK.info", None), (dev.dir / "Developer.info", None)] if dev else [])
-                    + ([(oin.dir / "Prefs/Gamepads.info", "page"), (oin.dir / "Utilities/OpenUp/Docs.info", None)]
+                    + ([(oin.dir / "Utilities/OpenUp/Docs.info", None)]
                        + [(oin.dir / f"Utilities/OpenUp/Docs/{n}.info", "page") for n in ("OpenInput.txt", "Design-OpenInput.txt", "Gamepads.txt")]
                        if oin else []))
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
@@ -1346,10 +1347,9 @@ def main() -> int:
             (pr.dir / "Icons/OpenPrint.info", "drawer-OpenPrint"), (pr.dir / "Drawer/OpenView.info", "OpenView"),
             (pr.dir / "Drawer/Printers and Queue.info", "Printers and Queue"),
             (ty.dir / "Prefs/OpenTypes.info", "OpenTypes"), (look.dir / "Prefs/Look.info", "Look"),
-            (ow.dir / "Prefs/Windows.info", "Windows"), (dock.dir / "Prefs/Dock.info", "Dock"),
+            (ow.dir / "Prefs/Windows.info", "Windows"), (dock.dir / "Prefs/OpenDock.info", "Dock"),
             (menus.dir / "Prefs/Menus.info", "Menus"), (tb.dir / "Prefs/TitleBar.info", "TitleBar"),
-            (snd.dir / "Prefs/Sound.info", "Sound"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
-            *([(oin.dir / "Prefs/Gamepads.info", "Gamepads")] if oin else []),
+            (snd.dir / "Prefs/OpenSound.info", "Sound"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
             (setup.dir / "WBStartup/OpenUp-Setup.info", "OpenUp-Setup"), (oc.dir / "Utilities/OpenCompress.info", "OpenCompress"),
             (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
             (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/OpenEdit.info", "OpenEdit"),

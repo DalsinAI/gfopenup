@@ -97,7 +97,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7 (10.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.1 (10.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1458,7 +1458,8 @@ static const rmap reconcile_map[] = {
     { "SYS:Prefs/PrinterGfx",   "classic", NULL, "OpenPrint's printer settings (to build)" },
     { "SYS:Prefs/PrinterPS",    "classic", NULL, "OpenPrint's printer settings (to build)" },
     { "SYS:Prefs/DefaultIcons", "classic", "SYS:Prefs/OpenTypes", "OpenTypes, which takes over default icons" },
-    { "SYS:Prefs/Serial",       "keep",    NULL, "no Open home planned" },
+    { "SYS:Prefs/Serial",       "classic", "SYS:Prefs/OpenSerial", "OpenSerial" },
+    { "SYS:Prefs/Sound",        "classic", "SYS:Prefs/OpenSound", "OpenSound (the Sound part; a Sound in Prefs is the OS's once OpenSound is there)" },
     { "SYS:Tools/Commodities/Blanker", "retire", "SYS:Tools/Commodities/OpenBlanker", "OpenBlanker" },
     { "SYS:Tools/Calculator",   "wait",    NULL, "OpenCalc (source in OpenUp, to build)" },
     { "SYS:Tools/TextEdit",     "replace", "C:OpenEdit", "OpenEdit, under TextEdit's name, so every icon that opens TextEdit opens OpenEdit" },
@@ -1812,11 +1813,11 @@ static int reconcile(const char *how, const char *once)
     }
     if (reconcile_icon_text(apply) < 0) failed++;
     /* the Open apps on the dock (the user, 10 October 2026): Dock ADD adds only those installed and not there */
-    if (exists("SYS:Prefs/Dock")) {
+    if (exists("SYS:Prefs/OpenDock")) {                 /* 0.7.1: the editor is OpenDock (every editor of ours is Open...) */
         if (!apply) PutStr((STRPTR)"  dock: OpenWrite, OpenPlay, OpenCompress, OpenFTP and OpenPuTTY added if installed and missing\n");
         else {
             BPTR nil = Open((STRPTR)"NIL:", MODE_NEWFILE);
-            LONG r = SystemTags((STRPTR)"SYS:Prefs/Dock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView "
+            LONG r = SystemTags((STRPTR)"SYS:Prefs/OpenDock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView "
                                 "SYS:Utilities/OpenWrite/OpenWrite SYS:Utilities/OpenPlay SYS:Utilities/OpenCompress "
                                 "SYS:Utilities/OpenFTP/OpenFTP SYS:Utilities/OpenPuTTY/OpenPuTTY SAVE",
                                 SYS_Input, (ULONG)nil, SYS_Output, (ULONG)NULL, TAG_DONE);
