@@ -316,7 +316,9 @@
         (if (<> #theme "Classic")
             (
                 (run (cat #tool " FONT CGTriumvirate.font 13 >>T:OpenUp.log"))
-                (run (cat #tool " TITLEBARS 0 2 >>T:OpenUp.log"))))))
+                (run (cat #tool " TITLEBARS 0 2 >>T:OpenUp.log"))
+                ; Workbench as a backdrop: no frame, scroll bars or size gadget on its window
+                (run (cat #tool " WBBACKDROP >>T:OpenUp.log"))))))
 
 (if (bitand #parts 16)
     (
