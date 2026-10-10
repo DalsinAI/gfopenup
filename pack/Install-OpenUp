@@ -318,7 +318,9 @@
                 (run (cat #tool " FONT CGTriumvirate.font 13 >>T:OpenUp.log"))
                 (run (cat #tool " TITLEBARS 0 2 >>T:OpenUp.log"))
                 ; Workbench as a backdrop: no frame, scroll bars or size gadget on its window
-                (run (cat #tool " WBBACKDROP >>T:OpenUp.log"))))))
+                (run (cat #tool " WBBACKDROP >>T:OpenUp.log"))
+                ; no fill gauge down the left border of drive windows: they get the same slim edge as any other window
+                (run (cat #tool " WBGAUGE >>T:OpenUp.log"))))))
 
 (if (bitand #parts 16)
     (
