@@ -120,6 +120,16 @@ static int same_word(const char *a, const char *b)
 
 /* ---- small helpers ----------------------------------------------------------- */
 
+/* strlcat, which libnix hasn't got: appends src to dst within size, always ending it. */
+static size_t str_cat(char *dst, const char *src, size_t size)
+{
+    size_t d = strlen(dst), i = 0;
+    if (d + 1 >= size) return d + strlen(src);
+    while (src[i] && d + i + 1 < size) { dst[d + i] = src[i]; i++; }
+    dst[d + i] = 0;
+    return d + strlen(src);
+}
+
 static void say(const char *a, const char *b, const char *c)
 {
     PutStr((STRPTR)a);
@@ -1027,7 +1037,7 @@ static int uninstall(void)
         } else if (!strcmp(e->kind, "moved")) {                /* RECONCILE's: moved back */
             LONG ok = exists(e->a) ? 0 : Rename((STRPTR)e->b, (STRPTR)e->a);
             if (ok) restored++;
-            else { say("OpenUp: can't put back ", e->a, "; it is at ", e->b); problems++; }
+            else { say("OpenUp: can't put back ", e->a, "; it is in SYS:Prefs/Classic or SYS:Storage/OpenUp-Superseded"); problems++; }
         } else if (!strcmp(e->kind, "replaced")) {
             if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; }
             else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); problems++; }
@@ -1471,8 +1481,8 @@ static int move_noted(const char *a, const char *b)
         if (!ok) { DeleteFile((STRPTR)b); say("OpenUp: can't move ", a, ". Is it running?"); return -1; }
     }
     add_entry("moved", a, b);
-    strlcpy(ai, a, sizeof ai); strlcat(ai, ".info", sizeof ai);
-    strlcpy(bi, b, sizeof bi); strlcat(bi, ".info", sizeof bi);
+    strlcpy(ai, a, sizeof ai); str_cat(ai, ".info", sizeof ai);
+    strlcpy(bi, b, sizeof bi); str_cat(bi, ".info", sizeof bi);
     if (exists(ai) && !exists(bi)) {
         ok = Rename((STRPTR)ai, (STRPTR)bi);
         if (ok) add_entry("moved", ai, bi);
@@ -1544,7 +1554,7 @@ static int picture_tone(const char *name)
     {
         char buf[300];
         strlcpy(buf, name, sizeof buf - 4);
-        strlcat(buf, tone ? "\ndark\n" : "\nlight\n", sizeof buf);
+        str_cat(buf, tone ? "\ndark\n" : "\nlight\n", sizeof buf);
         ensure_dir("ENVARC:OpenAmiga", 1);
         write_file(TONE_CACHE, buf, strlen(buf));
     }
@@ -1588,13 +1598,13 @@ static int backdrop_tone(void)
         return strstr(name, "dark") || strstr(name, "Dark") ? 1 : -1;
     tone = !strcmp(mode, "dark");                   /* the mode's word, unless the theme's colours say more */
     strlcpy(path, "SYS:Prefs/Presets/Themes/", sizeof path);
-    strlcat(path, theme, sizeof path);
-    strlcat(path, ".theme", sizeof path);
+    str_cat(path, theme, sizeof path);
+    str_cat(path, ".theme", sizeof path);
     t = read_file(path, &tlen);
     if (t) {
         char want[20];
         int in = 0;
-        strlcpy(want, "[", sizeof want); strlcat(want, mode, sizeof want); strlcat(want, "]", sizeof want);
+        strlcpy(want, "[", sizeof want); str_cat(want, mode, sizeof want); str_cat(want, "]", sizeof want);
         for (line = t; line && *line; line = strchr(line, '\n') ? strchr(line, '\n') + 1 : NULL) {
             if (*line == '[') { in = !strncmp(line, want, strlen(want)); continue; }
             if (in && !strncmp(line, "desktop", 7)) {
@@ -1735,7 +1745,7 @@ static int reconcile(const char *how, const char *once)
         const char *name = (const char *)FilePart((STRPTR)m->path);
         int there = exists(m->path), home = m->home && exists(m->home);
         if (!strcmp(m->action, "classic")) {
-            strlcpy(dest, CLASSIC "/", sizeof dest); strlcat(dest, name, sizeof dest);
+            strlcpy(dest, CLASSIC "/", sizeof dest); str_cat(dest, name, sizeof dest);
             if (!there) continue;
             if (!apply) { Printf((STRPTR)"  to Classic: %-22s %s\n", (LONG)m->path, (LONG)m->what); continue; }
             if (move_noted(m->path, dest) > 0) { Printf((STRPTR)"  to Classic: %s\n", (LONG)m->path); moved++; }
@@ -1840,8 +1850,8 @@ static LONG wb_cmd(const char *cmd, char *out, int size, int ticks)
 static const char *wb_line(char *buf, int size, const char *verb, const char *name, const char *rest)
 {
     strlcpy(buf, verb, size);
-    if (name) { strlcat(buf, " \"", size); strlcat(buf, name, size); strlcat(buf, "\"", size); }
-    if (rest) { strlcat(buf, " ", size); strlcat(buf, rest, size); }
+    if (name) { str_cat(buf, " \"", size); str_cat(buf, name, size); str_cat(buf, "\"", size); }
+    if (rest) { str_cat(buf, " ", size); str_cat(buf, rest, size); }
     return buf;
 }
 
@@ -1849,10 +1859,10 @@ static LONG wb_num(const char *attr, const char *name)
 {
     char cmd[300], out[32];
     strlcpy(cmd, "GETATTR ", sizeof cmd);
-    strlcat(cmd, attr, sizeof cmd);
-    strlcat(cmd, " NAME \"", sizeof cmd);
-    strlcat(cmd, name, sizeof cmd);
-    strlcat(cmd, "\"", sizeof cmd);
+    str_cat(cmd, attr, sizeof cmd);
+    str_cat(cmd, " NAME \"", sizeof cmd);
+    str_cat(cmd, name, sizeof cmd);
+    str_cat(cmd, "\"", sizeof cmd);
     if (wb_cmd(cmd, out, sizeof out, 250)) return -1;
     return atol(out);
 }
