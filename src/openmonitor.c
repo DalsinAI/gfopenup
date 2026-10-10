@@ -31,6 +31,7 @@
 #include <utility/hooks.h>
 #include <graphics/gfxmacros.h>
 #include <proto/exec.h>
+#include <libraries/configvars.h>
 #include <proto/dos.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
@@ -39,7 +40,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.1 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.1.1 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 #define REG(r, decl) register decl __asm(#r)
 
@@ -218,6 +219,31 @@ static void take_memory(void)
     chip_free_k = cf >> 10; fast_free_k = ff >> 10; chip_all_k = ca >> 10; fast_all_k = fa >> 10;
     mem_used_tenths = (chip_all_k + fast_all_k) ? ((chip_all_k + fast_all_k) - (chip_free_k + fast_free_k)) * 1000 /
                                                   (chip_all_k + fast_all_k) : 0;
+}
+
+/* The cores the CPU cores board presents through AutoConfig (the user, 10 October 2026: "the cpu count
+ * should read the amount of cores presented via autoconfig"): a Dalsin ($DA15) product 7 board carrying
+ * the ACSV block, CLASS ($20) 2, UNITS ($24) its cores. 0 without the board. */
+static ULONG board_cores(void)
+{
+    struct Library *eb = OpenLibrary((STRPTR)"expansion.library", 36);
+    ULONG n = 0;
+    if (eb) {
+        /* FindConfigDev(NULL, $DA15, 7): -72(a6), a0 oldConfigDev, d0 manufacturer, d1 product (no proto header:
+         * proto/expansion.h changed the hook types this file uses) */
+        register struct ConfigDev *d0 __asm("d0");
+        register struct Library *a6 __asm("a6") = eb;
+        register APTR a0 __asm("a0") = NULL;
+        register ULONG d0in __asm("d0") = 0xDA15;
+        register ULONG d1 __asm("d1") = 7;
+        __asm volatile ("jsr -72(%%a6)" : "=r" (d0) : "r" (a6), "r" (a0), "0" (d0in), "r" (d1) : "a1", "cc", "memory");
+        if (d0 && d0->cd_BoardAddr) {
+            volatile ULONG *r = (volatile ULONG *)d0->cd_BoardAddr;
+            if (r[0] == 0x41435356UL && r[0x20 / 4] == 2) n = r[0x24 / 4];
+        }
+        CloseLibrary(eb);
+    }
+    return n > 1024 ? 0 : n;
 }
 
 static ULONG omc_cores(void)
@@ -460,7 +486,7 @@ static int gui(void)
         graph_pen[i] = ObtainBestPen(scr->ViewPort.ColorMap, (graph_rgb[i] >> 16) * 0x01010101UL,
                                      ((graph_rgb[i] >> 8) & 255) * 0x01010101UL, (graph_rgb[i] & 255) * 0x01010101UL,
                                      OBP_Precision, PRECISION_GUI, TAG_DONE);
-    lv_hook.h_Entry = (HOOKFUNC)lv_render;
+    lv_hook.h_Entry = (__typeof__(lv_hook.h_Entry))lv_render;   /* whatever type this NDK gives h_Entry */
     list_init(&rowlist);
 
     g = CreateContext(&glist);
@@ -506,7 +532,7 @@ static int gui(void)
     OpenRTGBase = OpenLibrary((STRPTR)"openrtg.library", 0);
     if (OpenRTGBase && OpenRTGBase->lib_Version == 0 && OpenRTGBase->lib_Revision < 11) { CloseLibrary(OpenRTGBase); OpenRTGBase = NULL; }
     if (OpenRTGBase) draw_stats(NULL, 0, 1);    /* counting from now */
-    ncores = omc_cores();
+    ncores = (board_cores() ? board_cores() : omc_cores());
     disp_before = SysBase->DispCount;
     take_memory();
     draw_header();
