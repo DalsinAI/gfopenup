@@ -11,7 +11,8 @@
  *   OpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-strip-<H>.png for the
  *                                     screen's height, tiled, when there is one; else <prefix>-<W>x<H>.png, the
  *                                     one nearest the screen's shape, scaled to fit
- *   OpenUpTool FONT <font> <size>     the screens' font (Font prefs, "Screen text")
+ *   OpenUpTool FONT <font> <size>     the desktop's text: the screens' font and the icons'
+ *                                     text (Font prefs, "Screen text" and "Workbench icon text")
  *   OpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
  *                                     prefs, Appearance Settings, Title Bar Extra Height)
  *   OpenUpTool WBBACKDROP             Workbench as a backdrop: no frame, scroll bars or size gadget on
@@ -81,7 +82,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.4 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.5 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1201,40 +1202,56 @@ static UBYTE *prefs_start(const UBYTE *old, LONG oldlen, LONG extra, UBYTE **o)
 
 #define FONT_CHUNK 156               /* struct FontPrefs */
 
-/* The screens' font: the FONT chunk whose fp_Type is 2 (FP_SCREENFONT). */
+/* One FontPrefs chunk: fp_Type, pens, draw modes, the font. */
+static UBYTE *font_chunk(UBYTE *o, int type, int front, int back, int mode, int special, const char *font, LONG size)
+{
+    memcpy(o, "FONT", 4); put32(o + 4, FONT_CHUNK); o += 8;
+    memset(o, 0, FONT_CHUNK);
+    o[15] = (UBYTE)type;                             /* fp_Type */
+    o[16] = (UBYTE)front; o[17] = (UBYTE)back;       /* fp_FrontPen, fp_BackPen */
+    o[18] = (UBYTE)mode; o[19] = (UBYTE)special;     /* fp_DrawMode, fp_SpecialDrawMode (3.2: 1 shadow, 2 outline) */
+    o[24] = size >> 8; o[25] = size & 255;           /* fp_TextAttr.ta_YSize */
+    o[27] = 0x02;                                    /* ta_Flags: FPF_DISKFONT */
+    strcpy((char *)o + 28, font);                    /* fp_Name */
+    return o + FONT_CHUNK;
+}
+
+/* The desktop's text: the screens' font (fp_Type 2, FP_SCREENFONT) and the
+ * icons' text (fp_Type 0, FP_WBFONT) in the same font and size. OpenUp owns
+ * the desktop's text, so the icons no longer keep Topaz 8 in a filled box
+ * under the new screen text (the user, 10 October 2026): the label is drawn
+ * as text only (JAM1) in the pens it had; a shadow or an outline chosen in
+ * OpenPrefs Look is kept. The system font (fp_Type 1, fixed width for the
+ * Shell) stays as it is. */
 static int set_font(const char *font, LONG size)
 {
     LONG oldlen = 0, k, len;
-    UBYTE *old = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &oldlen), *buf, *o, *mine;
-    int ok;
+    UBYTE *old = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &oldlen), *buf, *o;
+    int front = 1, back = 0, special = 0, ok;
     if (size < 6 || size > 64 || strlen(font) > 120) { say("OpenUp: FONT wants a font name and a size from 6 to 64", NULL, NULL); if (old) FreeVec(old); return RETURN_FAIL; }
-    if (!(buf = prefs_start(old, oldlen, FONT_CHUNK + 8, &o))) { if (old) FreeVec(old); return RETURN_FAIL; }
+    if (!(buf = prefs_start(old, oldlen, 2 * (FONT_CHUNK + 8), &o))) { if (old) FreeVec(old); return RETURN_FAIL; }
     if (old && oldlen > 12 && !memcmp(old, "FORM", 4)) {
         for (k = 12; k + 8 <= oldlen; ) {
             ULONG n = get32(old + k + 4), whole = 8 + n + (n & 1);
             if (k + (LONG)whole > oldlen) break;
-            if (!memcmp(old + k, "FONT", 4) && !(n >= 16 && old[k + 8 + 14] == 0 && old[k + 8 + 15] == 2)) {
-                memcpy(o, old + k, whole); o += whole;               /* the icons' and the system font stay */
+            if (!memcmp(old + k, "FONT", 4) && n >= 20 && old[k + 8 + 14] == 0 && old[k + 8 + 15] == 0) {
+                front = old[k + 8 + 16]; back = old[k + 8 + 17];     /* the icons' pens and effect, kept */
+                if (old[k + 8 + 19] == 1 || old[k + 8 + 19] == 2) special = old[k + 8 + 19];
+            } else if (!memcmp(old + k, "FONT", 4) && !(n >= 16 && old[k + 8 + 14] == 0 && old[k + 8 + 15] == 2)) {
+                memcpy(o, old + k, whole); o += whole;               /* the system font stays */
             }
             k += whole;
         }
     }
-    memcpy(o, "FONT", 4); put32(o + 4, FONT_CHUNK); o += 8;
-    mine = o;
-    memset(mine, 0, FONT_CHUNK);
-    mine[15] = 2;                                   /* fp_Type: the screens' font */
-    mine[16] = 1; mine[17] = 0; mine[18] = 1;       /* fp_FrontPen, fp_BackPen, fp_DrawMode (JAM2) */
-    mine[24] = size >> 8; mine[25] = size & 255;    /* fp_TextAttr.ta_YSize */
-    mine[27] = 0x02;                                /* ta_Flags: FPF_DISKFONT */
-    strcpy((char *)mine + 28, font);                /* fp_Name */
-    o += FONT_CHUNK;
+    o = font_chunk(o, 0, front, back, 0 /* JAM1 */, special, font, size);
+    o = font_chunk(o, 2, 1, 0, 1 /* JAM2 */, 0, font, size);
     len = o - buf;
     put32(buf + 4, len - 8);
     if (old) FreeVec(old);
     ok = install_prefs("Font.prefs", buf, len);
     FreeVec(buf);
     if (!ok) return RETURN_ERROR;
-    say("OpenUp: the screens' font is ", font, " (from the next reboot)");
+    say("OpenUp: the screens' and the icons' text are ", font, " (from the next reboot)");
     return RETURN_OK;
 }
 
