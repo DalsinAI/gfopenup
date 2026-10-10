@@ -14,6 +14,8 @@
  *   OpenUpTool FONT <font> <size>     the screens' font (Font prefs, "Screen text")
  *   OpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
  *                                     prefs, Appearance Settings, Title Bar Extra Height)
+ *   OpenUpTool WBBACKDROP             Workbench as a backdrop: no frame, scroll bars or size gadget on
+ *                                     its window (Workbench's prefs, WBConfig.prefs)
  *   OpenUpTool P96LEFTOVER            5 (WARN) on a real Amiga with Picasso96's
  *                                     library left in LIBS: and no Picasso96 board running
  *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
@@ -1275,6 +1277,45 @@ static int set_titlebars(LONG screen, LONG window)
     return RETURN_OK;
 }
 
+/* Workbench as a backdrop: the word at offset 16 of WBConfig.prefs' WBCF chunk (flags, 0, the window's
+ * box, then the backdrop word). The user's other settings in the file stay. With no file, the one a
+ * stock 3.2.3 writes (a box of 0, 11, 640, 389) with the word set. In ENVARC: only, like FONT: Workbench
+ * reads it at the next boot (the original is kept for UNINSTALL). */
+static int set_wb_backdrop(void)
+{
+    LONG oldlen = 0, k, len;
+    UBYTE *old = (UBYTE *)read_file("ENVARC:Sys/WBConfig.prefs", &oldlen), *buf, *o;
+    int ok, done = 0;
+    if (!(buf = prefs_start(old, oldlen, 40, &o))) { if (old) FreeVec(old); return RETURN_FAIL; }
+    if (old && oldlen > 12 && !memcmp(old, "FORM", 4)) {
+        for (k = 12; k + 8 <= oldlen; ) {
+            ULONG n = get32(old + k + 4), whole = 8 + n + (n & 1);
+            if (k + (LONG)whole > oldlen) break;
+            if (!memcmp(old + k, "WBCF", 4) && n >= 18 && !done) {
+                memcpy(o, old + k, whole);
+                o[8 + 16] = 0; o[8 + 17] = 1;                          /* the backdrop word */
+                o += whole; done = 1;
+            } else if (memcmp(old + k, "PRHD", 4)) {
+                memcpy(o, old + k, whole); o += whole;
+            }
+            k += whole;
+        }
+    }
+    if (!done) {
+        static const UBYTE wbcf[28] = { 'W','B','C','F', 0,0,0,20,  0,0,0,0, 0,0,0,0,  0,0, 0,11, 2,0x80, 1,0x85,  0,1, 0,0 };
+        memcpy(o, wbcf, sizeof wbcf);
+        o += sizeof wbcf;
+    }
+    len = o - buf;
+    put32(buf + 4, len - 8);
+    if (old) FreeVec(old);
+    ok = install_prefs("WBConfig.prefs", buf, len);
+    FreeVec(buf);
+    if (!ok) return RETURN_ERROR;
+    say("OpenUp: Workbench is a backdrop (from the next reboot)", NULL, NULL);
+    return RETURN_OK;
+}
+
 static int list(void)
 {
     int i, files = 0;
@@ -1459,7 +1500,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | UPDATE [CHECK|YES]\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | UPDATE [CHECK|YES]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -1476,6 +1517,7 @@ static int real_main(void)
     else if (same_word(cmd, "BACKDROP") && args[1]) rc = backdrop((const char *)args[1]);
     else if (same_word(cmd, "FONT") && args[1] && args[2]) rc = set_font((const char *)args[1], atol((const char *)args[2]));
     else if (same_word(cmd, "TITLEBARS") && args[1] && args[2]) rc = set_titlebars(atol((const char *)args[1]), atol((const char *)args[2]));
+    else if (same_word(cmd, "WBBACKDROP")) rc = set_wb_backdrop();
     else if (same_word(cmd, "SETTING") && args[1] && args[2]) {
         /* The text goes through T: so it is installed like any file. */
         char line[200];
@@ -1506,7 +1548,7 @@ static int real_main(void)
         rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
