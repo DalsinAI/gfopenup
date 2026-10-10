@@ -475,6 +475,21 @@ def badge_write(ic, sel):
         ic.detail(rect(57, 39 + i * 3.6, 70, 40.2 + i * 3.6), CONTENT)
 
 
+def badge_expansion(ic, sel):
+    """An expansion card (the user, 10 Oct 2026: Expansion gets a badge too): a
+    green board on its gold edge fingers, a chip, and its light on when chosen."""
+    ic.add(poly([(50, 31), (77, 29), (78, 51), (51, 53)]), linear((50, 29), (78, 53), rgb('#4FAE5A'), rgb('#1F6A33')), gloss=0.2)
+    for i in range(7):                                            # the edge connector's gold fingers
+        x = 53.5 + i * 3.3
+        ic.detail(poly([(x, 50.6 - i * 0.08), (x + 1.9, 50.5 - i * 0.08), (x + 1.9, 54 - i * 0.1), (x, 54.1 - i * 0.1)]), GOLD)
+    ic.add(rect(56, 35, 68, 44), linear((56, 35), (68, 44), rgb('#3A3F46'), rgb('#15181C')), outline=1.0)
+    for i in range(4):                                            # its legs
+        ic.detail(rect(57.5 + i * 2.8, 33.6, 58.6 + i * 2.8, 35), rgb('#C9CDD3'))
+        ic.detail(rect(57.5 + i * 2.8, 44, 58.6 + i * 2.8, 45.4), rgb('#C9CDD3'))
+    ic.detail(rect(70.5, 33, 74.5, 35.5), rgb('#D8D2B0'))         # a little part beside it
+    ic.add(ellipse(70.8, 40, 74.2, 43.4), rgb('#7CFF6A') if sel else rgb('#2E5A2A'), outline=0.8)
+
+
 def own_drawer(ic, sel):
     """A drawer of our own drawing in the style (for a pack without Gorilla):
     an open tray seen from a little above, a handle on its front."""
@@ -508,7 +523,8 @@ ICONS = {
     "OpenUp-Setup": setup, "ZuneTest": zunetest,
     "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
 }
-BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write}
+BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write,
+          "Expansion": badge_expansion}
 
 
 def drawer_frames(badge) -> tuple[list[Image.Image], list[Image.Image]]:
