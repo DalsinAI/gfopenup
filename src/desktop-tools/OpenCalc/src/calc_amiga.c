@@ -66,6 +66,15 @@ static struct Gadget *gad[G_KEY0 + ROWS * COLS + SROWS * SCOLS];
 static char expr[EXPR_MAX + 1], result[80];
 static struct List hist;
 static struct Node hnode[HIST_MAX];
+
+/* exec's empty list, by hand: NewList is amiga.lib's and this is built -noixemul without it. */
+static void new_list(struct List *l)
+{
+    l->lh_Head = (struct Node *)&l->lh_Tail;
+    l->lh_Tail = NULL;
+    l->lh_TailPred = (struct Node *)&l->lh_Head;
+    l->lh_Type = NT_UNKNOWN;
+}
 static char htext[HIST_MAX][120];
 static int hcount;
 
@@ -145,7 +154,7 @@ static void add_history(const char *line)
     for (i = hcount; i > 0; i--) strcpy(htext[i], htext[i - 1]);
     strncpy(htext[0], line, sizeof htext[0] - 1); htext[0][sizeof htext[0] - 1] = 0;
     hcount++;
-    NewList(&hist);
+    new_list(&hist);
     for (i = 0; i < hcount; i++) { hnode[i].ln_Name = htext[i]; AddTail(&hist, &hnode[i]); }
     if (win) GT_SetGadgetAttrs(gad[G_HIST], win, NULL, GTLV_Labels, (ULONG)&hist, GTLV_Top, 0, TAG_DONE);
 }
@@ -317,7 +326,7 @@ int main(int argc, char **argv)
     int i, rc;
     (void)version;
     OC_Init(&ctx);
-    NewList(&hist);
+    new_list(&hist);
     if (argc > 1) {                                  /* OpenCalc 2+2: the answer on the Shell */
         double v = 0; OC_Status st; char num[40], line[EXPR_MAX + 1] = "";
         for (i = 1; i < argc; i++) { if (strlen(line) + strlen(argv[i]) + 1 <= EXPR_MAX) { if (i > 1) strcat(line, " "); strcat(line, argv[i]); } }
