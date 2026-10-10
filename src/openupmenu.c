@@ -39,7 +39,7 @@
 
 #include <string.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.3 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.4 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct Library *WorkbenchBase, *IconBase;
 
@@ -73,18 +73,16 @@ static const struct entry entries[] = {
     /* only with an OpenUpTool that has UPDATE (OpenUp Update, DESIGN.md section 5) */
     { M_OPENUP, HOW_CON, "OpenUp Update...", NULL, "SYS:C/OpenUpTool UPDATE", "SYS:C/OpenUpTool", "UPDATE [CHECK" },
     { M_PREFS,  HOW_WB,  "Look",         "SYS:Prefs/OpenLook",                   NULL, NULL, NULL },   /* 0.1.3: Windows, Title bar, Menus are its pages */
-    { M_PREFS,  HOW_WB,  "Dock",         "SYS:Prefs/Dock",                       NULL, NULL, NULL },
-    /* SYS:Prefs/Sound is OS 3.2's own editor until OpenUp's Sound part
-     * replaces it; OpenSpeaker comes with OpenUp's */
-    { M_PREFS,  HOW_WB,  "Sound",        "SYS:Prefs/Sound",                      NULL, "SYS:C/OpenSpeaker", NULL },
+    /* 0.1.4: every editor of ours in Prefs is Open... (the user, 10 October 2026); the OS's own are in Classic */
+    { M_PREFS,  HOW_WB,  "Dock",         "SYS:Prefs/OpenDock",                   NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Sound",        "SYS:Prefs/OpenSound",                  NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Date and time", "SYS:Prefs/OpenDateTime",              NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Input",        "SYS:Prefs/OpenInput",                  NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Serial",       "SYS:Prefs/OpenSerial",                 NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Printers",     "SYS:Utilities/OpenPrint/Printers and Queue", NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Network",      "SYS:Tools/Commodities/OpenSocketControl", NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "OpenTypes",    "SYS:Prefs/OpenTypes",                  NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Tata",         "SYS:Prefs/Tata",                       NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Gamepads",     "SYS:Prefs/Gamepads",                   NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Tata",         "SYS:Prefs/OpenTata",                   NULL, NULL, NULL },   /* Gamepads: under Input (OpenInput) since 0.1.3 */
     { M_PREFS,  HOW_WB,  "OpenUp Setup", "SYS:Prefs/OpenUp-Setup",               NULL, NULL, NULL },
 };
 #define NENTRIES (sizeof entries / sizeof entries[0])
