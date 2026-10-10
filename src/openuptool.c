@@ -81,7 +81,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.3 (9.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.4 (10.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -686,11 +686,19 @@ static int install(const char *drawer)
 
 /* 1 when the line from p to e is exactly the marker (trailing blanks
  * allowed): ";BEGIN OpenUp" and not ";BEGIN OpenUpSomething", another
- * program's block whose name starts the same way. */
+ * program's block whose name starts the same way. Any number of leading
+ * semicolons counts as one: a block once marked ";;BEGIN OpenUp" (an edit by
+ * hand or another tool) is ours too, so STARTUP replaces it instead of adding
+ * a second block and starting every program twice (10 Oct 2026). */
 static int is_marker_line(const char *p, const char *e, const char *marker)
 {
-    size_t ml = strlen(marker);
+    size_t ml;
     while (e > p && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r')) e--;
+    if (p >= e || *p != ';')
+        return 0;
+    while (p < e && *p == ';') p++;
+    while (*marker == ';') marker++;
+    ml = strlen(marker);
     return (size_t)(e - p) == ml && !strncmp(p, marker, ml);
 }
 
