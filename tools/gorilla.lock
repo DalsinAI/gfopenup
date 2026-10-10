@@ -1,5 +1,7 @@
 # Gorilla at AROS aa541964354368da8d26c04312c5570b483f5447: SHA-256 of every file OpenUp uses (tools/gorilla_icons.py --lock)
 204d8eff92f95aac4df6c8122bc1505f468f3a901e5a4cc08940e0ede1938994  LICENSE.GPL
+fa8a792e70af7b083b7c63aec75899d09aed0cb8d3410a3f8fd8d7f5fe9a2fcf  images/IconSets/Gorilla/Icons/Medium/AROS/Developer.png
+e0c87a61a1ff1f3bca0eda84b32c7a3c5b66921075c551be7119cd46eac540ac  images/IconSets/Gorilla/Icons/Medium/AROS/Developer/Include.png
 61cafbec41ac4a5a7c4bdea422b1dfe5e844e15f193197dca4c936f9eade9d8c  images/IconSets/Gorilla/Icons/Medium/AROS/Devs.png
 cbd2aa6370ecbeb53745ed3e208676bc1a80cf89345bea8d0253700e748621bf  images/IconSets/Gorilla/Icons/Medium/AROS/Devs/DOSDrivers.png
 38ec626ad054ee3e4037cfaf32ffdf9aaf701fc534404516a07a59ab82e3bba2  images/IconSets/Gorilla/Icons/Medium/AROS/Devs/DataTypes.png
