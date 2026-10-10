@@ -158,6 +158,22 @@ FACES = [
     ("ENVARC:Sys/def_datatype", "AROS/Prefs/Env-Archive/SYS/def_DataType.png"),
 ]
 
+# A face that is Gorilla's picture with one of our badges on it (icons/open/badge-NAME.png,
+# drawn by tools/open_icons_art.py in the drawer's 82 x 60 frame): Gorilla has no Expansion drawer
+# of its own (the user, 10 October 2026: "expansion should have that lovely tweak too").
+BADGED = {"SYS:Expansion": "Expansion"}
+OPEN_ART = Path(__file__).resolve().parent.parent / "icons" / "open"
+
+
+def with_badge(png: bytes, badge: str) -> bytes:
+    from PIL import Image
+    im = Image.open(io.BytesIO(png)).convert("RGBA")
+    im.alpha_composite(Image.open(OPEN_ART / f"badge-{badge}.png").convert("RGBA").resize(im.size, Image.LANCZOS))
+    out = io.BytesIO()
+    im.save(out, "PNG")
+    return out.getvalue()
+
+
 # SHA-256 of every file used, at AROS_COMMIT (tools/gorilla_icons.py --lock writes this list)
 LOCK: dict[str, str] = {}
 LOCK_FILE = Path(__file__).resolve().parent / "gorilla.lock"
@@ -291,6 +307,8 @@ def build(out: Path, amigachrome: Path, cache: Path) -> list[str]:
     src_names = short_names(sorted({rel[:-4] for _, rel in FACES}), ".png")
     for dest, rel in FACES:
         png = (root / MEDIUM / rel).read_bytes()
+        if dest in BADGED:
+            png = with_badge(png, BADGED[dest])
         w, h, rest, chosen = picture(png, amiga_icon)
         meta = {"type": 4, "defaultTool": None, "toolTypes": [], "toolWindow": None, "stack": 4096,
                 "x": amiga_icon.NO_POSITION, "y": amiga_icon.NO_POSITION, "drawer": None}
