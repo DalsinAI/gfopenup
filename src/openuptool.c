@@ -1472,7 +1472,17 @@ static int move_noted(const char *a, const char *b)
 {
     char ai[ENTRY_PATH], bi[ENTRY_PATH], dir[ENTRY_PATH];
     LONG ok;
-    if (!exists(a)) return 0;
+    if (!exists(a)) {
+        /* moved by an earlier run that stopped before it saved its list: noted now, so UNDO knows */
+        if (exists(b) && !find_entry("moved", a)) {
+            add_entry("moved", a, b);
+            strlcpy(ai, a, sizeof ai); str_cat(ai, ".info", sizeof ai);
+            strlcpy(bi, b, sizeof bi); str_cat(bi, ".info", sizeof bi);
+            if (!exists(ai) && exists(bi)) add_entry("moved", ai, bi);
+            return 2;
+        }
+        return 0;
+    }
     if (exists(b)) { say("OpenUp: ", b, " is there already; left both as they are."); return -1; }
     parent_of(b, dir, sizeof dir);
     if (!ensure_dir(dir, 1)) { say("OpenUp: can't make ", dir, "."); return -1; }
@@ -1516,8 +1526,20 @@ static int picture_tone(const char *name)
     struct BitMapHeader *bmh = NULL;
     ULONG *row;
     LONG len = 0, w, h, y, x, sum = 0, count = 0;
-    char *cache = read_file(TONE_CACHE, &len);
+    char *cache, side[300];
     int tone = -1, nl = (int)strlen(name);
+    /* a .tone file beside the picture ("dark" or "light"), as OpenUp's backdrops carry */
+    strlcpy(side, name, sizeof side);
+    str_cat(side, ".tone", sizeof side);
+    if ((cache = read_file(side, &len))) {
+        tone = len > 0 && (cache[0] == 'd' || cache[0] == 'D') ? 1 : len > 0 ? 0 : -1;
+        FreeVec(cache);
+        if (tone >= 0) return tone;
+    }
+    /* never a big picture at boot: decoding a full-screen PNG takes minutes on a 68k, and S:User-Startup
+     * waited for it (the black screen of 10 October 2026, 18:15). Only OpenUp's strips (16 pixels wide). */
+    if (!strstr(name, "-strip-")) return -1;
+    cache = read_file(TONE_CACHE, &len);
     if (cache) {
         if (len > nl + 1 && !strncmp(cache, name, nl) && cache[nl] == '\n') tone = cache[nl + 1] == 'd' ? 1 : cache[nl + 1] == 'l' ? 0 : -1;
         FreeVec(cache);
@@ -1748,12 +1770,15 @@ static int reconcile(const char *how, const char *once)
         int there = exists(m->path), home = m->home && exists(m->home);
         if (!strcmp(m->action, "classic")) {
             strlcpy(dest, CLASSIC "/", sizeof dest); str_cat(dest, name, sizeof dest);
-            if (!there) continue;
+            if (!there) {
+                if (apply) move_noted(m->path, dest);           /* notes one moved before (2), else nothing */
+                continue;
+            }
             if (!apply) { Printf((STRPTR)"  to Classic: %-22s %s\n", (LONG)m->path, (LONG)m->what); continue; }
             if (move_noted(m->path, dest) > 0) { Printf((STRPTR)"  to Classic: %s\n", (LONG)m->path); moved++; }
             else failed++;
         } else if (!strcmp(m->action, "retire")) {
-            if (!there) continue;
+            if (!there) { if (apply) { backup_path(m->path, dest, sizeof dest); move_noted(m->path, dest); } continue; }
             if (!home) { Printf((STRPTR)"  waits:      %-22s for %s\n", (LONG)m->path, (LONG)m->what); waiting++; continue; }
             backup_path(m->path, dest, sizeof dest);
             if (!apply) { Printf((STRPTR)"  retire:     %-22s %s replaces it\n", (LONG)m->path, (LONG)m->what); continue; }
@@ -1763,6 +1788,12 @@ static int reconcile(const char *how, const char *once)
             if (!there) continue;
             if (!home) { Printf((STRPTR)"  waits:      %-22s for %s\n", (LONG)m->path, (LONG)m->what); waiting++; continue; }
             backup_path(m->path, dest, sizeof dest);
+            if (exists(dest) && !find_entry("rnew", m->path)) {
+                /* replaced by an earlier run that stopped before it saved its list: noted now */
+                if (apply) { add_entry("moved", m->path, dest); add_entry("rnew", m->path, NULL); }
+                continue;
+            }
+            if (find_entry("rnew", m->path)) continue;          /* replaced already */
             if (!apply) { Printf((STRPTR)"  replace:    %-22s by %s\n", (LONG)m->path, (LONG)m->what); continue; }
             if (move_noted(m->path, dest) > 0) {
                 if (copy_file(m->home, m->path, 0)) {
