@@ -16,6 +16,9 @@
  *                                     prefs, Appearance Settings, Title Bar Extra Height)
  *   OpenUpTool WBBACKDROP             Workbench as a backdrop: no frame, scroll bars or size gadget on
  *                                     its window (Workbench's prefs, WBConfig.prefs)
+ *   OpenUpTool WBGAUGE                No fill gauge in a drive's window (Workbench's prefs, "No
+ *                                     volume gauge": the bar down the left border that shows how
+ *                                     full the disk is; the border is slim like any window's)
  *   OpenUpTool P96LEFTOVER            5 (WARN) on a real Amiga with Picasso96's
  *                                     library left in LIBS: and no Picasso96 board running
  *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
@@ -1316,6 +1319,49 @@ static int set_wb_backdrop(void)
     return RETURN_OK;
 }
 
+/* No volume gauge: the word at offset 38 of Workbench.prefs' WBNC chunk (wbe_DisableVolumeGauge; the
+ * struct of prefs/workbench.h with BOOL a word). Every other chunk, the hidden devices and the title
+ * format among them, and the rest of the settings stay. With no file, a stock 3.2.3's WBNC with the
+ * word set. ENVARC: only, as FONT: Workbench reads it at the next boot. */
+static int set_wb_gauge(void)
+{
+    LONG oldlen = 0, k, len;
+    UBYTE *old = (UBYTE *)read_file("ENVARC:Sys/Workbench.prefs", &oldlen), *buf, *o;
+    int ok, done = 0;
+    if (!(buf = prefs_start(old, oldlen, 64, &o))) { if (old) FreeVec(old); return RETURN_FAIL; }
+    if (old && oldlen > 12 && !memcmp(old, "FORM", 4)) {
+        for (k = 12; k + 8 <= oldlen; ) {
+            ULONG n = get32(old + k + 4), whole = 8 + n + (n & 1);
+            if (k + (LONG)whole > oldlen) break;
+            if (!memcmp(old + k, "WBNC", 4) && n >= 40 && !done) {
+                memcpy(o, old + k, whole);
+                o[8 + 38] = 0; o[8 + 39] = 1;                          /* the gauge is off */
+                o += whole; done = 1;
+            } else if (memcmp(old + k, "PRHD", 4)) {
+                memcpy(o, old + k, whole); o += whole;
+            }
+            k += whole;
+        }
+    }
+    if (!done) {
+        static const UBYTE wbnc[58] = { 'W','B','N','C', 0,0,0,50,
+            0,0,0x10,0, 0,0,0,3, 0,0,0,16, 0xff,0xff,0xff,0xff,0,1,0,1,   /* stack 4096, restart 3, precision 16, emboss -1 -1 1 1 */
+            0,0, 0,0,0,25, 0,1, 0,1,                                        /* borderless 0, name length 25, new icons, colour icons */
+            0,0,0,0, 0,0, 0,0, 0,1,                                         /* icon memory, lock pens, title bar, GAUGE OFF */
+            0,50, 0,0,0,0, 0,0,0,0 };                                       /* title delay 50, copy buffer, flags */
+        memcpy(o, wbnc, sizeof wbnc);
+        o += sizeof wbnc;
+    }
+    len = o - buf;
+    put32(buf + 4, len - 8);
+    if (old) FreeVec(old);
+    ok = install_prefs("Workbench.prefs", buf, len);
+    FreeVec(buf);
+    if (!ok) return RETURN_ERROR;
+    say("OpenUp: drives' windows have no fill gauge (from the next reboot)", NULL, NULL);
+    return RETURN_OK;
+}
+
 static int list(void)
 {
     int i, files = 0;
@@ -1500,7 +1546,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | UPDATE [CHECK|YES]\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | UPDATE [CHECK|YES]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -1518,6 +1564,7 @@ static int real_main(void)
     else if (same_word(cmd, "FONT") && args[1] && args[2]) rc = set_font((const char *)args[1], atol((const char *)args[2]));
     else if (same_word(cmd, "TITLEBARS") && args[1] && args[2]) rc = set_titlebars(atol((const char *)args[1]), atol((const char *)args[2]));
     else if (same_word(cmd, "WBBACKDROP")) rc = set_wb_backdrop();
+    else if (same_word(cmd, "WBGAUGE")) rc = set_wb_gauge();
     else if (same_word(cmd, "SETTING") && args[1] && args[2]) {
         /* The text goes through T: so it is installed like any file. */
         char line[200];
@@ -1548,7 +1595,7 @@ static int real_main(void)
         rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
