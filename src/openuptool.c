@@ -22,6 +22,9 @@
  *                                     full the disk is; the border is slim like any window's)
  *   OpenUpTool P96LEFTOVER            5 (WARN) on a real Amiga with Picasso96's
  *                                     library left in LIBS: and no Picasso96 board running
+ *   OpenUpTool RECONCILE [CHECK|APPLY [ONCE]|UNDO]  one desktop, the Open one: old prefs editors to
+ *                                     SYS:Prefs/Classic, replaced tools retired, settings OpenUp owns kept in
+ *                                     step; CHECK says what it would do (see the RECONCILE section)
  *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
  *                                     come back with UNINSTALL
  *   OpenUpTool UPDATE [CHECK|YES]     a newer pack Cradle put in DH1:OpenUp: CHECK says
@@ -68,6 +71,11 @@
 #include <exec/execbase.h>
 #include <dos/dos.h>
 #include <dos/dosextens.h>
+#include <dos/dostags.h>
+#include <datatypes/datatypes.h>
+#include <datatypes/datatypesclass.h>
+#include <datatypes/pictureclass.h>
+#include <proto/datatypes.h>
 #include <libraries/configvars.h>
 #include <libraries/expansionbase.h>
 #include <proto/exec.h>
@@ -82,7 +90,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.6.5 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -992,7 +1000,7 @@ static int uninstall(void)
     }
     for (i = nents - 1; i >= 0; i--) {
         entry *e = &ents[i];
-        if (!strcmp(e->kind, "new") || !strcmp(e->kind, "newfile")) {
+        if (!strcmp(e->kind, "new") || !strcmp(e->kind, "newfile") || !strcmp(e->kind, "rnew")) {
             if (!strcmp(e->kind, "newfile")) {
                 LONG len = 0;
                 char *t = read_file(e->a, &len);
@@ -1011,6 +1019,10 @@ static int uninstall(void)
                 if (exists(e->a)) { say("OpenUp: can't delete ", e->a, ". Is it in use? Delete it by hand."); problems++; }
                 else removed++;
             }
+        } else if (!strcmp(e->kind, "moved")) {                /* RECONCILE's: moved back */
+            LONG ok = exists(e->a) ? 0 : Rename((STRPTR)e->b, (STRPTR)e->a);
+            if (ok) restored++;
+            else { say("OpenUp: can't put back ", e->a, "; it is at ", e->b); problems++; }
         } else if (!strcmp(e->kind, "replaced")) {
             if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; }
             else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); problems++; }
@@ -1387,6 +1399,392 @@ static int set_wb_gauge(void)
     return RETURN_OK;
 }
 
+/* ---- RECONCILE: one desktop, the Open one ---------------------------------------------- */
+
+/* The user, 10 October 2026: "we own the config, and the legacy is just that". RECONCILE makes the desktop
+ * coherent in one pass, from one map: each old tool is moved where it no longer competes with its Open
+ * home, and nothing is ever deleted.
+ *   classic  an OS prefs editor goes to SYS:Prefs/Classic (one drawer in, still runs from there); its
+ *            settings files stay, since programs read them
+ *   retire   goes to SYS:Storage/OpenUp-Superseded, only once its Open replacement is on the disk
+ *   replace  goes to SYS:Storage/OpenUp-Superseded and its Open replacement takes its name, so every icon
+ *            and script that starts it starts the replacement (TextEdit: OpenEdit; no icon is changed)
+ *   wait     stays: its Open home is still to build (listed, so the list is the build list)
+ *   keep     stays: the OS's own, and wanted (said why)
+ * Each move is a "moved" line in the manifest: RECONCILE UNDO and UNINSTALL put it back.
+ * It also keeps the settings OpenUp owns in step: the icons' text is the screens' text (Font prefs), in a
+ * light colour with a shadow over a dark backdrop and a dark one over a light backdrop (the backdrop's tone
+ * from its theme's desktop colours), and the Open apps are on the dock (Dock ADD).
+ *   OpenUpTool RECONCILE [CHECK]       says what it would do (changes nothing)
+ *   OpenUpTool RECONCILE APPLY [ONCE]  does it; ONCE (at boot) only when this map is newer than the last run
+ *   OpenUpTool RECONCILE UNDO          puts back everything RECONCILE moved */
+#define RECONCILE_MAP_VERSION "1"
+#define RECONCILE_DONE "ENVARC:OpenAmiga/Reconcile.done"
+#define CLASSIC "SYS:Prefs/Classic"
+
+typedef struct { const char *path, *action, *home, *what; } rmap;
+static const rmap reconcile_map[] = {
+    { "SYS:Prefs/Asl",          "classic", NULL, "OpenLook: file requesters (to build)" },
+    { "SYS:Prefs/Font",         "classic", NULL, "OpenLook: fonts (to build); OpenUp sets the screens' and icons' text" },
+    { "SYS:Prefs/Palette",      "classic", NULL, "OpenLook: colours (to build)" },
+    { "SYS:Prefs/Pointer",      "classic", NULL, "OpenLook: pointer, with OpenMouseAccel (to build); the old editor crashes on this desktop" },
+    { "SYS:Prefs/ReAction",     "classic", NULL, "OpenLook: ReAction's look (to build)" },
+    { "SYS:Prefs/WBPattern",    "classic", NULL, "OpenLook: backdrop (to build)" },
+    { "SYS:Prefs/Workbench",    "classic", NULL, "OpenLook: Workbench (to build)" },
+    { "SYS:Prefs/ScreenMode",   "classic", NULL, "OpenLook Screen: mode and overscan (to build)" },
+    { "SYS:Prefs/Overscan",     "classic", NULL, "OpenLook Screen: mode and overscan (to build)" },
+    { "SYS:Prefs/Input",        "classic", NULL, "OpenInput's editor: input and IControl (to build)" },
+    { "SYS:Prefs/IControl",     "classic", NULL, "OpenInput's editor: input and IControl (to build)" },
+    { "SYS:Prefs/Time",         "classic", NULL, "Open Time and Locale (to build)" },
+    { "SYS:Prefs/Locale",       "classic", NULL, "Open Time and Locale (to build)" },
+    { "SYS:Prefs/Printer",      "classic", NULL, "OpenPrint's printer settings (to build)" },
+    { "SYS:Prefs/PrinterGfx",   "classic", NULL, "OpenPrint's printer settings (to build)" },
+    { "SYS:Prefs/PrinterPS",    "classic", NULL, "OpenPrint's printer settings (to build)" },
+    { "SYS:Prefs/DefaultIcons", "classic", "SYS:Prefs/OpenTypes", "OpenTypes, which takes over default icons" },
+    { "SYS:Prefs/Serial",       "keep",    NULL, "no Open home planned" },
+    { "SYS:Tools/Commodities/Blanker", "retire", "SYS:Tools/Commodities/OpenBlanker", "OpenBlanker" },
+    { "SYS:Tools/Calculator",   "wait",    NULL, "OpenCalc (source in OpenUp, to build)" },
+    { "SYS:Tools/TextEdit",     "replace", "C:OpenEdit", "OpenEdit, under TextEdit's name, so every icon that opens TextEdit opens OpenEdit" },
+    { "SYS:WBStartup/AsyncWB",  "keep",    NULL, "OS 3.2.3's: Workbench copies and deletes in processes of their own" },
+    { "SYS:WBStartup/RAWBInfo", "keep",    NULL, "OS 3.2.3's Information window" },
+};
+#define NRMAP (int)(sizeof reconcile_map / sizeof reconcile_map[0])
+
+/* Moves a file (and its icon) from a to b on the same volume, noted as "moved". 1 moved, 0 not there, -1 failed. */
+static int move_noted(const char *a, const char *b)
+{
+    char ai[ENTRY_PATH], bi[ENTRY_PATH], dir[ENTRY_PATH];
+    LONG ok;
+    if (!exists(a)) return 0;
+    if (exists(b)) { say("OpenUp: ", b, " is there already; left both as they are."); return -1; }
+    parent_of(b, dir, sizeof dir);
+    if (!ensure_dir(dir, 1)) { say("OpenUp: can't make ", dir, "."); return -1; }
+    ok = Rename((STRPTR)a, (STRPTR)b);
+    if (!ok) {
+        if (!copy_file(a, b, 0)) { say("OpenUp: can't move ", a, "; left in place."); return -1; }
+        ok = DeleteFile((STRPTR)a);
+        if (!ok) { DeleteFile((STRPTR)b); say("OpenUp: can't move ", a, ". Is it running?"); return -1; }
+    }
+    add_entry("moved", a, b);
+    strlcpy(ai, a, sizeof ai); strlcat(ai, ".info", sizeof ai);
+    strlcpy(bi, b, sizeof bi); strlcat(bi, ".info", sizeof bi);
+    if (exists(ai) && !exists(bi)) {
+        ok = Rename((STRPTR)ai, (STRPTR)bi);
+        if (ok) add_entry("moved", ai, bi);
+    }
+    return 1;
+}
+
+/* The FONT chunk of one fp_Type in a Font.prefs file (its data), or NULL. */
+static UBYTE *font_of_type(UBYTE *d, LONG len, int type)
+{
+    LONG k;
+    for (k = 12; d && k + 8 <= len; ) {
+        ULONG n = get32(d + k + 4);
+        if (k + 8 + (LONG)n > len) break;
+        if (!memcmp(d + k, "FONT", 4) && n >= FONT_CHUNK && d[k + 8 + 14] == 0 && d[k + 8 + 15] == type) return d + k + 8;
+        k += 8 + n + (n & 1);
+    }
+    return NULL;
+}
+
+/* A picture's tone from its own pixels, through picture.datatype (V44: PDTM_READPIXELARRAY as ARGB):
+ * twelve rows, every eighth pixel. 1 dark, 0 light, -1 couldn't read it. Remembered per picture in
+ * ENVARC:OpenAmiga/Backdrop.tone, as decoding a big picture takes a moment on a 68k. */
+#define TONE_CACHE "ENVARC:OpenAmiga/Backdrop.tone"
+static int picture_tone(const char *name)
+{
+    struct Library *DataTypesBase;
+    Object *o;
+    struct BitMapHeader *bmh = NULL;
+    ULONG *row;
+    LONG len = 0, w, h, y, x, sum = 0, count = 0;
+    char *cache = read_file(TONE_CACHE, &len);
+    int tone = -1, nl = (int)strlen(name);
+    if (cache) {
+        if (len > nl + 1 && !strncmp(cache, name, nl) && cache[nl] == '\n') tone = cache[nl + 1] == 'd' ? 1 : cache[nl + 1] == 'l' ? 0 : -1;
+        FreeVec(cache);
+        if (tone >= 0) return tone;
+    }
+    if (!(DataTypesBase = OpenLibrary((STRPTR)"datatypes.library", 44))) return -1;
+    o = NewDTObject((APTR)name, DTA_GroupID, GID_PICTURE, PDTA_Remap, FALSE, PDTA_DestMode, PMODE_V43, TAG_DONE);
+    if (!o) { CloseLibrary(DataTypesBase); return -1; }
+    GetDTAttrs(o, PDTA_BitMapHeader, (ULONG)&bmh, TAG_DONE);
+    w = bmh ? bmh->bmh_Width : 0;
+    h = bmh ? bmh->bmh_Height : 0;
+    if (w > 0 && h > 0 && w <= 8192 && (row = AllocVec(w * 4, MEMF_ANY))) {
+        for (y = 0; y < 12; y++) {
+            struct pdtBlitPixelArray m;
+            m.MethodID = PDTM_READPIXELARRAY;
+            m.pbpa_PixelData = row;
+            m.pbpa_PixelFormat = PBPAFMT_ARGB;
+            m.pbpa_PixelArrayMod = w * 4;
+            m.pbpa_Left = 0;
+            m.pbpa_Top = (h - 1) * y / 11;
+            m.pbpa_Width = w;
+            m.pbpa_Height = 1;
+            if (!DoDTMethodA(o, NULL, NULL, (Msg)&m)) continue;
+            for (x = 0; x < w; x += 8) {
+                ULONG p = row[x];
+                sum += (2126L * ((p >> 16) & 255) + 7152L * ((p >> 8) & 255) + 722L * (p & 255)) / 10000;
+                count++;
+            }
+        }
+        FreeVec(row);
+    }
+    DisposeDTObject(o);
+    CloseLibrary(DataTypesBase);
+    if (!count) return -1;
+    tone = sum / count < 115;                             /* 45 per cent of 255 */
+    {
+        char buf[300];
+        strlcpy(buf, name, sizeof buf - 4);
+        strlcat(buf, tone ? "\ndark\n" : "\nlight\n", sizeof buf);
+        ensure_dir("ENVARC:OpenAmiga", 1);
+        write_file(TONE_CACHE, buf, strlen(buf));
+    }
+    return tone;
+}
+
+/* The backdrop's tone: 1 dark, 0 light, -1 not known. OpenUp's backdrops are named <Theme>-<mode>[-chrome]-...
+ * (opengadtools' make_backdrops.py); the theme's desktop colours for that mode give the tone: the mean of
+ * their luminance below 45 per cent is dark. Another picture is dark when its name says so. */
+static int backdrop_tone(void)
+{
+    LONG len = 0, k, tlen = 0;
+    UBYTE *d = (UBYTE *)read_file("ENVARC:Sys/WBPattern.prefs", &len);
+    char name[256], theme[48], mode[16], path[120], *t, *line;
+    const char *base;
+    int i, tone = -1;
+    name[0] = 0;
+    for (k = 12; d && k + 8 <= len; ) {
+        ULONG n = get32(d + k + 4);
+        if (k + 8 + (LONG)n > len) break;
+        if (!memcmp(d + k, "PTRN", 4) && n >= 24 && d[k + 8 + 16] == 0 && d[k + 8 + 17] == 0 && !(d[k + 8 + 19] & 1)) {
+            /* wbp_Which 0: the desktop; not WBPF_PATTERN: a picture's name follows */
+            LONG dl = (d[k + 8 + 22] << 8) | d[k + 8 + 23];
+            if (dl > 0 && dl < (LONG)sizeof name && 24 + dl <= (LONG)n) { memcpy(name, d + k + 8 + 24, dl); name[dl] = 0; }
+        }
+        k += 8 + n + (n & 1);
+    }
+    if (d) FreeVec(d);
+    if (!name[0]) return -1;
+    if ((tone = picture_tone(name)) >= 0) return tone;   /* the picture itself, best */
+    base = strrchr(name, '/') ? strrchr(name, '/') + 1 : strchr(name, ':') ? strchr(name, ':') + 1 : name;
+    for (i = 0; base[i] && base[i] != '-' && i < (int)sizeof theme - 1; i++) theme[i] = base[i];
+    theme[i] = 0;
+    mode[0] = 0;
+    if (base[i] == '-') {
+        const char *m = base + i + 1;
+        for (i = 0; m[i] && m[i] != '-' && m[i] != '.' && i < (int)sizeof mode - 1; i++) mode[i] = m[i];
+        mode[i] = 0;
+    }
+    if (strcmp(mode, "light") && strcmp(mode, "dark"))
+        return strstr(name, "dark") || strstr(name, "Dark") ? 1 : -1;
+    tone = !strcmp(mode, "dark");                   /* the mode's word, unless the theme's colours say more */
+    strlcpy(path, "SYS:Prefs/Presets/Themes/", sizeof path);
+    strlcat(path, theme, sizeof path);
+    strlcat(path, ".theme", sizeof path);
+    t = read_file(path, &tlen);
+    if (t) {
+        char want[20];
+        int in = 0;
+        strlcpy(want, "[", sizeof want); strlcat(want, mode, sizeof want); strlcat(want, "]", sizeof want);
+        for (line = t; line && *line; line = strchr(line, '\n') ? strchr(line, '\n') + 1 : NULL) {
+            if (*line == '[') { in = !strncmp(line, want, strlen(want)); continue; }
+            if (in && !strncmp(line, "desktop", 7)) {
+                long sum = 0, count = 0;
+                char *p = line;
+                while ((p = strchr(p, '#')) && (!strchr(line, '\n') || p < strchr(line, '\n'))) {
+                    int c[3], j, ok = 1;
+                    if (strlen(p) < 7) break;
+                    for (j = 0; j < 3; j++) {
+                        int hi = p[1 + 2 * j], lo = p[2 + 2 * j], v = 0, q;
+                        for (q = 0; q < 2; q++) {
+                            int ch = q ? lo : hi;
+                            v <<= 4;
+                            if (ch >= '0' && ch <= '9') v |= ch - '0';
+                            else if ((ch | 32) >= 'a' && (ch | 32) <= 'f') v |= (ch | 32) - 'a' + 10;
+                            else ok = 0;
+                        }
+                        c[j] = v;
+                    }
+                    if (ok) { sum += (2126L * c[0] + 7152L * c[1] + 722L * c[2]) / 10000; count++; }
+                    p++;
+                }
+                if (count) tone = sum / count < 115;          /* 45 per cent of 255 */
+                break;
+            }
+        }
+        FreeVec(t);
+    }
+    return tone;
+}
+
+/* The icons' text's pens and effect in Font prefs (ENVARC:, and ENV: while Workbench isn't open yet, as at
+ * boot before LoadWB, so this boot shows it). */
+static int set_icon_pens(int front, int back, int special)
+{
+    LONG len = 0;
+    UBYTE *d = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &len), *wb;
+    int ok;
+    struct MsgPort *wbport;
+    if (!d) return 0;
+    if (!(wb = font_of_type(d, len, 0))) { FreeVec(d); return 0; }
+    wb[16] = (UBYTE)front; wb[17] = (UBYTE)back; wb[18] = 0; wb[19] = (UBYTE)special;
+    ok = install_prefs("Font.prefs", d, len);
+    Forbid();
+    wbport = FindPort((STRPTR)"WORKBENCH");
+    Permit();
+    if (ok && !wbport) write_file("ENV:Sys/Font.prefs", (const char *)d, len);
+    FreeVec(d);
+    return ok;
+}
+
+/* The icons' text in the screens' text (Font prefs): 1 already, 0 changed or would change, -1 failed. */
+static int reconcile_icon_text(int apply)
+{
+    LONG len = 0, size;
+    UBYTE *d = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &len), *wb, *sc;
+    char font[130];
+    int same, rc;
+    if (!d) { say("  icon text: no Font prefs saved yet; left to the OS", NULL, NULL); return 1; }
+    wb = font_of_type(d, len, 0);
+    sc = font_of_type(d, len, 2);
+    if (!sc) { FreeVec(d); say("  icon text: no screen text set; left as it is", NULL, NULL); return 1; }
+    same = wb && !memcmp(wb + 24, sc + 24, 2) && !strncmp((char *)wb + 28, (char *)sc + 28, 128) && wb[18] != 1;
+    strlcpy(font, (char *)sc + 28, sizeof font);
+    size = (sc[24] << 8) | sc[25];
+    FreeVec(d);
+    if (!same) {
+        if (!apply) Printf((STRPTR)"  icon text: would become %s %ld, as the screens' text\n", (LONG)font, size);
+        else if ((rc = set_font(font, size)) != RETURN_OK) return -1;
+    } else Printf((STRPTR)"  icon text: %s %ld, as the screens' text\n", (LONG)font, size);
+    {
+        int tone = backdrop_tone(), front, back, special, nf, nb, ns;
+        UBYTE *d2, *w2;
+        LONG len2 = 0;
+        if (tone < 0) return same ? 1 : 0;
+        d2 = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &len2);
+        w2 = d2 ? font_of_type(d2, len2, 0) : NULL;
+        if (!w2) { if (d2) FreeVec(d2); return same ? 1 : 0; }
+        front = w2[16]; back = w2[17]; special = w2[19];
+        FreeVec(d2);
+        if (tone) { nf = 2; nb = 1; ns = special ? special : 1; }    /* dark backdrop: white text, a black shadow */
+        else { nf = 1; nb = 2; ns = special; }                        /* light: black text, a white shadow if any */
+        if (nf == front && nb == back && ns == special) {
+            Printf((STRPTR)"  icon text: %s, for a %s backdrop\n", (LONG)(tone ? "light" : "dark"), (LONG)(tone ? "dark" : "light"));
+            return same ? 1 : 0;
+        }
+        if (!apply) {
+            Printf((STRPTR)"  icon text: would become %s, for a %s backdrop\n", (LONG)(tone ? "light with a shadow" : "dark"), (LONG)(tone ? "dark" : "light"));
+            return 0;
+        }
+        if (!set_icon_pens(nf, nb, ns)) return -1;
+        Printf((STRPTR)"  icon text: now %s, for a %s backdrop\n", (LONG)(tone ? "light with a shadow" : "dark"), (LONG)(tone ? "dark" : "light"));
+        return 0;
+    }
+}
+
+static int reconcile(const char *how, const char *once)
+{
+    int apply = how && same_word(how, "APPLY"), undo = how && same_word(how, "UNDO");
+    int i, moved = 0, failed = 0, waiting = 0;
+    char dest[ENTRY_PATH];
+    if (how && !apply && !undo && !same_word(how, "CHECK")) {
+        PutStr((STRPTR)"Usage: OpenUpTool RECONCILE [CHECK | APPLY [ONCE] | UNDO]\n");
+        return RETURN_FAIL;
+    }
+    manifest_load();
+    if (undo) {
+        for (i = nents - 1; i >= 0; i--) {
+            entry *e = &ents[i];
+            LONG ok;
+            if (!strcmp(e->kind, "rnew")) {             /* a replacement RECONCILE put in an old program's place */
+                if (DeleteFile((STRPTR)e->a) || !exists(e->a)) e->kind[0] = 0;
+                else { say("OpenUp: can't take away ", e->a, "."); failed++; }
+                continue;
+            }
+            if (strcmp(e->kind, "moved")) continue;
+            if (exists(e->a)) { say("OpenUp: ", e->a, " is back already; its moved copy stays where it is."); failed++; continue; }
+            ok = Rename((STRPTR)e->b, (STRPTR)e->a);
+            if (ok) { e->kind[0] = 0; moved++; }
+            else { say("OpenUp: can't put back ", e->a, "."); failed++; }
+        }
+        DeleteFile((STRPTR)RECONCILE_DONE);
+        if (!manifest_save()) return RETURN_ERROR;
+        Printf((STRPTR)"OpenUp: %ld put back where they were\n", (LONG)moved);
+        return failed ? RETURN_WARN : RETURN_OK;
+    }
+    if (apply && once && same_word(once, "ONCE")) {
+        LONG len = 0;
+        char *done = read_file(RECONCILE_DONE, &len);
+        int same = done && len >= 1 && !strncmp(done, RECONCILE_MAP_VERSION, strlen(RECONCILE_MAP_VERSION)) &&
+                   (len == (LONG)strlen(RECONCILE_MAP_VERSION) || done[strlen(RECONCILE_MAP_VERSION)] == '\n');
+        if (done) FreeVec(done);
+        if (same) return reconcile_icon_text(1) < 0 ? RETURN_WARN : RETURN_OK;   /* the backdrop may have changed */
+    }
+    Printf((STRPTR)"OpenUp: reconcile (map %s)%s\n", (LONG)RECONCILE_MAP_VERSION, (LONG)(apply ? "" : ": what it would do; APPLY does it"));
+    for (i = 0; i < NRMAP; i++) {
+        const rmap *m = &reconcile_map[i];
+        const char *name = (const char *)FilePart((STRPTR)m->path);
+        int there = exists(m->path), home = m->home && exists(m->home);
+        if (!strcmp(m->action, "classic")) {
+            strlcpy(dest, CLASSIC "/", sizeof dest); strlcat(dest, name, sizeof dest);
+            if (!there) continue;
+            if (!apply) { Printf((STRPTR)"  to Classic: %-22s %s\n", (LONG)m->path, (LONG)m->what); continue; }
+            if (move_noted(m->path, dest) > 0) { Printf((STRPTR)"  to Classic: %s\n", (LONG)m->path); moved++; }
+            else failed++;
+        } else if (!strcmp(m->action, "retire")) {
+            if (!there) continue;
+            if (!home) { Printf((STRPTR)"  waits:      %-22s for %s\n", (LONG)m->path, (LONG)m->what); waiting++; continue; }
+            backup_path(m->path, dest, sizeof dest);
+            if (!apply) { Printf((STRPTR)"  retire:     %-22s %s replaces it\n", (LONG)m->path, (LONG)m->what); continue; }
+            if (move_noted(m->path, dest) > 0) { Printf((STRPTR)"  retired:    %s\n", (LONG)m->path); moved++; }
+            else failed++;
+        } else if (!strcmp(m->action, "replace")) {
+            if (!there) continue;
+            if (!home) { Printf((STRPTR)"  waits:      %-22s for %s\n", (LONG)m->path, (LONG)m->what); waiting++; continue; }
+            backup_path(m->path, dest, sizeof dest);
+            if (!apply) { Printf((STRPTR)"  replace:    %-22s by %s\n", (LONG)m->path, (LONG)m->what); continue; }
+            if (move_noted(m->path, dest) > 0) {
+                if (copy_file(m->home, m->path, 0)) {
+                    add_entry("rnew", m->path, NULL);
+                    Printf((STRPTR)"  replaced:   %s by %s\n", (LONG)m->path, (LONG)m->home);
+                    moved++;
+                } else { say("OpenUp: can't put ", m->home, " in its place; RECONCILE UNDO puts the old one back."); failed++; }
+            } else failed++;
+        } else if (!strcmp(m->action, "wait")) {
+            if (!there) continue;
+            Printf((STRPTR)"  waits:      %-22s for %s%s\n", (LONG)m->path, (LONG)m->what, (LONG)(home ? " (on the disk)" : ""));
+            waiting++;
+        } else if (there) {
+            Printf((STRPTR)"  keeps:      %-22s %s\n", (LONG)m->path, (LONG)m->what);
+        }
+    }
+    if (reconcile_icon_text(apply) < 0) failed++;
+    /* the Open apps on the dock (the user, 10 October 2026): Dock ADD adds only those installed and not there */
+    if (exists("SYS:Prefs/Dock")) {
+        if (!apply) PutStr((STRPTR)"  dock: OpenWrite, OpenPlay, OpenCompress, OpenFTP and OpenPuTTY added if installed and missing\n");
+        else {
+            BPTR nil = Open((STRPTR)"NIL:", MODE_NEWFILE);
+            LONG r = SystemTags((STRPTR)"SYS:Prefs/Dock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView "
+                                "SYS:Utilities/OpenWrite/OpenWrite SYS:Utilities/OpenPlay SYS:Utilities/OpenCompress "
+                                "SYS:Utilities/OpenFTP/OpenFTP SYS:Utilities/OpenPuTTY/OpenPuTTY SAVE",
+                                SYS_Input, (ULONG)nil, SYS_Output, (ULONG)NULL, TAG_DONE);
+            if (nil) Close(nil);
+            PutStr((STRPTR)(r == 0 ? "  dock: the Open apps are on it\n" : "  dock: Dock ADD didn't run; the dock is as it was\n"));
+        }
+    }
+    if (apply) {
+        if (!manifest_save()) return RETURN_ERROR;
+        if (!failed) write_file(RECONCILE_DONE, RECONCILE_MAP_VERSION "\n", strlen(RECONCILE_MAP_VERSION) + 1);
+        Printf((STRPTR)"OpenUp: %ld moved, %ld waiting for their Open home%s\n", (LONG)moved, (LONG)waiting,
+               (LONG)(moved ? ". Choose Update in the drawers to see it." : ""));
+    }
+    return failed ? RETURN_WARN : RETURN_OK;
+}
+
 static int list(void)
 {
     int i, files = 0;
@@ -1571,7 +1969,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | UPDATE [CHECK|YES]\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | UPDATE [CHECK|YES]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -1590,6 +1988,7 @@ static int real_main(void)
     else if (same_word(cmd, "TITLEBARS") && args[1] && args[2]) rc = set_titlebars(atol((const char *)args[1]), atol((const char *)args[2]));
     else if (same_word(cmd, "WBBACKDROP")) rc = set_wb_backdrop();
     else if (same_word(cmd, "WBGAUGE")) rc = set_wb_gauge();
+    else if (same_word(cmd, "RECONCILE")) rc = reconcile((const char *)args[1], (const char *)args[2]);
     else if (same_word(cmd, "SETTING") && args[1] && args[2]) {
         /* The text goes through T: so it is installed like any file. */
         char line[200];
@@ -1620,7 +2019,7 @@ static int real_main(void)
         rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
