@@ -27,6 +27,8 @@
  *                                     step; CHECK says what it would do (see the RECONCILE section)
  *   OpenUpTool TIDY [ONCE]            the system's drawers cleaned up, sized to fit (at most 800 x 600) and
  *                                     snapshotted by Workbench itself, so they open neat (see TIDY)
+ *   OpenUpTool ICONS [CHECK|APPLY]    old icons (four colours, NewIcons) found on SYS: and Work: and given
+ *                                     our faces, by name from Gorilla's set, else by kind (see ICONS)
  *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
  *                                     come back with UNINSTALL
  *   OpenUpTool UPDATE [CHECK|YES]     a newer pack Cradle put in DH1:OpenUp: CHECK says
@@ -1949,6 +1951,129 @@ static int tidy(const char *once)
     return RETURN_OK;
 }
 
+/* ---- ICONS: every icon in the house style ------------------------------------------------------ */
+
+/* The user, 10 October 2026: an icon find and replace that hunts for icons that aren't AmigaChrome's and
+ * offers ours, with the drawers tidied after. ICONS walks SYS: and Work: (three drawers deep, OpenUp's own
+ * Storage and Parts left out) for old icons: the classic four-colour pictures and NewIcons, anything that
+ * isn't an OS 3.5 colour icon or a PNG icon and isn't one OpenUp gave already. Each gets a new face, the
+ * icon keeping its type, tool, tool types, stack, place and drawer window (face_icon, as the install does):
+ *   - by its name, from the Gorilla set OpenUp carries (Work:OpenUp/Parts/GorillaIcons/Icons/<name>.info);
+ *   - else by its kind, from the system's default icons (ENVARC:Sys/def_Drawer, def_Tool, def_Project...),
+ *     which OpenUp has given Gorilla's faces.
+ * The originals go to SYS:Storage/OpenUp-Superseded; UNINSTALL puts them back.
+ *   OpenUpTool ICONS [CHECK]    lists what it would change
+ *   OpenUpTool ICONS APPLY      changes them, then has Workbench tidy the system's drawers (TIDY) */
+#define ICON_LIB "Work:OpenUp/Parts/GorillaIcons/Icons"
+#define ICONS_MAX 400
+static char *icon_found[ICONS_MAX], *icon_from[ICONS_MAX];
+static int icon_count;
+
+/* 1 when the icon file is an old one: no FORM ICON (OS 3.5) and no PNG. */
+static int old_icon(const char *path, int *type)
+{
+    LONG len = 0, k;
+    UBYTE *d = (UBYTE *)read_file(path, &len);
+    int old = 0;
+    *type = 0;
+    if (!d) return 0;
+    if (len > 78 && d[0] == 0xE3 && d[1] == 0x10) {             /* a DiskObject */
+        old = 1;
+        *type = d[48];
+        for (k = 78; k + 12 <= len; k++)
+            if (!memcmp(d + k, "FORM", 4) && !memcmp(d + k + 8, "ICON", 4)) { old = 0; break; }
+    }
+    if (len > 8 && !memcmp(d, "\x89PNG", 4)) old = 0;
+    FreeVec(d);
+    return old;
+}
+
+static const char *kind_default(int type)
+{
+    switch (type) {
+    case WBDISK: return "ENVARC:Sys/def_Disk.info";
+    case WBDRAWER: return "ENVARC:Sys/def_Drawer.info";
+    case WBTOOL: return "ENVARC:Sys/def_Tool.info";
+    case WBPROJECT: return "ENVARC:Sys/def_Project.info";
+    case WBGARBAGE: return "ENVARC:Sys/def_Trashcan.info";
+    case WBKICK: return "ENVARC:Sys/def_Kick.info";
+    }
+    return NULL;
+}
+
+static char *dup_text(const char *s)
+{
+    char *d = malloc(strlen(s) + 1);
+    if (d) strcpy(d, s);
+    return d;
+}
+
+static void icons_walk(const char *dir, int depth)
+{
+    BPTR lock = Lock((STRPTR)dir, ACCESS_READ);
+    struct FileInfoBlock *fib;
+    char sub[256], lib[256];
+    if (!lock) return;
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (Examine(lock, fib)) {
+            while (icon_count < ICONS_MAX && ExNext(lock, fib)) {
+                const char *n = (const char *)fib->fib_FileName;
+                int l = strlen(n), type = 0;
+                strlcpy(sub, dir, sizeof sub);
+                if (sub[strlen(sub) - 1] != ':') str_cat(sub, "/", sizeof sub);
+                str_cat(sub, n, sizeof sub);
+                if (fib->fib_DirEntryType > 0) {
+                    if (depth < 3 && strcmp(n, "OpenUp-Superseded") && strcmp(n, "Parts") && strcmp(n, "T") &&
+                        strcmp(n, "Trashcan") && strncmp(n, ".", 1))
+                        icons_walk(sub, depth + 1);
+                    continue;
+                }
+                if (l <= 5 || !same_word(n + l - 5, ".info") || find_entry(NULL, sub) || !old_icon(sub, &type)) continue;
+                /* the replacement: by name from Gorilla's set, else by kind */
+                strlcpy(lib, ICON_LIB "/", sizeof lib);
+                str_cat(lib, n, sizeof lib);
+                if (!exists(lib)) {
+                    const char *k = kind_default(type);
+                    if (!k || !exists(k)) continue;
+                    strlcpy(lib, k, sizeof lib);
+                }
+                icon_found[icon_count] = dup_text(sub);
+                icon_from[icon_count] = dup_text(lib);
+                if (icon_found[icon_count] && icon_from[icon_count]) icon_count++;
+            }
+        }
+        FreeDosObject(DOS_FIB, fib);
+    }
+    UnLock(lock);
+}
+
+static int icons(const char *how)
+{
+    int apply = how && same_word(how, "APPLY"), i, done = 0, failed = 0;
+    if (how && !apply && !same_word(how, "CHECK")) { PutStr((STRPTR)"Usage: OpenUpTool ICONS [CHECK | APPLY]\n"); return RETURN_FAIL; }
+    manifest_load();
+    icon_count = 0;
+    icons_walk("SYS:", 0);
+    if (exists("Work:")) icons_walk("Work:", 0);
+    if (!icon_count) { PutStr((STRPTR)"OpenUp: every icon is in the house style already\n"); return RETURN_OK; }
+    for (i = 0; i < icon_count; i++) {
+        if (!apply) { Printf((STRPTR)"  old: %s  (new face: %s)\n", (LONG)icon_found[i], (LONG)icon_from[i]); continue; }
+        if (face_icon(icon_from[i], icon_found[i]) > 0) { Printf((STRPTR)"  new face: %s\n", (LONG)icon_found[i]); done++; }
+        else failed++;
+    }
+    if (!apply) { Printf((STRPTR)"OpenUp: %ld old icons; ICONS APPLY gives them our faces\n", (LONG)icon_count); return RETURN_OK; }
+    if (!manifest_save()) return RETURN_ERROR;
+    Printf((STRPTR)"OpenUp: %ld icons given our faces, %ld left as they were\n", (LONG)done, (LONG)failed);
+    if (done) {
+        struct MsgPort *wb;
+        Forbid();
+        wb = FindPort((STRPTR)"WORKBENCH");
+        Permit();
+        if (wb) tidy(NULL);                            /* new pictures, new sizes: the drawers tidied again */
+    }
+    return failed ? RETURN_WARN : RETURN_OK;
+}
+
 static int list(void)
 {
     int i, files = 0;
@@ -2133,7 +2258,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | UPDATE [CHECK|YES]\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -2154,6 +2279,7 @@ static int real_main(void)
     else if (same_word(cmd, "WBGAUGE")) rc = set_wb_gauge();
     else if (same_word(cmd, "RECONCILE")) rc = reconcile((const char *)args[1], (const char *)args[2]);
     else if (same_word(cmd, "TIDY")) rc = tidy((const char *)args[1]);
+    else if (same_word(cmd, "ICONS")) rc = icons((const char *)args[1]);
     else if (same_word(cmd, "SETTING") && args[1] && args[2]) {
         /* The text goes through T: so it is installed like any file. */
         char line[200];
@@ -2184,7 +2310,7 @@ static int real_main(void)
         rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
