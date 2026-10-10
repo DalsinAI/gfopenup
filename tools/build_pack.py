@@ -90,8 +90,8 @@ a Part file that C/OpenUpTool reads:
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs), and
                         OpenAHI's files for the ACAHI sound board: acaudio.audio, its modes file
-                        and AHI's settings on Host mix (amigachrome's vendor/amigachrome-guest;
-                        ahi.device comes with OpenAHI's own, in progress)
+                        and AHI's settings on Host mix, with OpenAHI's own ahi.device
+                        (amigachrome's vendor/amigachrome-guest; all "when AmigaChrome")
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
@@ -372,6 +372,9 @@ def build_parts(a):
     # acaudio.audio, the AHI driver for the ACAHI board, and its modes file (amigachrome's vendored guest tree)
     run(["sh", a.amigachrome / "vendor/amigachrome-guest/devices/acaudio.audio/build.sh", ROOT / "build/acaudio"],
         env=dict(env, STOVE=str(STOVE)))
+    # ahi.device, OpenAHI's own (MIT; amigachrome #388): the other half of AHI on the ACAHI board
+    run(["sh", a.amigachrome / "vendor/amigachrome-guest/devices/ahi.device/build.sh", ROOT / "build/ahidevice"],
+        env=dict(env, STOVE=str(STOVE)))
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
@@ -532,7 +535,6 @@ PART_MAIN = {
     "OpenFiles": ("Utilities/OpenFiles", "OpenFiles"),
     "OpenPlay": ("Utilities/OpenPlay", "OpenPlay"),
     "OpenTitle": ("C/OpenTitle", "OpenTitle"),
-    "Sound": ("Prefs/Sound", "Sound"),
     "OpenEdit": ("C/OpenEdit", "OpenEdit"),
     "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
     "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
@@ -541,9 +543,10 @@ PART_MAIN = {
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read. OpenPrint 0.4 is OpenPrint (0.3) with
 # OpenView 0.5 and the copy at SYS:Utilities/MultiView; OpenMUI 0.2 is
-# zunemaster.library (0.1) with the muimaster.library face (19.1).
+# zunemaster.library (0.1) with the muimaster.library face (19.1). Sound 0.2 is OpenPrefs Sound and
+# OpenSpeaker (0.1) with OpenAHI's ahi.device, acaudio.audio and modes (AmigaChrome machines only).
 PART_OWN_VERSION = {"AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev",
-                    "OpenPrint", "OpenMUI"}
+                    "OpenPrint", "OpenMUI", "Sound"}
 
 
 def opentls_part(top: Path, tls_src: Path):
@@ -740,7 +743,7 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.7", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
+    look = Part(top, "OpenLook", "0.7.3", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
@@ -843,7 +846,7 @@ def main() -> int:
     # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
     # Installer runs "SYS:Prefs/Dock SAVE" once, on a first install, so the
     # dock starts with the buttons of a dock already there.
-    dock = Part(top, "OpenDock", "0.4", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "OpenDock", "0.5", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     dock.add("Prefs/Dock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/Dock")
     dock.add("Prefs/Dock.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Dock.info")
@@ -1148,7 +1151,7 @@ def main() -> int:
 
     # OpenTitle: the title bar's logo, free memory, clock and settings cog, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.6.1", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
+    tb = Part(top, "OpenTitle", "0.6.2", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
     tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
     tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
     tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
@@ -1159,25 +1162,37 @@ def main() -> int:
     # in SYS:Prefs/Sound, whose old editor the Installer copies to
     # SYS:Prefs/Classic first, and OpenSpeaker on the menu bar (openamigaprefs).
     so = a.openamigaprefs / "Sound/build/os3"
-    snd = Part(top, "Sound", "0.1", "Sound: the volume, Paula's and AHI's levels, and a speaker on the menu bar")
+    snd = Part(top, "Sound", "0.2", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and OpenAHI on AmigaChrome")
     snd.add("Prefs/Sound", (so / "Sound").read_bytes(), "SYS:Prefs/Sound")
     snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")
     snd.add("Prefs/Sound.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Sound.info")
-    # OpenAHI, folded into Sound (the user, 9 Oct 2026): the Team's pieces for the ACAHI board, acaudio.audio and
-    # DEVS:AudioModes/ACAUDIO (amigachrome's vendor/amigachrome-guest/devices/acaudio.audio, built here) and
-    # AHI's settings on the board's Host mix mode (mkahiprefs.py there; "default": a user's own stay). No
-    # ahi.device yet: it comes with OpenAHI's own, which the Team is writing.
+    # OpenAHI, folded into Sound (the user, 9 Oct 2026), is the Team's own AHI for the ACAHI board: ahi.device
+    # (devices/ahi.device, MIT, no Aminet code), acaudio.audio and DEVS:AudioModes/ACAUDIO (amigachrome's
+    # vendor/amigachrome-guest/devices/acaudio.audio, built here) and AHI's settings on the board's Host mix
+    # mode (mkahiprefs.py there; "default": a user's own stay). Never Aminet's AHI.
     acb = ROOT / "build/acaudio"
+    ahb = ROOT / "build/ahidevice"
     sys.path.insert(0, str(a.amigachrome / "vendor/amigachrome-guest/devices/acaudio.audio"))
     import mkahiprefs
-    # Each of the four lines is "when AmigaChrome" (OpenUpTool 0.6.3): the board is AmigaChrome's, so nothing
+    # Each of these lines is "when AmigaChrome" (OpenUpTool 0.6.3): the board is AmigaChrome's, so nothing
     # lands on a real Amiga or a PiStorm, where Sound is installed too.
+    n_before = len(snd.lines)
+    snd.add("Devs/ahi.device", (ahb / "Devs/ahi.device").read_bytes(), "DEVS:ahi.device")
     snd.add("Devs/AHI/acaudio.audio", (acb / "AHI/acaudio.audio").read_bytes(), "DEVS:AHI/acaudio.audio")
     snd.add("Devs/AudioModes/ACAUDIO", (acb / "AudioModes/ACAUDIO").read_bytes(), "DEVS:AudioModes/ACAUDIO")
     prefs = mkahiprefs.prefs()
     snd.add("Prefs/ahi.prefs", prefs, "ENVARC:Sys/ahi.prefs", default=True)
     snd.add("Prefs/ahi.prefs", prefs, "ENV:Sys/ahi.prefs", default=True)
-    snd.lines[-4:] = ["when AmigaChrome " + l for l in snd.lines[-4:]]
+    # OpenAHI's licence note, with the other licences: ahi.device is MIT, the Team's own, written from AHI's
+    # public interface, with no Aminet code in it
+    lic = (a.amigachrome / "LICENSE").read_text(encoding="utf-8", errors="replace")
+    note = ("OpenAHI: ahi.device, acaudio.audio and DEVS:AudioModes/ACAUDIO\n\n"
+            "OpenAHI is the Team's own AHI for AmigaChrome's ACAHI sound board. Its ahi.device is written by\n"
+            "the Team from AHI's public interface (devices/ahi.h, libraries/ahi_sub.h and AHI's documented\n"
+            "behaviour). No Aminet code or binaries are in it, and nothing from Aminet is needed. Programs that\n"
+            "use AHI work unchanged. MIT licence, as follows.\n\n" + lic)
+    snd.add("Utilities/OpenUp/Licences/OpenAHI.txt", note.encode("latin-1", "replace"), "SYS:Utilities/OpenUp/Licences/OpenAHI.txt")
+    snd.lines[n_before:] = ["when AmigaChrome " + l for l in snd.lines[n_before:]]
     snd.line("startup SYS:Prefs/Sound USE")
     snd.write()
 
