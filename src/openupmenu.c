@@ -39,7 +39,7 @@
 
 #include <string.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1 (7.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.1 (10.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct Library *WorkbenchBase, *IconBase;
 
@@ -80,6 +80,8 @@ static const struct entry entries[] = {
     /* SYS:Prefs/Sound is OS 3.2's own editor until OpenUp's Sound part
      * replaces it; OpenSpeaker comes with OpenUp's */
     { M_PREFS,  HOW_WB,  "Sound",        "SYS:Prefs/Sound",                      NULL, "SYS:C/OpenSpeaker", NULL },
+    { M_PREFS,  HOW_WB,  "Date and time", "SYS:Prefs/OpenDateTime",              NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Printers",     "SYS:Utilities/OpenPrint/Printers and Queue", NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "OpenTypes",    "SYS:Prefs/OpenTypes",                  NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Tata",         "SYS:Prefs/Tata",                       NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Gamepads",     "SYS:Prefs/Gamepads",                   NULL, NULL, NULL },
