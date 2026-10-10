@@ -31,9 +31,7 @@
 #include <utility/hooks.h>
 #include <graphics/gfxmacros.h>
 #include <proto/exec.h>
-#include <proto/expansion.h>
 #include <libraries/configvars.h>
-#include <libraries/expansionbase.h>
 #include <proto/dos.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
@@ -226,19 +224,24 @@ static void take_memory(void)
 /* The cores the CPU cores board presents through AutoConfig (the user, 10 October 2026: "the cpu count
  * should read the amount of cores presented via autoconfig"): a Dalsin ($DA15) product 7 board carrying
  * the ACSV block, CLASS ($20) 2, UNITS ($24) its cores. 0 without the board. */
-struct ExpansionBase *ExpansionBase;   /* opened for the look, closed after (the type proto/expansion.h declares) */
 static ULONG board_cores(void)
 {
+    struct Library *eb = OpenLibrary((STRPTR)"expansion.library", 36);
     ULONG n = 0;
-    ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 36);
-    if (ExpansionBase) {
-        struct ConfigDev *cd = FindConfigDev(NULL, 0xDA15, 7);
-        if (cd && cd->cd_BoardAddr) {
-            volatile ULONG *r = (volatile ULONG *)cd->cd_BoardAddr;
+    if (eb) {
+        /* FindConfigDev(NULL, $DA15, 7): -72(a6), a0 oldConfigDev, d0 manufacturer, d1 product (no proto header:
+         * proto/expansion.h changed the hook types this file uses) */
+        register struct ConfigDev *d0 __asm("d0");
+        register struct Library *a6 __asm("a6") = eb;
+        register APTR a0 __asm("a0") = NULL;
+        register ULONG d0in __asm("d0") = 0xDA15;
+        register ULONG d1 __asm("d1") = 7;
+        __asm volatile ("jsr -72(%%a6)" : "=r" (d0) : "r" (a6), "r" (a0), "0" (d0in), "r" (d1) : "a1", "cc", "memory");
+        if (d0 && d0->cd_BoardAddr) {
+            volatile ULONG *r = (volatile ULONG *)d0->cd_BoardAddr;
             if (r[0] == 0x41435356UL && r[0x20 / 4] == 2) n = r[0x24 / 4];
         }
-        CloseLibrary((struct Library *)ExpansionBase);
-        ExpansionBase = NULL;
+        CloseLibrary(eb);
     }
     return n > 1024 ? 0 : n;
 }
