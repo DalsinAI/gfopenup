@@ -57,6 +57,8 @@ FACES = [
     ("SYS:Storage", "AROS/Storage.png"),
     ("SYS:WBStartup", "AROS/WBStartup.png"),
     ("SYS:Expansion", "AROS/Prefs/Env-Archive/SYS/def_Drawer.png"),
+    ("SYS:Developer", "AROS/Developer.png"),                    # the user, 10 Oct 2026: Developer in our look
+    ("SYS:Developer/OpenGPU-SDK", "AROS/Developer/Include.png"),
     ("SYS:Fonts", "AROS/Fonts.png"),
     ("SYS:Locale", "AROS/Locale.png"),
     ("SYS:Libs", "AROS/Libs.png"),
