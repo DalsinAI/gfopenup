@@ -1,0 +1,16 @@
+{
+  "bundle": "OpenUp Desktop Tools",
+  "version": "0.1",
+  "components": [
+    {
+      "name": "OpenCalc",
+      "suggested_repo_path": "OpenUp/apps/OpenCalc",
+      "status": "portable calculator engine implemented; OpenUp GUI adapter to bind"
+    },
+    {
+      "name": "OpenShell",
+      "suggested_repo_path": "OpenUp/apps/OpenShell",
+      "status": "window/feature architecture specified; Shell transport and GUI integration boundary scaffolded"
+    }
+  ]
+}
