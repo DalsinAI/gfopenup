@@ -501,12 +501,39 @@ def drawer_icon(badge, own: bool):
 
 # ---- the list ------------------------------------------------------------------------------------
 
+def gamepads(sel):
+    """A game pad: a d-pad and four face buttons; chosen, A is pressed and the d-pad's up arm lit."""
+    ic = Icon()
+    body = union(rrect(6, 22, 58, 42, 9), ellipse(4, 30, 22, 54), ellipse(42, 30, 60, 54))
+    ic.add(body, linear((0, 22), (0, 54), rgb('#7E8794'), rgb('#2A2F37')), gloss=0.35)
+    # the d-pad, a cross on the left grip
+    cx, cy = 17, 33
+    ic.add(union(rect(cx - 2.6, cy - 7, cx + 2.6, cy + 7), rect(cx - 7, cy - 2.6, cx + 7, cy + 2.6)), rgb('#1B1E23'), outline=1.0)
+    if sel:
+        ic.detail(rect(cx - 1.6, cy - 6, cx + 1.6, cy - 2.6), lighter(BLUE, 0.35))
+    # the face buttons in a diamond on the right: Y top, X left, B right, A bottom
+    bx, by, d, r = 47, 33, 5.6, 3.1
+    for (dx, dy), (c, lo), name in (((0, -1), (GOLD, GOLD_LO), "Y"), ((-1, 0), (BLUE, BLUE_LO), "X"),
+                                    ((1, 0), (RED, RED_LO), "B"), ((0, 1), (GREEN, GREEN_LO), "A")):
+        x, y = bx + dx * d, by + dy * d
+        pressed = sel and name == "A"
+        top, bottom = (darker(c, 0.15), lo) if pressed else (lighter(c, 0.3), lo)
+        ic.add(ellipse(x - r, y - r + (0.8 if pressed else 0), x + r, y + r + (0.8 if pressed else 0)),
+               linear((x - r, y - r), (x + r, y + r), top, bottom), outline=1.1, gloss=0.0 if pressed else 0.45)
+    # Back and Start between the grips
+    for x in (27, 33.5):
+        ic.detail(rrect(x, 26.5, x + 4, 28.5, 1), rgb('#C9CED6'))
+    prefs_badge(ic, 3, 3, 1.35)
+    return ic
+
+
 ICONS = {
     "OpenFiles": openfiles, "OpenView": openview, "OpenEdit": openedit, "OpenWrite": openwrite,
     "OpenPlay": openplay, "OpenBrowser": openbrowser, "OpenCompress": opencompress,
     "Printers and Queue": printer, "Install-OpenUp": install, "Uninstall-OpenUp": uninstall,
     "OpenUp-Setup": setup, "ZuneTest": zunetest,
     "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
+    "Gamepads": gamepads,
 }
 BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write}
 

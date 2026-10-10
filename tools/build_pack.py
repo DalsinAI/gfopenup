@@ -1349,6 +1349,7 @@ def main() -> int:
             (ow.dir / "Prefs/Windows.info", "Windows"), (dock.dir / "Prefs/Dock.info", "Dock"),
             (menus.dir / "Prefs/Menus.info", "Menus"), (tb.dir / "Prefs/TitleBar.info", "TitleBar"),
             (snd.dir / "Prefs/Sound.info", "Sound"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
+            *([(oin.dir / "Prefs/Gamepads.info", "Gamepads")] if oin else []),
             (setup.dir / "WBStartup/OpenUp-Setup.info", "OpenUp-Setup"), (oc.dir / "Utilities/OpenCompress.info", "OpenCompress"),
             (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
             (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/OpenEdit.info", "OpenEdit"),
