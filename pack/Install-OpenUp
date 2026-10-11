@@ -368,9 +368,14 @@
         (working "Installing OpenImage")
         (if (> (run (cat #tool " INSTALL Parts/OpenImage >>T:OpenUp.log")) 5)
             (message "OpenImage didn't install completely. T:OpenUp.log says why; nothing else changed."))
-        (if (not (bitand #parts 128))
-            (message "OpenImage's datatypes for AVIF, HEIC, FLAC, video and documents need OpenService "
-                     "and a services card or a paired Cradle. WebP and WebM work without them."))))
+        (if (not #ac)
+            (message "On this Amiga, OpenImage's datatypes for AVIF, HEIC, MP3, FLAC, video and documents "
+                     "only open files through OpenService and a Cradle paired over your network: "
+                     "without one, those files don't open (\"not implemented\"). "
+                     "PNG, WebP and WebM work on the Amiga itself.")
+            (if (not (bitand #parts 128))
+                (message "OpenImage's datatypes for AVIF, HEIC, FLAC, video and documents need OpenService "
+                         "and a services card or a paired Cradle. WebP and WebM work without them.")))))
 
 (if (bitand #parts 512)
     (
@@ -386,11 +391,18 @@
 
 ; Warp3D, as it always has, needs a 68040 or 68060 and its FPU. Wazp3D's
 ; settings are taken over once (ENVARC:OpenAmiga/Wazp3D-taken says so), and
-; Wazp3D's own files stay where they are.
+; Wazp3D's own files stay where they are. On a real Amiga a graphics card's own
+; Warp3D (its drivers in LIBS:Warp3D/HWdrivers: a Permedia 2, Voodoo or ViRGE)
+; is left alone: away from AmigaChrome OpenUp's Warp3D draws on the CPU, and
+; it would take that card's place.
 (if (bitand #parts 67108864)
     (if (or (= (database "fpu") "NOFPU") (and (<> (database "cpu") "68040") (<> (database "cpu") "68060")))
         (message "Warp3D needs a 68040 or 68060 with its FPU, and this Amiga doesn't have one, "
                  "so it was left out. Nothing else changed.")
+      (if (and (not #ac) (exists "LIBS:Warp3D/HWdrivers"))
+        (message "This Amiga has a graphics card's own Warp3D (LIBS:Warp3D/HWdrivers). OpenUp's Warp3D "
+                 "draws on the CPU here and would take its place, so it was left out. Nothing else changed. "
+                 "(If those drivers are only Wazp3D's, OpenUpTool INSTALL Parts/Warp3D in a Shell installs it.)")
         (
             (working "Installing Warp3D")
             (if (> (run (cat #tool " INSTALL Parts/Warp3D >>T:OpenUp.log")) 5)
@@ -398,7 +410,7 @@
                 (if (and (or (or (exists "ENVARC:Wazp3D.cfg") (exists "ENV:Wazp3D.cfg")) (exists "LIBS:soft3d.library"))
                          (not (exists "ENVARC:OpenAmiga/Wazp3D-taken")))
                     (if (< (run "C:Warp3DPrefs FROMWAZP3D SAVE >>T:OpenUp.log") 10)
-                        (textfile (dest "ENVARC:OpenAmiga/Wazp3D-taken") (append "OpenUp took Wazp3D's settings over for Warp3D.\n"))))))))
+                        (textfile (dest "ENVARC:OpenAmiga/Wazp3D-taken") (append "OpenUp took Wazp3D's settings over for Warp3D.\n")))))))))
 
 (if (bitand #parts 134217728)
     (
