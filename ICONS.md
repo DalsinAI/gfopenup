@@ -33,6 +33,8 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 | OpenTypes | Documents, arrow to a program | Arrow moves on |
 | OpenUp-Setup | Box and wand | Star flares and sparkles |
 | ZuneTest | A window of gadgets | A gadget pressed |
+| OpenMonitor | Monitor: the CPU's and GPU's graphs over the cores' bars, a meter at its foot | The load climbs: graphs up, cores full, the needle in the red |
+| KindsGallery (opengadtools) | Three tiles: a slider, a button, check boxes (one ticked) | Knob slides on, button pressed, the other box ticked |
 
 ## 2. Format
 
@@ -115,6 +117,12 @@ python3 tools/open_icons_art.py icons/open    # needs Pillow and numpy
 
 OpenBrowser draws its own the same way in openamigabrowser's
 `tools/make-icons.py` (art in `icons/art/`, with `-selected` frames).
+
+KindsGallery, OpenGadTools' showcase, is drawn here (`kindsgallery` in the
+drawing script) and its two pictures are copied to opengadtools'
+`art/icons`; its `lib/build.sh` writes `KindsGallery.info` beside the program
+with `tools/make_icon.py`, the same way the pack writes ours (85 per cent,
+hard alpha, dithered, the glow on the chosen frame).
 
 ## 5. How the pack build picks them up
 
