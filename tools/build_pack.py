@@ -347,8 +347,10 @@ def build_parts(a):
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
     run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
-    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
-         "-o", ROOT / "build/os3/OpenMonitor", ROOT / "src/openmonitor.c"], env=env)
+    ogt = a.opengadtools / "lib"                              # OpenMonitor draws in the theme's font, as the Open apps
+    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common", f"-I{ogt}",
+         "-o", ROOT / "build/os3/OpenMonitor", ROOT / "src/openmonitor.c",
+         ogt / "ogt_look.c", ogt / "ogt_theme.c", ogt / "ogt_font.c"], env=env)
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
     g = a.guest
