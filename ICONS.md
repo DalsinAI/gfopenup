@@ -35,6 +35,7 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 | ZuneTest | A window of gadgets | A gadget pressed |
 | OpenMonitor | Monitor: the CPU's and GPU's graphs over the cores' bars, a meter at its foot | The load climbs: graphs up, cores full, the needle in the red |
 | KindsGallery (opengadtools) | Three tiles: a slider, a button, check boxes (one ticked) | Knob slides on, button pressed, the other box ticked |
+| OpenMeters (openamigabench) | A frosted panel: the date and time over three bars, partly filled, the middle one in the accent | A reading later: the bars move on, the last past 90 per cent in the warning colour, the clock's hand on |
 
 ## 2. Format
 
@@ -123,6 +124,14 @@ drawing script) and its two pictures are copied to opengadtools'
 `art/icons`; its `lib/build.sh` writes `KindsGallery.info` beside the program
 with `tools/make_icon.py`, the same way the pack writes ours (85 per cent,
 hard alpha, dithered, the glow on the chosen frame).
+
+OpenMeters, OpenBench's desktop widget, is drawn here too (`openmeters`, on
+the frosted glass of `frosted_glass`, as the dock's shelf looks). Its two
+pictures are copied to openamigabench's `meters/art`; its `meters/build.sh`
+writes `OpenMeters.info` beside the program (`meters/make_icon.py`) with the
+tooltypes the program's own MAKEICON writes. When the pack ships OpenBench,
+its `SYS:WBStartup/OpenMeters.info` is a job in `open_icons()` with the
+picture name `OpenMeters`, so it keeps the part's tooltypes and stack.
 
 ## 5. How the pack build picks them up
 
