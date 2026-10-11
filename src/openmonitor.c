@@ -488,9 +488,48 @@ static void send_break(void)
 /* ---- ending a program: Ctrl-C, a moment, and only then Force quit, behind a warning ------------- */
 
 #define END_WAIT 3                              /* seconds a program gets to tidy up after its Ctrl-C */
-static struct Task *ending;                     /* the program End program is waiting on, or NULL */
-static char ending_name[40];
+
+/* Which task, and which run of it: exec reuses a freed task's memory, so the address alone could name a
+ * newer task by then. Its name's pointer and its stack's bottom go with it; for a Shell's process the
+ * command it runs (cli_Module), since Ctrl-C ends the command and leaves the Shell open. */
+struct ident {
+    struct Task *t;
+    STRPTR lnname;
+    APTR splower;
+    BPTR module;                                /* the Shell's command (0: at its prompt) */
+    LONG shell;                                 /* the Shell's number, 0 when not a Shell's process */
+    char name[40];
+};
+static struct ident ending;                     /* the program End program is waiting on; ending.t NULL for none */
 static int ending_secs;
+
+/* Under Forbid, with t alive. */
+static void take_ident(struct ident *id, struct Task *t, const char *name)
+{
+    struct Process *p = (struct Process *)t;
+    id->t = t;
+    id->lnname = (STRPTR)t->tc_Node.ln_Name;
+    id->splower = t->tc_SPLower;
+    id->module = 0;
+    id->shell = 0;
+    if (t->tc_Node.ln_Type == NT_PROCESS && p->pr_CLI) {
+        id->module = ((struct CommandLineInterface *)BADDR(p->pr_CLI))->cli_Module;
+        id->shell = p->pr_TaskNum;
+    }
+    strcpy(id->name, name);
+}
+
+enum { ID_GONE, ID_THERE, ID_COMMAND_ENDED };
+
+/* Under Forbid: gone, still there, or (a Shell's command) ended with its Shell still open. */
+static int ident_state(const struct ident *id)
+{
+    struct Process *p = (struct Process *)id->t;
+    if (!task_alive(id->t) || (STRPTR)id->t->tc_Node.ln_Name != id->lnname || id->t->tc_SPLower != id->splower) return ID_GONE;
+    if (id->shell && (!p->pr_CLI || ((struct CommandLineInterface *)BADDR(p->pr_CLI))->cli_Module != id->module))
+        return ID_COMMAND_ENDED;
+    return ID_THERE;
+}
 
 /* A part of the system: a plain task (devices, input, the graphics and timer tasks), a process that is
  * a DOS device's handler (a file system: DH0, RAM, CON), or one of the OS's own processes. Not under
@@ -531,45 +570,50 @@ static LONG ask(const char *text, const char *buttons)
 }
 
 /* Removes the task at once: RemTask, which frees only what it lists in tc_MemEntry (its stack, for most
- * programs). Under Forbid, with the task found again first, so a task that ended meanwhile is never touched. */
-static void force_quit(struct Task *t, const char *name)
+ * programs). Under Forbid, with the same task (ident_state) found again first, so a task that ended
+ * meanwhile, a newer one at its address, or a Shell whose command has ended is never touched. */
+static void force_quit(const struct ident *id)
 {
     char s[100];
-    int gone;
+    int st;
     Forbid();
-    gone = !task_alive(t);
-    if (!gone && t != FindTask(NULL)) RemTask(t);
+    st = ident_state(id);
+    if (st == ID_THERE && id->t != FindTask(NULL)) RemTask(id->t);
     Permit();
-    if (chosen == t) chosen = NULL;
-    if (ending == t) ending = NULL;
-    snprintf(s, sizeof s, gone ? "%s had already ended." : "Removed %s. Restart when you can: what it had open stays open.", name);
+    if (chosen == id->t) chosen = NULL;
+    if (ending.t == id->t) ending.t = NULL;
+    if (st == ID_GONE) snprintf(s, sizeof s, "%s had already ended.", id->name);
+    else if (st == ID_COMMAND_ENDED) snprintf(s, sizeof s, "%s stopped by itself; its Shell is still open.", id->name);
+    else snprintf(s, sizeof s, "Removed %s. Restart when you can: what it had open stays open.", id->name);
     status(s);
     refresh_list();
 }
 
 /* The warnings before Force quit: one for any program, a second for a part of the system. 1 to go on. */
-static int confirm_force(struct Task *t, const char *name, int after_break)
+static int confirm_force(const struct ident *id, int after_break)
 {
-    char text[480];
+    char text[520], shell[80];
     LONG r;
+    if (id->shell) snprintf(shell, sizeof shell, "\n\nIt runs in Shell %ld: Force quit removes that Shell too.", (long)id->shell);
+    else shell[0] = 0;
     snprintf(text, sizeof text,
              "%s%s\n\n"
              "Force quit removes it at once. It cannot tidy up:\n"
              "its memory, files and windows stay open until you\n"
              "restart, and the Amiga may become unstable.\n"
-             "Save your work in other programs first.",
-             name, after_break ? " did not stop after Ctrl-C." : ": force quit?");
+             "Save your work in other programs first.%s",
+             id->name, after_break ? " did not stop after Ctrl-C." : ": force quit?", shell);
     r = ask(text, after_break ? "Force quit|Wait longer|Cancel" : "Force quit|Cancel");
     if (after_break && r == 2) { ending_secs = 0; status("Waiting a little longer..."); return 0; }
-    if (r != 1) { if (ending == t) ending = NULL; status("Left running."); return 0; }
-    if (is_system(t, name)) {
+    if (r != 1) { if (ending.t == id->t) ending.t = NULL; status("Left running."); return 0; }
+    if (is_system(id->t, id->name)) {
         snprintf(text, sizeof text,
                  "%s is part of the system (a device, a file system\n"
                  "or one of the OS's own tasks).\n\n"
                  "Removing it will very likely stop the Amiga, and a\n"
                  "file system's disk may need checking afterwards.",
-                 name);
-        if (ask(text, "Remove it anyway|Cancel") != 1) { if (ending == t) ending = NULL; status("Left running."); return 0; }
+                 id->name);
+        if (ask(text, "Remove it anyway|Cancel") != 1) { if (ending.t == id->t) ending.t = NULL; status("Left running."); return 0; }
     }
     return 1;
 }
@@ -588,42 +632,49 @@ static void end_program(void)
     if (!chosen_usable()) return;
     Forbid();
     if (!task_alive(chosen)) { Permit(); chosen = NULL; status("That task has ended."); return; }
+    take_ident(&ending, chosen, chosen_name);
+    if (ending.shell && !ending.module) {       /* a Shell at its prompt: Ctrl-C ends nothing there */
+        Permit();
+        ending.t = NULL;
+        snprintf(s, sizeof s, "Shell %ld is at its prompt: type EndCLI in it, or close its window.", (long)ending.shell);
+        status(s);
+        return;
+    }
     Signal(chosen, SIGBREAKF_CTRL_C);
     Permit();
-    ending = chosen;
-    strcpy(ending_name, chosen_name);
     ending_secs = 0;
-    snprintf(s, sizeof s, "Stopping %s... (sent Ctrl-C, waiting up to %d seconds)", ending_name, END_WAIT);
+    snprintf(s, sizeof s, "Stopping %s... (sent Ctrl-C, waiting up to %d seconds)", ending.name, END_WAIT);
     status(s);
 }
 
 static void end_check(void)
 {
     char s[100];
-    int alive;
-    if (!ending) return;
+    int st;
+    if (!ending.t) return;
     Forbid();
-    alive = task_alive(ending);
+    st = ident_state(&ending);
     Permit();
-    if (!alive) {
-        snprintf(s, sizeof s, "%s has stopped.", ending_name);
+    if (st != ID_THERE) {
+        snprintf(s, sizeof s, st == ID_GONE ? "%s has stopped." : "%s has stopped; its Shell is still open.", ending.name);
         status(s);
-        ending = NULL;
-    } else if (++ending_secs >= END_WAIT) {
-        struct Task *t = ending;
-        if (confirm_force(t, ending_name, 1)) force_quit(t, ending_name);
+        ending.t = NULL;
+    } else if (++ending_secs > END_WAIT) {      /* > : the first tick may come at once, so a full END_WAIT at least */
+        struct ident id = ending;
+        if (confirm_force(&id, 1)) force_quit(&id);
     }
 }
 
 /* Force quit straight away (Shift-Del): the same warnings, without the Ctrl-C first. */
 static void force_chosen(void)
 {
-    struct Task *t;
-    char name[40];
+    struct ident id;
     if (!chosen_usable()) return;
-    t = chosen;
-    strcpy(name, chosen_name);
-    if (confirm_force(t, name, 0)) force_quit(t, name);
+    Forbid();
+    if (!task_alive(chosen)) { Permit(); chosen = NULL; status("That task has ended."); return; }
+    take_ident(&id, chosen, chosen_name);
+    Permit();
+    if (confirm_force(&id, 0)) force_quit(&id);
 }
 
 static int gui(void)
