@@ -80,6 +80,7 @@
 #include <datatypes/datatypesclass.h>
 #include <datatypes/pictureclass.h>
 #include <proto/datatypes.h>
+#include <clib/alib_protos.h>
 #include <rexx/storage.h>
 #include <rexx/rxslib.h>
 #include <proto/rexxsyslib.h>
@@ -97,7 +98,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.1 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.2 (11.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1563,7 +1564,10 @@ static int picture_tone(const char *name)
             m.pbpa_Top = (h - 1) * y / 11;
             m.pbpa_Width = w;
             m.pbpa_Height = 1;
-            if (!DoDTMethodA(o, NULL, NULL, (Msg)&m)) continue;
+            /* DoMethodA, not DoDTMethodA: DoDTMethodA puts a GadgetInfo (NULL here) in the message's second
+             * longword, which for this method is pbpa_PixelData, and the row went to address 0 (found on
+             * Instance-32, 11 October 2026). */
+            if (!DoMethodA(o, (Msg)&m)) continue;
             for (x = 0; x < w; x += 8) {
                 ULONG p = row[x];
                 sum += (2126L * ((p >> 16) & 255) + 7152L * ((p >> 8) & 255) + 722L * (p & 255)) / 10000;
