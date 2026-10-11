@@ -231,7 +231,7 @@
             (help "OpenBench: a new desktop in Workbench's place, made for RTG screens (new, version 0.1.14, "
                   "off unless picked). It shows the disks and drawers in the look of the theme, starts "
                   "programs as Workbench does, and has the Open preferences (Look, Windows, Title bar, Menus, "
-                  "Dock, Sound, OpenTypes and more) built in. OpenMeters, a small panel with the time, the "
+                  "Dock, Sound, OpenTypes and more) built in. OpenMeters, a small panel with the date and time, the "
                   "free memory and how full each disk is, comes with it, in SYS:WBStartup.\n\n"
                   "S:Startup-Sequence runs SYS:System/OpenBench where it ran LoadWB, in lines marked "
                   "\"OpenUp desktop\"; the file as it was is kept in SYS:Storage/OpenUp-Superseded, and "

@@ -151,8 +151,8 @@ choose:
 - OpenBench (new, off unless picked, and offered only on a true-colour RTG
   screen): a desktop in Workbench's place, made for RTG screens, version
   0.1.14, with the Open preferences built in (SYS:System/OpenBench), and
-  OpenMeters, a small panel on the desktop with the time, the free memory
-  and how full each disk is (SYS:WBStartup); S:Startup-Sequence runs
+  OpenMeters, a small panel on the desktop with the date and time, the free
+  memory and how full each disk is (SYS:WBStartup); S:Startup-Sequence runs
   OpenBench where it ran LoadWB, in marked lines, and the uninstaller puts
   the LoadWB line back; hold Shift as the Amiga starts for Workbench, and if
   OpenBench can't start, Workbench starts as before.
