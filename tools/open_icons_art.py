@@ -25,7 +25,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gstyle import *            # noqa: E402,F401,F403
-from PIL import Image           # noqa: E402
+import numpy as np              # noqa: E402
+from PIL import Image, ImageDraw, ImageFilter   # noqa: E402
 
 # ---- pieces ------------------------------------------------------------------------------------
 
@@ -190,6 +191,60 @@ def openmonitor(sel):
         ic.detail(rect(x, top, x + 3.2, 38.4), linear((0, 38.4), (0, 31.2), rgb('#4FCB55'), rgb('#F6D04D') if v > 0.8 else rgb('#8CE07A')))
     # the meter, standing at the monitor's foot on the right
     gauge_dial(ic, 49, 47, 13, 0.92 if sel else 0.3)
+    return ic
+
+
+def frosted_glass(x0, y0, x1, y1):
+    """A fill for frosted glass, as the dock's shelf and OpenMeters' panel are drawn: a cool light gradient
+    with the desktop's colours showing through it blurred, and a soft sheen across it from the top left."""
+    glass = np.asarray(linear((x0, y0), (x0, y1), rgb('#F2F6FB'), rgb('#B9C5D6')), np.float32)
+    behind = Image.new('RGB', (W, W), (0, 0, 0))
+    d = ImageDraw.Draw(behind)
+    for cx, cy, r, c in ((x0 + 8, y1 - 4, 14, (70, 130, 225)), (x1 - 6, y0 + 6, 12, (90, 195, 185)),
+                         (x0 + (x1 - x0) * 0.6, y1 + 1, 11, (175, 120, 215))):
+        d.ellipse([P(cx - r), P(cy - r), P(cx + r), P(cy + r)], fill=c)
+    behind = np.asarray(behind.filter(ImageFilter.GaussianBlur(5 * S)), np.float32)
+    through = behind.max(axis=2, keepdims=True) / 255 * 0.6
+    out = glass * (1 - through) + behind * 0.6
+    w = x1 - x0
+    sheen = poly([(x0 + w * 0.26, y0), (x0 + w * 0.44, y0), (x0 + w * 0.30, y1), (x0 + w * 0.12, y1)])
+    sheen = np.asarray(sheen.filter(ImageFilter.GaussianBlur(4 * S)), np.float32)[..., None] / 255 * 0.42
+    out = out + (255 - out) * sheen
+    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), 'RGB')
+
+
+def openmeters(sel):
+    """OpenMeters, the desktop widget (openamigabench meters/): a small frosted panel with the date and time
+    at the top and three bars, partly filled, the middle one in the accent; chosen, a reading later: the bars
+    move on, the accent one fills further, the last passes 90 per cent and turns the warning colour, and the
+    clock's hand moves on."""
+    ic = Icon()
+    x0, y0, x1, y1 = 2, 9, 62, 55
+    ic.add(rrect(x0, y0, x1, y1, 7), frosted_glass(x0, y0, x1, y1), gloss=0.2)
+    ic.detail(cut(rrect(x0 + 0.5, y0 + 0.5, x1 - 0.5, y1 - 0.5, 6.5), rrect(x0 + 1.4, y0 + 1.4, x1 - 1.4, y1 - 1.4, 5.6)),
+              rgb('#FAFCFF'))                                           # the lighter rim
+    # the date and time: a little clock, the date in the text colour and the time muted
+    cx, cy, r = 10.5, 16.2, 3.7
+    ic.add(ellipse(cx - r, cy - r, cx + r, cy + r), linear((cx - r, cy - r), (cx + r, cy + r), (255, 255, 255), rgb('#C9D3E0')), outline=1.1)
+    a = math.radians((165 if sel else 75) - 90)
+    ic.detail(stroke([(cx, cy), (cx + math.cos(a) * 2.7, cy + math.sin(a) * 2.7)], 0.85), INK)
+    ic.detail(stroke([(cx, cy), (cx - 0.6, cy - 1.9)], 0.85), INK)
+    ic.detail(rrect(17, 15.0, 36, 17.4, 1.2), rgb('#283040'))
+    ic.detail(rrect(39, 15.0, 50, 17.4, 1.2), rgb('#5F6B7E'))
+    # the bars (Chip, Fast and video RAM): a label, then the bar a step darker than the glass, filled as far as used
+    top, step, th = 23.0, 10.2, 6.0
+    for i, v in enumerate((0.66, 0.88, 0.95) if sel else (0.45, 0.68, 0.55)):
+        y = top + i * step
+        ic.detail(rrect(7, y + th / 2 - 1.0, 13.5, y + th / 2 + 1.0, 1.0), rgb('#323C4C'))
+        tx0, tx1 = 17, 57
+        bar = rrect(tx0, y, tx1, y + th, th / 2)
+        ic.add(bar, linear((0, y), (0, y + th), rgb('#8D9AAE'), rgb('#CDD6E3')), outline=1.0)
+        c, lo = (BLUE, BLUE_LO) if i == 1 else (rgb('#7F8C9E'), rgb('#434D5B'))
+        if v > 0.9:
+            c, lo = RED, RED_LO
+        fx = tx0 + (tx1 - tx0) * v
+        ic.detail(inter(rrect(tx0, y, fx, y + th, th / 2), bar), linear((0, y), (0, y + th), lighter(c, 0.35), lo))
+        ic.detail(inter(rect(tx0 + 1.6, y + 0.7, fx - 1.4, y + 1.4), bar), lighter(c, 0.6))
     return ic
 
 
@@ -634,7 +689,7 @@ ICONS = {
     "OpenFiles": openfiles, "OpenView": openview, "OpenEdit": openedit, "OpenWrite": openwrite,
     "OpenPlay": openplay, "OpenBrowser": openbrowser, "OpenCompress": opencompress,
     "Printers and Queue": printer, "Install-OpenUp": install, "Uninstall-OpenUp": uninstall,
-    "OpenUp-Setup": setup, "ZuneTest": zunetest, "OpenMonitor": openmonitor,
+    "OpenUp-Setup": setup, "ZuneTest": zunetest, "OpenMonitor": openmonitor, "OpenMeters": openmeters,
     "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
     "Gamepads": gamepads, "KindsGallery": kindsgallery,
 }
