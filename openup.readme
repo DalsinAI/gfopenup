@@ -147,7 +147,15 @@ choose:
   for every program in one standard layout, with C:OIList, and Gamepads in
   SYS:Prefs to test and map pads and choose which drives which port (an
   opt-in patch there lets older games see a modern pad); on AmigaChrome it
-  sees the Amiga's ports for now.
+  sees the Amiga's ports for now;
+- OpenBench (new, off unless picked, and offered only on a true-colour RTG
+  screen): a desktop in Workbench's place, made for RTG screens, version
+  0.1.14, with the Open preferences built in (SYS:System/OpenBench), and
+  OpenMeters, a small panel on the desktop with the time, the free memory
+  and how full each disk is (SYS:WBStartup); S:Startup-Sequence runs
+  OpenBench where it ran LoadWB, in marked lines, and the uninstaller puts
+  the LoadWB line back; hold Shift as the Amiga starts for Workbench, and if
+  OpenBench can't start, Workbench starts as before.
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,
@@ -155,7 +163,8 @@ OpenTypes, Tata, Gamepads, OpenUp Setup). SYS:C/OpenUpMenu keeps them there; "Op
 QUIT" takes them out.
 Every file it adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest;
 replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines
-sit in one marked block in S:User-Startup. Uninstall-OpenUp (in
+sit in one marked block in S:User-Startup (and, with OpenBench, one marked
+block in S:Startup-Sequence, the file as it was kept). Uninstall-OpenUp (in
 SYS:Utilities/OpenUp) takes it all out again.
 
 Licence: MIT, Copyright (c) 2026 AmigaChrome Team, for its own files; third-party

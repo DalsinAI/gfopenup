@@ -9,7 +9,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
-        [--no-build] [--lha]
+        [--openamigabench DIR] [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
 the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
@@ -85,6 +85,11 @@ a Part file that C/OpenUpTool reads:
   OpenInput/            openinput.library (game controllers for every program), C:OIList,
                         OpenPrefs Gamepads in SYS:Prefs and the docs; off by default; its
                         startup line is Gamepads USE (--openamigainput)
+  OpenBench/            OpenBench 0.1.14, the desktop in LoadWB's place, with twelve preference editors
+                        built in (SYS:System/OpenBench), and OpenMeters, its desktop widget, in
+                        SYS:WBStartup; its "desktop" line changes S:Startup-Sequence's LoadWB line,
+                        marked, and the uninstaller puts it back. Off by default, and offered only on a
+                        true-colour RTG screen (--openamigabench)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
@@ -434,6 +439,12 @@ def build_parts(a):
     if a.openamigainput:
         run(["sh", a.openamigainput / "library/build.sh", a.openamigainput / "build"], env=dict(env, STOVE=str(STOVE)))
         run(["sh", a.openamigaprefs / "Gamepads/build.sh"], env=dict(env, STOVE=str(STOVE)))
+    # OpenBench and OpenMeters (openamigabench, os32 stove): the desktop with this OpenGadTools' drawer window
+    # and theme and this openamigaprefs' editors built in, and the desktop widget
+    if a.openamigabench:
+        run(["sh", a.openamigabench / "desktop/build.sh"],
+            env=dict(env, STOVE=str(STOVE), OGT=str(a.opengadtools), OAP=str(a.openamigaprefs)))
+        run(["sh", a.openamigabench / "meters/build.sh"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
         # make_sdk.py won't write over a kit: a rebuild's old one goes to archive/ beside it
         for old in Path(a.opengpu_sdk).glob("OpenGPU-SDK-*/"):
@@ -539,6 +550,7 @@ PART_MAIN = {
     "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
     "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
+    "OpenBench": ("System/OpenBench", "OpenBench"),
 }
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read. OpenPrint 0.4 is OpenPrint (0.3) with
@@ -575,6 +587,38 @@ def opentls_part(top: Path, tls_src: Path):
             "SYS:Utilities/OpenUp/Licences/OpenTLS.txt")
     tls.write()
     return tls
+
+
+# OpenMeters' tooltypes, as its MAKEICON writes them (openamigabench meters/openmeters.c, make_icon): the
+# ones in brackets are switched off, there to show what can be set. DONOTWAIT first, as for every program
+# that stays in SYS:WBStartup: Workbench (Shift held, or no RTG) doesn't wait for it to end.
+OPENMETERS_TOOLTYPES = ["DONOTWAIT", "CORNER=TOPRIGHT", "(LEFT=40)", "(TOP=40)", "BARWIDTH=200", "REFRESH=2", "(NODATE)",
+                        "(NOMEMORY)", "(NOVIDEO)", "(NOVOLUMES)", "(RAM)", "(HIDE=Name|Name)"]
+
+
+def openbench_part(top: Path, built: Path, icons):
+    """The OpenBench part (the Team, 11 October 2026: OpenBench in OpenUp) from openamigabench's desktop/build.sh
+    and meters/build.sh output folder (built: OpenBench and OpenMeters), or None when OpenBench isn't there.
+
+    OpenBench is the desktop in LoadWB's place: the Part file's "desktop" line has OpenUpTool turn
+    S:Startup-Sequence's LoadWB line into a marked block that runs SYS:System/OpenBench, with LoadWB as its
+    Else (src/startseq.h); the file as it was is kept in SYS:Storage/OpenUp-Superseded and UNINSTALL puts the
+    LoadWB line back. OpenBench itself runs LoadWB when Shift is held or it can't start. OpenMeters, its desktop
+    widget, goes in SYS:WBStartup with the icon its MAKEICON would write. "needs RTGScreen": installed only
+    where Workbench's screen is a true-colour RTG one; the Installer offers it only there, unticked."""
+    bench = built / "OpenBench"
+    if not bench.is_file():
+        return None
+    ob = Part(top, "OpenBench", "0.1.14", "OpenBench: the desktop in LoadWB's place on an RTG screen, with the Open "
+              "preferences built in, and OpenMeters on it")
+    ob.line("needs RTGScreen")
+    ob.add("System/OpenBench", bench.read_bytes(), "SYS:System/OpenBench")
+    ob.add("WBStartup/OpenMeters", (built / "OpenMeters").read_bytes(), "SYS:WBStartup/OpenMeters")
+    ob.add("WBStartup/OpenMeters.info", icons.icon(icons.WBTOOL, "page", None, OPENMETERS_TOOLTYPES, stack=16384),
+           "SYS:WBStartup/OpenMeters.info")
+    ob.line("desktop SYS:System/OpenBench")      # after its files: S:Startup-Sequence changes once OpenBench is there
+    ob.write()
+    return ob
 
 
 def check_part_versions(parts: Path) -> None:
@@ -641,6 +685,8 @@ def main() -> int:
                     help="openamigatelegram, for the Telegram part (left out without it)")
     ap.add_argument("--openamigainput", type=Path, default=first(DEV / "openamigainput", DEV.parent / "openamigainput"),
                     help="openamigainput, for the OpenInput part (left out without it)")
+    ap.add_argument("--openamigabench", type=Path, default=first(DEV / "openamigabench", DEV.parent / "openamigabench"),
+                    help="openamigabench, for the OpenBench part: OpenBench and OpenMeters (left out without it)")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the OpenGPU developer kit is made (or, with --no-build, read): the OpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -1127,6 +1173,10 @@ def main() -> int:
         oin.line("startup SYS:Prefs/OpenGamepads USE")
         oin.write()
 
+    # OpenBench (openamigabench): the desktop in LoadWB's place, and OpenMeters (openbench_part). Off by
+    # default, and the Installer offers it only on a true-colour RTG screen.
+    bench = openbench_part(top, a.openamigabench / "build/os3", icons) if a.openamigabench else None
+
     # GCC 16's FPCR clash (openamigartg tools/fpcr_check.py) must not be in
     # anything the graphics parts ship, whichever stove built it.
     objdump = next((p for p in (Path.home() / "AmigaChrome/stoves/os32-gcc16/prefix/bin/m68k-amigaos-objdump",
@@ -1332,6 +1382,7 @@ def main() -> int:
                     + ([(dm.dir / f"Utilities/OpenDemos/{n}.info", "page") for n in ("Boing", "Chrome Gears", "Copper Tunnel")]
                        + [(dm.dir / "Utilities/OpenDemos.info", None)] if dm else [])
                     + ([(tg.dir / "Utilities/UnofficialTelegram.info", "page")] if tg else [])
+                    + ([(bench.dir / "WBStartup/OpenMeters.info", "page")] if bench else [])
                     + ([(dev.dir / "Developer/OpenGPU-SDK.info", None), (dev.dir / "Developer.info", None)] if dev else [])
                     + ([(oin.dir / "Utilities/OpenUp/Docs.info", None)]
                        + [(oin.dir / f"Utilities/OpenUp/Docs/{n}.info", "page") for n in ("OpenInput.txt", "Design-OpenInput.txt", "Gamepads.txt")]

@@ -33,7 +33,7 @@
 ; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY,
 ; 1073741824 Tata (the last bit of this word).
 ; The second word, #parts2 (OpenUp 0.7.0): 1 OpenFTP, 2 Unofficial Telegram, 4 OpenGPU developer files,
-; 8 OpenInput, 16 OpenTLS.
+; 8 OpenInput, 16 OpenTLS, 32 OpenBench (asked on its own, and only on a true-colour RTG screen).
 ; None of them is ticked by default, on any machine.
 ; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos, OpenPuTTY
 ; and Tata (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D
@@ -221,8 +221,27 @@
                  "OpenInput: game controllers (new)"
                  "OpenTLS: secure connections (new)")
         (default 0)))
+; OpenBench takes LoadWB's place, so it is offered only where it can be the desktop: a true-colour RTG
+; screen (OpenUpTool DETECT's OpenUp/RTGScreen; its Part file needs it too). Unticked: off unless picked.
+(set #g6 0)
+(if (= (getenv "OpenUp/RTGScreen") "1")
+    (set #g6
+        (askoptions
+            (prompt "One more part, for this RTG screen:")
+            (help "OpenBench: a new desktop in Workbench's place, made for RTG screens (new, version 0.1.14, "
+                  "off unless picked). It shows the disks and drawers in the look of the theme, starts "
+                  "programs as Workbench does, and has the Open preferences (Look, Windows, Title bar, Menus, "
+                  "Dock, Sound, OpenTypes and more) built in. OpenMeters, a small panel with the time, the "
+                  "free memory and how full each disk is, comes with it, in SYS:WBStartup.\n\n"
+                  "S:Startup-Sequence runs SYS:System/OpenBench where it ran LoadWB, in lines marked "
+                  "\"OpenUp desktop\"; the file as it was is kept in SYS:Storage/OpenUp-Superseded, and "
+                  "Uninstall-OpenUp puts the LoadWB line back. Hold Shift as the Amiga starts for "
+                  "Workbench instead; if OpenBench can't start, Workbench starts as before. It needs "
+                  "OpenRTG (openrtg.library): without it, Workbench starts as before.")
+            (choices "OpenBench: a desktop for RTG (new, 0.1.14)")
+            (default 0))))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
-(set #parts2 #g5)
+(set #parts2 (+ #g5 (shiftleft #g6 5)))
 ; OpenFTP's FTPS needs OpenTLS, and OpenTLS does its sums with OpenCrypto
 (if (bitand #parts2 1) (set #parts2 (bitor #parts2 16)))
 (if (bitand #parts2 16) (set #parts (bitor #parts 268435456)))
@@ -559,6 +578,18 @@
             (working "Installing OpenInput")
             (if (> (run (cat #tool " INSTALL Parts/OpenInput >>T:OpenUp.log")) 5)
                 (message "OpenInput didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
+; OpenBench last of the parts: its files first, then S:Startup-Sequence's LoadWB line (its Part file's
+; "desktop" line). OpenUpTool leaves a Startup-Sequence that already runs OpenBench as it is.
+(if (bitand #parts2 32)
+    (if (exists "Parts/OpenBench/Part")
+        (
+            (working "Installing OpenBench")
+            (if (> (run (cat #tool " INSTALL Parts/OpenBench >>T:OpenUp.log")) 5)
+                (message "OpenBench didn't install completely, and Workbench stays the desktop. "
+                         "T:OpenUp.log says why.")
+                (if (and (not (exists "LIBS:openrtg.library")) (not (bitand #parts 512)))
+                    (message "OpenBench is installed. It is the desktop on OpenRTG's screens; until OpenRTG "
+                             "is installed (Install-OpenUp, OpenRTG), Workbench starts as before."))))))
 
 ; OpenUp 0.6.14 to 0.7.0 changed the default tool of about 40 of AmigaOS 3.2.3's own
 ; icons (datatype descriptors, pointer presets, DOSDrivers, the Picasso96 guides...) to

@@ -65,7 +65,13 @@ with its notices.
 - **Startup changes are marked.** They go in a marked block in `S:User-Startup`.
   The one exception is `C:OpenRTG`, early in `S:Startup-Sequence` on
   machines whose board has no boot ROM. It too is marked, with the old file
-  kept.
+  kept. OpenBench, the desktop in LoadWB's place (off by default, offered
+  only on a true-colour RTG screen; the Team, 11 October 2026), is changed
+  the same way: its Part file's `desktop` line turns the `LoadWB` line into a
+  block marked `;BEGIN OpenUp desktop` to `;END OpenUp desktop` that runs
+  `SYS:System/OpenBench`, with the original line as its `Else`; the file as
+  it was goes to `SYS:Storage/OpenUp-Superseded/S`, and the uninstaller puts
+  the `LoadWB` line back (`src/startseq.h`, checked by `tools/startseq_test.c`).
 - **Re-running a newer pack upgrades in place.** A manifest in
   `ENVARC:OpenAmiga/` lists what is installed, with versions; ACBuild's
   AmigaChrome Tools tab can read it.

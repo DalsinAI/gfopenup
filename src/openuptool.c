@@ -1,6 +1,7 @@
 /* OpenUpTool: what OpenUp's Installer scripts call (DESIGN.md section 3).
  *
- *   OpenUpTool DETECT                 what this machine is; ENV:OpenUp/...
+ *   OpenUpTool DETECT                 what this machine is; ENV:OpenUp/... (RTGScreen: 1 when Workbench's
+ *                                     screen is a true-colour RTG one)
  *   OpenUpTool INSTALL <part drawer>  installs one part, as its Part file says
  *   OpenUpTool STARTUP                writes the marked block in S:User-Startup
  *   OpenUpTool UNINSTALL              puts everything back
@@ -48,12 +49,20 @@
  *   ";BEGIN OpenUp" to ";END OpenUp". A line listed in
  *   ENVARC:OpenAmiga/Startup.off (OpenUp Setup's switches) is written with
  *   ";OFF " in front, so AmigaDOS skips it.
+ * - S:Startup-Sequence is changed only where DESIGN.md section 3 says: a
+ *   part's "desktop" line turns its LoadWB line into a block marked
+ *   ";BEGIN OpenUp desktop" to ";END OpenUp desktop" (src/startseq.h), the
+ *   file as it was kept in SYS:Storage/OpenUp-Superseded/S; UNINSTALL puts the
+ *   LoadWB line back: the kept copy itself when nothing else in the file has
+ *   changed since (byte for byte), else only OpenUp's lines come out and the
+ *   copy stays. A Startup-Sequence that already runs the program is left.
  * - Errors say what to do next, in plain words.
  *
  * A part's drawer holds its files, laid out as they go, and a Part file:
  *   part <name> <version>
  *   needs AmigaChrome                  (only on an AmigaChrome instance)
  *   needs ACRTG                        (only with an ACRTG graphics board)
+ *   needs RTGScreen                    (0.7.3: only when Workbench's screen is a true-colour RTG one)
  *   keep <dest> <marker> [<marker>...]  (dest must be absent or contain a marker)
  *   copy <file in the drawer> <dest>
  *   default <file in the drawer> <dest> (copied only when dest is missing)
@@ -66,6 +75,8 @@
  *                                        left alone when the machine hasn't got it)
  *   startup <the rest of the line>
  *   when AmigaChrome <copy|default|add|face|retire line>  (0.6.3: the line only on an AmigaChrome instance)
+ *   desktop <program>                   (0.7.3: <program> starts the desktop in LoadWB's place, from
+ *                                        S:Startup-Sequence; see DESIGN.md section 3 and src/startseq.h)
  * Words with spaces are quoted.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
@@ -97,8 +108,11 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <inline/macros.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.2 (11.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+#include "startseq.h"
+
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.3 (11.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -195,7 +209,8 @@ static int write_file(const char *path, const char *data, LONG len)
 /* One line each: kind, then up to three tab-separated fields. Kinds:
  *   part <name> <version>   new <dest>   replaced <dest> <backup>
  *   same <dest>   dir <path>   bdir <path>   startup <part> <line>
- *   newfile <path> (a file OpenUp made, such as S:User-Startup) */
+ *   newfile <path> (a file OpenUp made, such as S:User-Startup)
+ *   desktop <S:Startup-Sequence> <backup> (its LoadWB line in OpenUp's desktop block) */
 #define MAXE 1024
 /* a and b are whole paths, each in an allocation of its own length (libnix
  * gives them all back at exit): a path is never cut short in the manifest,
@@ -426,6 +441,27 @@ static int is_amigachrome(void)
     return board(1) || board(2);        /* ACBridge, ACStorage */
 }
 
+/* 1 when Workbench's screen is a true-colour RTG one: a CyberGraphX bitmap (Picasso96's or OpenRTG's)
+ * deeper than 8 bits, as OpenBench checks before it takes the desktop (openamigabench desktop/openbench.c). */
+#define CYBRMATTR_DEPTH 0x80000007UL
+#define CYBRMATTR_ISCYBERGFX 0x80000008UL
+static int rtg_screen(void)
+{
+    struct Library *CyberGfxBase = OpenLibrary((STRPTR)"cybergraphics.library", 40);
+    struct Screen *scr;
+    int yes = 0;
+    if (!CyberGfxBase)
+        return 0;
+    if ((scr = LockPubScreen((STRPTR)"Workbench"))) {
+        struct BitMap *bm = scr->RastPort.BitMap;
+        yes = bm && LP2(0x60, ULONG, GetCyberMapAttr, struct BitMap *, bm, a0, ULONG, CYBRMATTR_ISCYBERGFX, d0, , CyberGfxBase)
+                 && LP2(0x60, ULONG, GetCyberMapAttr, struct BitMap *, bm, a0, ULONG, CYBRMATTR_DEPTH, d0, , CyberGfxBase) > 8;
+        UnlockPubScreen(NULL, scr);
+    }
+    CloseLibrary(CyberGfxBase);
+    return yes;
+}
+
 static void set_env(const char *name, const char *value)
 {
     ensure_dir("ENV:OpenUp", 0);
@@ -443,6 +479,7 @@ static int detect(void)
     else machine = "Amiga";
     set_env("OpenUp/Machine", machine);
     set_env("OpenUp/RTG", board(9) ? "ACRTG" : "");
+    set_env("OpenUp/RTGScreen", rtg_screen() ? "1" : "");
     set_env("OpenUp/Network", board(6) ? "OpenSocket card" : "");
     strcpy(summary, "This is ");
     strcat(summary, ac ? "an AmigaChrome instance" : !strcmp(machine, "PiStorm") ? "a PiStorm (Emu68)" : "an Amiga");
@@ -613,6 +650,120 @@ static int face_icon(const char *from, const char *dest)
     return 1;
 }
 
+/* S:Startup-Sequence's desktop line (DESIGN.md section 3, src/startseq.h): program starts the desktop in
+ * LoadWB's place. The file as it was is kept in SYS:Storage/OpenUp-Superseded/S the first time, and the
+ * manifest's "desktop" entry sends UNINSTALL to desktop_uninstall. A Startup-Sequence that already runs the
+ * program (set up by hand) is left as it is. 1 changed, 0 nothing to do, -1 not done (said why). */
+static int desktop_install(const char *program)
+{
+    char backup[260], dir[260], *out = NULL;
+    LONG len = 0;
+    char *text = read_file(SEQ_FILE, &len);
+    entry *e;
+    int r, added = 0;
+    if (!text) {
+        say("OpenUp: can't read " SEQ_FILE ", so ", program, " doesn't start the desktop; LoadWB does, as before.");
+        return -1;
+    }
+    r = (LONG)strlen(text) == len ? ss_with_desktop(text, program, &out) : SS_NO_LOADWB;
+    FreeVec(text);
+    backup_path(SEQ_FILE, backup, sizeof backup);
+    switch (r) {
+    case SS_CHANGED: break;
+    case SS_ALREADY:                                    /* ours already; listed again if the list lost it */
+        if (!find_entry("desktop", SEQ_FILE))
+            add_entry("desktop", SEQ_FILE, exists(backup) ? backup : NULL);
+        return 0;
+    case SS_BY_HAND:
+        say("OpenUp: " SEQ_FILE " already runs ", program, "; it is left as it is.");
+        return 0;
+    case SS_NOMEM:
+        say("OpenUp: out of memory changing " SEQ_FILE "; ", program, " doesn't start the desktop. Run OpenUp again.");
+        return -1;
+    default:
+        say("OpenUp: " SEQ_FILE " hasn't exactly one LoadWB line, so OpenUp leaves it, and ", program,
+            " doesn't start the desktop. To start it there, put it in place of LoadWB by hand.");
+        return -1;
+    }
+    parent_of(backup, dir, sizeof dir);
+    if (!exists(backup) && (!ensure_dir(dir, 0) || !copy_file(SEQ_FILE, backup, 0))) {
+        free(out);
+        say("OpenUp: can't keep a copy of " SEQ_FILE " in SYS:Storage, so it wasn't changed and ", program,
+            " doesn't start the desktop. Is SYS: full or write-protected?");
+        return -1;
+    }
+    if (!(e = find_entry("desktop", SEQ_FILE)) && !(added = 1, e = add_entry("desktop", SEQ_FILE, backup))) {
+        free(out);
+        say("OpenUp: out of memory noting " SEQ_FILE "; it wasn't changed, and ", program, " doesn't start the desktop.");
+        return -1;
+    }
+    if (!write_file(SEQ_FILE, out, strlen(out))) {
+        free(out);
+        if (added) e->kind[0] = 0;                  /* not changed: not listed (manifest_save skips it) */
+        say("OpenUp: can't write " SEQ_FILE ", so ", program, " doesn't start the desktop. Is SYS: write-protected?");
+        return -1;
+    }
+    free(out);
+    return 1;
+}
+
+/* 1 when the file holds exactly text. */
+static int file_is(const char *path, const char *text)
+{
+    LONG len = 0;
+    char *data = read_file(path, &len);
+    int same = data && len == (LONG)strlen(text) && !memcmp(data, text, len);
+    if (data) FreeVec(data);
+    return same;
+}
+
+/* UNINSTALL for a "desktop" entry: the LoadWB line back in its place. When nothing else in the file has
+ * changed since, that is the kept copy, byte for byte, and the copy itself goes back (its protection bits
+ * too); when someone has changed other lines since, only OpenUp's block comes out, and the kept copy stays
+ * in SYS:Storage/OpenUp-Superseded/S. 1 put back, 0 nothing to do, -1 failed (said why). */
+static int desktop_uninstall(const entry *e)
+{
+    char dir[ENTRY_PATH], *out = NULL;
+    LONG len = 0;
+    char *text = read_file(e->a, &len);
+    int r, ok;
+    if (!text) {
+        say("OpenUp: can't read ", e->a, "; the file as it was is in SYS:Storage/OpenUp-Superseded/S.");
+        return -1;
+    }
+    r = (LONG)strlen(text) == len ? ss_without_desktop(text, &out) : SS_NONE;
+    FreeVec(text);
+    if (r == SS_NOMEM) {
+        say("OpenUp: out of memory putting back ", e->a, "'s LoadWB line; run Uninstall-OpenUp again.");
+        return -1;
+    }
+    if (r == SS_NONE) {
+        say("OpenUp: ", e->a, " no longer has OpenUp's desktop lines, so it is left as it is.");
+        return 0;
+    }
+    if (e->b[0] && file_is(e->b, out)) {
+        if ((ok = copy_file(e->b, e->a, 0))) {
+            DeleteFile((STRPTR)e->b);
+            if (strlcpy(dir, e->b, sizeof dir) < sizeof dir && strrchr(dir, '/')) {
+                *strrchr(dir, '/') = 0;
+                DeleteFile((STRPTR)dir);                            /* SYS:Storage/OpenUp-Superseded/S, once empty */
+            }
+        }
+    } else {
+        ok = write_file(e->a, out, strlen(out));
+        if (ok && e->b[0] && exists(e->b))
+            say("OpenUp: ", e->a, " was changed since OpenUp changed it: only OpenUp's lines came out. "
+                "The file as it was before OpenUp is kept in SYS:Storage/OpenUp-Superseded/S.");
+    }
+    free(out);
+    if (!ok) {
+        say("OpenUp: can't put back ", e->a, "'s LoadWB line. Replace the lines from \"" SEQ_BEGIN "\" to \"" SEQ_END
+            "\" with the line after their Else, by hand.");
+        return -1;
+    }
+    return 1;
+}
+
 static int install(const char *drawer)
 {
     char path[220], from[260], *text, *p, *line, partname[64] = "", partver[32] = "";
@@ -661,6 +812,11 @@ static int install(const char *drawer)
                     say("OpenUp: ", partname, " needs an ACRTG graphics board; left out here. In AmigaChrome, fit one in Cradle (Hardware, Display).");
                     refused = 1;
                 }
+                if (!strcmp(w[1], "RTGScreen") && !rtg_screen()) {
+                    say("OpenUp: ", partname, " is for a true-colour RTG screen, and Workbench's screen isn't one here; left out."
+                        " Choose a 16- or 24-bit RTG mode in SYS:Prefs/ScreenMode, then run OpenUp again.");
+                    refused = 1;
+                }
             } else if (pass == 0 && !strcmp(w[0], "keep") && n >= 3) {
                 if (exists(w[1]) && !has_marker(w[1], w + 2, n - 2) && !find_entry(NULL, w[1])) {
                     say("OpenUp: ", w[1], " belongs to another program, so OpenUp leaves it and this part out.");
@@ -676,6 +832,11 @@ static int install(const char *drawer)
                 }
             } else if (pass == 1 && !strcmp(w[0], "retire") && n >= 2) {
                 switch (retire_file(w[1])) {
+                case 1: files++; break;
+                case -1: errors++; break;
+                }
+            } else if (pass == 1 && !strcmp(w[0], "desktop") && n >= 2) {
+                switch (desktop_install(w[1])) {
                 case 1: files++; break;
                 case -1: errors++; break;
                 }
@@ -1041,6 +1202,11 @@ static int uninstall(void)
             LONG ok = exists(e->a) ? 0 : Rename((STRPTR)e->b, (STRPTR)e->a);
             if (ok) restored++;
             else { say("OpenUp: can't put back ", e->a, "; it is in SYS:Prefs/Classic or SYS:Storage/OpenUp-Superseded"); problems++; }
+        } else if (!strcmp(e->kind, "desktop")) {              /* S:Startup-Sequence's LoadWB line */
+            switch (desktop_uninstall(e)) {
+            case 1: restored++; break;
+            case -1: problems++; break;
+            }
         } else if (!strcmp(e->kind, "replaced")) {
             if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; }
             else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); problems++; }
