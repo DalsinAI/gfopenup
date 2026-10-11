@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       Dalsin Limited
 Type:         util/misc
-Version:      0.7.3
+Version:      0.7.4
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -34,7 +34,7 @@ choose:
 - OpenService: services from AmigaChrome's boards and from a Cradle you pair
   with (DEVS:openservice.device, and C:Nursery to list them); nothing goes on
   the network until a Cradle is paired.
-- OpenImage: datatypes for WebP and WebM on the Amiga itself, and through
+- OpenImage: datatypes for PNG (our own decoder), WebP and WebM on the Amiga itself, and through
   OpenService for AVIF, HEIC, JPEG XL, camera RAW, SVG, FLAC, Ogg, MP3, MIDI,
   MP4 and other video, and office documents, and music modules: MOD, MED,
   Oktalyzer, DigiBooster, XM, S3M, IT, played on the Amiga itself through
