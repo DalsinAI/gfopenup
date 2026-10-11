@@ -108,7 +108,9 @@ choose:
   (OpenGL 1.1) on OpenGPU, for Warp3D and MiniGL games and programs; they
   need a 68040 or 68060 with its FPU; a Warp3D.library already there
   (Wazp3D's) is kept, and Wazp3D's settings are taken over (C:Warp3DPrefs
-  changes them; W3DTest and MGLTest in SYS:Tools show them working);
+  changes them; W3DTest and MGLTest in SYS:Tools show them working); on a
+  real Amiga with a graphics card's own Warp3D (LIBS:Warp3D/HWdrivers) the
+  part is left out, so the card keeps drawing;
 - Icons (new): Gorilla, AROS's icon set (GPL), as new pictures for the
   system's own drawers, programs and default icons; the old pictures are
   kept and come back with the uninstaller;
