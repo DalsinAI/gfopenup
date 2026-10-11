@@ -30,7 +30,7 @@
 
 #include "opencalc.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenCalc 0.2 (10.10.2026) OpenUp, MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenCalc 0.3 (11.10.2026) OpenUp, MIT, Copyright (c) 2026 Dalsin Limited";
 #define TITLE "Calculator"
 #define SCREEN_TITLE "OpenCalc 0.2"
 #define EXPR_MAX 200
@@ -217,10 +217,14 @@ static int gui(void)
     if (bw < 34) bw = 34;
     sx = 12 + COLS * (bw + 4) + 12;
     sw = SCOLS * (bw + 4) - 4;
-    hx = sx + sw + 12;
+    /* 0.3 (the Team, 11 October 2026: "the results box ... should be above the input field so it's more vertical,
+     * and ... 50% less tall"): the history on top, as wide as the keys, half the keys' height; the window narrower */
     hw = TextLength(&scr->RastPort, (STRPTR)"12345678 * 3.14159 = 38785", 26) + 30;
-    W = hx + hw + 12;
-    lvh = ROWS * (bh + 4) - 4 + lh + 4;
+    W = sx + sw + 12;
+    if (W < hw + 24) W = hw + 24;
+    hx = 12;
+    hw = W - 24;
+    lvh = (ROWS * (bh + 4) - 4 + lh + 4) / 2;
 
     g = CreateContext(&glist);
     memset(&ng, 0, sizeof ng);
@@ -230,6 +234,8 @@ static int gui(void)
     (ng.ng_LeftEdge = (x), ng.ng_TopEdge = (y), ng.ng_Width = (w), ng.ng_Height = (h), ng.ng_GadgetText = (STRPTR)(text), \
      ng.ng_Flags = (flags), ng.ng_GadgetID = (id), g = gad[id] = CreateGadget(kind, g, &ng, __VA_ARGS__, TAG_DONE))
     row = top;
+    G(LISTVIEW_KIND, G_HIST, hx, row, hw, lvh, NULL, 0, GTLV_Labels, (ULONG)&hist, GTLV_ReadOnly, FALSE);
+    row += lvh + 6;
     G(STRING_KIND, G_EXPR, 12, row, W - 24, lh, NULL, 0, GTST_String, (ULONG)expr, GTST_MaxChars, EXPR_MAX);
     row += lh + 4;
     G(TEXT_KIND, G_RESULT, 12, row, W - 24, lh, NULL, 0, GTTX_Text, (ULONG)result, GTTX_Border, TRUE, GTTX_Justification, GTJ_RIGHT);
@@ -241,7 +247,6 @@ static int gui(void)
     for (r = 0; r < SROWS; r++)
         for (c = 0; c < SCOLS; c++)
             G(BUTTON_KIND, G_KEY0 + ROWS * COLS + r * SCOLS + c, sx + c * (bw + 4), row + lh + 8 + r * (bh + 4), bw, bh, sci[r][c].label, 0, GA_Disabled, FALSE);
-    G(LISTVIEW_KIND, G_HIST, hx, row, hw, lvh, NULL, 0, GTLV_Labels, (ULONG)&hist, GTLV_ReadOnly, FALSE);
     row += ROWS * (bh + 4) + 8;
     if (!g) { rc = RETURN_FAIL; goto out; }
     win = OpenWindowTags(NULL, WA_Title, (ULONG)TITLE, WA_ScreenTitle, (ULONG)SCREEN_TITLE, WA_PubScreen, (ULONG)scr,
