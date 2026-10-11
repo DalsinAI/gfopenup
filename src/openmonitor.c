@@ -1,4 +1,4 @@
-/* OpenMonitor 0.1: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
+/* OpenMonitor 0.2: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
  * (the user, 10 October 2026: "a cpu / task / process app similar to task manager in windows or resources
  * in ubuntu ... have it show gpu too").
  *
@@ -7,7 +7,17 @@
  *     some), memory (chip and fast together), and the GPU: how much of the drawing OpenGPU did, with the
  *     pixels a second (openrtg.library's ORTG_DrawStats, 0.11 on);
  *   - every task and process, busiest first: name, CPU, priority, state, stack;
- *   - Priority up and down, and Break (Ctrl-C), for the one chosen.
+ *   - Priority up and down, Break (Ctrl-C) and End program, for the one chosen.
+ *
+ * Its text is in the theme's font, as every Open app's (OpenGadTools' ogt_look and ogt_font, as OpenFiles):
+ * the screen's own font only when the theme's and the nearest proportional ones are missing.
+ *
+ * Ending a program (the user, 11 October 2026: "a proper kill process"). AmigaOS keeps no list of what a
+ * task owns, so removing one (RemTask) leaves its memory, files, windows and locks behind, and a reply
+ * to a request it made lands in freed memory. So End program asks first: a Ctrl-C, then up to 3 seconds
+ * for the program to tidy up and go by itself. Only if it is still there is Force quit offered, behind a
+ * warning; a system task or a file system gets a second, stronger one; OpenMonitor never removes itself.
+ * Keys on the chosen row: Ctrl-C Break, Del End program, Shift-Del Force quit.
  *
  * How busy a task is: AmigaOS keeps no time per task, so OpenMonitor looks 50 times a second (a vertical
  * blank interrupt server) at which task is running, and counts. A task waiting, the machine idle, counts
@@ -27,6 +37,7 @@
 #include <hardware/intbits.h>
 #include <intuition/intuition.h>
 #include <intuition/screens.h>
+#include <devices/inputevent.h>
 #include <libraries/gadtools.h>
 #include <utility/hooks.h>
 #include <graphics/gfxmacros.h>
@@ -40,7 +51,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.1.1 (10.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+#include "ogt_look.h"
+#include "ogt_font.h"
+
+static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.2 (11.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 #define REG(r, decl) register decl __asm(#r)
 
@@ -277,6 +291,9 @@ static void push(int g, ULONG v)
 static struct Window *win;
 static APTR vi;
 static struct DrawInfo *dri;
+static ogt_theme theme;                         /* the Open apps' look: its font is OpenMonitor's */
+static struct TextFont *font;
+static struct TextAttr ta;
 static int gx, gy, gw, gh;                      /* the graphs' row */
 static ULONG ncores;
 
@@ -357,12 +374,19 @@ static ULONG lv_render(REG(a0, struct Hook *h), REG(a2, struct Node *node), REG(
     char s[40];
     (void)h;
     if (msg->lvdm_MethodID != LV_DRAW) return LVCB_UNKNOWN;
+    if (font && rp->Font != font) SetFont(rp, font);
     SetAPen(rp, sel ? pens[FILLPEN] : pens[BACKGROUNDPEN]);
     SetDrMd(rp, JAM1);
     RectFill(rp, msg->lvdm_Bounds.MinX, y, msg->lvdm_Bounds.MaxX, msg->lvdm_Bounds.MaxY);
     SetAPen(rp, sel ? pens[FILLTEXTPEN] : pens[TEXTPEN]);
     Move(rp, x + 4, base);
-    Text(rp, (STRPTR)r->name, strlen(r->name));
+    {
+        /* a proportional font: the name stops before the CPU column, never under it */
+        struct TextExtent te;
+        int room = col_pri - 16 - TextLength(rp, (STRPTR)"100.0%", 6) - 12;
+        ULONG fit = room > 0 ? TextFit(rp, (STRPTR)r->name, strlen(r->name), &te, NULL, 1, room, rp->TxHeight + 1) : 0;
+        Text(rp, (STRPTR)r->name, fit);
+    }
     snprintf(s, sizeof s, "%lu.%lu%%", (unsigned long)r->tenths / 10, (unsigned long)r->tenths % 10);
     right_text(rp, x + col_pri - 16, base, s);
     snprintf(s, sizeof s, "%ld", (long)r->pri);
@@ -380,15 +404,17 @@ static ULONG lv_render(REG(a0, struct Hook *h), REG(a2, struct Node *node), REG(
 
 /* ---- the window --------------------------------------------------------------------------- */
 
-enum { G_LIST, G_UP, G_DOWN, G_BREAK, G_STATUS, G_COUNT };
+enum { G_LIST, G_UP, G_DOWN, G_BREAK, G_END, G_STATUS, G_COUNT };
 static struct Gadget *gad[G_COUNT];
 static char status_text[120];
 static struct Task *chosen;
+static char chosen_name[40];
 static int list_x, list_y, list_w;
 
 static void status(const char *s)
 {
     strncpy(status_text, s, sizeof status_text - 1);
+    status_text[sizeof status_text - 1] = 0;
     if (win && gad[G_STATUS]) GT_SetGadgetAttrs(gad[G_STATUS], win, NULL, GTTX_Text, (ULONG)status_text, TAG_DONE);
 }
 
@@ -417,8 +443,11 @@ static void refresh_list(void)
     GT_SetGadgetAttrs(gad[G_LIST], win, NULL, GTLV_Labels, (ULONG)&rowlist, GTLV_Selected, (ULONG)sel, TAG_DONE);
 }
 
+static void end_check(void);
+
 static void tick(void)
 {
+    end_check();
     refresh_list();
     take_memory();
     take_gpu();
@@ -446,12 +475,155 @@ static void change_pri(int by)
 
 static void send_break(void)
 {
+    char s[100];
     if (!chosen) { status("Choose a task in the list first."); return; }
     Forbid();
     if (!task_alive(chosen)) { Permit(); chosen = NULL; status("That task has ended."); return; }
     Signal(chosen, SIGBREAKF_CTRL_C);
     Permit();
-    status("Sent Ctrl-C: a program that listens for it stops (most Shell commands do).");
+    snprintf(s, sizeof s, "Sent Ctrl-C to %s: a program that listens for it stops.", chosen_name);
+    status(s);
+}
+
+/* ---- ending a program: Ctrl-C, a moment, and only then Force quit, behind a warning ------------- */
+
+#define END_WAIT 3                              /* seconds a program gets to tidy up after its Ctrl-C */
+static struct Task *ending;                     /* the program End program is waiting on, or NULL */
+static char ending_name[40];
+static int ending_secs;
+
+/* A part of the system: a plain task (devices, input, the graphics and timer tasks), a process that is
+ * a DOS device's handler (a file system: DH0, RAM, CON), or one of the OS's own processes. Not under
+ * Forbid: LockDosList may wait. Only the task's address is compared, so a task that ends meanwhile is
+ * harmless here. */
+static int is_system(struct Task *t, const char *name)
+{
+    static const char *const own[] = { "Workbench", "ramlib", "IPrefs", "ConClip", "input.device", NULL };
+    struct DosList *dl;
+    int i, sys = 0;
+    Forbid();
+    if (!task_alive(t)) { Permit(); return 0; }
+    sys = t->tc_Node.ln_Type != NT_PROCESS;
+    Permit();
+    for (i = 0; !sys && own[i]; i++) if (!strcmp(name, own[i])) sys = 1;
+    if (!sys) {
+        struct MsgPort *port = &((struct Process *)t)->pr_MsgPort;
+        dl = LockDosList(LDF_DEVICES | LDF_READ);
+        while ((dl = NextDosEntry(dl, LDF_DEVICES))) if (dl->dol_Task == port) { sys = 1; break; }
+        UnLockDosList(LDF_DEVICES | LDF_READ);
+    }
+    return sys;
+}
+
+/* One requester in the theme's look as far as Intuition's go: its text as it is (a task's name may hold
+ * a %), its buttons. The button's number, Intuition's way: the last one is 0. */
+static LONG ask(const char *text, const char *buttons)
+{
+    struct EasyStruct es;
+    APTR args[1];
+    args[0] = (APTR)text;
+    es.es_StructSize = sizeof es;
+    es.es_Flags = 0;
+    es.es_Title = (UBYTE *)"OpenMonitor";
+    es.es_TextFormat = (UBYTE *)"%s";
+    es.es_GadgetFormat = (UBYTE *)buttons;
+    return EasyRequestArgs(win, &es, NULL, args);
+}
+
+/* Removes the task at once: RemTask, which frees only what it lists in tc_MemEntry (its stack, for most
+ * programs). Under Forbid, with the task found again first, so a task that ended meanwhile is never touched. */
+static void force_quit(struct Task *t, const char *name)
+{
+    char s[100];
+    int gone;
+    Forbid();
+    gone = !task_alive(t);
+    if (!gone && t != FindTask(NULL)) RemTask(t);
+    Permit();
+    if (chosen == t) chosen = NULL;
+    if (ending == t) ending = NULL;
+    snprintf(s, sizeof s, gone ? "%s had already ended." : "Removed %s. Restart when you can: what it had open stays open.", name);
+    status(s);
+    refresh_list();
+}
+
+/* The warnings before Force quit: one for any program, a second for a part of the system. 1 to go on. */
+static int confirm_force(struct Task *t, const char *name, int after_break)
+{
+    char text[480];
+    LONG r;
+    snprintf(text, sizeof text,
+             "%s%s\n\n"
+             "Force quit removes it at once. It cannot tidy up:\n"
+             "its memory, files and windows stay open until you\n"
+             "restart, and the Amiga may become unstable.\n"
+             "Save your work in other programs first.",
+             name, after_break ? " did not stop after Ctrl-C." : ": force quit?");
+    r = ask(text, after_break ? "Force quit|Wait longer|Cancel" : "Force quit|Cancel");
+    if (after_break && r == 2) { ending_secs = 0; status("Waiting a little longer..."); return 0; }
+    if (r != 1) { if (ending == t) ending = NULL; status("Left running."); return 0; }
+    if (is_system(t, name)) {
+        snprintf(text, sizeof text,
+                 "%s is part of the system (a device, a file system\n"
+                 "or one of the OS's own tasks).\n\n"
+                 "Removing it will very likely stop the Amiga, and a\n"
+                 "file system's disk may need checking afterwards.",
+                 name);
+        if (ask(text, "Remove it anyway|Cancel") != 1) { if (ending == t) ending = NULL; status("Left running."); return 0; }
+    }
+    return 1;
+}
+
+static int chosen_usable(void)
+{
+    if (!chosen) { status("Choose a task in the list first."); return 0; }
+    if (chosen == FindTask(NULL)) { status("That is OpenMonitor: close its window to end it."); return 0; }
+    return 1;
+}
+
+/* End program: a Ctrl-C now; tick() checks each second and offers Force quit after END_WAIT. */
+static void end_program(void)
+{
+    char s[100];
+    if (!chosen_usable()) return;
+    Forbid();
+    if (!task_alive(chosen)) { Permit(); chosen = NULL; status("That task has ended."); return; }
+    Signal(chosen, SIGBREAKF_CTRL_C);
+    Permit();
+    ending = chosen;
+    strcpy(ending_name, chosen_name);
+    ending_secs = 0;
+    snprintf(s, sizeof s, "Stopping %s... (sent Ctrl-C, waiting up to %d seconds)", ending_name, END_WAIT);
+    status(s);
+}
+
+static void end_check(void)
+{
+    char s[100];
+    int alive;
+    if (!ending) return;
+    Forbid();
+    alive = task_alive(ending);
+    Permit();
+    if (!alive) {
+        snprintf(s, sizeof s, "%s has stopped.", ending_name);
+        status(s);
+        ending = NULL;
+    } else if (++ending_secs >= END_WAIT) {
+        struct Task *t = ending;
+        if (confirm_force(t, ending_name, 1)) force_quit(t, ending_name);
+    }
+}
+
+/* Force quit straight away (Shift-Del): the same warnings, without the Ctrl-C first. */
+static void force_chosen(void)
+{
+    struct Task *t;
+    char name[40];
+    if (!chosen_usable()) return;
+    t = chosen;
+    strcpy(name, chosen_name);
+    if (confirm_force(t, name, 0)) force_quit(t, name);
 }
 
 static int gui(void)
@@ -461,27 +633,30 @@ static int gui(void)
     struct NewGadget ng;
     struct MsgPort *tport = NULL;
     struct timerequest *tr = NULL;
-    int timer = 0, quit = 0, rc = RETURN_OK, fh, lh, W, H, top, left, row, bw, i, lvh;
+    int timer = 0, quit = 0, rc = RETURN_OK, fh, lh, tb, W, H, top, left, row, bw, i, lvh, mode;
     if (!scr) return RETURN_FAIL;
     vi = GetVisualInfoA(scr, NULL);
     dri = GetScreenDrawInfo(scr);
     if (!vi || !dri) { rc = RETURN_FAIL; goto out; }
-    fh = scr->Font->ta_YSize;
+    ogt_look_load(&theme, &mode);
+    if (!(font = ogt_open_font(&theme, scr, &ta))) { rc = RETURN_FAIL; goto out; }
+    fh = font->tf_YSize;                         /* the theme's font: the window's text */
+    tb = scr->WBorTop + scr->Font->ta_YSize + 1; /* the title bar is the screen's font, Intuition's */
     lh = fh + 6;
     left = scr->WBorLeft + 8;
-    top = scr->WBorTop + fh + 1 + 8;
+    top = tb + 8;
     W = 800 - scr->WBorLeft - scr->WBorRight;
-    H = 600 - (scr->WBorTop + fh + 1) - scr->WBorBottom;
+    H = 600 - tb - scr->WBorBottom;
     if (W + scr->WBorLeft + scr->WBorRight > scr->Width) W = scr->Width - scr->WBorLeft - scr->WBorRight;
-    if (H + scr->WBorTop + fh + 1 + scr->WBorBottom > scr->Height - scr->BarHeight - 1)
-        H = scr->Height - scr->BarHeight - 1 - (scr->WBorTop + fh + 1) - scr->WBorBottom;
+    if (H + tb + scr->WBorBottom > scr->Height - scr->BarHeight - 1)
+        H = scr->Height - scr->BarHeight - 1 - tb - scr->WBorBottom;
     gx = left; gy = top; gw = W - 16; gh = 120;
     list_x = left; list_w = W - 16;
     list_y = gy + gh + 10 + fh + 6;
     col_pri = list_w * 58 / 100;
     col_state = list_w * 66 / 100;
     col_stack = list_w * 82 / 100;
-    lvh = H - (list_y - (scr->WBorTop + fh + 1)) - 2 * (lh + 8) - 4;
+    lvh = H - (list_y - tb) - 2 * (lh + 8) - 4;
     for (i = 0; i < GR_N; i++)
         graph_pen[i] = ObtainBestPen(scr->ViewPort.ColorMap, (graph_rgb[i] >> 16) * 0x01010101UL,
                                      ((graph_rgb[i] >> 8) & 255) * 0x01010101UL, (graph_rgb[i] & 255) * 0x01010101UL,
@@ -491,36 +666,37 @@ static int gui(void)
 
     g = CreateContext(&glist);
     memset(&ng, 0, sizeof ng);
-    ng.ng_TextAttr = scr->Font;
+    ng.ng_TextAttr = &ta;
     ng.ng_VisualInfo = vi;
     ng.ng_LeftEdge = list_x; ng.ng_TopEdge = list_y; ng.ng_Width = list_w; ng.ng_Height = lvh; ng.ng_GadgetID = G_LIST;
     g = gad[G_LIST] = CreateGadget(LISTVIEW_KIND, g, &ng, GTLV_Labels, (ULONG)&rowlist, GTLV_ShowSelected, (ULONG)NULL,
                                    GTLV_CallBack, (ULONG)&lv_hook, TAG_DONE);
     row = list_y + lvh + 8;
-    bw = (list_w - 2 * 10) / 3;
+    bw = (list_w - 3 * 10) / 4;
     {
-        static const char *const names[3] = { "Priority up", "Priority down", "Break (Ctrl-C)" };
-        for (i = 0; i < 3; i++) {
+        static const char *const names[4] = { "Priority up", "Priority down", "Break (Ctrl-C)", "End program" };
+        for (i = 0; i < 4; i++) {
             ng.ng_LeftEdge = list_x + i * (bw + 10); ng.ng_TopEdge = row; ng.ng_Width = bw; ng.ng_Height = lh;
             ng.ng_GadgetText = (STRPTR)names[i]; ng.ng_GadgetID = G_UP + i; ng.ng_Flags = PLACETEXT_IN;
             g = gad[G_UP + i] = CreateGadget(BUTTON_KIND, g, &ng, TAG_DONE);
         }
     }
     row += lh + 8;
-    strcpy(status_text, "Busiest first, every second. Choose a task for its priority or a Ctrl-C.");
+    strcpy(status_text, "Busiest first, every second. Choose a task for its priority, a Ctrl-C or End program.");
     ng.ng_LeftEdge = list_x; ng.ng_TopEdge = row; ng.ng_Width = list_w; ng.ng_Height = lh; ng.ng_GadgetText = NULL;
     ng.ng_GadgetID = G_STATUS; ng.ng_Flags = 0;
     g = gad[G_STATUS] = CreateGadget(TEXT_KIND, g, &ng, GTTX_Text, (ULONG)status_text, GTTX_Border, TRUE, TAG_DONE);
     if (!g) { rc = RETURN_FAIL; goto out; }
 
-    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.1", WA_PubScreen, (ULONG)scr,
+    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.2", WA_PubScreen, (ULONG)scr,
                          WA_Left, (scr->Width - W - scr->WBorLeft - scr->WBorRight) / 2,
-                         WA_Top, scr->BarHeight + 1 + (scr->Height - scr->BarHeight - 1 - H - (scr->WBorTop + fh + 1) - scr->WBorBottom) / 2,
+                         WA_Top, scr->BarHeight + 1 + (scr->Height - scr->BarHeight - 1 - H - tb - scr->WBorBottom) / 2,
                          WA_InnerWidth, W, WA_InnerHeight, H, WA_Gadgets, (ULONG)glist,
                          WA_DragBar, TRUE, WA_DepthGadget, TRUE, WA_CloseGadget, TRUE, WA_Activate, TRUE, WA_SmartRefresh, TRUE,
                          WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_REFRESHWINDOW | LISTVIEWIDCMP | BUTTONIDCMP | IDCMP_VANILLAKEY,
                          TAG_DONE);
     if (!win) { rc = RETURN_FAIL; goto out; }
+    SetFont(win->RPort, font);
     GT_RefreshWindow(win, NULL);
 
     vbi.is_Node.ln_Type = NT_INTERRUPT;
@@ -558,11 +734,15 @@ static int gui(void)
         }
         while (!quit && (m = GT_GetIMsg(win->UserPort))) {
             ULONG cls = m->Class;
-            UWORD code = m->Code;
+            UWORD code = m->Code, qual = m->Qualifier;
             struct Gadget *gg = (struct Gadget *)m->IAddress;
             GT_ReplyIMsg(m);
             if (cls == IDCMP_CLOSEWINDOW) quit = 1;
             else if (cls == IDCMP_VANILLAKEY && (code == 27 || code == 'q')) quit = 1;
+            else if (cls == IDCMP_VANILLAKEY && code == 3) send_break();                 /* Ctrl-C */
+            else if (cls == IDCMP_VANILLAKEY && code == 127) {                          /* Del, Shift-Del */
+                if (qual & (IEQUALIFIER_LSHIFT | IEQUALIFIER_RSHIFT)) force_chosen(); else end_program();
+            }
             else if (cls == IDCMP_REFRESHWINDOW) {
                 GT_BeginRefresh(win);
                 draw_header();
@@ -574,6 +754,7 @@ static int gui(void)
                     if (code < (UWORD)nrows) {
                         char s[100];
                         chosen = rows[code].task;
+                        strcpy(chosen_name, rows[code].name);
                         snprintf(s, sizeof s, "%s: %s, priority %ld.", rows[code].name, rows[code].process ? "a process" : "a task",
                                  (long)rows[code].pri);
                         status(s);
@@ -582,6 +763,7 @@ static int gui(void)
                 case G_UP: change_pri(1); break;
                 case G_DOWN: change_pri(-1); break;
                 case G_BREAK: send_break(); break;
+                case G_END: end_program(); break;
                 }
             }
         }
@@ -601,6 +783,8 @@ out:
     for (i = 0; i < GR_N; i++) if (graph_pen[i] >= 0) ReleasePen(scr->ViewPort.ColorMap, graph_pen[i]);
     if (dri) FreeScreenDrawInfo(scr, dri);
     if (vi) FreeVisualInfo(vi);
+    if (font) { CloseFont(font); font = NULL; }
+    if (theme.text) ogt_theme_free(&theme);
     UnlockPubScreen(NULL, scr);
     return rc;
 }
