@@ -743,7 +743,7 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.7.3", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
+    look = Part(top, "OpenLook", "0.8.4", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
@@ -784,14 +784,14 @@ def main() -> int:
         gi.write()
 
     # OpenTypes: which program opens each kind of file (openamigaprefs)
-    ty = Part(top, "OpenTypes", "0.2.1", "OpenTypes: which program opens each kind of file")
+    ty = Part(top, "OpenTypes", "0.2.2", "OpenTypes: which program opens each kind of file")
     ty.add("Prefs/OpenTypes", (a.openamigaprefs / "OpenTypes/build/os3/OpenTypes").read_bytes(), "SYS:Prefs/OpenTypes")
     ty.add("Prefs/OpenTypes.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenTypes.info")
     ty.write()
 
     # OpenCompress: one program, the window from Workbench and the command in
     # the Shell (SYS:Utilities is in the Shell's path)
-    oc = Part(top, "OpenCompress", "0.3", "OpenCompress: archives and disk images, from its window or the Shell")
+    oc = Part(top, "OpenCompress", "0.3.2", "OpenCompress: archives and disk images, from its window or the Shell")
     oc.add("Utilities/OpenCompress", (a.openamigacompress / "build/os3/OpenCompress").read_bytes(), "SYS:Utilities/OpenCompress")
     oc.add("Utilities/OpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenCompress.info")
     oc.write()
@@ -823,7 +823,7 @@ def main() -> int:
     img.write()
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
-    ow = Part(top, "OpenWindows", "0.5", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
+    ow = Part(top, "OpenWindows", "0.8.4", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
     ow.add("Prefs/Windows", (a.openamigaprefs / "Windows/build/os3/Windows").read_bytes(), "SYS:Prefs/Windows")
     ow.add("Prefs/Windows.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Windows.info")
     ow.add("Tools/Commodities/OpenWindows", (a.openamigaprefs / "Windows/build/os3/OpenWindows").read_bytes(),
@@ -834,7 +834,7 @@ def main() -> int:
     # OpenBlanker: the screen blanker, started at boot, on every install
     # (openamigaprefs): after five minutes with no key or mouse it plays Gods
     # and Angels, AmigaChrome's homage to the Amiga's makers and keepers
-    bl = Part(top, "OpenBlanker", "1.0", "OpenBlanker: the screen blanker, and its show, Gods and Angels")
+    bl = Part(top, "OpenBlanker", "1.1.1", "OpenBlanker: the screen blanker, and its show, Gods and Angels")
     bl.add("Tools/Commodities/OpenBlanker", (a.openamigaprefs / "Blanker/build/os3/OpenBlanker").read_bytes(),
            "SYS:Tools/Commodities/OpenBlanker")
     bl.add("Tools/Commodities/OpenBlanker.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Tools/Commodities/OpenBlanker.info")
@@ -846,7 +846,7 @@ def main() -> int:
     # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
     # Installer runs "SYS:Prefs/OpenDock SAVE" once, on a first install, so the
     # dock starts with the buttons of a dock already there.
-    dock = Part(top, "OpenDock", "0.5", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "OpenDock", "0.6.3", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     # 10 October 2026: every editor of ours in SYS:Prefs is Open... (the user: "either all are Open x or none are")
     dock.add("Prefs/OpenDock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/OpenDock")
@@ -862,7 +862,7 @@ def main() -> int:
 
     # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "OpenMenus", "0.4", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
+    menus = Part(top, "OpenMenus", "0.4.3", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
     menus.add("Prefs/Menus", (a.openamigaprefs / "Menus/build/os3/Menus").read_bytes(), "SYS:Prefs/Menus")
     menus.add("Prefs/Menus.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Menus.info")
@@ -871,7 +871,7 @@ def main() -> int:
 
     # OpenUp Setup: the first-start wizard (openamigaprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:OpenAmiga/Setup.done.
-    setup = Part(top, "OpenUpSetup", "0.1", "OpenUp Setup: the first-start wizard, with the startup switches")
+    setup = Part(top, "OpenUpSetup", "0.1.2", "OpenUp Setup: the first-start wizard, with the startup switches")
     setup.add("Prefs/OpenUp-Setup", (a.openamigaprefs / "Setup/build/os3/OpenUp-Setup").read_bytes(), "SYS:Prefs/OpenUp-Setup")
     setup.add("Prefs/OpenUp-Setup.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenUp-Setup.info")
     setup.add("WBStartup/OpenUp-Setup", b"", "SYS:WBStartup/OpenUp-Setup")
@@ -888,7 +888,7 @@ def main() -> int:
     # files, and whichever installs last leaves the same bytes.
     rtg = a.openamigartg / "build"
     acrtg_gpu = (a.guest / "build/guest/os32/ACRTG.gpu").read_bytes()
-    rt = Part(top, "OpenRTG", "0.13", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
+    rt = Part(top, "OpenRTG", "0.14.3", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
     rt.line("needs AmigaChrome")
     rt.line("needs ACRTG")
     rt.line('retire "DEVS:Monitors/acrtg"')
@@ -1138,21 +1138,21 @@ def main() -> int:
 
     # OpenFiles: the file manager (openamigafilemanager). Double-click opens
     # files with their icon's program, else OpenView (the OpenPrint part).
-    of = Part(top, "OpenFiles", "0.2.2", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
+    of = Part(top, "OpenFiles", "0.2.4", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
     of.add("Utilities/OpenFiles", (a.openamigafilemanager / "build/os3/OpenFiles").read_bytes(), "SYS:Utilities/OpenFiles")
     of.add("Utilities/OpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenFiles.info")
     of.write()
 
     # OpenPlay: the media player for every datatype (openamigamediaplayer).
     # Files can be shift-clicked with it or dropped on its window.
-    op = Part(top, "OpenPlay", "0.1", "OpenPlay: plays everything the datatypes open, with a playlist")
+    op = Part(top, "OpenPlay", "0.1.3", "OpenPlay: plays everything the datatypes open, with a playlist")
     op.add("Utilities/OpenPlay", (a.openamigamediaplayer / "build/os3/OpenPlay").read_bytes(), "SYS:Utilities/OpenPlay")
     op.add("Utilities/OpenPlay.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenPlay.info")
     op.write()
 
     # OpenTitle: the title bar's logo, free memory, clock and settings cog, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.6.2", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
+    tb = Part(top, "OpenTitle", "0.6.12", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
     tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
     tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
     tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
@@ -1199,7 +1199,7 @@ def main() -> int:
 
     # OpenEdit: the text editor (openamigaedit), with its kinds of file in ENVARC:
     oe = a.openamigaedit / "build/os3"
-    ed = Part(top, "OpenEdit", "0.1", "OpenEdit: a text editor with tabs, find and replace, and colours for scripts and code")
+    ed = Part(top, "OpenEdit", "0.1.2", "OpenEdit: a text editor with tabs, find and replace, and colours for scripts and code")
     ed.add("C/OpenEdit", (oe / "OpenEdit").read_bytes(), "SYS:C/OpenEdit")
     for k in sorted((oe / "Kinds").glob("*.kind")):
         ed.add(f"Kinds/{k.name}", k.read_bytes(), f"ENVARC:OpenEdit/Kinds/{k.name}")
@@ -1213,7 +1213,7 @@ def main() -> int:
     # (PROGDIR:Dictionaries), and OWConvert in C: for scripts
     ow_src = a.openamigawrite
     ob = ow_src / "build/os3"
-    wr = Part(top, "OpenWrite", "1.0.2", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr = Part(top, "OpenWrite", "2.0.1", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.add("Utilities/OpenWrite/OpenWrite", (ob / "OpenWrite").read_bytes(), "SYS:Utilities/OpenWrite/OpenWrite")
     wr.add("Utilities/OpenWrite/OpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/OpenWrite/OpenWrite.info")
     for d in sorted((ow_src / "Dictionaries").glob("*.words")):
