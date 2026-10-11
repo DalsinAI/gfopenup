@@ -137,20 +137,91 @@ def openview(sel):
     return ic
 
 
+def gauge_dial(ic, cx, cy, r, value):
+    """A round meter: a steel rim, a dark face with a green, gold and red scale,
+    and a needle at value (0 the left end of the scale, 1 the right)."""
+    ic.add(ellipse(cx - r, cy - r, cx + r, cy + r), linear((cx - r, cy - r), (cx + r, cy + r), rgb('#F4F6F8'), rgb('#8A929D')), gloss=0.25)
+    ri = r - 2.6
+    ic.add(ellipse(cx - ri, cy - ri, cx + ri, cy + ri), radial((cx - ri * 0.3, cy - ri * 0.4), ri * 1.7, rgb('#3A4656'), rgb('#10161F')), outline=0.9)
+    rs = ri - 2.2
+    for i, c in enumerate((GREEN, GOLD, RED)):                    # the scale, from 150 degrees round to 30 (over the top)
+        ic.detail(arc(cx - rs, cy - rs, cx + rs, cy + rs, 150 + i * 80, 230 + i * 80, 2.4), c)
+    a = math.radians(150 + 240 * value)
+    tip = (cx + math.cos(a) * (rs - 0.6), cy + math.sin(a) * (rs - 0.6))
+    ic.detail(stroke([(cx, cy), tip], 1.9), (255, 255, 255))
+    ic.detail(ellipse(cx - 2.1, cy - 2.1, cx + 2.1, cy + 2.1), rgb('#E9ECF0'))
+
+
 def openmonitor(sel):
-    """A screen with three live graphs (CPU blue, memory green, GPU orange); chosen, they climb."""
+    """A monitor showing the machine at work: the CPU's and the GPU's graphs over
+    the cores' bars, and a meter at its foot; chosen, the load climbs: the
+    graphs rise, the cores fill and the needle swings into the red."""
     ic = Icon()
-    ic.add(rrect(4, 8, 56, 46, 3), linear((4, 8), (56, 46), rgb('#4A5160'), rgb('#1C2028')), gloss=0.15)
-    ic.add(rect(8, 12, 52, 42), linear((0, 12), (0, 42), rgb('#10161F'), rgb('#26303D')), outline=0.9)
-    for i in range(1, 4):
-        ic.detail(rect(9, 12 + i * 7.5, 51, 12.5 + i * 7.5), rgb('#3A4656'))
-    lift = 5 if sel else 0
-    lines = [((61, 143, 214), [(9, 34), (15, 30), (21, 32), (27, 24), (33, 27), (39, 19 - lift), (45, 22 - lift), (51, 15 - lift)]),
-             ((76, 175, 80), [(9, 28), (15, 27), (21, 27), (27, 26), (33, 26), (39, 25), (45, 25), (51, 24 - lift)]),
-             ((240, 140, 40), [(9, 39), (15, 36), (21, 38), (27, 33), (33, 35), (39, 30 - lift), (45, 31 - lift), (51, 27 - lift)])]
-    for c, pts in lines:
-        ic.detail(stroke(pts, 1.6), c)
-    ic.add(poly([(24, 46), (36, 46), (39, 54), (21, 54)]), linear((0, 46), (0, 54), rgb('#9AA1AC'), rgb('#5D6470')), outline=1.2)
+    # the stand, then the monitor in steel, its screen dark
+    ic.add(poly([(20, 41), (32, 41), (34.5, 50), (17.5, 50)]), linear((0, 41), (0, 50), rgb('#E9ECF0'), rgb('#8A929D')), outline=1.6)
+    ic.add(rrect(10, 48.5, 42, 54.5, 2), linear((10, 48.5), (42, 54.5), rgb('#E9ECF0'), rgb('#8A929D')), gloss=0.3)
+    ic.add(rrect(1, 4, 55, 44, 3.5), linear((1, 4), (55, 44), rgb('#F4F6F8'), rgb('#9EA6B0')), gloss=0.2)
+    sx0, sy0, sx1, sy1 = 5.5, 8.5, 50.5, 39.5
+    ic.add(rect(sx0, sy0, sx1, sy1), linear((0, sy0), (0, sy1), rgb('#16202C'), rgb('#0B1017')), outline=0.9)
+    for i in range(1, 4):                                           # the grid
+        y = sy0 + i * 5.2
+        ic.detail(rect(sx0 + 0.5, y, sx1 - 0.5, y + 0.45), rgb('#2C3A4C'))
+    for i in range(1, 6):
+        x = sx0 + i * 7.5
+        ic.detail(rect(x, sy0 + 0.5, x + 0.45, sy0 + 20.5), rgb('#2C3A4C'))
+    # the graphs: the CPU (blue, filled below) and the GPU (orange)
+    up = 4.5 if sel else 0.0
+    xs = [6, 12, 18, 24, 30, 36, 42, 50]
+    cpu = [25, 21, 23, 16, 19, 14 - up * 0.6, 16 - up, 11 - up]
+    gpu = [27, 26, 22, 24, 21, 22 - up * 0.5, 18 - up, 19 - up]
+    cpu = [(x, max(sy0 + 1.6, y)) for x, y in zip(xs, cpu)]
+    gpu = [(x, max(sy0 + 1.6, y)) for x, y in zip(xs, gpu)]
+    ic.detail(poly(cpu + [(50, 29), (6, 29)]), linear((0, 10), (0, 29), rgb('#2F5F9E'), rgb('#16273D')))
+    ic.detail(stroke(gpu, 1.5), rgb('#FFA64A'))
+    ic.detail(stroke(cpu, 1.7), rgb('#8CC4FF'))
+    ic.detail(rect(sx0 + 0.5, 29.6, sx1 - 0.5, 30.2), rgb('#3A4A5E'))
+    # the cores: a bar each along the foot of the screen, green going gold when busy
+    rest = [0.45, 0.8, 0.3, 0.6, 0.5, 0.25]
+    busy = [0.9, 1.0, 0.75, 0.95, 0.85, 0.8]
+    for i, v in enumerate(busy if sel else rest):
+        x = 7.5 + i * 4.8
+        top = 38.4 - 7.2 * v
+        ic.detail(rect(x, 31.4, x + 3.2, 38.4), rgb('#1E2A38'))
+        ic.detail(rect(x, top, x + 3.2, 38.4), linear((0, 38.4), (0, 31.2), rgb('#4FCB55'), rgb('#F6D04D') if v > 0.8 else rgb('#8CE07A')))
+    # the meter, standing at the monitor's foot on the right
+    gauge_dial(ic, 49, 47, 13, 0.92 if sel else 0.3)
+    return ic
+
+
+def kindsgallery(sel):
+    """A gallery of gadgets: three tiles, each showing one kind: a slider, a
+    button and check boxes; chosen, the knob slides on, the button is pressed
+    and the empty box is ticked."""
+    ic = Icon()
+    tile = lambda x0, y0, x1, y1: ic.add(rrect(x0, y0, x1, y1, 3), linear((x0, y0), (x1, y1), GREY_HI, rgb('#C9CDD3')), gloss=0.18)
+    # the slider, on the wide tile at the top
+    tile(4, 4, 60, 26)
+    ic.add(rrect(10, 13.2, 54, 17.2, 2), rgb('#C3C8CF'), outline=1.1)
+    kx = 38 if sel else 22
+    ic.detail(rrect(10.6, 13.8, kx, 16.6, 1.6), linear((0, 13.8), (0, 16.6), lighter(BLUE, 0.35), BLUE_LO))
+    ic.add(rrect(kx - 4, 8.6, kx + 4, 21.8, 2), linear((kx - 4, 9), (kx + 4, 22), lighter(ORANGE, 0.3), ORANGE_LO), outline=1.3, gloss=0.4)
+    ic.detail(rect(kx - 1.6, 13.4, kx + 1.6, 14.0), darker(ORANGE, 0.35))
+    ic.detail(rect(kx - 1.6, 15.6, kx + 1.6, 16.2), darker(ORANGE, 0.35))
+    # the button, bottom left: raised at rest, pressed when chosen
+    tile(4, 31, 30, 58)
+    if sel:
+        ic.add(rrect(8.5, 39.5, 25.5, 51, 2.5), linear((8.5, 40), (25.5, 51), BLUE_LO, BLUE), outline=1.3)
+        ic.detail(rect(12.5, 44.6, 21.5, 46.2), rgb('#DCE8F8'))
+    else:
+        ic.add(rrect(8.5, 38, 25.5, 49.5, 2.5), linear((8.5, 38), (25.5, 49.5), lighter(BLUE, 0.4), BLUE_LO), outline=1.3, gloss=0.4)
+        ic.detail(rect(12.5, 43.1, 21.5, 44.7), (255, 255, 255))
+    # the check boxes, bottom right: one ticked; chosen, the other too
+    tile(34, 31, 60, 58)
+    for i, y in enumerate((35.5, 46.5)):
+        ic.add(rrect(38, y, 46.5, y + 8.5, 1.4), linear((38, y), (46.5, y + 8.5), (255, 255, 255), rgb('#DDE1E6')), outline=1.1)
+        ic.detail(rect(49, y + 3.6, 56, y + 4.9), CONTENT)
+        if i == 0 or sel:
+            ic.add(stroke([(39.6, y + 4.4), (41.8, y + 6.6), (46.6, y + 0.6)], 1.7), GREEN, outline=0.9)
     return ic
 
 
@@ -565,7 +636,7 @@ ICONS = {
     "Printers and Queue": printer, "Install-OpenUp": install, "Uninstall-OpenUp": uninstall,
     "OpenUp-Setup": setup, "ZuneTest": zunetest, "OpenMonitor": openmonitor,
     "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
-    "Gamepads": gamepads,
+    "Gamepads": gamepads, "KindsGallery": kindsgallery,
 }
 BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write,
           "Expansion": badge_expansion}

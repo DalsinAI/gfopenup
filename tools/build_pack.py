@@ -22,8 +22,9 @@ Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
 a Part file that C/OpenUpTool reads:
 
-  OpenUp/               OpenUpTool and the uninstaller, and OpenUpMenu: the
-                        Tools menu's OpenUp and Preferences sub-menus
+  OpenUp/               OpenUpTool and the uninstaller, OpenUpMenu: the
+                        Tools menu's OpenUp and Preferences sub-menus, and
+                        OpenMonitor in SYS:Utilities (tasks, CPU, cores, memory, GPU)
   OpenSocket/           bsdsocket.library 4.2 and its tools (amigachrome's
                         vendored payload, vendor/opensocket-os32)
   OpenPrint/            OpenPrint and OpenView (openamigaprint's package)
@@ -346,6 +347,8 @@ def build_parts(a):
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
     run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
+    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
+         "-o", ROOT / "build/os3/OpenMonitor", ROOT / "src/openmonitor.c"], env=env)
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
     g = a.guest
@@ -683,7 +686,7 @@ def main() -> int:
     # programs) and a Preferences one (the settings editors), each showing only
     # what is installed (DESIGN.md section 7). Started at boot; it waits for
     # Workbench, as S:User-Startup runs before LoadWB.
-    core = Part(top, "OpenUp", a.version, "OpenUpTool, the uninstaller, and OpenUp's programs and settings in Workbench's Tools menu")
+    core = Part(top, "OpenUp", a.version, "OpenUpTool, the uninstaller, OpenUp's programs and settings in Workbench's Tools menu, and OpenMonitor")
     core.add("C/OpenUpTool", tool, "SYS:C/OpenUpTool")
     core.add("C/OpenUpMenu", (ROOT / "build/os3/OpenUpMenu").read_bytes(), "SYS:C/OpenUpMenu")
     core.line("startup Run >NIL: C:OpenUpMenu")
@@ -695,6 +698,9 @@ def main() -> int:
     core.add("Utilities/OpenUp/Uninstall-OpenUp.info", (top / "Uninstall-OpenUp.info").read_bytes(),
              "SYS:Utilities/OpenUp/Uninstall-OpenUp.info")
     core.add("Utilities/OpenUp.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/OpenUp.info", own=True)
+    # OpenMonitor: tasks, CPU and the cores, memory and the GPU, as Task Manager or Resources show them
+    core.add("Utilities/OpenMonitor", (ROOT / "build/os3/OpenMonitor").read_bytes(), "SYS:Utilities/OpenMonitor")
+    core.add("Utilities/OpenMonitor.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenMonitor.info")
     core.write()
 
     # OpenSocket: amigachrome's vendored payload, by its manifest
@@ -1344,6 +1350,7 @@ def main() -> int:
             (a.out / "OpenUp.info", "drawer-OpenUp"), (top / "Install-OpenUp.info", "Install-OpenUp"),
             (top / "Uninstall-OpenUp.info", "Uninstall-OpenUp"), (core.dir / "Utilities/OpenUp.info", "drawer-OpenUp"),
             (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "Uninstall-OpenUp"),
+            (core.dir / "Utilities/OpenMonitor.info", "OpenMonitor"),
             (pr.dir / "Icons/OpenPrint.info", "drawer-OpenPrint"), (pr.dir / "Drawer/OpenView.info", "OpenView"),
             (pr.dir / "Drawer/Printers and Queue.info", "Printers and Queue"),
             (ty.dir / "Prefs/OpenTypes.info", "OpenTypes"), (look.dir / "Prefs/Look.info", "Look"),
