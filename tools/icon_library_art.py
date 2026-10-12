@@ -200,6 +200,7 @@ OpenPrint = printer + page
 OpenSocket = netplug
 Classic = window(tint=orange)
 OpenBlanker = monitor(dark=1) + star@face
+OpenTata = file(OpenTata)
 OpenRTG = monitor + card
 All Prefs = cog + drawer
 Wi-Fi = wifi
@@ -286,6 +287,7 @@ OpenWrite = file(OpenWrite)
 OpenPlay = file(OpenPlay)
 OpenBrowser = file(OpenBrowser)
 OpenMail = envelope
+Telegram = file(Telegram)
 OpenCompress = file(OpenCompress)
 OpenPrint queue = file(Printers and Queue)
 OpenSocket = netplug + pctower
