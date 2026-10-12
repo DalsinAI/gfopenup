@@ -24,6 +24,8 @@
             (run "SYS:Prefs/OpenTypes UNDO >T:OpenUp-uninstall.log"))
         (if (exists "ENVARC:OpenAmiga/OpenView-switched")
             (delete "ENVARC:OpenAmiga/OpenView-switched"))
+        (if (exists "ENVARC:OpenAmiga/OpenFiles-place-reset")
+            (delete "ENVARC:OpenAmiga/OpenFiles-place-reset"))
         ; OpenUp's entries leave the Tools menu now, before their programs go
         (if (exists "SYS:C/OpenUpMenu")
             (run "SYS:C/OpenUpMenu >NIL: QUIT"))
