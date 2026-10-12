@@ -685,13 +685,47 @@ def gamepads(sel):
     return ic
 
 
+def opentata(sel):
+    """A program's page with a warning sign before it; chosen, the sign lights up red. A prefs editor."""
+    ic = Icon()
+    page(ic, 18, 4, 52, 46)
+    for i in range(5):
+        ic.detail(rect(23, 10 + i * 5, 47 - (i % 2) * 6, 11.4 + i * 5), CONTENT)
+    lift = 3 if sel else 0
+    tri = poly([(36, 24 - lift), (56, 58 - lift), (16, 58 - lift)])
+    c, lo = (RED, RED_LO) if sel else (GOLD, GOLD_LO)
+    ic.add(tri, linear((36, 24), (36, 58), lighter(c, 0.3), lo), outline=2.0, gloss=0.3)
+    ic.detail(union(rrect(34.2, 34 - lift, 37.8, 48 - lift, 1.6), ellipse(34.2, 50 - lift, 37.8, 53.6 - lift)),
+              (255, 255, 255) if sel else INK)
+    prefs_badge(ic, 2, 44, 1.2)
+    return ic
+
+def paper_plane(ic, x, y, s=1.0, colour=(255, 255, 255)):
+    at = lambda u, v: (x + u * s, y + v * s)
+    ic.add(poly([at(0, 0), at(-30, 10), at(-20, 14)]), linear(at(-30, 0), at(0, 14), colour, rgb('#C8D6E8')), outline=1.4)
+    ic.add(poly([at(0, 0), at(-20, 14), at(-12, 24)]), linear(at(-20, 0), at(0, 24), rgb('#E6EDF6'), rgb('#9DB0C9')), outline=1.4)
+    ic.detail(poly([at(-20, 14), at(-17, 21), at(-12, 17)]), rgb('#8FA3BE'))
+
+def telegram(sel):
+    """A paper plane in a blue disc; chosen, it has flown up and on, a trail behind it."""
+    ic = Icon()
+    disc = ellipse(4, 4, 60, 60)
+    ic.add(disc, radial((22, 18), 60, rgb('#6FC0F2'), rgb('#1E6FB5')), gloss=0.3)
+    if sel:
+        for i in range(3):
+            ic.detail(inter(ellipse(12 + i * 6, 40 - i * 4, 15 + i * 6, 43 - i * 4), disc), (255, 255, 255))
+        paper_plane(ic, 50, 14, 1.05)
+    else:
+        paper_plane(ic, 45, 20, 1.05)
+    return ic
+
 ICONS = {
     "OpenFiles": openfiles, "OpenView": openview, "OpenEdit": openedit, "OpenWrite": openwrite,
     "OpenPlay": openplay, "OpenBrowser": openbrowser, "OpenCompress": opencompress,
     "Printers and Queue": printer, "Install-OpenUp": install, "Uninstall-OpenUp": uninstall,
     "OpenUp-Setup": setup, "ZuneTest": zunetest, "OpenMonitor": openmonitor, "OpenMeters": openmeters,
     "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
-    "Gamepads": gamepads, "KindsGallery": kindsgallery,
+    "Gamepads": gamepads, "KindsGallery": kindsgallery, "OpenTata": opentata, "Telegram": telegram,
 }
 BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write,
           "Expansion": badge_expansion}

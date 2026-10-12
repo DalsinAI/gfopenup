@@ -158,6 +158,7 @@ Prefs editors: OpenUp and AmigaChrome,OpenRTG,Screen modes on OpenRTG,Monitor wi
 Prefs editors: OpenUp and AmigaChrome,All Prefs,"The cog's ""All Prefs..."" entry",Cog with a drawer,P2,,png/prefs/All Prefs.info
 Prefs editors: OpenUp and AmigaChrome,Wi-Fi,Wireless network (OpenSocket),Wi-Fi fan,P2,Gorilla: Prefs/WiFi,png/prefs/Wi-Fi.info
 Prefs editors: OpenUp and AmigaChrome,AmigaChrome Sharing,Clipboard and file sharing with the PC,Two clipboards and arrows,P1,,png/prefs/AmigaChrome Sharing.info
+Prefs editors: OpenUp and AmigaChrome,OpenTata,Warns before loading programs and files known to fail (Tata),Page with a warning sign,P1,,png/prefs/OpenTata.info
 Prefs editors: other people's,MUI,MUI's look and settings,MUI window with sliders,P2,Gorilla: Prefs/Zune,png/prefs/MUI.info
 Prefs editors: other people's,Zune,Zune's settings (OpenMUI),Zune window with sliders,P2,Gorilla: Prefs/Zune,png/prefs/Zune.info
 Prefs editors: other people's,AHI,AHI audio modes,Speaker and sound card,P2,Gorilla: Prefs/AHI,png/prefs/AHI.info
@@ -248,6 +249,7 @@ Open apps and AmigaChrome,ACClip,Shared clipboard,Clipboard with arrows,P1,,png/
 Open apps and AmigaChrome,Send Out,AmigaChrome's drop icon on the backdrop,Computer with an arrow,P1,,png/open/Send Out.info
 Open apps and AmigaChrome,OpenUp update,An update is ready,Box with a star,P2,,png/open/OpenUp update.info
 Open apps and AmigaChrome,Dock buttons: Start,Phase 2 start pop-up,AmigaChrome mark in a circle,P2,,png/open/Dock buttons- Start.info
+Open apps and AmigaChrome,Telegram,Unofficial Telegram for Amiga (Open),Paper plane in a blue disc,P1,,png/open/Telegram.info
 File types: documents and text,Text,Plain text (def_ascii),Page with lines,P1,Gorilla: Env-Archive/SYS/def_Text,png/filetypes/Text.info
 File types: documents and text,Document,A generic document,Page with a folded corner,P1,Gorilla: Env-Archive/SYS/def_Document,png/filetypes/Document.info
 File types: documents and text,ReadMe,A read-me file,"Page with ""i""",P1,Gorilla: Env-Archive/SYS/def_ReadMe,png/filetypes/ReadMe.info
