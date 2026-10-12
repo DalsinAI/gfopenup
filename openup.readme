@@ -97,8 +97,8 @@ choose:
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
-  openrtg.library 0.16, with opengpu.library 0.11 and the board's driver;
-- OpenGPU (new): opengpu.library 0.11, so programs' drawing and SDL 2 games
+  openrtg.library 0.16, with opengpu.library 0.12 and the board's driver;
+- OpenGPU (new): opengpu.library 0.12, so programs' drawing and SDL 2 games
   run on the x86 or ARM64 cores and GL (Mesa) on the GPU, through
   AmigaChrome's graphics board, and on the Amiga's own CPU where there is no
   board; OpenGfx, the faster graphics.library drawing, is inside it now
