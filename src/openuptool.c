@@ -1281,6 +1281,24 @@ static void backdrop_setting_back(int *restored, int *problems)
     }
 }
 
+/* 1 when path is in OpenUp's own backdrop drawer. Everything there is OpenUp's: a picture an earlier install
+ * put there before the manifest listed it is marked "same", and each picture's tone sits beside it as
+ * "<picture>.tone", never listed (Daletop's lab, 12 Oct 2026: 80 logo pictures and 296 .tone files were left
+ * after UNINSTALL). */
+#define BACKDROP_DRAWER "SYS:Prefs/Presets/Backdrops/OpenUp/"
+static int in_backdrop_drawer(const char *path)
+{
+    return !strncmp(path, BACKDROP_DRAWER, sizeof BACKDROP_DRAWER - 1);
+}
+
+/* The tone file beside a backdrop picture, when there is one. */
+static void delete_tone(const char *pic)
+{
+    char tone[ENTRY_PATH];
+    if (strlcpy(tone, pic, sizeof tone) >= sizeof tone || str_cat(tone, ".tone", sizeof tone) >= sizeof tone) return;
+    DeleteFile((STRPTR)tone);
+}
+
 static int uninstall(void)
 {
     int i, problems = 0, restored = 0, removed = 0, said_wait = 0;
@@ -1299,6 +1317,10 @@ static int uninstall(void)
     backdrop_setting_back(&restored, &problems);
     for (i = nents - 1; i >= 0; i--) {
         entry *e = &ents[i];
+        if (in_backdrop_drawer(e->a) && (!strcmp(e->kind, "new") || !strcmp(e->kind, "same")))
+            delete_tone(e->a);
+        if (!strcmp(e->kind, "same") && in_backdrop_drawer(e->a))
+            strcpy(e->kind, "new");                         /* OpenUp's drawer: OpenUp's picture */
         if (!strcmp(e->kind, "new") || !strcmp(e->kind, "newfile") || !strcmp(e->kind, "rnew")) {
             if (!strcmp(e->kind, "newfile")) {
                 LONG len = 0;
