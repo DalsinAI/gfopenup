@@ -25,7 +25,7 @@ a Part file that C/OpenUpTool reads:
   OpenUp/               OpenUpTool and the uninstaller, OpenUpMenu: the
                         Tools menu's OpenUp and Preferences sub-menus, and
                         OpenMonitor in SYS:Utilities (tasks, CPU, cores, memory, GPU)
-  OpenSocket/           bsdsocket.library 4.2 and its tools, built from openamigasocket
+  OpenSocket/           bsdsocket.library 4.3 and its tools, built from openamigasocket
                         (--openamigasocket) and laid out by the manifest of amigachrome's
                         vendored payload (vendor/opensocket-os32); without the checkout,
                         that vendored payload as it is
@@ -736,7 +736,7 @@ def main() -> int:
     payload = a.amigachrome / "vendor/opensocket-os32"
     m = json.loads((payload / "manifest.json").read_text())
     so_out = ROOT / "build/opensocket" if a.openamigasocket else None
-    sock = Part(top, "OpenSocket", "4.2", "bsdsocket.library 4.2 through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
+    sock = Part(top, "OpenSocket", "4.3", "bsdsocket.library 4.3 through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
     sock.line("needs AmigaChrome")
     sock.line('keep "SYS:Libs/bsdsocket.library" ' + " ".join(f'"{x}"' for x in OPENSOCKET_MARKERS))
     for f in m["files"]:

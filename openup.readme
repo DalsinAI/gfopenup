@@ -17,7 +17,7 @@ kept, and one uninstaller puts everything back.
 Version 0.7 is for AmigaChrome instances. Its Installer installs, as you
 choose:
 - OpenSocket: the network, through the x86 or ARM64 cores (bsdsocket.library
-  4.2);
+  4.3);
 - OpenPrint and OpenView: printing to PDF and network printers, and viewing; OpenView takes
   MultiView's place, so whatever opened MultiView opens OpenView (MultiView is kept);
 - AmigaChrome sharing: the clipboard and files, shared in and out of the
