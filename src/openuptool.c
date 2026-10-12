@@ -104,7 +104,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.7 (12.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.8 (12.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -159,6 +159,24 @@ static int exists(const char *path)
     me->pr_WindowPtr = win;
     if (l) UnLock(l);
     return l != 0;
+}
+
+/* 0.7.8: a synchronous SystemTags never gets a NULL input or output (12 Oct 2026), as OpenDock 0.6.4 and
+ * OpenMenus 0.4.4 give their programs (openamigaprefs #94). quiet: both are NIL:. Otherwise the command gets
+ * OpenUpTool's own input and output when it has them (a Shell, or OpenUp Update's window, where the messages
+ * belong) and NIL: in place of either it hasn't got (started from Workbench). A synchronous call leaves the
+ * handles to the caller, so the NIL: ones opened here are closed here. -1 when NIL: can't be opened. */
+static LONG run_sync(const char *cmd, int quiet)
+{
+    BPTR in = quiet ? 0 : Input(), out = quiet ? 0 : Output();
+    BPTR nil_in = in ? 0 : Open((STRPTR)"NIL:", MODE_OLDFILE), nil_out = out ? 0 : Open((STRPTR)"NIL:", MODE_NEWFILE);
+    LONG rc = -1;
+    if ((in || nil_in) && (out || nil_out))
+        rc = SystemTags((STRPTR)cmd, SYS_Input, (ULONG)(in ? in : nil_in), SYS_Output, (ULONG)(out ? out : nil_out),
+                        TAG_DONE);
+    if (nil_in) Close(nil_in);
+    if (nil_out) Close(nil_out);
+    return rc;
 }
 
 static char *read_file(const char *path, LONG *lenp)
@@ -2146,12 +2164,9 @@ static int reconcile(const char *how, const char *once)
     if (exists("SYS:Prefs/OpenDock")) {                 /* 0.7.1: the editor is OpenDock (every editor of ours is Open...) */
         if (!apply) PutStr((STRPTR)"  dock: OpenWrite, OpenPlay, OpenCompress, OpenFTP and OpenPuTTY added if installed and missing\n");
         else {
-            BPTR nil = Open((STRPTR)"NIL:", MODE_NEWFILE);
-            LONG r = SystemTags((STRPTR)"SYS:Prefs/OpenDock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView "
-                                "SYS:Utilities/OpenWrite/OpenWrite SYS:Utilities/OpenPlay SYS:Utilities/OpenCompress "
-                                "SYS:Utilities/OpenFTP/OpenFTP SYS:Utilities/OpenPuTTY/OpenPuTTY SAVE",
-                                SYS_Input, (ULONG)nil, SYS_Output, (ULONG)NULL, TAG_DONE);
-            if (nil) Close(nil);
+            LONG r = run_sync("SYS:Prefs/OpenDock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView "
+                              "SYS:Utilities/OpenWrite/OpenWrite SYS:Utilities/OpenPlay SYS:Utilities/OpenCompress "
+                              "SYS:Utilities/OpenFTP/OpenFTP SYS:Utilities/OpenPuTTY/OpenPuTTY SAVE", 1);
             PutStr((STRPTR)(r == 0 ? "  dock: the Open apps are on it\n" : "  dock: Dock ADD didn't run; the dock is as it was\n"));
         }
     }
@@ -2574,7 +2589,7 @@ static int update(const char *how)
             say("OpenUp: can't write T:OpenUp-update. Is T: full?", NULL, NULL);
             return RETURN_ERROR;
         }
-        rc = SystemTagList((STRPTR)"Execute T:OpenUp-update", NULL);
+        rc = run_sync("Execute T:OpenUp-update", 0);
         DeleteFile((STRPTR)"T:OpenUp-update");
         return rc == 0 ? RETURN_OK : RETURN_WARN;
     }
