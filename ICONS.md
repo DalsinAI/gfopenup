@@ -13,7 +13,7 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 
 | Icon | At rest | Chosen |
 |---|---|---|
-| Drawers (OpenUp, OpenPrint, OpenBrowser, OpenWrite) | Gorilla's drawer, our badge at its foot on the right | The badge plays its own second frame (on our own drawer, files show too) |
+| Drawers (OpenUp, OpenPrint, OpenBrowser, OpenWrite, OpenPuTTY, OpenFTP, OpenMail, OpenDemos) | Gorilla's drawer, our badge at its foot on the right | The badge plays its own second frame (on our own drawer, files show too) |
 | OpenFiles | Two panes, a file chosen on the right | The choice moves to the left pane |
 | OpenView | Picture, magnifier beside it | Magnifier over the picture |
 | OpenEdit | Pad and pencil | Pencil moves on, a fresh line written |
@@ -33,6 +33,13 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 | OpenTypes | Documents, arrow to a program | Arrow moves on |
 | OpenUp-Setup | Box and wand | Star flares and sparkles |
 | ZuneTest | A window of gadgets | A gadget pressed |
+| OpenBlanker | A monitor on a starry night, the moon low | The stars move on and the moon is up |
+| OpenTata (prefs) | A program's page, a yellow warning sign before it | The sign lifts and lights up red |
+| OpenPuTTY | A terminal and its key | A line more in the session, the key turned |
+| OpenFTP | Two folders, a file leaving one, arrows between | The file is on its way across |
+| Telegram | A paper plane in a blue disc | The plane has flown up and on, a trail behind |
+| OpenMail | A sealed envelope with a stamp | The envelope open, the letter out |
+| OpenDemos (drawer badge) | The Boing ball over its shadow | It bounces up and spins on |
 | OpenMonitor | Monitor: the CPU's and GPU's graphs over the cores' bars, a meter at its foot | The load climbs: graphs up, cores full, the needle in the red |
 | KindsGallery (opengadtools) | Three tiles: a slider, a button, check boxes (one ticked) | Knob slides on, button pressed, the other box ticked |
 | OpenMeters (openamigabench) | A frosted panel: the date and time over three bars, partly filled, the middle one in the accent | A reading later: the bars move on, the last past 90 per cent in the warning colour, the clock's hand on |
