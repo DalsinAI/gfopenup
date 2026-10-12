@@ -104,7 +104,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.5 (12.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.6 (12.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -441,6 +441,13 @@ static int is_amigachrome(void)
     return board(1) || board(2);        /* ACBridge, ACStorage */
 }
 
+/* An ACRTG graphics board: product 9 is the 16 MiB board, product 15 the 64 MiB one ("rtgVramMiB": 64 with
+ * acrtg.card 2.6). Up to OpenUpTool 0.7.5 only 9 counted, so a 64 MiB machine had "RTG: none" and no OpenRTG. */
+static int acrtg_board(void)
+{
+    return board(9) || board(15);
+}
+
 static void set_env(const char *name, const char *value)
 {
     ensure_dir("ENV:OpenUp", 0);
@@ -485,7 +492,7 @@ static int detect(void)
      * for a new install */
     saved_theme(theme, sizeof theme);
     set_env("OpenUp/Theme", theme);
-    set_env("OpenUp/RTG", board(9) ? "ACRTG" : "");
+    set_env("OpenUp/RTG", acrtg_board() ? "ACRTG" : "");
     set_env("OpenUp/Network", board(6) ? "OpenSocket card" : "");
     strcpy(summary, "This is ");
     strcat(summary, ac ? "an AmigaChrome instance" : !strcmp(machine, "PiStorm") ? "a PiStorm (Emu68)" : "an Amiga");
@@ -494,7 +501,7 @@ static int detect(void)
     strcat(summary, attn & (AFF_68881 | AFF_FPU40) ? " and an FPU" : " and no FPU");
     strcat(summary, ".\n");
     if (ac) {
-        strcat(summary, board(9) ? "RTG: an ACRTG card.\n" : "RTG: none.\n");
+        strcat(summary, acrtg_board() ? "RTG: an ACRTG card.\n" : "RTG: none.\n");
         strcat(summary, board(6) ? "Network: the OpenSocket card is fitted.\n"
                                  : "Network: the OpenSocket card isn't fitted (turn the instance's Network switch on in Cradle).\n");
     } else {
@@ -772,7 +779,7 @@ static int install(const char *drawer)
                     say("OpenUp: ", partname, " is for AmigaChrome instances; left out here.");
                     refused = 1;
                 }
-                if (!strcmp(w[1], "ACRTG") && !board(9)) {
+                if (!strcmp(w[1], "ACRTG") && !acrtg_board()) {
                     say("OpenUp: ", partname, " needs an ACRTG graphics board; left out here. In AmigaChrome, fit one in Cradle (Hardware, Display).");
                     refused = 1;
                 }
