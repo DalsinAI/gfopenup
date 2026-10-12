@@ -107,7 +107,7 @@ struct row {
 enum { OWN_PROGRAM, OWN_SHELL, OWN_FS, OWN_SYSTEM };
 static const char *const own_names[] = { "Workbench", "ramlib", "IPrefs", "ConClip", "input.device", NULL };
 
-#define MAXFS 64
+#define MAXFS 128
 static struct MsgPort *fs_port[MAXFS];          /* the DOS devices' handlers' ports, from the last look */
 static int nfs;
 
@@ -460,6 +460,10 @@ static struct Gadget *gad[G_COUNT];
 static char status_text[120];
 static struct Task *chosen;
 static char chosen_name[40];
+static struct MsgPort *tport;                   /* the one-second timer */
+static struct timerequest *tr;
+static int timer;
+static int in_menu;                             /* the right-click menu is open: no requesters from tick() */
 static int list_x, list_y, list_w, list_h;
 static struct Screen *pscr;                     /* the screen OpenMonitor is on */
 static int font_h;                              /* the theme's font's height */
@@ -502,7 +506,7 @@ static void end_check(void);
 
 static void tick(void)
 {
-    end_check();
+    if (!in_menu) end_check();
     refresh_list();
     take_memory();
     take_gpu();
@@ -510,6 +514,16 @@ static void tick(void)
     push(GR_MEM, mem_used_tenths);
     push(GR_GPU, gpu_share_tenths);
     draw_graphs();
+}
+
+/* The second is up: the next look, and the timer again. */
+static void timer_due(void)
+{
+    if (!timer || !CheckIO((struct IORequest *)tr)) return;
+    WaitIO((struct IORequest *)tr);
+    tick();
+    tr->tr_node.io_Command = TR_ADDREQUEST; tr->tr_time.tv_secs = 1; tr->tr_time.tv_micro = 0;
+    SendIO((struct IORequest *)tr);
 }
 
 /* The chosen task's priority: up or down by some, or (absolute) set to a value, -20 to 20. */
@@ -598,6 +612,12 @@ static int is_system(struct Task *t)
     if (!task_alive(t)) { Permit(); return 0; }
     kind = task_kind(t, &shell);
     Permit();
+    if (kind == OWN_PROGRAM) {                  /* past take_handlers()' MAXFS: the whole list, for safety */
+        struct MsgPort *port = &((struct Process *)t)->pr_MsgPort;
+        struct DosList *dl = LockDosList(LDF_DEVICES | LDF_READ);
+        while ((dl = NextDosEntry(dl, LDF_DEVICES))) if (dl->dol_Task == port) { kind = OWN_FS; break; }
+        UnLockDosList(LDF_DEVICES | LDF_READ);
+    }
     return kind == OWN_SYSTEM || kind == OWN_FS;
 }
 
@@ -953,8 +973,10 @@ static const struct mitem pri_menu[] = {
 };
 
 #define MAXMI 16
+#define PANEL_IDCMP (IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS | IDCMP_INACTIVEWINDOW | IDCMP_VANILLAKEY)
 struct panel {
     struct Window *w;
+    int shared;                                 /* its UserPort is the menu's */
     const struct mitem *it;
     int n, hl, width, height;
     int top[MAXMI], h[MAXMI];
@@ -1028,7 +1050,7 @@ static void panel_draw(struct panel *p, LONG cur_pri)
 
 /* Opens a panel with its top left at x, y, kept on the screen; beside: the parent's left edge, to open on
  * its left instead when there is no room on the right. */
-static int panel_open(struct panel *p, int x, int y, int beside, int active)
+static int panel_open(struct panel *p, int x, int y, int beside, int active, struct MsgPort *share)
 {
     struct RastPort *rp = win->RPort;
     int i, w = 150, kw;
@@ -1057,14 +1079,30 @@ static int panel_open(struct panel *p, int x, int y, int beside, int active)
     p->w = OpenWindowTags(NULL, WA_PubScreen, (ULONG)pscr, WA_Left, x, WA_Top, y, WA_Width, w, WA_Height, p->height,
                           WA_Borderless, TRUE, WA_Activate, (ULONG)active, WA_RMBTrap, TRUE, WA_ReportMouse, TRUE,
                           WA_SmartRefresh, TRUE, WA_NoCareRefresh, TRUE,
-                          WA_IDCMP, active ? IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS | IDCMP_INACTIVEWINDOW | IDCMP_VANILLAKEY : 0,
-                          TAG_DONE);
+                          WA_IDCMP, share ? 0 : PANEL_IDCMP, TAG_DONE);
+    p->shared = share != NULL;
+    if (p->w && share) {                        /* the submenu shares the menu's port: a click on it is seen */
+        p->w->UserPort = share;
+        ModifyIDCMP(p->w, PANEL_IDCMP);
+    }
     return p->w != NULL;
 }
 
 static void panel_close(struct panel *p)
 {
-    if (p->w) { CloseWindow(p->w); p->w = NULL; }
+    if (!p->w) return;
+    if (p->shared) {                            /* a shared port: its messages go back first (the RKM's way) */
+        struct IntuiMessage *im, *next;
+        Forbid();
+        for (im = (struct IntuiMessage *)p->w->UserPort->mp_MsgList.lh_Head;
+             (next = (struct IntuiMessage *)im->ExecMessage.mn_Node.ln_Succ); im = next)
+            if (im->IDCMPWindow == p->w) { Remove((struct Node *)im); ReplyMsg((struct Message *)im); }
+        p->w->UserPort = NULL;
+        ModifyIDCMP(p->w, 0);
+        Permit();
+    }
+    CloseWindow(p->w);
+    p->w = NULL;
 }
 
 static int panel_inside(const struct panel *p, int sx, int sy)
@@ -1090,18 +1128,22 @@ static int run_menu(const struct mitem *items, int n, LONG cur_pri, LONG *pri)
     memset(&m, 0, sizeof m);
     memset(&sb, 0, sizeof sb);
     m.it = items; m.n = n;
-    if (!panel_open(&m, ox + 2, oy + 2, -1, 1)) return A_NONE;
+    if (!panel_open(&m, ox + 2, oy + 2, -1, 1, NULL)) return A_NONE;
     panel_draw(&m, cur_pri);
+    in_menu = 1;
     while (!done) {
         struct IntuiMessage *im;
-        WaitPort(m.w->UserPort);
+        ULONG tsig = timer ? 1UL << tport->mp_SigBit : 0;
+        if (Wait((1UL << m.w->UserPort->mp_SigBit) | tsig) & tsig) timer_due();   /* the list and graphs go on */
         while (!done && (im = (struct IntuiMessage *)GetMsg(m.w->UserPort))) {
             ULONG cls = im->Class;
             UWORD code = im->Code;
             int sx = pscr->MouseX, sy = pscr->MouseY, hm, hs;
             ReplyMsg((struct Message *)im);
             if (sx - ox > 4 || ox - sx > 4 || sy - oy > 4 || oy - sy > 4) moved = 1;
-            if (cls == IDCMP_INACTIVEWINDOW || (cls == IDCMP_VANILLAKEY && code == 27)) { done = 1; break; }
+            if (cls == IDCMP_VANILLAKEY && code == 27) { done = 1; break; }
+            /* the other one of the two taking over (a click on the submenu, or back) keeps it open */
+            if (cls == IDCMP_INACTIVEWINDOW && !panel_inside(&m, sx, sy) && !panel_inside(&sb, sx, sy)) { done = 1; break; }
             /* the highlight follows the pointer */
             hs = panel_hit(&sb, sx, sy);
             hm = panel_hit(&m, sx, sy);
@@ -1115,7 +1157,7 @@ static int run_menu(const struct mitem *items, int n, LONG cur_pri, LONG *pri)
                     if (sub_of >= 0 && sub_of != hm) { panel_close(&sb); sub_of = -1; }
                     if (m.it[hm].kind == MI_SUB && sub_of != hm) {
                         sb.it = m.it[hm].sub; sb.n = m.it[hm].nsub;
-                        if (panel_open(&sb, m.w->LeftEdge + m.width - 4, m.w->TopEdge + m.top[hm] - 3, m.w->LeftEdge, 0)) {
+                        if (panel_open(&sb, m.w->LeftEdge + m.width - 4, m.w->TopEdge + m.top[hm] - 3, m.w->LeftEdge, 0, m.w->UserPort)) {
                             sub_of = hm;
                             panel_draw(&sb, cur_pri);
                         }
@@ -1138,6 +1180,7 @@ static int run_menu(const struct mitem *items, int n, LONG cur_pri, LONG *pri)
     }
     panel_close(&sb);
     panel_close(&m);
+    in_menu = 0;
     return result;
 }
 
@@ -1147,9 +1190,10 @@ static void row_menu(int mx, int my)
     static char sub[48];
     char own[24];
     struct mitem items[13];
+    struct ident id;
     ULONG top = 0;
     LONG pri = 0, cur;
-    int r, n = 0, a;
+    int r, n = 0, a, st;
     if (mx < list_x + 2 || mx >= list_x + list_w - 18 || my < list_y + 2 || my >= list_y + list_h - 2) return;
     GT_GetGadgetAttrs(gad[G_LIST], win, NULL, GTLV_Top, (ULONG)&top, TAG_DONE);
     r = (int)top + (my - list_y - 2) / font_h;
@@ -1158,6 +1202,10 @@ static void row_menu(int mx, int my)
     strcpy(chosen_name, rows[r].name);
     GT_SetGadgetAttrs(gad[G_LIST], win, NULL, GTLV_Selected, (ULONG)r, TAG_DONE);
     cur = rows[r].pri;
+    Forbid();                                   /* the same run of it after the menu, not a newer task there */
+    if (!task_alive(chosen)) { Permit(); chosen = NULL; status("That task has ended."); return; }
+    take_ident(&id, chosen, chosen_name);
+    Permit();
     owner_text(rows[r].kind, rows[r].shell, own, sizeof own);
     snprintf(sub, sizeof sub, "%s, %s", rows[r].process ? "process" : "task", own);
     memset(items, 0, sizeof items);
@@ -1174,6 +1222,18 @@ static void row_menu(int mx, int my)
     items[n].kind = MI_ITEM; items[n].action = A_END; items[n].label = "End program..."; items[n++].key = "Del";
     items[n].kind = MI_DANGER; items[n].action = A_FORCE; items[n].label = "Force quit..."; items[n++].key = "Shift Del";
     a = run_menu(items, n, cur, &pri);
+    if (a == A_NONE) return;
+    Forbid();
+    st = ident_state(&id);
+    Permit();
+    if (st == ID_GONE) { if (chosen == id.t) chosen = NULL; status("That task has ended."); return; }
+    if (st == ID_COMMAND_ENDED && (a == A_END || a == A_FORCE)) {
+        char s[100];
+        snprintf(s, sizeof s, "%s has stopped; its Shell is still open.", id.name);
+        status(s);
+        return;
+    }
+    chosen = id.t;
     switch (a) {
     case A_BREAK: case A_SIG_C: send_break(); break;
     case A_SIG_D: send_signal(SIGBREAKF_CTRL_D, "Ctrl-D"); break;
@@ -1194,9 +1254,7 @@ static int gui(void)
     struct Screen *scr = LockPubScreen(NULL);
     struct Gadget *glist = NULL, *g;
     struct NewGadget ng;
-    struct MsgPort *tport = NULL;
-    struct timerequest *tr = NULL;
-    int timer = 0, quit = 0, rc = RETURN_OK, fh, lh, tb, W, H, top, left, row, bw, i, lvh, mode;
+    int quit = 0, rc = RETURN_OK, fh, lh, tb, W, H, top, left, row, bw, i, lvh, mode;
     if (!scr) return RETURN_FAIL;
     vi = GetVisualInfoA(scr, NULL);
     dri = GetScreenDrawInfo(scr);
@@ -1294,12 +1352,7 @@ static int gui(void)
         ULONG tsig = timer ? 1UL << tport->mp_SigBit : 0;
         ULONG got = Wait((1UL << win->UserPort->mp_SigBit) | tsig | SIGBREAKF_CTRL_C);
         if (got & SIGBREAKF_CTRL_C) quit = 1;
-        if (timer && (got & tsig) && CheckIO((struct IORequest *)tr)) {
-            WaitIO((struct IORequest *)tr);
-            tick();
-            tr->tr_node.io_Command = TR_ADDREQUEST; tr->tr_time.tv_secs = 1; tr->tr_time.tv_micro = 0;
-            SendIO((struct IORequest *)tr);
-        }
+        if (got & tsig) timer_due();
         while (!quit && (m = GT_GetIMsg(win->UserPort))) {
             ULONG cls = m->Class;
             UWORD code = m->Code, qual = m->Qualifier;
@@ -1346,8 +1399,9 @@ out:
         WaitIO((struct IORequest *)tr);
         CloseDevice((struct IORequest *)tr);
     }
-    if (tr) DeleteIORequest((struct IORequest *)tr);
-    if (tport) DeleteMsgPort(tport);
+    if (tr) { DeleteIORequest((struct IORequest *)tr); tr = NULL; }
+    if (tport) { DeleteMsgPort(tport); tport = NULL; }
+    timer = 0;
     if (OpenRTGBase) { CloseLibrary(OpenRTGBase); OpenRTGBase = NULL; }
     if (win) { CloseWindow(win); win = NULL; }
     FreeGadgets(glist);
