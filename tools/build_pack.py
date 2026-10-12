@@ -94,6 +94,8 @@ a Part file that C/OpenUpTool reads:
                         and AHI's settings on Host mix, with OpenAHI's own ahi.device
                         (amigachrome's vendor/amigachrome-guest; all "when AmigaChrome")
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
+  OpenDrawer/           OpenDrawer, the drawer windows of the Team's own Workbench, beside the OS's
+                        Workbench, in SYS:Utilities; off by default (opengadtools workbench/)
   OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
   OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
@@ -352,6 +354,7 @@ def build_parts(a):
          "-o", ROOT / "build/os3/OpenMonitor", ROOT / "src/openmonitor.c",
          ogt / "ogt_look.c", ogt / "ogt_theme.c", ogt / "ogt_font.c"], env=env)
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
+    run(["sh", a.opengadtools / "workbench/build.sh"], env=env)   # OpenDrawer
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
     g = a.guest
     out = g / "build/guest/os32"
@@ -541,6 +544,7 @@ PART_MAIN = {
     "OpenPlay": ("Utilities/OpenPlay", "OpenPlay"),
     "OpenTitle": ("C/OpenTitle", "OpenTitle"),
     "OpenEdit": ("C/OpenEdit", "OpenEdit"),
+    "OpenDrawer": ("Utilities/OpenDrawer", "OpenDrawer"),
     "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
     "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
@@ -1221,6 +1225,17 @@ def main() -> int:
     ed.add("Tools/OpenEdit.info", icons.icon(icons.WBPROJECT, "page", "C:IconX", ["WINDOW=NIL:"], stack=8192), "SYS:Tools/OpenEdit.info")
     ed.write()
 
+    # OpenDrawer: the drawer windows of the Team's own Workbench (opengadtools workbench/), as a
+    # program beside the OS's Workbench until the Team's workbench.library opens them itself. Its
+    # icon opens SYS:, and drawers dropped on it or shift-selected with it open in windows of their
+    # own; in a Shell, OpenDrawer [path ...] (SYS:Utilities is on the path). Off by default.
+    odb = (a.opengadtools / "build/os3/OpenDrawer").read_bytes()
+    od = Part(top, "OpenDrawer", binary_version(odb, "OpenDrawer") or "0.2",
+              "OpenDrawer: drawer windows with an icon line, icons or a list, search and Snapshot")
+    od.add("Utilities/OpenDrawer", odb, "SYS:Utilities/OpenDrawer")
+    od.add("Utilities/OpenDrawer.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Utilities/OpenDrawer.info")
+    od.write()
+
     # OpenWrite: the word processor (openamigawrite), as its 1.0 release lays it
     # out: a drawer, with the dictionary beside the program, where it looks
     # (PROGDIR:Dictionaries), and OWConvert in C: for scripts
@@ -1345,6 +1360,7 @@ def main() -> int:
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (of.dir / "Utilities/OpenFiles.info", files_art),
                                              (op.dir / "Utilities/OpenPlay.info", play_art),
+                                             (od.dir / "Utilities/OpenDrawer.info", "page"),
                                              (w3.dir / "Tools/W3DTest.info", "install"),
                                              (a.out / "OpenUp.info", None)]
                     + ([(w3.dir / "Tools/MGLTest.info", "install")] if (w3.dir / "Tools/MGLTest.info").is_file() else [])
