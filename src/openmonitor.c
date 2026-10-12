@@ -1,4 +1,4 @@
-/* OpenMonitor 0.3: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
+/* OpenMonitor 0.3.1: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
  * (the user, 10 October 2026: "a cpu / task / process app similar to task manager in windows or resources
  * in ubuntu ... have it show gpu too").
  *
@@ -60,7 +60,12 @@
 #include "ogt_look.h"
 #include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3 (12.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3.1 (12.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+/* The window runs on 32 KB, however OpenMonitor is started (0.3.1). From a Shell (Run, a script) it got
+ * the Shell's 4 KB, and closing the window rebooted the machine every time; with 32 KB it closes cleanly
+ * (OpenUp 0.7.5's labs, 12 October 2026; OpenTypes 0.2.3 had the same). libnix's start code swaps to a
+ * stack of this size when the one it was given is smaller. The icon's 32 KB is unchanged. */
+unsigned long __stack = 32768;
 
 #define REG(r, decl) register decl __asm(#r)
 
@@ -1312,7 +1317,7 @@ static int gui(void)
     g = gad[G_STATUS] = CreateGadget(TEXT_KIND, g, &ng, GTTX_Text, (ULONG)status_text, GTTX_Border, TRUE, TAG_DONE);
     if (!g) { rc = RETURN_FAIL; goto out; }
 
-    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.3", WA_PubScreen, (ULONG)scr,
+    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.3.1", WA_PubScreen, (ULONG)scr,
                          WA_Left, (scr->Width - W - scr->WBorLeft - scr->WBorRight) / 2,
                          WA_Top, scr->BarHeight + 1 + (scr->Height - scr->BarHeight - 1 - H - tb - scr->WBorBottom) / 2,
                          WA_InnerWidth, W, WA_InnerHeight, H, WA_Gadgets, (ULONG)glist,
