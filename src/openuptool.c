@@ -31,6 +31,9 @@
  *                                     our faces, by name from Gorilla's set, else by kind (see ICONS)
  *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
  *                                     come back with UNINSTALL
+ *   OpenUpTool UNPLACE <program>      drops the program's windows from OpenWindows' Places
+ *                                     (ENV: and ENVARC:OpenPrefs/WindowPlaces), so they open
+ *                                     at the program's own first size again
  *   OpenUpTool UPDATE [CHECK|YES]     a newer pack Cradle put in DH1:OpenUp: CHECK says
  *                                     (WARN when one waits); UPDATE shows what changes and
  *                                     asks; YES doesn't ask. It never runs on its own
@@ -100,7 +103,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.3 (12.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.4 (12.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -802,6 +805,59 @@ static int switched_off(const char *off, const char *line)
         p = *e ? e + 1 : e;
     }
     return 0;
+}
+
+/* ---- OpenWindows' places ------------------------------------------------------- */
+
+/* The places text without the lines for a program's windows: each line is
+ * "program:title" in quotes, then left, top, width and height. */
+static char *without_places(const char *text, const char *prog, int *dropped)
+{
+    char *out = AllocVec(strlen(text) + 2, MEMF_ANY), *o = out;
+    const char *p = text;
+    size_t n = strlen(prog);
+    *dropped = 0;
+    if (!out)
+        return NULL;
+    while (*p) {
+        const char *e = p;
+        int ours = 0;
+        while (*e && *e != '\n') e++;
+        if (*p == '"' && (size_t)(e - p) > n + 2 && p[n + 1] == ':') {
+            size_t i;
+            ours = 1;
+            for (i = 0; i < n; i++)
+                if ((p[1 + i] | 0x20) != (prog[i] | 0x20)) { ours = 0; break; }
+        }
+        if (ours) (*dropped)++;
+        else { memcpy(o, p, e - p); o += e - p; if (*e) *o++ = '\n'; }
+        p = *e ? e + 1 : e;
+    }
+    *o = 0;
+    return out;
+}
+
+/* Drops a program's windows from both copies of OpenWindows' places file,
+ * so they open at the program's own first size again. A file that isn't
+ * there, or has no line for it, is fine. */
+static int unplace(const char *prog)
+{
+    static const char *const files[2] = { "ENV:OpenPrefs/WindowPlaces", "ENVARC:OpenPrefs/WindowPlaces" };
+    int k, rc = RETURN_OK;
+    for (k = 0; k < 2; k++) {
+        char *text = read_file(files[k], NULL), *out;
+        int dropped;
+        if (!text)
+            continue;
+        out = without_places(text, prog, &dropped);
+        if (out && dropped && !write_file(files[k], out, strlen(out))) {
+            say("OpenUp: can't write ", files[k], NULL);
+            rc = RETURN_ERROR;
+        }
+        if (out) FreeVec(out);
+        FreeVec(text);
+    }
+    return rc;
 }
 
 /* 1 when a startup line runs a program named by its path ("SYS:Prefs/OpenSound USE", "Run >NIL: C:OpenDock")
@@ -2354,7 +2410,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES]\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -2406,7 +2462,8 @@ static int real_main(void)
         rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES]\n"); rc = RETURN_FAIL; }
+    else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
