@@ -963,7 +963,7 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the OpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "OpenGPU", "0.9.1", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp = Part(top, "OpenGPU", "0.11", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
     gp.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
     gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
@@ -1191,7 +1191,7 @@ def main() -> int:
 
     # OpenFiles: the file manager (openamigafilemanager). Double-click opens
     # files with their icon's program, else OpenView (the OpenPrint part).
-    of = Part(top, "OpenFiles", "0.3", "OpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
+    of = Part(top, "OpenFiles", "0.3.1", "OpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
     of.add("Utilities/OpenFiles", (a.openamigafilemanager / "build/os3/OpenFiles").read_bytes(), "SYS:Utilities/OpenFiles")
     of.add("Utilities/OpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenFiles.info")
     of.write()
