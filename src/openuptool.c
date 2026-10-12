@@ -104,7 +104,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.6 (12.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.7 (12.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1257,9 +1257,51 @@ static int set_theme(const char *name, const char *look)
 
 /* ---- UNINSTALL ----------------------------------------------------------------------------- */
 
+#define WBPATTERN "ENVARC:Sys/WBPattern.prefs"
+#define WBPATTERN_ENV "ENV:Sys/WBPattern.prefs"
+
+/* 0.7.7: Workbench's backdrop setting goes back first, before any file is deleted. Whoever shows the backdrop
+ * (IPrefs for Hyperion's Workbench, OpenBench 0.1.19 for itself) keeps its picture's file open until the
+ * setting changes; before, the setting went back in the same pass as the pictures, so the picture could
+ * still be in use when its turn came. A setting OpenUp made from nothing is put back as a pattern file with
+ * no picture in ENV: (ENV: is gone at the next boot), so the picture is let go now. */
+static void backdrop_setting_back(int *restored, int *problems)
+{
+    static const char empty[] = "FORM\0\0\0\x12PREFPRHD\0\0\0\x06\0\0\0\0\0\0";
+    int i;
+    for (i = 0; i < nents; i++) {
+        entry *e = &ents[i];
+        if (strcmp(e->a, WBPATTERN) && strcmp(e->a, WBPATTERN_ENV)) continue;
+        if (!strcmp(e->kind, "replaced")) {
+            if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); (*restored)++; e->kind[0] = 0; }
+            else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); (*problems)++; }
+        } else if (!strcmp(e->kind, "new") && !strcmp(e->a, WBPATTERN_ENV)) {
+            if (write_file(e->a, empty, (LONG)sizeof empty - 1)) e->kind[0] = 0;
+        }
+    }
+}
+
+/* 1 when path is in OpenUp's own backdrop drawer. Everything there is OpenUp's: a picture an earlier install
+ * put there before the manifest listed it is marked "same", and each picture's tone sits beside it as
+ * "<picture>.tone", never listed (Daletop's lab, 12 Oct 2026: 80 logo pictures and 296 .tone files were left
+ * after UNINSTALL). */
+#define BACKDROP_DRAWER "SYS:Prefs/Presets/Backdrops/OpenUp/"
+static int in_backdrop_drawer(const char *path)
+{
+    return !strncmp(path, BACKDROP_DRAWER, sizeof BACKDROP_DRAWER - 1);
+}
+
+/* The tone file beside a backdrop picture, when there is one. */
+static void delete_tone(const char *pic)
+{
+    char tone[ENTRY_PATH];
+    if (strlcpy(tone, pic, sizeof tone) >= sizeof tone || str_cat(tone, ".tone", sizeof tone) >= sizeof tone) return;
+    DeleteFile((STRPTR)tone);
+}
+
 static int uninstall(void)
 {
-    int i, problems = 0, restored = 0, removed = 0;
+    int i, problems = 0, restored = 0, removed = 0, said_wait = 0;
     manifest_load();
     if (!nents && !exists(MANIFEST)) {
         say("OpenUp isn't installed here: there is no list of its files (" MANIFEST ").", NULL, NULL);
@@ -1272,8 +1314,13 @@ static int uninstall(void)
         say("OpenUp: can't take its block out of S:User-Startup. Remove the lines from \"" BLOCK_BEGIN "\" to \"" BLOCK_END "\" by hand.", NULL, NULL);
         problems++;
     }
+    backdrop_setting_back(&restored, &problems);
     for (i = nents - 1; i >= 0; i--) {
         entry *e = &ents[i];
+        if (in_backdrop_drawer(e->a) && (!strcmp(e->kind, "new") || !strcmp(e->kind, "same")))
+            delete_tone(e->a);
+        if (!strcmp(e->kind, "same") && in_backdrop_drawer(e->a))
+            strcpy(e->kind, "new");                         /* OpenUp's drawer: OpenUp's picture */
         if (!strcmp(e->kind, "new") || !strcmp(e->kind, "newfile") || !strcmp(e->kind, "rnew")) {
             if (!strcmp(e->kind, "newfile")) {
                 LONG len = 0;
@@ -1281,24 +1328,26 @@ static int uninstall(void)
                 int blank = 1;
                 for (LONG k = 0; t && k < len; k++) if (t[k] != '\n' && t[k] != ' ') { blank = 0; break; }
                 if (t) FreeVec(t);
-                if (!blank) continue;                       /* someone else wrote in it since */
+                if (!blank) { e->kind[0] = 0; continue; }   /* someone else wrote in it since: theirs now */
             }
-            if (DeleteFile((STRPTR)e->a)) removed++;
-            else if (exists(e->a)) {
-                /* In use, as Workbench's backdrop picture is until it has read
-                 * the setting put back above: give it up to ten seconds. */
+            if (DeleteFile((STRPTR)e->a)) { removed++; e->kind[0] = 0; }
+            else if (!exists(e->a)) e->kind[0] = 0;          /* gone already */
+            else {
+                /* In use, as the backdrop picture is until whoever shows it has read the setting put back
+                 * above and let it go; decoding the new one takes a while on a 68k: up to 30 seconds. */
                 int tries;
-                for (tries = 0; tries < 20 && !DeleteFile((STRPTR)e->a) && exists(e->a); tries++)
+                if (!said_wait++) say("OpenUp: waiting for ", e->a, " to be let go...");
+                for (tries = 0; tries < 60 && !DeleteFile((STRPTR)e->a) && exists(e->a); tries++)
                     Delay(25);
-                if (exists(e->a)) { say("OpenUp: can't delete ", e->a, ". Is it in use? Delete it by hand."); problems++; }
-                else removed++;
+                if (exists(e->a)) { say("OpenUp: can't delete ", e->a, " yet: it is in use."); problems++; }
+                else { removed++; e->kind[0] = 0; }
             }
         } else if (!strcmp(e->kind, "moved")) {                /* RECONCILE's: moved back */
             LONG ok = exists(e->a) ? 0 : Rename((STRPTR)e->b, (STRPTR)e->a);
-            if (ok) restored++;
+            if (ok) { restored++; e->kind[0] = 0; }
             else { say("OpenUp: can't put back ", e->a, "; it is in SYS:Prefs/Classic or SYS:Storage/OpenUp-Superseded"); problems++; }
         } else if (!strcmp(e->kind, "replaced")) {
-            if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; }
+            if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; e->kind[0] = 0; }
             else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); problems++; }
         }
     }
@@ -1344,6 +1393,11 @@ static int uninstall(void)
         DeleteFile((STRPTR)MANIFEST_ENV);
         DeleteFile((STRPTR)"ENVARC:OpenAmiga");
         DeleteFile((STRPTR)"ENV:OpenAmiga");
+    } else if (manifest_save()) {
+        /* 0.7.7: what is left stays listed (what was done is taken out), so UNINSTALL can be run again to
+         * finish: after a reboot nothing holds a backdrop picture. Before, the list kept everything, and a
+         * second run failed on the originals already put back. */
+        say("OpenUp: reboot, then run OpenUpTool UNINSTALL again to finish.", NULL, NULL);
     }
     Printf((STRPTR)"OpenUp: uninstalled: %ld file%s removed, %ld put back as they were%s\n", removed, (LONG)(removed == 1 ? "" : "s"),
            restored, (LONG)(problems ? "; see the messages above" : ". Reboot to finish."));
@@ -1351,9 +1405,6 @@ static int uninstall(void)
 }
 
 /* ---- BACKDROP ------------------------------------------------------------------------------ */
-
-#define WBPATTERN "ENVARC:Sys/WBPattern.prefs"
-#define WBPATTERN_ENV "ENV:Sys/WBPattern.prefs"
 
 static ULONG get32(const UBYTE *p) { return (ULONG)p[0] << 24 | (ULONG)p[1] << 16 | (ULONG)p[2] << 8 | p[3]; }
 static void put32(UBYTE *p, ULONG v) { p[0] = v >> 24; p[1] = v >> 16; p[2] = v >> 8; p[3] = v; }
