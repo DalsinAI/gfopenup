@@ -150,7 +150,11 @@ choose:
   for every program in one standard layout, with C:OIList, and Gamepads in
   SYS:Prefs to test and map pads and choose which drives which port (an
   opt-in patch there lets older games see a modern pad); on AmigaChrome it
-  sees the Amiga's ports for now.
+  sees the Amiga's ports for now;
+- OpenDrawer (new, off unless picked): drawer windows with an icon line,
+  icons or a list sorted by name, size, date or kind, search and Snapshot,
+  in the look's theme, beside Workbench (SYS:Utilities/OpenDrawer; drawers
+  dropped on its icon open in its windows).
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,

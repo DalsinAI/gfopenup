@@ -33,7 +33,7 @@
 ; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY,
 ; 1073741824 Tata (the last bit of this word).
 ; The second word, #parts2 (OpenUp 0.7.0): 1 OpenFTP, 2 Unofficial Telegram, 4 OpenGPU developer files,
-; 8 OpenInput, 16 OpenTLS.
+; 8 OpenInput, 16 OpenTLS, 32 OpenDrawer.
 ; None of them is ticked by default on a new install; an upgrade ticks those already there (below).
 ; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos, OpenPuTTY
 ; and Tata (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D
@@ -62,6 +62,7 @@
 (if (exists "SYS:Developer/OpenGPU-SDK") (set #default2 (bitor #default2 4)))
 (if (exists "LIBS:openinput.library") (set #default2 (bitor #default2 8)))
 (if (exists "LIBS:opentls.library") (set #default2 (bitor #default2 16)))
+(if (exists "SYS:Utilities/OpenDrawer") (set #default2 (bitor #default2 32)))
 (set #g1
     (askoptions
         (prompt "Which parts should OpenUp install? (1 of 5)")
@@ -232,12 +233,19 @@
               "with the server's certificate checked against Mozilla's list of certificate "
               "authorities, in S:OpenTLS (put your own in ENVARC:OpenTLS/certs). OpenFTP's FTPS "
               "uses it, so it comes with OpenFTP whatever is picked here; it brings OpenCrypto, "
-              "which does its sums on the x86 or ARM64 cores on AmigaChrome.")
+              "which does its sums on the x86 or ARM64 cores on AmigaChrome.\n\n"
+              "OpenDrawer: drawer windows with an icon line (back, forward, the parent, places, "
+              "search), icons or a list sorted by name, size, date or kind, in the look's theme "
+              "(new, off unless picked). It runs beside Workbench: its icon in SYS:Utilities "
+              "opens SYS:, and drawers dropped on it open in its windows; in a Shell, OpenDrawer "
+              "and the drawers to open. Snapshot keeps a window's place, view and order in the "
+              "drawer's icon, as Workbench does.")
         (choices "OpenFTP: FTP and FTPS (new)"
                  "Telegram, unofficial: needs setting up (new)"
                  "OpenGPU developer files (new)"
                  "OpenInput: game controllers (new)"
-                 "OpenTLS: secure connections (new)")
+                 "OpenTLS: secure connections (new)"
+                 "OpenDrawer: drawer windows (new)")
         (default #default2)))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
@@ -590,6 +598,12 @@
             (working "Installing OpenInput")
             (if (> (run (cat #tool " INSTALL Parts/OpenInput >>T:OpenUp.log")) 5)
                 (message "OpenInput didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
+(if (bitand #parts2 32)
+    (if (exists "Parts/OpenDrawer/Part")
+        (
+            (working "Installing OpenDrawer")
+            (if (> (run (cat #tool " INSTALL Parts/OpenDrawer >>T:OpenUp.log")) 5)
+                (message "OpenDrawer didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
 
 ; OpenUp 0.6.14 to 0.7.0 changed the default tool of about 40 of AmigaOS 3.2.3's own
 ; icons (datatype descriptors, pointer presets, DOSDrivers, the Picasso96 guides...) to
