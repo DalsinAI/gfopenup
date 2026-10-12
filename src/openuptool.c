@@ -8,6 +8,7 @@
  *                                     to OpenView by mistake (see FIXTOOLS below)
  *   OpenUpTool LIST                   what is installed
  *   OpenUpTool SETTING <dest> <text>  a setting the Installer asked for, as a file
+ *   OpenUpTool THEME <name> <look>    the look's theme: a saved look keeps its mode and other lines (see THEME)
  *   OpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-strip-<H>.png for the
  *                                     screen's height, tiled, when there is one; else <prefix>-<W>x<H>.png, the
  *                                     one nearest the screen's shape, scaled to fit
@@ -103,7 +104,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.4 (12.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.5 (12.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -446,9 +447,33 @@ static void set_env(const char *name, const char *value)
     SetVar((STRPTR)name, (STRPTR)value, -1, GVF_GLOBAL_ONLY);
 }
 
+#define LOOK_ENVARC "ENVARC:OpenGadTools/Look"
+#define LOOK_ENV "ENV:OpenGadTools/Look"
+
+/* The theme of the look saved in ENVARC:OpenGadTools/Look: the first word of its first line ("Graphite" of
+ * "Graphite dark"), as OpenLook reads it (a first line that is a comment is Classic); "" when there is no
+ * look saved, as before a new install. */
+static void saved_theme(char *out, int size)
+{
+    char *text = read_file(LOOK_ENVARC, NULL), *p;
+    int n = 0;
+    out[0] = 0;
+    if (!text) return;
+    for (p = text; *p == ' ' || *p == '\t'; p++) ;
+    if (*p == ';') strlcpy(out, "Classic", size);
+    else {
+        if (*p == '"') { p++; while (p[n] && p[n] != '"' && p[n] != '\n' && n < size - 1) n++; }
+        else while (p[n] && p[n] != ' ' && p[n] != '\t' && p[n] != '\n' && p[n] != '\r' && n < size - 1) n++;
+        memcpy(out, p, n);
+        out[n] = 0;
+        if (!n) strlcpy(out, "Classic", size);
+    }
+    FreeVec(text);
+}
+
 static int detect(void)
 {
-    char summary[600];
+    char summary[600], theme[80];
     const char *machine;
     UWORD attn = ((struct ExecBase *)SysBase)->AttnFlags;
     int ac = is_amigachrome();
@@ -456,6 +481,10 @@ static int detect(void)
     else if (OpenResource((STRPTR)"devicetree.resource")) machine = "PiStorm";
     else machine = "Amiga";
     set_env("OpenUp/Machine", machine);
+    /* the look this Amiga has (OpenUpTool 0.7.5): the Installer keeps it on an upgrade, and picks one only
+     * for a new install */
+    saved_theme(theme, sizeof theme);
+    set_env("OpenUp/Theme", theme);
     set_env("OpenUp/RTG", board(9) ? "ACRTG" : "");
     set_env("OpenUp/Network", board(6) ? "OpenSocket card" : "");
     strcpy(summary, "This is ");
@@ -562,13 +591,49 @@ static int retire_file(const char *dest)
     return 1;
 }
 
+/* 1 when icon b already shows icon a's picture, as icon.library reads them (OS 3.5 icons): the size, the
+ * frame, and both images with their palettes and transparent colours. A face is only the picture, so an
+ * icon that has it already is left as it is. Before OpenUpTool 0.7.5 every face line wrote its icon again
+ * on every install and upgrade: the GorillaIcons part counted every icon it faces as changed each time
+ * (59 on one lab copy of Instance-32, 76 on another), and Workbench redrew each of them. */
+static int same_picture(struct DiskObject *a, struct DiskObject *b)
+{
+    struct DiskObject *o[2];
+    LONG w[2] = { 0, 0 }, h[2] = { 0, 0 }, pm[2] = { 0, 0 }, fr[2] = { 0, 0 };
+    int i, k;
+    o[0] = a; o[1] = b;
+    for (i = 0; i < 2; i++)
+        IconControl(o[i], ICONCTRLA_GetWidth, (ULONG)&w[i], ICONCTRLA_GetHeight, (ULONG)&h[i],
+                    ICONCTRLA_IsPaletteMapped, (ULONG)&pm[i], ICONCTRLA_GetFrameless, (ULONG)&fr[i], TAG_DONE);
+    if (!pm[0] || !pm[1] || w[0] <= 0 || h[0] <= 0 || w[0] != w[1] || h[0] != h[1] || fr[0] != fr[1])
+        return 0;
+    for (k = 0; k < 2; k++) {
+        UBYTE *img[2] = { NULL, NULL };
+        struct ColorRegister *pal[2] = { NULL, NULL };
+        LONG np[2] = { 0, 0 }, tc[2] = { -1, -1 };
+        for (i = 0; i < 2; i++)
+            IconControl(o[i], k ? ICONCTRLA_GetImageData2 : ICONCTRLA_GetImageData1, (ULONG)&img[i],
+                        k ? ICONCTRLA_GetPalette2 : ICONCTRLA_GetPalette1, (ULONG)&pal[i],
+                        k ? ICONCTRLA_GetPaletteSize2 : ICONCTRLA_GetPaletteSize1, (ULONG)&np[i],
+                        k ? ICONCTRLA_GetTransparentColor2 : ICONCTRLA_GetTransparentColor1, (ULONG)&tc[i], TAG_DONE);
+        if (!img[0] != !img[1] || !pal[0] != !pal[1] || np[0] != np[1] || tc[0] != tc[1])
+            return 0;
+        if (img[0] && memcmp(img[0], img[1], (size_t)(w[0] * h[0])))
+            return 0;
+        if (pal[0] && np[0] > 0 && memcmp(pal[0], pal[1], (size_t)np[0] * sizeof(struct ColorRegister)))
+            return 0;
+    }
+    return 1;
+}
+
 /* A new face for an icon that stays the system's (Gorilla's pictures on SYS:'s
  * drawers and programs and on the default icons, ICONS.md section 8): the
  * picture comes from the part's icon, and everything else (type, default
  * tool, tool types, stack, the drawer's window, its place) stays the icon's
  * own. The original goes to SYS:Storage/OpenUp-Superseded the first time, as
  * for a replaced file, so UNINSTALL puts it back. An icon the machine hasn't
- * got is left alone. 1 changed, 0 nothing to do, -1 failed (said why). */
+ * got, or one that shows the picture already (same_picture), is left alone.
+ * 1 changed, 0 nothing to do, -1 failed (said why). */
 static int face_icon(const char *from, const char *dest)
 {
     char backup[260], dir[260], fname[260], dname[260];
@@ -583,19 +648,30 @@ static int face_icon(const char *from, const char *dest)
     if ((n = strlen(dname)) > 5 && same_word(dname + n - 5, ".info")) dname[n - 5] = 0;
     backup_path(dest, backup, sizeof backup);
     e = find_entry(NULL, dest);
-    if (!e || !strcmp(e->kind, "same")) {          /* the first time: keep the original */
-        parent_of(backup, dir, sizeof dir);
-        if (!exists(backup) && (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0))) {
-            say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; its picture wasn't changed. Is SYS: full or write-protected?");
-            return -1;
-        }
-    }
     if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) {
         say("OpenUp: icon.library 44 or later is needed to give ", dest, " its new picture.");
         return -1;
     }
     pic = GetIconTags((STRPTR)fname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
     old = GetIconTags((STRPTR)dname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    if (pic && old && same_picture(pic, old)) {     /* the picture is there already: nothing to write */
+        FreeDiskObject(pic);
+        FreeDiskObject(old);
+        CloseLibrary(IconBase);
+        IconBase = NULL;
+        return 0;
+    }
+    if (!e || !strcmp(e->kind, "same")) {          /* the first time: keep the original */
+        parent_of(backup, dir, sizeof dir);
+        if (!exists(backup) && (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0))) {
+            say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; its picture wasn't changed. Is SYS: full or write-protected?");
+            if (pic) FreeDiskObject(pic);
+            if (old) FreeDiskObject(old);
+            CloseLibrary(IconBase);
+            IconBase = NULL;
+            return -1;
+        }
+    }
     if (pic && old) {
         /* the new picture with the old icon's own: lent for the write, then given back */
         UBYTE type = pic->do_Type;
@@ -1115,6 +1191,63 @@ static int fix_tools(const char *table, int all)
     return fix_failed ? RETURN_WARN : RETURN_OK;
 }
 
+/* ---- SETTING and THEME --------------------------------------------------------------------- */
+
+/* A setting as a file, installed like any file (the original kept the first time, and listed), through T:.
+ * The manifest is loaded by the caller and saved here. RETURN_OK or RETURN_ERROR. */
+static int install_text(const char *dest, const char *text)
+{
+    int rc;
+    if (!write_file("T:OpenUp-setting", text, strlen(text))) return RETURN_ERROR;
+    rc = install_file("T:OpenUp-setting", dest, 0) < 0 ? RETURN_ERROR : RETURN_OK;
+    DeleteFile((STRPTR)"T:OpenUp-setting");
+    if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
+    return rc;
+}
+
+/* The look's theme (OpenUpTool 0.7.5). ENVARC:OpenGadTools/Look's first line is "<theme> <mode>", and the
+ * lines after it are the user's own, written by OpenPrefs Look: dark mode by the clock, an accent, Lite,
+ * "profile auto", which screens and programs are drawn in the theme, the windows' gadgets. Up to OpenUp 0.7.5
+ * the Installer wrote the whole file again on every run, with the theme its question gave: a Novice never sees
+ * the question, so every Novice upgrade put back Open, light, without the user's lines.
+ *   OpenUpTool THEME <name> <look>   with a look saved already, only its theme becomes <name>, as OpenLook
+ *                                    THEME <name> SAVE does (the mode and every other line stay); with none
+ *                                    (a new install), <look> is the look. ENVARC: and ENV: both. */
+static int set_theme(const char *name, const char *look)
+{
+    char *old = read_file(LOOK_ENVARC, NULL), *text, *p;
+    ULONG n;
+    int rc;
+    if (!old) {
+        n = strlen(look) + 2;
+        if (!(text = AllocVec(n, MEMF_ANY))) return RETURN_FAIL;
+        strcpy(text, look);
+        if (!*text || text[strlen(text) - 1] != '\n') strcat(text, "\n");
+    } else {
+        /* the first word goes; the rest of the first line (the mode) and every line after it stay */
+        for (p = old; *p == ' ' || *p == '\t'; p++) ;
+        if (*p == ';') p = NULL;                         /* a comment first: the name and light, before it */
+        else if (*p == '"') { for (p++; *p && *p != '"' && *p != '\n'; p++) ; if (*p == '"') p++; }
+        else while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') p++;
+        n = strlen(name) + strlen(old) + 10;
+        if (!(text = AllocVec(n, MEMF_ANY))) { FreeVec(old); return RETURN_FAIL; }
+        strcpy(text, name);
+        if (!p) { strcat(text, " light\n"); strcat(text, old); }
+        else if (*p == '\n' || *p == '\r' || !*p) { strcat(text, " light"); strcat(text, p); }
+        else strcat(text, p);
+        if (text[strlen(text) - 1] != '\n') strcat(text, "\n");
+        FreeVec(old);
+    }
+    manifest_load();
+    ensure_dir("ENV:OpenGadTools", 0);
+    rc = install_text(LOOK_ENVARC, text);
+    if (rc == RETURN_OK) rc = install_text(LOOK_ENV, text);
+    if (rc == RETURN_OK) say("OpenUp: the look's theme is ", name, "");
+    else say("OpenUp: can't write ", LOOK_ENVARC, ". Is SYS: full or write-protected?");
+    FreeVec(text);
+    return rc;
+}
+
 /* ---- UNINSTALL ----------------------------------------------------------------------------- */
 
 static int uninstall(void)
@@ -1179,6 +1312,25 @@ static int uninstall(void)
         }
     DeleteFile((STRPTR)SUPERSEDED);
     if (!problems) {
+        /* OpenUp's own marks in ENVARC:OpenAmiga go with it (OpenUpTool 0.7.5). Each records that a step of
+         * OpenUp's has run; with OpenUp gone they mean nothing, and a later install would believe them and skip
+         * the step (Setup's first-start questions, RECONCILE, TIDY). The user's settings stay, as any program's
+         * settings in ENVARC: stay when the program goes, and a later install finds them: Sound (OpenPrefs
+         * Sound's levels and beep), PrefsView (simple or advanced, for every OpenPrefs editor) and
+         * Startup.off (the startup lines switched off in OpenUp Setup). */
+        static const char *const marks[] = {
+            "ENVARC:OpenAmiga/Reconcile.done",      /* RECONCILE APPLY has run (its moves are put back above) */
+            "ENVARC:OpenAmiga/Tidy.done",           /* TIDY has tidied the system's drawers */
+            "ENVARC:OpenAmiga/Setup.done",          /* OpenUp Setup, the first-start wizard, has run or won't come back */
+            "ENVARC:OpenAmiga/Backdrop.tone",       /* the backdrop's tone, remembered by OpenUpTool */
+        };
+        for (i = 0; i < (int)(sizeof marks / sizeof marks[0]); i++) {
+            char env[ENTRY_PATH];
+            DeleteFile((STRPTR)marks[i]);
+            strlcpy(env, "ENV:", sizeof env);
+            str_cat(env, marks[i] + 7, sizeof env);    /* the copy in ENV:, if there is one */
+            DeleteFile((STRPTR)env);
+        }
         DeleteFile((STRPTR)REPAIRED_MARK);
         DeleteFile((STRPTR)REPAIR_LOG);
         DeleteFile((STRPTR)MANIFEST);
@@ -2410,7 +2562,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -2439,13 +2591,9 @@ static int real_main(void)
         line[sizeof line - 2] = 0;
         strcat(line, "\n");
         manifest_load();
-        if (!write_file("T:OpenUp-setting", line, strlen(line))) rc = RETURN_ERROR;
-        else {
-            rc = install_file("T:OpenUp-setting", (const char *)args[1], 0) < 0 ? RETURN_ERROR : RETURN_OK;
-            DeleteFile((STRPTR)"T:OpenUp-setting");
-            if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
-        }
+        rc = install_text((const char *)args[1], line);
     }
+    else if (same_word(cmd, "THEME") && args[1] && args[2]) rc = set_theme((const char *)args[1], (const char *)args[2]);
     else if (same_word(cmd, "P96LEFTOVER")) {
         /* Picasso96API.library in LIBS: with no Picasso96 board running (its
          * monitor driver would have opened rtg.library at boot) hangs SDL's
@@ -2463,7 +2611,7 @@ static int real_main(void)
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;

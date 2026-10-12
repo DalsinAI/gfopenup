@@ -929,7 +929,7 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the OpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "OpenGPU", "0.9", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp = Part(top, "OpenGPU", "0.9.1", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
     gp.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
     gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
@@ -1109,8 +1109,10 @@ def main() -> int:
         for f in sorted(p for p in kit.rglob("*") if p.is_file()):
             rel = f.relative_to(kit).as_posix()
             dev.add(f"Developer/OpenGPU-SDK/{rel}", f.read_bytes(), f"SYS:Developer/OpenGPU-SDK/{rel}")
+        # only where there is none (as Developer.info): the GorillaIcons part gives it Gorilla's picture, and
+        # "add" put the plain drawer back over that picture on every upgrade, so both parts wrote it each run
         dev.add("Developer/OpenGPU-SDK.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)),
-                "SYS:Developer/OpenGPU-SDK.info", own=True)
+                "SYS:Developer/OpenGPU-SDK.info", default=True)
         dev.add("Developer.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)), "SYS:Developer.info", default=True)
         dev.line("startup Assign OpenGPU-SDK: SYS:Developer/OpenGPU-SDK")
         dev.write()
