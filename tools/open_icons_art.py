@@ -685,6 +685,191 @@ def gamepads(sel):
     return ic
 
 
+def screen_box(ic, x0, y0, x1, y1, face=None):
+    """A monitor: a light case, a dark glass face, a foot; returns the glass's mask."""
+    ic.add(rect((x0 + x1) / 2 - 5, y1 - 1, (x0 + x1) / 2 + 5, y1 + 4), linear((0, y1), (0, y1 + 4), GREY_LO, DARK))
+    ic.add(rrect((x0 + x1) / 2 - 11, y1 + 3, (x0 + x1) / 2 + 11, y1 + 6.5, 1.6), linear((0, y1 + 3), (0, y1 + 6.5), GREY_HI, GREY_LO))
+    ic.add(rrect(x0, y0, x1, y1, 3.4), linear((x0, y0), (x1, y1), GREY_HI, rgb('#B9BDC4')), gloss=0.15)
+    glass = rrect(x0 + 3, y0 + 3, x1 - 3, y1 - 3, 1.6)
+    ic.add(glass, face or radial((x0 + 10, y0 + 8), (x1 - x0), rgb('#2A3550'), rgb('#070A12')), outline=1.0)
+    return glass
+
+
+def star(cx, cy, r, k=0.42, n=5, turn=0.0):
+    return poly([(cx + (r if i % 2 == 0 else r * k) * math.cos(math.radians(-90 + turn + i * 180 / n)),
+                  cy + (r if i % 2 == 0 else r * k) * math.sin(math.radians(-90 + turn + i * 180 / n))) for i in range(2 * n)])
+
+
+def openblanker(sel):
+    """A monitor resting on a starry night; chosen, the stars have moved on and the moon is up."""
+    ic = Icon()
+    glass = screen_box(ic, 5, 8, 59, 46)
+    pts = ((14, 16, 1.6), (25, 30, 1.2), (34, 15, 2.2), (46, 33, 1.5), (51, 19, 1.1), (18, 37, 1.0))
+    dx = 5 if sel else 0
+    for x, y, r in pts:
+        x = 9 + (x + dx - 9) % 46
+        ic.detail(inter(star(x, y, r * 1.6), glass), rgb('#FFF3B0'))
+    mx, my = (44, 15) if sel else (48, 38)
+    ic.detail(inter(cut(ellipse(mx - 5, my - 5, mx + 5, my + 5), ellipse(mx - 2, my - 7, mx + 8, my + 3)), glass), GOLD)
+    return ic
+
+
+def opentata(sel):
+    """A program's page with a warning sign before it; chosen, the sign lights up red. A prefs editor."""
+    ic = Icon()
+    page(ic, 18, 4, 52, 46)
+    for i in range(5):
+        ic.detail(rect(23, 10 + i * 5, 47 - (i % 2) * 6, 11.4 + i * 5), CONTENT)
+    lift = 3 if sel else 0
+    tri = poly([(36, 24 - lift), (56, 58 - lift), (16, 58 - lift)])
+    c, lo = (RED, RED_LO) if sel else (GOLD, GOLD_LO)
+    ic.add(tri, linear((36, 24), (36, 58), lighter(c, 0.3), lo), outline=2.0, gloss=0.3)
+    ic.detail(union(rrect(34.2, 34 - lift, 37.8, 48 - lift, 1.6), ellipse(34.2, 50 - lift, 37.8, 53.6 - lift)),
+              (255, 255, 255) if sel else INK)
+    prefs_badge(ic, 2, 44, 1.2)
+    return ic
+
+
+def terminal(ic, x0, y0, x1, y1, lines, cursor_at):
+    """A terminal window: a title bar over a black screen with green text and a cursor."""
+    window(ic, x0, y0, x1, y1)
+    ic.detail(rect(x0 + 1.4, y0 + 5.6, x1 - 1.4, y1 - 1.4), rgb('#0B0F0C'))
+    for i, w in enumerate(lines):
+        y = y0 + 9 + i * 5
+        ic.detail(poly([(x0 + 4, y), (x0 + 7, y + 1.6), (x0 + 4, y + 3.2)]), rgb('#7CFF6A'))
+        if w:
+            ic.detail(rect(x0 + 9, y + 0.8, x0 + 9 + w, y + 2.4), rgb('#7CFF6A'))
+    cy = y0 + 9 + cursor_at * 5
+    ic.detail(rect(x0 + 9, cy, x0 + 12, cy + 3.4), rgb('#C8FFC0'))
+
+
+def openputty(sel):
+    """A terminal and its key (SSH); chosen, the key has turned and the session has a line more."""
+    ic = Icon()
+    terminal(ic, 4, 6, 54, 46, [26, 18, 30, 0] if sel else [26, 18, 0], 3 if sel else 2)
+    kx, ky = 48, 50
+    a = -25 if sel else 20
+    t = math.radians(a)
+    tip = (kx + math.cos(t) * 13, ky + math.sin(t) * 13)
+    ic.add(stroke([(kx, ky), tip], 3.2), linear((kx, ky), tip, lighter(GOLD, 0.2), GOLD_LO), outline=1.4)
+    n = perp(t)
+    tooth = lambda u: (kx + math.cos(t) * u, ky + math.sin(t) * u)
+    for u in (9, 12):
+        p = tooth(u)
+        ic.add(stroke([p, (p[0] + n[0] * 3.4, p[1] + n[1] * 3.4)], 2.0), GOLD_LO, outline=1.0)
+    ic.add(ellipse(kx - 6.5, ky - 6.5, kx + 6.5, ky + 6.5), radial((kx - 2, ky - 2), 9, lighter(GOLD, 0.4), GOLD_LO), gloss=0.3)
+    ic.detail(ellipse(kx - 2, ky - 2, kx + 2, ky + 2), DARK_LO)
+    return ic
+
+
+def folder(ic, x0, y0, x1, y1, c=GOLD, lo=GOLD_LO):
+    ic.add(poly([(x0, y0 + 3), (x0 + 9, y0 + 3), (x0 + 12, y0), (x0 + 20, y0), (x0 + 22, y0 + 3), (x1, y0 + 3), (x1, y1), (x0, y1)]),
+           linear((x0, y0), (x1, y1), lighter(c, 0.3), lo), gloss=0.25)
+    ic.detail(rect(x0 + 1.2, y0 + 6.5, x1 - 1.2, y0 + 7.4), lo)
+
+
+def openftp(sel):
+    """Two folders, here and there, with files crossing between them; chosen, the file is on its way."""
+    ic = Icon()
+    folder(ic, 3, 30, 27, 52)
+    folder(ic, 37, 30, 61, 52, BLUE, BLUE_LO)
+    arrow(ic, 50 if sel else 44, 20, 1, 0, size=0.8)
+    arrow(ic, 14 if sel else 20, 12, -1, 0, size=0.8, colour=ORANGE, colour_lo=ORANGE_LO)
+    x = 33 if sel else 9
+    page(ic, x, 18 if sel else 24, x + 12, (33 if sel else 39), holes=False)
+    return ic
+
+
+def paper_plane(ic, x, y, s=1.0, colour=(255, 255, 255)):
+    at = lambda u, v: (x + u * s, y + v * s)
+    ic.add(poly([at(0, 0), at(-30, 10), at(-20, 14)]), linear(at(-30, 0), at(0, 14), colour, rgb('#C8D6E8')), outline=1.4)
+    ic.add(poly([at(0, 0), at(-20, 14), at(-12, 24)]), linear(at(-20, 0), at(0, 24), rgb('#E6EDF6'), rgb('#9DB0C9')), outline=1.4)
+    ic.detail(poly([at(-20, 14), at(-17, 21), at(-12, 17)]), rgb('#8FA3BE'))
+
+
+def telegram(sel):
+    """A paper plane in a blue disc; chosen, it has flown up and on, a trail behind it."""
+    ic = Icon()
+    disc = ellipse(4, 4, 60, 60)
+    ic.add(disc, radial((22, 18), 60, rgb('#6FC0F2'), rgb('#1E6FB5')), gloss=0.3)
+    if sel:
+        for i in range(3):
+            ic.detail(inter(ellipse(12 + i * 6, 40 - i * 4, 15 + i * 6, 43 - i * 4), disc), (255, 255, 255))
+        paper_plane(ic, 50, 14, 1.05)
+    else:
+        paper_plane(ic, 45, 20, 1.05)
+    return ic
+
+
+def envelope(ic, x0, y0, x1, y1, open_=False):
+    cx = (x0 + x1) / 2
+    if open_:
+        ic.add(poly([(x0, y0), (cx, y0 - (y1 - y0) * 0.55), (x1, y0)]), linear((0, y0 - 14), (0, y0), rgb('#E6E9EE'), rgb('#AEB4BD')), outline=1.6)
+        page(ic, x0 + 5, y0 - 12, x1 - 5, y1 - 6, holes=False)
+        for i in range(3):
+            ic.detail(rect(x0 + 9, y0 - 8 + i * 4, x1 - 9 - (i % 2) * 6, y0 - 6.8 + i * 4), CONTENT)
+    ic.add(rrect(x0, y0, x1, y1, 2.2), linear((x0, y0), (x1, y1), GREY_HI, rgb('#B9BDC4')), gloss=0.15)
+    ic.detail(stroke([(x0 + 1, y1 - 1), (cx, y0 + (y1 - y0) * 0.5), (x1 - 1, y1 - 1)], 1.0), rgb('#8E949C'))
+    if not open_:
+        ic.add(poly([(x0, y0), (x1, y0), (cx, y0 + (y1 - y0) * 0.6)]), linear((0, y0), (0, y1), rgb('#F2F4F7'), rgb('#C3C8CF')), outline=1.6)
+
+
+def openmail(sel):
+    """A letter in its envelope with a stamp; chosen, the envelope is open and the letter out."""
+    ic = Icon()
+    envelope(ic, 4, 22, 60, 56, open_=sel)
+    ic.add(rect(47, 26, 56, 35), linear((47, 26), (56, 35), lighter(RED, 0.2), RED_LO), outline=1.0)
+    ic.detail(ellipse(49.5, 28.5, 53.5, 32.5), GOLD)
+    return ic
+
+
+def boing(ic, cx, cy, r, turn):
+    """The Boing ball: red and white squares on a sphere; turn moves them round."""
+    ball = ellipse(cx - r, cy - r, cx + r, cy + r)
+    ic.add(ball, (255, 255, 255), gloss=0.0)
+    cells = blank()
+    n = 8
+    for i in range(-1, n + 1):
+        for j in range(n):
+            if (i + j) % 2:
+                continue
+            # longitude bands squeezed toward the edges, as on a sphere
+            band = lambda k: math.sin(math.pi * (min(max(k / n, 0), 1) - 0.5))
+            u0, u1 = band(i + turn), band(i + 1 + turn)
+            v0, v1 = band(j), band(j + 1)
+            if u1 > u0:
+                cells = union(cells, rect(cx + u0 * r, cy + v0 * r, cx + u1 * r, cy + v1 * r))
+    ic.detail(inter(cells, ball), RED)
+    ic.detail(inter(ball, ellipse(cx - r * 0.75, cy - r * 0.8, cx - r * 0.05, cy - r * 0.25)), (255, 255, 255))
+
+
+def badge_putty(ic, sel):
+    terminal(ic, 50, 30, 78, 55, [10, 14] if sel else [10], 2 if sel else 1)
+
+
+def badge_ftp(ic, sel):
+    folder(ic, 50, 38, 66, 54)
+    folder(ic, 62, 42, 78, 56, BLUE, BLUE_LO)
+    arrow(ic, 76 if sel else 72, 34, 1, 0, size=0.55)
+
+
+def badge_mail(ic, sel):
+    envelope(ic, 50, 38, 78, 55, open_=sel)
+
+
+def badge_demos(ic, sel):
+    ic.add(ellipse(55, 53, 75, 57), solid(rgb('#5A5A5A')), outline=0)
+    boing(ic, 65, 40 if sel else 44, 10, 0.5 if sel else 0)
+
+
+def opendemos(sel):
+    """The Boing ball over its shadow; chosen, it has bounced up and spun on."""
+    ic = Icon()
+    ic.add(ellipse(14, 54, 50, 60), solid(rgb('#4A4F57')), outline=0)
+    boing(ic, 32, 22 if sel else 30, 21, 0.5 if sel else 0)
+    return ic
+
+
 ICONS = {
     "OpenFiles": openfiles, "OpenView": openview, "OpenEdit": openedit, "OpenWrite": openwrite,
     "OpenPlay": openplay, "OpenBrowser": openbrowser, "OpenCompress": opencompress,
@@ -692,9 +877,12 @@ ICONS = {
     "OpenUp-Setup": setup, "ZuneTest": zunetest, "OpenMonitor": openmonitor, "OpenMeters": openmeters,
     "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
     "Gamepads": gamepads, "KindsGallery": kindsgallery,
+    "OpenBlanker": openblanker, "OpenTata": opentata, "OpenPuTTY": openputty, "OpenFTP": openftp,
+    "Telegram": telegram, "OpenMail": openmail, "OpenDemos": opendemos,
 }
 BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write,
-          "Expansion": badge_expansion}
+          "Expansion": badge_expansion, "OpenPuTTY": badge_putty, "OpenFTP": badge_ftp, "OpenMail": badge_mail,
+          "OpenDemos": badge_demos}
 
 
 def drawer_frames(badge) -> tuple[list[Image.Image], list[Image.Image]]:

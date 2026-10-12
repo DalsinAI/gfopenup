@@ -1039,6 +1039,7 @@ def main() -> int:
     # 8 October 2026: S:, not LIBS:), replaced by each OpenUp, the old one
     # kept in SYS:Storage; the user's own ENVARC:Tata/Known and decisions are
     # never touched. The Installer leaves it unticked while Tata is 0.x.
+    tt = None
     if a.openamigatata:
         tt_src = a.openamigatata
         tb_os3 = tt_src / "build/os3"
@@ -1363,11 +1364,20 @@ def main() -> int:
             (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
             (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/OpenEdit.info", "OpenEdit"),
             (wr.dir / "Utilities/OpenWrite/OpenWrite.info", "OpenWrite"),
-            (wr.dir / "Utilities/OpenWrite.info", "drawer-OpenWrite")],
+            (wr.dir / "Utilities/OpenWrite.info", "drawer-OpenWrite"),
+            (bl.dir / "Tools/Commodities/OpenBlanker.info", "OpenBlanker"),
+            (ml.dir / "Utilities/OpenMail/OpenMail.info", "OpenMail"), (ml.dir / "Utilities/OpenMail.info", "drawer-OpenMail")]
+            + ([(tt.dir / "Prefs/OpenTata.info", "OpenTata")] if tt else [])
+            + ([(pt.dir / "Utilities/OpenPuTTY/OpenPuTTY.info", "OpenPuTTY"), (pt.dir / "Utilities/OpenPuTTY.info", "drawer-OpenPuTTY")] if pt else [])
+            + ([(ftp.dir / "Utilities/OpenFTP/OpenFTP.info", "OpenFTP"), (ftp.dir / "Utilities/OpenFTP.info", "drawer-OpenFTP")] if ftp else [])
+            + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else [])
+            + ([(dm.dir / "Utilities/OpenDemos.info", "drawer-OpenDemos")] if dm else []),
             drawers={a.out / "OpenUp.info": [top / "Install-OpenUp.info", top / "Uninstall-OpenUp.info"],
                      core.dir / "Utilities/OpenUp.info": [core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info"],
                      pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info")),
-                     wr.dir / "Utilities/OpenWrite.info": [wr.dir / "Utilities/OpenWrite/OpenWrite.info"]},
+                     wr.dir / "Utilities/OpenWrite.info": [wr.dir / "Utilities/OpenWrite/OpenWrite.info"],
+                     **{p.dir / f"Utilities/{n}.info": sorted((p.dir / f"Utilities/{n}").glob("*.info"))
+                        for p, n in ((ml, "OpenMail"), (pt, "OpenPuTTY"), (ftp, "OpenFTP"), (dm, "OpenDemos")) if p}},
             gorilla_drawer=gorilla_drawer)
     except Exception as e:                  # an amigachrome checkout without amiga_icon (before #153): the icons above stay
         print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
