@@ -34,7 +34,7 @@
 ; 1073741824 Tata (the last bit of this word).
 ; The second word, #parts2 (OpenUp 0.7.0): 1 OpenFTP, 2 Unofficial Telegram, 4 OpenGPU developer files,
 ; 8 OpenInput, 16 OpenTLS.
-; None of them is ticked by default, on any machine.
+; None of them is ticked by default on a new install; an upgrade ticks those already there (below).
 ; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos, OpenPuTTY
 ; and Tata (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D
 ; (295632378). Tata stays unticked while it is 0.x (the user, 8 October 2026), and is ticked from 1.0.
@@ -44,6 +44,24 @@
 ; group is bits 0-8, 9-17, 18-26 and 27-30 of #parts, so the bits above keep their meaning;
 ; the fifth is #parts2.
 (set #default (if #ac 396295679 295632378))
+; An upgrade brings the parts already on this Amiga up to date, also those a new install leaves
+; unticked (Tata, OpenMUI or OpenFTP picked before): each is ticked when its main file is there. A
+; Novice user never sees the questions, so before 0.7.5 an upgrade left those parts at their old
+; versions. Not OpenRTG: its part writes Workbench's screen mode again (ENVARC: and ENV:), which would
+; undo a mode chosen since and asks Intuition to reset the Workbench screen while the Installer's
+; window is open; it stays a choice (Intermediate or Expert), as before.
+(if (exists "LIBS:zunemaster.library") (set #default (bitor #default 65536)))
+(if (exists "SYS:Utilities/OpenMail/OpenMail") (set #default (bitor #default 2097152)))
+(if (exists "SYS:Utilities/OpenBrowser/OpenBrowser") (set #default (bitor #default 4194304)))
+(if (exists "SYS:Utilities/OpenDemos/OpenDemos") (set #default (bitor #default 134217728)))
+(if (exists "SYS:Utilities/OpenPuTTY/OpenPuTTY") (set #default (bitor #default 536870912)))
+(if (exists "SYS:C/Tata") (set #default (bitor #default 1073741824)))
+(set #default2 0)
+(if (exists "SYS:Utilities/OpenFTP/OpenFTP") (set #default2 (bitor #default2 1)))
+(if (exists "SYS:Utilities/UnofficialTelegram") (set #default2 (bitor #default2 2)))
+(if (exists "SYS:Developer/OpenGPU-SDK") (set #default2 (bitor #default2 4)))
+(if (exists "LIBS:openinput.library") (set #default2 (bitor #default2 8)))
+(if (exists "LIBS:opentls.library") (set #default2 (bitor #default2 16)))
 (set #g1
     (askoptions
         (prompt "Which parts should OpenUp install? (1 of 5)")
@@ -127,7 +145,7 @@
         (prompt "Which parts should OpenUp install? (3 of 5)")
         (help "Sound: one place for the volume, Amiga sound (Paula) and AHI sound, with Test "
               "buttons, and a speaker on the menu bar: click for the levels, the wheel turns it "
-              "up and down (new). The old Sound editor moves to SYS:Prefs/Classic.\n\n"
+              "up and down (new), in SYS:Prefs/OpenSound. The OS's own Sound editor stays where it is.\n\n"
               "OpenEdit: a text editor with tabs, find and replace, and colours for scripts, "
               "C and guides (new). OpenEdit in a Shell, or OpenEdit file WAIT for programs "
               "that wait for their editor.\n\n"
@@ -220,7 +238,7 @@
                  "OpenGPU developer files (new)"
                  "OpenInput: game controllers (new)"
                  "OpenTLS: secure connections (new)")
-        (default 0)))
+        (default #default2)))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
 ; OpenFTP's FTPS needs OpenTLS, and OpenTLS does its sums with OpenCrypto
@@ -242,11 +260,12 @@
                       "Graphite: graphite and steel, in the AmiKit style.\n"
                       "Ember: flat warm greys with orange, in the Ubuntu style.\n"
                       "Clear: flat, light and rounded, in the Windows 11 style.\n"
+                      "Sky: Open's colours with graduated blue frames and bevelled title bar gadgets.\n"
                       "Classic: the OS's own look, drawn as it always was.\n\n"
                       "You can change it later with OpenLook THEME <name> SAVE.")
-                (choices "Open" "Glass" "Graphite" "Ember" "Clear" "Classic")
+                (choices "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")
                 (default 0))
-            "Open" "Glass" "Graphite" "Ember" "Clear" "Classic")))
+            "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")))
 ; with a look, the windows of the look approved on 8 October 2026: no zoom
 ; gadget, scroll bars only when needed, and no size gadget when OpenWindows is
 ; picked too (it resizes from the edges; without it the size gadget stays).
@@ -445,7 +464,8 @@
         (set #first (not (exists "ENVARC:OpenDock/Dock")))
         (if (> (run (cat #tool " INSTALL Parts/OpenDock >>T:OpenUp.log")) 5)
             (message "OpenDock didn't install completely. T:OpenUp.log says why; nothing else changed.")
-            (if #first (run "SYS:Prefs/Dock SAVE >>T:OpenUp.log")))))
+            ; the editor is SYS:Prefs/OpenDock since 0.7.4 (every editor of ours is Open...)
+            (if #first (run "SYS:Prefs/OpenDock SAVE >>T:OpenUp.log")))))
 
 (if (bitand #parts 4096)
     (
@@ -500,10 +520,9 @@
 (if (bitand #parts 262144)
     (
         (working "Installing Sound")
-        (if (and (exists "SYS:Prefs/Sound") (not (exists "SYS:Prefs/Classic/Sound")))
-            (
-                (makedir "SYS:Prefs/Classic" (infos))
-                (copyfiles (source "SYS:Prefs/Sound") (dest "SYS:Prefs/Classic") (infos) (nogauge))))
+        ; Since 0.7.4 the Sound part is SYS:Prefs/OpenSound and leaves the OS's SYS:Prefs/Sound alone, so
+        ; nothing is copied to SYS:Prefs/Classic any more: that copy was in no list, and Uninstall-OpenUp
+        ; left it behind. (OpenUpTool RECONCILE moves the OS's editor there, listed, when it is asked to.)
         (if (> (run (cat #tool " INSTALL Parts/Sound >>T:OpenUp.log")) 5)
             (message "Sound didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
@@ -609,8 +628,8 @@
 
 ; OpenFiles and OpenView on the dock, also a dock someone already has; the
 ; rest of it is left alone, and a button already there isn't added twice.
-(if (exists "SYS:Prefs/Dock")
-    (run "SYS:Prefs/Dock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView SAVE >>T:OpenUp.log"))
+(if (exists "SYS:Prefs/OpenDock")
+    (run "SYS:Prefs/OpenDock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView SAVE >>T:OpenUp.log"))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)

@@ -50,7 +50,9 @@
  * - Startup lines go in one marked block in S:User-Startup:
  *   ";BEGIN OpenUp" to ";END OpenUp". A line listed in
  *   ENVARC:OpenAmiga/Startup.off (OpenUp Setup's switches) is written with
- *   ";OFF " in front, so AmigaDOS skips it.
+ *   ";OFF " in front, so AmigaDOS skips it, and a line whose program isn't on
+ *   the disk with ";MISSING " (STARTUP writes it back in once it is there).
+ *   A part's lines are the ones its Part file has now (0.7.5).
  * - Errors say what to do next, in plain words.
  *
  * A part's drawer holds its files, laid out as they go, and a Part file:
@@ -101,7 +103,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.3 (12.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.4 (12.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -198,8 +200,11 @@ static int write_file(const char *path, const char *data, LONG len)
 /* One line each: kind, then up to three tab-separated fields. Kinds:
  *   part <name> <version>   new <dest>   replaced <dest> <backup>
  *   same <dest>   dir <path>   bdir <path>   startup <part> <line>
- *   newfile <path> (a file OpenUp made, such as S:User-Startup) */
-#define MAXE 1024
+ *   newfile <path> (a file OpenUp made, such as S:User-Startup)
+ * 1024 entries was too few (0.7.3 and earlier): every part ticked comes to about 1,150 lines in 0.7.5,
+ * an upgrade keeps the lines of files earlier versions put in, and a lab copy of an instance upgraded
+ * from 0.7.3 to 0.7.4 filled the table, so new files and a part's new startup line went unlisted. */
+#define MAXE 4096
 /* a and b are whole paths, each in an allocation of its own length (libnix
  * gives them all back at exit): a path is never cut short in the manifest,
  * where a cut path would send UNINSTALL to the wrong file, and the table
@@ -248,6 +253,9 @@ static void manifest_load(void)
         }
         nents++;
     }
+    while (*p == '\n') p++;
+    if (*p && nents >= MAXE)
+        manifest_short = 1;                 /* more lines than the table holds: saving would lose them */
     FreeVec(text);
 }
 
@@ -295,9 +303,12 @@ static entry *find_entry(const char *kind, const char *a)
 
 static entry *add_entry(const char *kind, const char *a, const char *b)
 {
+    static int said_full;
     entry *e;
-    if (nents >= MAXE)
+    if (nents >= MAXE) {
+        if (!said_full++) say("OpenUp: its list of installed files (" MANIFEST ") is full.", NULL, NULL);
         return NULL;
+    }
     e = &ents[nents];
     if (!set_text(&e->a, a) || !set_text(&e->b, b ? b : ""))
         return NULL;
@@ -616,6 +627,26 @@ static int face_icon(const char *from, const char *dest)
     return 1;
 }
 
+/* A part's startup lines are the ones its Part file has now. Installing it marks the lines it had before
+ * ("ostartup"); each line it still has goes back in its place, and the rest are taken out. Before 0.7.5 a
+ * line a newer part changed stayed too: "SYS:Prefs/Sound USE" beside 0.7.4's "SYS:Prefs/OpenSound USE",
+ * and a boot that stopped where the old editor was no longer there (a lab copy of Instance-32). */
+static void mark_startup(const char *part)
+{
+    int i;
+    for (i = 0; i < nents; i++)
+        if (!strcmp(ents[i].kind, "startup") && !strcmp(ents[i].b, part))
+            strcpy(ents[i].kind, "ostartup");
+}
+
+static void drop_marked_startup(void)
+{
+    int i;
+    for (i = 0; i < nents; i++)
+        if (!strcmp(ents[i].kind, "ostartup"))
+            ents[i].kind[0] = 0;                    /* taken out: manifest_save leaves it out */
+}
+
 static int install(const char *drawer)
 {
     char path[220], from[260], *text, *p, *line, partname[64] = "", partver[32] = "";
@@ -641,8 +672,12 @@ static int install(const char *drawer)
             while (*p && *p != '\n') p++;
             if (*p) *p++ = 0;
             if (!strncmp(line, "startup ", 8)) {
-                if (pass == 1 && !find_entry("startup", line + 8))
-                    add_entry("startup", line + 8, partname);
+                if (pass == 1) {
+                    entry *old = find_entry("ostartup", line + 8);
+                    if (old && !strcmp(old->b, partname)) strcpy(old->kind, "startup");   /* kept, in its place */
+                    else if (!find_entry("startup", line + 8))
+                        add_entry("startup", line + 8, partname);
+                }
                 continue;
             }
             n = words(line, w, 12);
@@ -655,6 +690,7 @@ static int install(const char *drawer)
             if (!strcmp(w[0], "part") && n >= 3) {
                 strncpy(partname, w[1], sizeof partname - 1);
                 strncpy(partver, w[2], sizeof partver - 1);
+                if (pass == 1) mark_startup(partname);
             } else if (pass == 0 && !strcmp(w[0], "needs") && n >= 2) {
                 if (!strcmp(w[1], "AmigaChrome") && !is_amigachrome()) {
                     say("OpenUp: ", partname, " is for AmigaChrome instances; left out here.");
@@ -695,6 +731,7 @@ static int install(const char *drawer)
         FreeVec(copy);
     }
     FreeVec(text);
+    drop_marked_startup();
     if (refused)
         return RETURN_WARN;
     {
@@ -823,6 +860,25 @@ static int unplace(const char *prog)
     return rc;
 }
 
+/* 1 when a startup line runs a program named by its path ("SYS:Prefs/OpenSound USE", "Run >NIL: C:OpenDock")
+ * and that program isn't on the disk. A command found on the path (Assign ...) isn't checked. Such a line,
+ * written as it is, stops S:User-Startup and the boot with "Unknown command": a part not ticked in an upgrade
+ * keeps its old line (0.7.3's "SYS:Prefs/Gamepads USE"), and a program can be moved by hand. */
+static int program_missing(const char *line)
+{
+    char buf[ENTRY_PATH], *w[4];
+    int n, k = 0;
+    strlcpy(buf, line, sizeof buf);
+    n = words(buf, w, 4);
+    if (n && same_word(w[0], "Run")) {
+        k = 1;
+        while (k < n && w[k][0] == '>') k++;        /* Run's own redirections: >NIL: */
+    }
+    if (k >= n || !strchr(w[k], ':'))
+        return 0;
+    return !exists(w[k]);
+}
+
 static int write_startup(int remove_only)
 {
     char *text, *rest, *buf;
@@ -858,6 +914,10 @@ static int write_startup(int remove_only)
             for (i = 0; i < nents; i++)
                 if (!strcmp(ents[i].kind, "startup") && strlen(buf) + strlen(ents[i].a) + 32 < (ULONG)(64 + MAXE * 2 + 8192)) {
                     if (off && switched_off(off, ents[i].a)) strcat(buf, ";OFF ");     /* switched off in OpenUp Setup */
+                    else if (program_missing(ents[i].a)) {                           /* back in when the program is */
+                        say("OpenUp: left out of S:User-Startup, as its program isn't there: ", ents[i].a, NULL);
+                        strcat(buf, ";MISSING ");
+                    }
                     strcat(buf, ents[i].a);
                     strcat(buf, "\n");
                 }
@@ -2299,7 +2359,7 @@ static int update(const char *how)
         LONG rc;
         strcpy(cmd, "CD " CRADLE_DRAWER "\n");
         strcat(cmd, inst);
-        strcat(cmd, " Install-OpenUp APPNAME OpenUp\n");
+        strcat(cmd, " Install-OpenUp APPNAME OpenUp NOLOG\n");       /* no install_log_file left in SYS: */
         if (!write_file("T:OpenUp-update", cmd, strlen(cmd))) {
             say("OpenUp: can't write T:OpenUp-update. Is T: full?", NULL, NULL);
             return RETURN_ERROR;
