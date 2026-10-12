@@ -28,7 +28,38 @@
         (if (exists "SYS:C/OpenUpMenu")
             (run "SYS:C/OpenUpMenu >NIL: QUIT"))
         (set #rc (run (cat #tool " UNINSTALL >>T:OpenUp-uninstall.log")))
+        ; OpenUp 0.6.12 to 0.7.4's Installer copied the OS's Sound editor into SYS:Prefs/Classic and
+        ; listed the copy nowhere, so it stayed behind. With the OS's own back in SYS:Prefs, a copy of
+        ; the same size goes too, and the drawer with it once it is empty. So does OpenPrefs' own old
+        ; Sound editor (0.6's, "Sound 0.1 ... OpenPrefs, Dalsin Limited"), which an Amiga upgraded
+        ; through 0.6 can have there instead (a lab copy of Instance-32, 12 October 2026).
+        (set #oldsound 0)
+        (if (= (exists "SYS:Prefs/Classic/Sound") 1)
+            (
+                (if (= (exists "SYS:Prefs/Sound") 1)
+                    (if (= (getsize "SYS:Prefs/Classic/Sound") (getsize "SYS:Prefs/Sound")) (set #oldsound 1)))
+                (if (= (run "C:Search >NIL: SYS:Prefs/Classic/Sound \"OpenPrefs, Dalsin\" QUIET") 0)
+                    (set #oldsound 1))))
+        (if #oldsound
+            (
+                (delete "SYS:Prefs/Classic/Sound" (optional "force" "nofail"))
+                (if (exists "SYS:Prefs/Classic/Sound.info")
+                    (delete "SYS:Prefs/Classic/Sound.info" (optional "force" "nofail")))
+                (delete "SYS:Prefs/Classic" (optional "nofail"))
+                (if (and (not (exists "SYS:Prefs/Classic")) (exists "SYS:Prefs/Classic.info"))
+                    (delete "SYS:Prefs/Classic.info" (optional "force" "nofail")))))
+        ; The dock's buttons, ENVARC:OpenDock/Dock: the Installer writes them (OpenDock SAVE on a first
+        ; install, OpenDock ADD on every one), and nothing listed them, so they stayed behind. Once
+        ; OpenDock itself is gone they go too; anything else in the drawer stays, and the drawer with it.
+        ; Not where OpenBench is: its own dock reads the same file.
+        (if (and (not (exists "SYS:C/OpenDock")) (not (exists "SYS:System/OpenBench")))
+            (
+                (if (exists "ENVARC:OpenDock/Dock") (delete "ENVARC:OpenDock/Dock" (optional "force" "nofail")))
+                (if (exists "ENV:OpenDock/Dock") (delete "ENV:OpenDock/Dock" (optional "force" "nofail")))
+                (if (exists "ENVARC:OpenDock") (delete "ENVARC:OpenDock" (optional "nofail")))
+                (if (exists "ENV:OpenDock") (delete "ENV:OpenDock" (optional "nofail")))))
         (if (> #rc 5)
             (message "Some files couldn't be put back. T:OpenUp-uninstall.log "
                      "says which, and what to do."))
-        (exit "OpenUp is out. Reboot the Amiga to finish.")))
+        ; (quiet): no stock "Installation complete ... can be found in your Work: drawer" box after ours
+        (exit "OpenUp is out. Reboot the Amiga to finish." (quiet))))

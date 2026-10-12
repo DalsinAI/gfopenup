@@ -97,7 +97,7 @@ a Part file that C/OpenUpTool reads:
   OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
   OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
-                        the main CPU without one, and OMCTest (openamigamulticore)
+                        the main CPU without one, OMCTest and OMCBench (openamigamulticore)
   OpenMail/             OpenMail, the mail reader, and C:OpenMailCheck; needs AmiSSL 5 (openamigamail)
   OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
                         OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser)
@@ -677,8 +677,12 @@ def main() -> int:
     for script in ("Install-OpenUp", "Uninstall-OpenUp"):
         text = (ROOT / "pack" / script).read_text(encoding="latin-1").replace("@VERSION@", a.version).replace("@DATE@", date)
         put(script, text.encode("latin-1"))
+        # NOLOG: the Installer's own install_log_file (and its icon) went in SYS: or Work: on every run, in no
+        # list, so it stayed after Uninstall-OpenUp; what OpenUp does is in T:OpenUp.log and the manifest.
+        # The Installer (47.19) lists NOLOG as a tooltype too, but in the labs a start from this icon still
+        # wrote the log; NOLOG on the command line (OpenUpTool UPDATE) does stop it
         put(script + ".info", icons.icon(icons.WBPROJECT, "install", "Installer",
-                                          [f"APPNAME=OpenUp", "MINUSER=NOVICE", "DEFUSER=NOVICE"]))
+                                          [f"APPNAME=OpenUp", "MINUSER=NOVICE", "DEFUSER=NOVICE", "NOLOG"]))
     put("C/OpenUpTool", tool)
     readme = (ROOT / "openup.readme").read_bytes()
     put("OpenUp.readme", readme)
@@ -751,7 +755,7 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.8.4", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
+    look = Part(top, "OpenLook", "0.8.6", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
@@ -792,7 +796,7 @@ def main() -> int:
         gi.write()
 
     # OpenTypes: which program opens each kind of file (openamigaprefs)
-    ty = Part(top, "OpenTypes", "0.2.2", "OpenTypes: which program opens each kind of file")
+    ty = Part(top, "OpenTypes", "0.2.3", "OpenTypes: which program opens each kind of file")
     ty.add("Prefs/OpenTypes", (a.openamigaprefs / "OpenTypes/build/os3/OpenTypes").read_bytes(), "SYS:Prefs/OpenTypes")
     ty.add("Prefs/OpenTypes.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenTypes.info")
     ty.write()
@@ -896,7 +900,7 @@ def main() -> int:
     # files, and whichever installs last leaves the same bytes.
     rtg = a.openamigartg / "build"
     acrtg_gpu = (a.guest / "build/guest/os32/ACRTG.gpu").read_bytes()
-    rt = Part(top, "OpenRTG", "0.14.3", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
+    rt = Part(top, "OpenRTG", "0.16.0", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
     rt.line("needs AmigaChrome")
     rt.line("needs ACRTG")
     rt.line('retire "DEVS:Monitors/acrtg"')
@@ -1039,6 +1043,7 @@ def main() -> int:
     # 8 October 2026: S:, not LIBS:), replaced by each OpenUp, the old one
     # kept in SYS:Storage; the user's own ENVARC:Tata/Known and decisions are
     # never touched. The Installer leaves it unticked while Tata is 0.x.
+    tt = None
     if a.openamigatata:
         tt_src = a.openamigatata
         tb_os3 = tt_src / "build/os3"
@@ -1153,14 +1158,14 @@ def main() -> int:
 
     # OpenPlay: the media player for every datatype (openamigamediaplayer).
     # Files can be shift-clicked with it or dropped on its window.
-    op = Part(top, "OpenPlay", "0.1.3", "OpenPlay: plays everything the datatypes open, with a playlist")
+    op = Part(top, "OpenPlay", "0.1.6", "OpenPlay: plays everything the datatypes open, with a playlist")
     op.add("Utilities/OpenPlay", (a.openamigamediaplayer / "build/os3/OpenPlay").read_bytes(), "SYS:Utilities/OpenPlay")
     op.add("Utilities/OpenPlay.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenPlay.info")
     op.write()
 
     # OpenTitle: the title bar's logo, free memory, clock and settings cog, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.6.12", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
+    tb = Part(top, "OpenTitle", "0.6.13", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
     tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
     tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
     tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
@@ -1255,13 +1260,19 @@ def main() -> int:
     # OpenMulticore: openmulticore.library runs a 68k job on another core of a
     # cores board (openservice.device's cpu.m68k/1), or on the main CPU when
     # there is none, so programs that offload (openmodule.datatype) work on
-    # every machine; OMCTest checks it.
+    # every machine; OMCTest checks it, and OMCBench (0.3, a Shell command:
+    # OMCBench [JOBS n] [ITEMS n] [WORK n] [STRICT]) measures what is worth
+    # sending to the board.
     mcb = a.openamigamulticore / "build"
     mcv = binary_version((mcb / "openmulticore.library").read_bytes(), "openmulticore.library") or "0.2"
-    mc = Part(top, "OpenMulticore", mcv, "OpenMulticore: openmulticore.library, jobs on the cores board's other cores, and OMCTest")
+    with_bench = (mcb / "OMCBench").is_file()
+    mc = Part(top, "OpenMulticore", mcv, "OpenMulticore: openmulticore.library, jobs on the cores board's other cores, and OMCTest"
+              + (" and OMCBench" if with_bench else ""))
     mc.add("Libs/openmulticore.library", (mcb / "openmulticore.library").read_bytes(), "LIBS:openmulticore.library")
     mc.add("Tools/OMCTest", (mcb / "OMCTest").read_bytes(), "SYS:Tools/OMCTest")
     mc.add("Tools/OMCTest.info", icons.icon(icons.WBTOOL, "install", stack=16384), "SYS:Tools/OMCTest.info")
+    if with_bench:                          # no icon: it prints its tables in the Shell it runs from
+        mc.add("Tools/OMCBench", (mcb / "OMCBench").read_bytes(), "SYS:Tools/OMCBench")
     mc.write()
 
     # OpenMail: the mail reader (openamigamail), in a drawer with its providers
@@ -1363,7 +1374,10 @@ def main() -> int:
             (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
             (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/OpenEdit.info", "OpenEdit"),
             (wr.dir / "Utilities/OpenWrite/OpenWrite.info", "OpenWrite"),
-            (wr.dir / "Utilities/OpenWrite.info", "drawer-OpenWrite")],
+            (wr.dir / "Utilities/OpenWrite.info", "drawer-OpenWrite")]
+            # the icon library's OpenTata and Telegram (#104), when those parts are in the pack
+            + ([(tt.dir / "Prefs/OpenTata.info", "OpenTata")] if tt else [])
+            + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else []),
             drawers={a.out / "OpenUp.info": [top / "Install-OpenUp.info", top / "Uninstall-OpenUp.info"],
                      core.dir / "Utilities/OpenUp.info": [core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info"],
                      pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info")),
