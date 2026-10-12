@@ -9,7 +9,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
-        [--no-build] [--lha]
+        [--openamigasocket DIR] [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
 the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
@@ -25,8 +25,10 @@ a Part file that C/OpenUpTool reads:
   OpenUp/               OpenUpTool and the uninstaller, OpenUpMenu: the
                         Tools menu's OpenUp and Preferences sub-menus, and
                         OpenMonitor in SYS:Utilities (tasks, CPU, cores, memory, GPU)
-  OpenSocket/           bsdsocket.library 4.2 and its tools (amigachrome's
-                        vendored payload, vendor/opensocket-os32)
+  OpenSocket/           bsdsocket.library 4.2 and its tools, built from openamigasocket
+                        (--openamigasocket) and laid out by the manifest of amigachrome's
+                        vendored payload (vendor/opensocket-os32); without the checkout,
+                        that vendored payload as it is
   OpenPrint/            OpenPrint and OpenView (openamigaprint's package)
   AmigaChromeSharing/   accontrol.device, ACClip and ACDrop (amigachrome-guest)
   OpenLook/             the look and its themes (opengadtools), and its editor,
@@ -38,15 +40,15 @@ a Part file that C/OpenUpTool reads:
   OpenCompress/         OpenCompress, its window and command (openamigacompress)
   OpenService/          openservice.device and Nursery: services from boards and
                         paired Cradles (openamigaservice)
-  OpenImage/            datatypes: WebP, WebM and music modules (MOD, MED, XM...) on
-                        the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
+  OpenImage/            datatypes: PNG, Targa (TGA), WebP, WebM and music modules (MOD,
+                        MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through OpenService (openamigaimage)
   OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
   OpenWindows/          snapping, Amiga+Tab, double-click to front, the wheel under the
                         pointer and window places, with its editor, OpenPrefs Windows (openamigaprefs)
   OpenDock/             a dock, which takes over ToolManager's, AmiDock's or AmiStart's
                         buttons, and its editor, OpenPrefs Dock (openamigaprefs)
-  OpenMenus/            OpenMenus, our own menus (pull-down or pop-up), and their editor,
+  OpenMenus/            OpenMenus, the Team's own menus (pull-down or pop-up), and their editor,
                         OpenPrefs Menus (openamigaprefs)
   OpenUpSetup/          OpenUp Setup: the first-start wizard and the startup switches
                         (openamigaprefs)
@@ -383,6 +385,14 @@ def build_parts(a):
     # ahi.device, OpenAHI's own (MIT; amigachrome #388): the other half of AHI on the ACAHI board
     run(["sh", a.amigachrome / "vendor/amigachrome-guest/devices/ahi.device/build.sh", ROOT / "build/ahidevice"],
         env=dict(env, STOVE=str(STOVE)))
+    # OpenSocket from its own repository's main, with its own scripts and the os32 stove (as the vendored
+    # payload's manifest says it was built), httpget with the AmiSSL SDK's headers. OpenUp 0.7.5 took the
+    # vendored payload, last refreshed on 4 October, so it shipped OpenSocketControl 1.0 after 1.0.1 and
+    # 1.0.2 (the addresses' byte order) were merged in openamigasocket.
+    if a.openamigasocket:
+        so_out = ROOT / "build/opensocket"
+        run(["sh", a.openamigasocket / "guest/network/acnet/build.sh", so_out], env=dict(env, STOVE=str(STOVE)))
+        run(["sh", a.openamigasocket / "tools/actcptools/build.sh", so_out], env=dict(env, STOVE=str(STOVE), AMISSL=str(a.amissl)))
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
@@ -551,9 +561,12 @@ PART_MAIN = {
 }
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read. OpenPrint 0.4 is OpenPrint (0.3) with
-# OpenView 0.5 and the copy at SYS:Utilities/MultiView; OpenMUI 0.2 is
-# zunemaster.library (0.1) with the muimaster.library face (19.1). Sound 0.2 is OpenPrefs Sound and
-# OpenSpeaker (0.1) with OpenAHI's ahi.device, acaudio.audio and modes (AmigaChrome machines only).
+# OpenView 0.5 and the copy at SYS:Utilities/MultiView; OpenMUI 0.2.1 is
+# zunemaster.library (0.1, with the datatypes cache's Stricmp fix of 12 October 2026) with the
+# muimaster.library face (19.1). Sound 0.2.1 is OpenPrefs Sound and OpenSpeaker (0.1.4) with OpenAHI's
+# ahi.device (6.1.1), acaudio.audio and modes (AmigaChrome machines only). OpenImage 0.4 adds
+# opentga.datatype (47.1). A part's own version goes up when what it ships changes, so OpenUpTool UPDATE
+# and the Installer's log name the change.
 PART_OWN_VERSION = {"AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev",
                     "OpenPrint", "OpenMUI", "Sound"}
 
@@ -650,6 +663,9 @@ def main() -> int:
                     help="openamigatelegram, for the Telegram part (left out without it)")
     ap.add_argument("--openamigainput", type=Path, default=first(DEV / "openamigainput", DEV.parent / "openamigainput"),
                     help="openamigainput, for the OpenInput part (left out without it)")
+    ap.add_argument("--openamigasocket", type=Path, default=first(DEV / "openamigasocket", DEV.parent / "openamigasocket"),
+                    help="openamigasocket, for the OpenSocket part's files, built here (without it, amigachrome's "
+                         "vendored payload, which can be older than openamigasocket's main)")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the OpenGPU developer kit is made (or, with --no-build, read): the OpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -713,16 +729,26 @@ def main() -> int:
     core.add("Utilities/OpenMonitor.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenMonitor.info")
     core.write()
 
-    # OpenSocket: amigachrome's vendored payload, by its manifest
+    # OpenSocket: the files and places amigachrome's vendored payload's manifest lists (the same list Cradle's own
+    # installer uses), each from this build of openamigasocket (build_parts) when there is one, else the vendored
+    # file. The version check reads only bsdsocket.library, so a stale OpenSocketControl in the vendored payload
+    # went into 0.7.5 unseen; the line below says where the part's files came from.
     payload = a.amigachrome / "vendor/opensocket-os32"
     m = json.loads((payload / "manifest.json").read_text())
+    so_out = ROOT / "build/opensocket" if a.openamigasocket else None
     sock = Part(top, "OpenSocket", "4.2", "bsdsocket.library 4.2 through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
     sock.line("needs AmigaChrome")
     sock.line('keep "SYS:Libs/bsdsocket.library" ' + " ".join(f'"{x}"' for x in OPENSOCKET_MARKERS))
     for f in m["files"]:
         if f.get("installPath"):
-            sock.add(f["path"], (payload / f["path"]).read_bytes(), "SYS:" + f["installPath"])
+            src = so_out / Path(f["path"]).name if so_out else payload / f["path"]
+            if not src.is_file():
+                raise SystemExit(f"OpenSocket: {f['path']} wasn't built ({src})")
+            sock.add(f["path"], src.read_bytes(), "SYS:" + f["installPath"])
     sock.write()
+    osc = (sock.dir / "Tools/Commodities/OpenSocketControl").read_bytes()
+    print(f"  OpenSocket: {'built from ' + str(a.openamigasocket) if so_out else 'the vendored payload (openamigasocket ' + m.get('source', {}).get('commit', '?') + ')'}; "
+          f"OpenSocketControl {binary_version(osc, 'OpenSocketControl') or '(no version)'}")
 
     # OpenPrint and OpenView: openamigaprint's own package, laid out as its Installer does
     pkg = a.openamigaprint / "build/package/OpenPrint"
@@ -759,7 +785,7 @@ def main() -> int:
 
     # OpenLook and its themes
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.8.6", "OpenLook: the OpenGadTools look for every GadTools program, frames and title bars too (through OpenGfx), and its editor")
+    look = Part(top, "OpenLook", "0.9.0", "OpenLook: the OpenGadTools look for every GadTools and ReAction program, frames and title bars too (through OpenGfx), and its editor")
     look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
     for t in sorted((o / "themes").glob("*.theme")):
         look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
@@ -819,7 +845,7 @@ def main() -> int:
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
     sv.write()
 
-    # OpenImage: datatypes (openamigaimage). WebP, WebM and music modules
+    # OpenImage: datatypes (openamigaimage). PNG, Targa (opentga.datatype), WebP, WebM and music modules
     # (openmodule.datatype: MOD, MED, Oktalyzer, DigiBooster, XM, S3M, IT,
     # played by libxmp on the Amiga itself) decode on the 68k; the rest ask
     # media.decode/1 or doc.render/1 through OpenService. Every class and
@@ -829,7 +855,7 @@ def main() -> int:
     # newer pack updates them), and a machine without a Cradle keeps what it
     # had. Their own classes have names nobody else uses.
     dt = a.openamigaimage / "Datatypes/out"
-    img = Part(top, "OpenImage", "0.3", "OpenImage: datatypes for today's pictures, sounds, music modules, documents and video")
+    img = Part(top, "OpenImage", "0.4", "OpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
     for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
         img.add(f"Classes/DataTypes/{c.name}", c.read_bytes(), f"SYS:Classes/DataTypes/{c.name}",
                 own=c.name in ("webp.datatype", "webm.datatype"))
@@ -862,7 +888,7 @@ def main() -> int:
     # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
     # Installer runs "SYS:Prefs/OpenDock SAVE" once, on a first install, so the
     # dock starts with the buttons of a dock already there.
-    dock = Part(top, "OpenDock", "0.6.3", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "OpenDock", "0.6.5", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     # 10 October 2026: every editor of ours in SYS:Prefs is Open... (the user: "either all are Open x or none are")
     dock.add("Prefs/OpenDock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/OpenDock")
@@ -878,7 +904,7 @@ def main() -> int:
 
     # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "OpenMenus", "0.4.3", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
+    menus = Part(top, "OpenMenus", "0.4.4", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
     menus.add("Prefs/Menus", (a.openamigaprefs / "Menus/build/os3/Menus").read_bytes(), "SYS:Prefs/Menus")
     menus.add("Prefs/Menus.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Menus.info")
@@ -887,7 +913,7 @@ def main() -> int:
 
     # OpenUp Setup: the first-start wizard (openamigaprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:OpenAmiga/Setup.done.
-    setup = Part(top, "OpenUpSetup", "0.1.2", "OpenUp Setup: the first-start wizard, with the startup switches")
+    setup = Part(top, "OpenUpSetup", "0.1.3", "OpenUp Setup: the first-start wizard, with the startup switches")
     setup.add("Prefs/OpenUp-Setup", (a.openamigaprefs / "Setup/build/os3/OpenUp-Setup").read_bytes(), "SYS:Prefs/OpenUp-Setup")
     setup.add("Prefs/OpenUp-Setup.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenUp-Setup.info")
     setup.add("WBStartup/OpenUp-Setup", b"", "SYS:WBStartup/OpenUp-Setup")
@@ -904,6 +930,14 @@ def main() -> int:
     # files, and whichever installs last leaves the same bytes.
     rtg = a.openamigartg / "build"
     acrtg_gpu = (a.guest / "build/guest/os32/ACRTG.gpu").read_bytes()
+    # amigachrome-guest keeps an ACRTG.gpu in git, and on 12 October 2026 that one was 1.1 (8.10.2026) while the
+    # source said 1.2.1: build_parts builds over it, but a --no-build pack from a fresh checkout would take the old
+    # driver. Its version must be the source's.
+    want = re.search(r"\$VER: ACRTG\.gpu ([0-9][0-9.]*) ",
+                     (a.guest / "libraries/acrtg.gpu/acrtg_gpu.c").read_text(encoding="latin-1", errors="replace"))
+    if want and binary_version(acrtg_gpu, "ACRTG.gpu") != want.group(1):
+        raise SystemExit(f"ACRTG.gpu: build/guest/os32/ACRTG.gpu says {binary_version(acrtg_gpu, 'ACRTG.gpu')}, "
+                         f"its source {want.group(1)}: build it (libraries/acrtg.gpu/build.sh) first")
     rt = Part(top, "OpenRTG", "0.16.0", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
     rt.line("needs AmigaChrome")
     rt.line("needs ACRTG")
@@ -1157,7 +1191,7 @@ def main() -> int:
 
     # OpenFiles: the file manager (openamigafilemanager). Double-click opens
     # files with their icon's program, else OpenView (the OpenPrint part).
-    of = Part(top, "OpenFiles", "0.2.4", "OpenFiles: two panes with tabs, safe copies, a trashcan and undo")
+    of = Part(top, "OpenFiles", "0.3", "OpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
     of.add("Utilities/OpenFiles", (a.openamigafilemanager / "build/os3/OpenFiles").read_bytes(), "SYS:Utilities/OpenFiles")
     of.add("Utilities/OpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenFiles.info")
     of.write()
@@ -1171,7 +1205,7 @@ def main() -> int:
 
     # OpenTitle: the title bar's logo, free memory, clock and settings cog, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.6.13", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
+    tb = Part(top, "OpenTitle", "0.6.14", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
     tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
     tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
     tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
@@ -1182,7 +1216,7 @@ def main() -> int:
     # in SYS:Prefs/OpenSound (the OS's Sound goes to SYS:Prefs/Classic:
     # OpenUpTool RECONCILE), and OpenSpeaker on the menu bar (openamigaprefs).
     so = a.openamigaprefs / "Sound/build/os3"
-    snd = Part(top, "Sound", "0.2", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and OpenAHI on AmigaChrome")
+    snd = Part(top, "Sound", "0.2.1", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and OpenAHI on AmigaChrome")
     snd.add("Prefs/OpenSound", (so / "Sound").read_bytes(), "SYS:Prefs/OpenSound")
     snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")
     snd.add("Prefs/OpenSound.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenSound.info")
@@ -1267,7 +1301,7 @@ def main() -> int:
     # program's file, stays; OpenUp's own copy is kept up to date and the
     # uninstaller removes it).
     mui = a.openamigamui / "build/os3"
-    om = Part(top, "OpenMUI", "0.2", "OpenMUI: zunemaster.library, a muimaster.library face where there is no MUI (preview), and ZuneTest")
+    om = Part(top, "OpenMUI", "0.2.1", "OpenMUI: zunemaster.library, a muimaster.library face where there is no MUI (preview), and ZuneTest")
     om.add("Libs/zunemaster.library", (mui / "zunemaster.library").read_bytes(), "LIBS:zunemaster.library")
     om.add("Libs/muimaster.library", (mui / "muimaster.library").read_bytes(), "LIBS:muimaster.library", own=True)
     om.add("Tools/ZuneTest", (mui / "ZuneTest").read_bytes(), "SYS:Tools/ZuneTest")
