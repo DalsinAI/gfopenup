@@ -68,7 +68,15 @@ with its notices.
   kept.
 - **Re-running a newer pack upgrades in place.** A manifest in
   `ENVARC:OpenAmiga/` lists what is installed, with versions; ACBuild's
-  AmigaChrome Tools tab can read it.
+  AmigaChrome Tools tab can read it. An upgrade keeps what the user chose: a
+  look already saved in `ENVARC:OpenGadTools/Look` keeps its theme, mode,
+  profile and other lines, and its backdrop (the Installer's look question
+  starts on that theme; another theme picked changes only the theme, through
+  `OpenUpTool THEME`). Only a new install gets OpenUp's own look. A part's
+  `face` lines write an icon only when it hasn't got the picture yet.
+  UNINSTALL takes OpenUp's own marks out of `ENVARC:OpenAmiga`
+  (`Reconcile.done`, `Tidy.done`, `Setup.done`, `Backdrop.tone`) and leaves
+  the user's settings there (`Sound`, `PrefsView`, `Startup.off`).
 - **Errors say what to do next,** in plain words (the mission test).
 - **Every app and prefs editor has an animated GlowIcon,** drawn and
   shipped as [ICONS.md](ICONS.md) sets out.
