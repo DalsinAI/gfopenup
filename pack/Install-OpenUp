@@ -66,7 +66,7 @@
 (set #g1
     (askoptions
         (prompt "Which parts should OpenUp install? (1 of 5)")
-        (help "OpenSocket: the Amiga's network (bsdsocket.library 4.2), through the x86 or ARM64 cores. "
+        (help "OpenSocket: the Amiga's network (bsdsocket.library 4.3), through the x86 or ARM64 cores. "
               "AmigaChrome instances only.\n\n"
               "OpenPrint and OpenView: print to PDF and to printers on your network, "
               "and view pictures and documents. OpenView takes MultiView's place: whatever "
