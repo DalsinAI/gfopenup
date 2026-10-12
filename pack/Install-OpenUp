@@ -258,7 +258,24 @@
 (set #look "Open light")
 (set #theme "Open")
 (set #back "Open-light")
-(if (bitand #parts 24)
+; The look the Amiga has already (ENVARC:OpenGadTools/Look, from OpenUpTool DETECT): "" on a new install.
+; An upgrade keeps it, with its mode, profile and the rest of the user's look settings: the question's
+; default is the theme in place, so a Novice upgrade (which never shows the question) changes nothing,
+; and a theme picked in Intermediate or Expert mode changes only the theme (OpenUpTool THEME). Up to
+; 0.7.5 the default was always Open and the whole look was written again, so a Novice upgrade put Open
+; back. A theme of the user's own that isn't one of these isn't asked about, and stays.
+(set #theme0 (getenv "OpenUp/Theme"))
+(set #pick -1)
+(if (= #theme0 "") (set #pick 0))
+(if (= #theme0 "Open") (set #pick 0))
+(if (= #theme0 "Glass") (set #pick 1))
+(if (= #theme0 "Graphite") (set #pick 2))
+(if (= #theme0 "Ember") (set #pick 3))
+(if (= #theme0 "Clear") (set #pick 4))
+(if (= #theme0 "Sky") (set #pick 5))
+(if (= #theme0 "Classic") (set #pick 6))
+(if (<> #theme0 "") (set #theme #theme0))
+(if (and (bitand #parts 24) (>= #pick 0))
     (set #theme
         (select
             (askchoice
@@ -270,10 +287,15 @@
                       "Clear: flat, light and rounded, in the Windows 11 style.\n"
                       "Sky: Open's colours with graduated blue frames and bevelled title bar gadgets.\n"
                       "Classic: the OS's own look, drawn as it always was.\n\n"
+                      "The look you have is chosen already, and keeps its other settings.\n"
                       "You can change it later with OpenLook THEME <name> SAVE.")
                 (choices "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")
-                (default 0))
+                (default #pick))
             "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")))
+; a new install's look, or another theme picked: written; the look in place, kept: left as it is
+(set #newlook (or (= #theme0 "") (<> #theme #theme0)))
+; OpenUp's backdrops were there before this run: the backdrop chosen since stays unless the theme changes
+(set #hadback (exists "SYS:Prefs/Presets/Backdrops/OpenUp"))
 ; with a look, the windows of the look approved on 8 October 2026: no zoom
 ; gadget, scroll bars only when needed, and no size gadget when OpenWindows is
 ; picked too (it resizes from the edges; without it the size gadget stays).
@@ -334,9 +356,11 @@
         (working "Installing OpenLook")
         (if (> (run (cat #tool " INSTALL Parts/OpenLook >>T:OpenUp.log")) 5)
             (message "OpenLook didn't install completely. T:OpenUp.log says why; nothing else changed."))
-        (run (cat #tool " SETTING ENVARC:OpenGadTools/Look \"" #look "\" >>T:OpenUp.log"))
-        (run (cat #tool " SETTING ENV:OpenGadTools/Look \"" #look "\" >>T:OpenUp.log"))
-        ; the Open programs (OpenCompress, OpenMail) draw in the same theme
+        ; the look (ENVARC: and ENV:): a new install's whole, or only the theme of the look in place
+        (if #newlook
+            (run (cat #tool " THEME " #theme " \"" #look "\" >>T:OpenUp.log")))
+        ; the Open programs (OpenCompress, OpenMail) draw in the same theme: OpenUp's own setting, kept in
+        ; step with the look's theme (it is read only where there is no look)
         (run (cat #tool " SETTING ENVARC:OpenGadTools/Theme \"" #theme "\" >>T:OpenUp.log"))
         (run (cat #tool " SETTING ENV:OpenGadTools/Theme \"" #theme "\" >>T:OpenUp.log"))
         ; with a look: a clear screen font, and window title bars a little taller (the screen's own bar keeps the standard height)
@@ -354,17 +378,10 @@
         (working "Installing the backgrounds")
         (if (> (run (cat #tool " INSTALL Parts/Backdrops >>T:OpenUp.log")) 5)
             (message "The backgrounds didn't install completely. T:OpenUp.log says why; nothing else changed."))
-        (if (<> #back "")
+        ; the theme's backdrop on a new install, a new theme, or the first time the backgrounds come;
+        ; an upgrade that keeps the look keeps the backdrop the user has too
+        (if (and (<> #back "") (or #newlook (not #hadback)))
             (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/OpenUp/" #back " >>T:OpenUp.log")))))
-
-; a pack built with --no-gorilla has no Parts/GorillaIcons: the icons keep their pictures
-(if (bitand #parts 16777216)
-    (if (exists "Parts/GorillaIcons/Part")
-        (
-            (working "Giving the system's icons Gorilla's pictures")
-            (if (> (run (cat #tool " INSTALL Parts/GorillaIcons >>T:OpenUp.log")) 5)
-                (message "Some icons kept their old pictures. T:OpenUp.log says why; nothing else changed.")))
-        (message "This pack was made without Gorilla's icons, so the system's icons keep their pictures.")))
 
 (if (bitand #parts 32)
     (
@@ -616,6 +633,17 @@
             (working "Installing OpenDrawer")
             (if (> (run (cat #tool " INSTALL Parts/OpenDrawer >>T:OpenUp.log")) 5)
                 (message "OpenDrawer didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
+
+; Gorilla's pictures after the parts, so the drawers a part makes (SYS:Developer and its OpenGPU-SDK, from
+; the OpenGPU developer files) get theirs in the same run. An icon that has its picture already is left as
+; it is (OpenUpTool 0.7.5). A pack built with --no-gorilla has no Parts/GorillaIcons: the icons keep their pictures.
+(if (bitand #parts 16777216)
+    (if (exists "Parts/GorillaIcons/Part")
+        (
+            (working "Giving the system's icons Gorilla's pictures")
+            (if (> (run (cat #tool " INSTALL Parts/GorillaIcons >>T:OpenUp.log")) 5)
+                (message "Some icons kept their old pictures. T:OpenUp.log says why; nothing else changed.")))
+        (message "This pack was made without Gorilla's icons, so the system's icons keep their pictures.")))
 
 ; OpenUp 0.6.14 to 0.7.0 changed the default tool of about 40 of AmigaOS 3.2.3's own
 ; icons (datatype descriptors, pointer presets, DOSDrivers, the Picasso96 guides...) to
