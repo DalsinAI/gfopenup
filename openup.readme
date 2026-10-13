@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.8.0
+Version:      0.8.1
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -175,7 +175,9 @@ choose:
   mathieeedoubbas.library 47.100 (a 68040 or 68060 with its FPU) and
   input.device 50.2 (a 68020 or later). The ROM ones are loaded by OS 3.2's
   own LoadModule, so the Amiga restarts once by itself as it starts;
-  unticking one puts OS 3.2's own back.
+  unticking one puts OS 3.2's own back. New in 0.8.1, in LIBS: for any
+  Amiga: version, nonvolatile, realtime, amigaguide, rexxsyslib (over
+  OS 3.2's own ARexx, kept in LIBS:OS32) and lowlevel.library, all 47.100.
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,

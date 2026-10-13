@@ -267,12 +267,20 @@
 ; The sixth page, OpenLibs (OpenUp 0.8.0): the Team's open libraries, one switch each, in place of OS 3.2's
 ; own (amigachrome-guest libraries/OPEN_LIBRARIES.md, section 3). Only libraries whose ABI test against
 ; OS 3.2's own is clean are offered, and none is ticked on a new install. Bits of #libs: 1 utility.library,
-; 2 mathieeedoubbas.library, 4 input.device. A library switched on already is ticked, so an upgrade (a
+; 2 mathieeedoubbas.library, 4 input.device; from 0.8.1 the disk libraries, all for any 68000: 8 version.library,
+; 16 nonvolatile.library, 32 realtime.library, 64 amigaguide.library, 128 rexxsyslib.library, 256 lowlevel.library
+; (amigachrome-guest #122 to #127). A library switched on already is ticked, so an upgrade (a
 ; Novice one never shows the question) changes nothing; unticking one puts OS 3.2's own back.
 (set #libs0 0)
 (if (exists "LIBS:OpenLibs/utility.module") (set #libs0 (bitor #libs0 1)))
 (if (exists "SYS:Storage/OpenUp-Superseded/LIBS/mathieeedoubbas.library") (set #libs0 (bitor #libs0 2)))
 (if (exists "LIBS:OpenLibs/input.device") (set #libs0 (bitor #libs0 4)))
+(if (exists "SYS:Storage/OpenUp-Superseded/LIBS/version.library") (set #libs0 (bitor #libs0 8)))
+(if (exists "SYS:Storage/OpenUp-Superseded/LIBS/nonvolatile.library") (set #libs0 (bitor #libs0 16)))
+(if (exists "SYS:Storage/OpenUp-Superseded/LIBS/realtime.library") (set #libs0 (bitor #libs0 32)))
+(if (exists "SYS:Storage/OpenUp-Superseded/LIBS/amigaguide.library") (set #libs0 (bitor #libs0 64)))
+(if (exists "SYS:Storage/OpenUp-Superseded/LIBS/rexxsyslib.library") (set #libs0 (bitor #libs0 128)))
+(if (exists "SYS:Storage/OpenUp-Superseded/LIBS/lowlevel.library") (set #libs0 (bitor #libs0 256)))
 (set #libs
     (askoptions
         (prompt "Open libraries, in place of OS 3.2's own (6 of 6)")
@@ -287,10 +295,22 @@
               "AmigaChrome. Needs a 68040 or 68060 with its FPU.\n\n"
               "input.device 50.2: the keyboard and the mouse, with AmigaChrome's pointer placed exactly "
               "where the host's is, one setting for key repeat and acceleration for relative mice. "
-              "InputProbe INFO in a Shell says which input.device runs. Needs a 68020 or later.")
+              "InputProbe INFO in a Shell says which input.device runs. Needs a 68020 or later.\n\n"
+              "In LIBS:, for any Amiga, each in place of OS 3.2's own, which is kept and comes back when "
+              "unticked: version.library, nonvolatile.library (saved settings and high scores), "
+              "realtime.library (the music clock), amigaguide.library (the help viewer's library), "
+              "rexxsyslib.library (ARexx's library; OS 3.2's own is kept in LIBS:OS32 and still runs "
+              "the ARexx scripts) and lowlevel.library (joysticks, CD32 pads, the keyboard and timers "
+              "for games), all 47.100.")
         (choices "utility.library 47.100 (68020)"
                  "mathieeedoubbas.library 47.100 (68040 + FPU)"
-                 "input.device 50.2 (68020)")
+                 "input.device 50.2 (68020)"
+                 "version.library 47.100"
+                 "nonvolatile.library 47.100"
+                 "realtime.library 47.100"
+                 "amigaguide.library 47.100"
+                 "rexxsyslib.library 47.100 (with OS 3.2's ARexx)"
+                 "lowlevel.library 47.100")
         (default #libs0)))
 (set #cpu (database "cpu"))
 ; The ROM ones are loaded from S:Pre-LoadModule-Startup. Another program's file there keeps its place, and a
@@ -300,16 +320,16 @@
     (
         (message "S:Pre-LoadModule-Startup belongs to another program (it loads modules of its own), so "
                  "utility.library and input.device were left out. Nothing else changed.")
-        (set #libs (bitand #libs 2))))
+        (set #libs (bitand #libs 506))))
 (if (and (bitand #libs 5) (or (= #cpu "68000") (= #cpu "68010")))
     (
         (message "utility.library and input.device need a 68020 or later, and this Amiga has a "
                  #cpu ", so they were left out.")
-        (set #libs (bitand #libs 2))))
+        (set #libs (bitand #libs 506))))
 (if (and (bitand #libs 2) (or (= (database "fpu") "NOFPU") (and (<> #cpu "68040") (<> #cpu "68060"))))
     (
         (message "mathieeedoubbas.library needs a 68040 or 68060 with its FPU, so it was left out.")
-        (set #libs (bitand #libs 5))))
+        (set #libs (bitand #libs 509))))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
 ; OpenFTP's FTPS needs OpenTLS, and OpenTLS does its sums with OpenCrypto
@@ -738,6 +758,34 @@
                 (message "input.device didn't install completely. T:OpenUp.log says why."))
             (if (bitand #libs0 4)
                 (run (cat #tool " REMOVE Parts/OpenLibs/input >>T:OpenUp.log"))))
+        ; 0.8.1: the disk libraries. rexxsyslib.library's replacement is a face over OS 3.2's own, which holds
+        ; the ARexx interpreter, so OS 3.2's goes to LIBS:OS32 first (the copy is OpenUp's, marked in ENVARC:, and
+        ; goes with it); without that copy the library is left out, since ARexx scripts would no longer run.
+        (if (and (bitand #libs 128) (not (bitand #libs0 128)) (not (exists "LIBS:OS32/rexxsyslib.library")))
+            (
+                (if (not (exists "LIBS:OS32")) (makedir "LIBS:OS32"))
+                (run "C:Copy LIBS:rexxsyslib.library LIBS:OS32/rexxsyslib.library CLONE QUIET >>T:OpenUp.log")
+                (if (exists "LIBS:OS32/rexxsyslib.library")
+                    (run "C:Echo >ENVARC:OpenAmiga/OpenLibs-RexxBody \"LIBS:OS32/rexxsyslib.library is OpenUp's copy\"")
+                    (
+                        (message "OS 3.2's rexxsyslib.library couldn't be kept in LIBS:OS32, so the open "
+                                 "rexxsyslib.library was left out. T:OpenUp.log says why.")
+                        (set #libs (bitand #libs 383))))))
+        (set #n 0)
+        (while (< #n 6)
+            (
+                (set #bit (shiftleft 8 #n))
+                (set #lib (select #n "version" "nonvolatile" "realtime" "amigaguide" "rexxsyslib" "lowlevel"))
+                (if (bitand #libs #bit)
+                    (if (> (run (cat #tool " INSTALL Parts/OpenLibs/" #lib " >>T:OpenUp.log")) 5)
+                        (message #lib ".library didn't install completely. T:OpenUp.log says why."))
+                    (if (bitand #libs0 #bit)
+                        (run (cat #tool " REMOVE Parts/OpenLibs/" #lib " >>T:OpenUp.log"))))
+                (set #n (+ #n 1))))
+        (if (and (not (bitand #libs 128)) (exists "ENVARC:OpenAmiga/OpenLibs-RexxBody"))
+            (
+                (delete "LIBS:OS32/rexxsyslib.library")
+                (delete "ENVARC:OpenAmiga/OpenLibs-RexxBody")))
         (if (and (bitand #libs0 5) (not (bitand #libs 5)))
             (run "C:LoadModule REMOVE NOREBOOT >>T:OpenUp.log"))
         (if (and (not #libs) #libs0)
@@ -745,7 +793,8 @@
         (if #libchange
             (message "The open libraries change at the next start. With utility.library or "
                      "input.device switched on, the Amiga restarts once by itself as it starts, "
-                     "so they take the ROM's place."))))
+                     "so they take the ROM's place. The libraries in LIBS: change for programs "
+                     "started after the next start."))))
 
 ; Gorilla's pictures after the parts, so the drawers a part makes (SYS:Developer and its OpenGPU-SDK, from
 ; the OpenGPU developer files) get theirs in the same run. An icon that has its picture already is left as
