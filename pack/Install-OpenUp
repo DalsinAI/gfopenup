@@ -42,7 +42,7 @@
 ; and a longer askoptions comes back with the defaults of its first pages mixed up
 ; (8 October 2026, on a scratch instance: 60751359 came back as 30265063). Each
 ; group is bits 0-8, 9-17, 18-26 and 27-30 of #parts, so the bits above keep their meaning;
-; the fifth is #parts2.
+; the fifth is #parts2, and the sixth (0.8.0) the open libraries, #libs.
 (set #default (if #ac 396295679 295632378))
 ; An upgrade brings the parts already on this Amiga up to date, also those a new install leaves
 ; unticked (Tata, OpenMUI or OpenFTP picked before): each is ticked when its main file is there. A
@@ -70,7 +70,7 @@
 (if (exists "SYS:System/OpenBench") (set #default2 (bitor #default2 64)))
 (set #g1
     (askoptions
-        (prompt "Which parts should OpenUp install? (1 of 5)")
+        (prompt "Which parts should OpenUp install? (1 of 6)")
         (help "OpenSocket: the Amiga's network (bsdsocket.library 4.3), through the x86 or ARM64 cores. "
               "AmigaChrome instances only.\n\n"
               "OpenPrint and OpenView: print to PDF and to printers on your network, "
@@ -107,7 +107,7 @@
         (default (bitand #default 511))))
 (set #g2
     (askoptions
-        (prompt "Which parts should OpenUp install? (2 of 5)")
+        (prompt "Which parts should OpenUp install? (2 of 6)")
         (help "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
               "on AmigaChrome's graphics board, and its Native modes, which follow the size of "
               "AmigaChrome's window. Picasso96's monitor for that board is put "
@@ -151,7 +151,7 @@
         (default (bitand (shiftright #default 9) 511))))
 (set #g3
     (askoptions
-        (prompt "Which parts should OpenUp install? (3 of 5)")
+        (prompt "Which parts should OpenUp install? (3 of 6)")
         (help "Sound: one place for the volume, Amiga sound (Paula) and AHI sound, with Test "
               "buttons, and a speaker on the menu bar: click for the levels, the wheel turns it "
               "up and down (new), in SYS:Prefs/OpenSound. The OS's own Sound editor stays where it is.\n\n"
@@ -194,7 +194,7 @@
         (default (bitand (shiftright #default 18) 511))))
 (set #g4
     (askoptions
-        (prompt "Which parts should OpenUp install? (4 of 5)")
+        (prompt "Which parts should OpenUp install? (4 of 6)")
         (help "OpenDemos: Boing, Chrome Gears and Copper Tunnel, three small 3D demos in GL "
               "(new, off unless picked; needs OpenGPU and an FPU). In SYS:Utilities/OpenDemos.\n\n"
               "OpenCrypto: opencrypto.library 2.0, the sums behind secure connections (SSH's key "
@@ -217,7 +217,7 @@
         (default (bitand (shiftright #default 27) 15))))
 (set #g5
     (askoptions
-        (prompt "Which parts should OpenUp install? (5 of 5)")
+        (prompt "Which parts should OpenUp install? (5 of 6)")
         (help "OpenFTP: FTP and FTPS in two panes, with a site manager and the Open family's "
               "look (new, off unless picked). In SYS:Utilities/OpenFTP. Plain FTP works as it is. "
               "FTPS (encrypted FTP) works with OpenTLS (opentls.library); AmiSSL 5 is still used "
@@ -264,6 +264,52 @@
                  "OpenBench: the Team's own Workbench (preview)"
                  "OpenDateTime: date, time and region (new)")
         (default #default2)))
+; The sixth page, OpenLibs (OpenUp 0.8.0): the Team's open libraries, one switch each, in place of OS 3.2's
+; own (amigachrome-guest libraries/OPEN_LIBRARIES.md, section 3). Only libraries whose ABI test against
+; OS 3.2's own is clean are offered, and none is ticked on a new install. Bits of #libs: 1 utility.library,
+; 2 mathieeedoubbas.library, 4 input.device. A library switched on already is ticked, so an upgrade (a
+; Novice one never shows the question) changes nothing; unticking one puts OS 3.2's own back.
+(set #libs0 0)
+(if (exists "LIBS:OpenLibs/utility.module") (set #libs0 (bitor #libs0 1)))
+(if (exists "SYS:Storage/OpenUp-Superseded/LIBS/mathieeedoubbas.library") (set #libs0 (bitor #libs0 2)))
+(if (exists "LIBS:OpenLibs/input.device") (set #libs0 (bitor #libs0 4)))
+(set #libs
+    (askoptions
+        (prompt "Open libraries, in place of OS 3.2's own (6 of 6)")
+        (help "The Team's own rewrites of AmigaOS libraries, each tested call for call against OS 3.2's "
+              "own. Each is off until you tick it, and unticking it puts OS 3.2's own back. A library "
+              "in the ROM (utility.library, input.device) is loaded by OS 3.2's own LoadModule and takes "
+              "the ROM's place from the next start: the Amiga restarts once by itself when it starts. "
+              "Unticked, the ROM's own comes back at the next start.\n\n"
+              "utility.library 47.100: tags, hooks, dates and 64-bit sums, run on the x86 or ARM64 cores "
+              "on AmigaChrome. Needs a 68020 or later.\n\n"
+              "mathieeedoubbas.library 47.100: double-precision maths, run on the x86 or ARM64 cores on "
+              "AmigaChrome. Needs a 68040 or 68060 with its FPU.\n\n"
+              "input.device 50.2: the keyboard and the mouse, with AmigaChrome's pointer placed exactly "
+              "where the host's is, one setting for key repeat and acceleration for relative mice. "
+              "InputProbe INFO in a Shell says which input.device runs. Needs a 68020 or later.")
+        (choices "utility.library 47.100 (68020)"
+                 "mathieeedoubbas.library 47.100 (68040 + FPU)"
+                 "input.device 50.2 (68020)")
+        (default #libs0)))
+(set #cpu (database "cpu"))
+; The ROM ones are loaded from S:Pre-LoadModule-Startup. Another program's file there keeps its place, and a
+; second LoadModule with another set would restart the Amiga for ever, so they are left out then.
+(if (and (bitand #libs 5) (exists "S:Pre-LoadModule-Startup")
+         (<> 0 (run "C:Search >NIL: S:Pre-LoadModule-Startup OpenLibs-Startup QUIET")))
+    (
+        (message "S:Pre-LoadModule-Startup belongs to another program (it loads modules of its own), so "
+                 "utility.library and input.device were left out. Nothing else changed.")
+        (set #libs (bitand #libs 2))))
+(if (and (bitand #libs 5) (or (= #cpu "68000") (= #cpu "68010")))
+    (
+        (message "utility.library and input.device need a 68020 or later, and this Amiga has a "
+                 #cpu ", so they were left out.")
+        (set #libs (bitand #libs 2))))
+(if (and (bitand #libs 2) (or (= (database "fpu") "NOFPU") (and (<> #cpu "68040") (<> #cpu "68060"))))
+    (
+        (message "mathieeedoubbas.library needs a 68040 or 68060 with its FPU, so it was left out.")
+        (set #libs (bitand #libs 5))))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
 ; OpenFTP's FTPS needs OpenTLS, and OpenTLS does its sums with OpenCrypto
@@ -663,6 +709,43 @@
             (working "Installing OpenDateTime")
             (if (> (run (cat #tool " INSTALL Parts/OpenDateTime >>T:OpenUp.log")) 5)
                 (message "OpenDateTime didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
+
+; OpenLibs (0.8.0): each library ticked is installed (an upgrade brings its newer build), and each one
+; unticked that was switched on is taken out, OS 3.2's own put back (OpenUpTool REMOVE). The ROM ones load with
+; OS 3.2's own LoadModule at the next start (S:OpenLibs-Startup), which loads the set again when it changes; with
+; the last ROM one unticked, LoadModule REMOVE NOREBOOT lets go of its modules at the next start. The startup
+; comes with the first library and goes with the last. A pack without Parts/OpenLibs changes nothing.
+(set #libchange (<> #libs #libs0))
+(if (exists "Parts/OpenLibs/Part")
+    (
+        (if #libs
+            (
+                (working "Installing OpenLibs")
+                (if (> (run (cat #tool " INSTALL Parts/OpenLibs >>T:OpenUp.log")) 5)
+                    (message "OpenLibs didn't install completely. T:OpenUp.log says why."))))
+        (if (bitand #libs 1)
+            (if (> (run (cat #tool " INSTALL Parts/OpenLibs/utility >>T:OpenUp.log")) 5)
+                (message "utility.library didn't install completely. T:OpenUp.log says why."))
+            (if (bitand #libs0 1)
+                (run (cat #tool " REMOVE Parts/OpenLibs/utility >>T:OpenUp.log"))))
+        (if (bitand #libs 2)
+            (if (> (run (cat #tool " INSTALL Parts/OpenLibs/mathieeedoubbas >>T:OpenUp.log")) 5)
+                (message "mathieeedoubbas.library didn't install completely. T:OpenUp.log says why."))
+            (if (bitand #libs0 2)
+                (run (cat #tool " REMOVE Parts/OpenLibs/mathieeedoubbas >>T:OpenUp.log"))))
+        (if (bitand #libs 4)
+            (if (> (run (cat #tool " INSTALL Parts/OpenLibs/input >>T:OpenUp.log")) 5)
+                (message "input.device didn't install completely. T:OpenUp.log says why."))
+            (if (bitand #libs0 4)
+                (run (cat #tool " REMOVE Parts/OpenLibs/input >>T:OpenUp.log"))))
+        (if (and (bitand #libs0 5) (not (bitand #libs 5)))
+            (run "C:LoadModule REMOVE NOREBOOT >>T:OpenUp.log"))
+        (if (and (not #libs) #libs0)
+            (run (cat #tool " REMOVE Parts/OpenLibs >>T:OpenUp.log")))
+        (if #libchange
+            (message "The open libraries change at the next start. With utility.library or "
+                     "input.device switched on, the Amiga restarts once by itself as it starts, "
+                     "so they take the ROM's place."))))
 
 ; Gorilla's pictures after the parts, so the drawers a part makes (SYS:Developer and its OpenGPU-SDK, from
 ; the OpenGPU developer files) get theirs in the same run. An icon that has its picture already is left as

@@ -29,6 +29,9 @@
         ; OpenUp's entries leave the Tools menu now, before their programs go
         (if (exists "SYS:C/OpenUpMenu")
             (run "SYS:C/OpenUpMenu >NIL: QUIT"))
+        ; OpenLibs (0.8.0): the open ROM libraries OS 3.2's LoadModule loaded leave memory at the next start
+        (if (exists "S:OpenLibs-Startup")
+            (run "C:LoadModule REMOVE NOREBOOT >>T:OpenUp-uninstall.log"))
         (set #rc (run (cat #tool " UNINSTALL >>T:OpenUp-uninstall.log")))
         ; OpenUp 0.6.12 to 0.7.4's Installer copied the OS's Sound editor into SYS:Prefs/Classic and
         ; listed the copy nowhere, so it stayed behind. With the OS's own back in SYS:Prefs, a copy of
