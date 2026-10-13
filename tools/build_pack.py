@@ -9,7 +9,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
-        [--openamigasocket DIR] [--no-build] [--lha]
+        [--openamigasocket DIR] [--openamigabench DIR] [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
 the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
@@ -53,9 +53,11 @@ a Part file that C/OpenUpTool reads:
   OpenUpSetup/          OpenUp Setup: the first-start wizard and the startup switches
                         (openamigaprefs)
   OpenRTG/              Workbench on OpenRTG's own 16-bit screen, without Picasso96:
-                        openrtg.library, its monitor driver and CyberGraphX
-                        compatibility, with opengpu.library and ACRTG.gpu
-                        (openamigartg; AmigaChrome's ACRTG board)
+                        openrtg.library (Native modes that follow the host window from
+                        0.17), its monitor driver and CyberGraphX compatibility, with
+                        opengpu.library and ACRTG.gpu (openamigartg; AmigaChrome's ACRTG
+                        board). Its Upgrade/ drawer is the same part without Workbench's
+                        screen mode, which the Installer takes where OpenRTG is installed
   OpenGPU/              opengpu.library and LIBS:OpenGPU/: ACRTG.gpu (the ACRTG
                         board's ring, amigachrome-guest), SDL2.module and GL.module
                         (Mesa), loaded when a program first asks; C:OpenGPUCheck.
@@ -91,6 +93,12 @@ a Part file that C/OpenUpTool reads:
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
+  OpenDateTime/         OpenDateTime in SYS:Prefs: the date, the time and the region, a place
+                        rather than an offset, with summer time by itself (openamigaprefs)
+  OpenBench/            OpenBench, the Team's own Workbench, in SYS:System, off unless picked
+                        (--openamigabench). It runs where the Startup-Sequence starts
+                        SYS:System/OpenBench in LoadWB's place; OpenUp doesn't change the
+                        Startup-Sequence yet
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs), and
                         OpenAHI's files for the ACAHI sound board: acaudio.audio, its modes file
                         and AHI's settings on Host mix, with OpenAHI's own ahi.device
@@ -378,6 +386,7 @@ def build_parts(a):
     run(["sh", a.openamigaprefs / "Menus/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Menus/engine/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "TitleBar/build.sh"], env=env)
+    run(["sh", a.openamigaprefs / "DateTime/build.sh"], env=env)     # OpenDateTime
     run(["sh", a.openamigaprefs / "Sound/build.sh"], env=env)
     # acaudio.audio, the AHI driver for the ACAHI board, and its modes file (amigachrome's vendored guest tree)
     run(["sh", a.amigachrome / "vendor/amigachrome-guest/devices/acaudio.audio/build.sh", ROOT / "build/acaudio"],
@@ -460,6 +469,13 @@ def build_parts(a):
             old.rename(arch / f"{old.name}-{time.strftime('%Y%m%dT%H%M%S')}")
         run([sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
              "--gl", gl_out, a.opengpu_sdk], env=dict(os.environ))
+    # OpenBench (openamigabench desktop/build.sh, os32 stove): the desktop with the dock and the Open
+    # editors built in, from this build's opengadtools, openamigaprefs and openamigatata
+    if a.openamigabench:
+        bench_env = dict(env, STOVE=str(STOVE), OGT=str(a.opengadtools), OAP=str(a.openamigaprefs))
+        if a.openamigatata:
+            bench_env["TATA"] = str(a.openamigatata)
+        run(["sh", a.openamigabench / "desktop/build.sh"], env=bench_env)
     p = a.openamigaprint
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=env)
@@ -553,6 +569,8 @@ PART_MAIN = {
     "OpenFiles": ("Utilities/OpenFiles", "OpenFiles"),
     "OpenPlay": ("Utilities/OpenPlay", "OpenPlay"),
     "OpenTitle": ("C/OpenTitle", "OpenTitle"),
+    "OpenDateTime": ("Prefs/OpenDateTime", "OpenDateTime"),
+    "OpenBench": ("System/OpenBench", "OpenBench"),
     "OpenEdit": ("C/OpenEdit", "OpenEdit"),
     "OpenDrawer": ("Utilities/OpenDrawer", "OpenDrawer"),
     "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
@@ -666,6 +684,8 @@ def main() -> int:
     ap.add_argument("--openamigasocket", type=Path, default=first(DEV / "openamigasocket", DEV.parent / "openamigasocket"),
                     help="openamigasocket, for the OpenSocket part's files, built here (without it, amigachrome's "
                          "vendored payload, which can be older than openamigasocket's main)")
+    ap.add_argument("--openamigabench", type=Path, default=first(DEV / "openamigabench", DEV.parent / "openamigabench"),
+                    help="openamigabench checkout: OpenBench, the Team's own Workbench (desktop/build.sh)")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the OpenGPU developer kit is made (or, with --no-build, read): the OpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -938,7 +958,8 @@ def main() -> int:
     if want and binary_version(acrtg_gpu, "ACRTG.gpu") != want.group(1):
         raise SystemExit(f"ACRTG.gpu: build/guest/os32/ACRTG.gpu says {binary_version(acrtg_gpu, 'ACRTG.gpu')}, "
                          f"its source {want.group(1)}: build it (libraries/acrtg.gpu/build.sh) first")
-    rt = Part(top, "OpenRTG", "0.16.0", "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96")
+    rtv = binary_version((rtg / "openrtg.library").read_bytes(), "openrtg.library") or "0.17"
+    rt = Part(top, "OpenRTG", rtv, "OpenRTG: Workbench on OpenRTG's own screens, without Picasso96, and Native modes")
     rt.line("needs AmigaChrome")
     rt.line("needs ACRTG")
     rt.line('retire "DEVS:Monitors/acrtg"')
@@ -955,6 +976,24 @@ def main() -> int:
     rt.add("Prefs/ScreenMode.prefs", mode, "ENVARC:Sys/ScreenMode.prefs")
     rt.add("Prefs/ScreenMode-ENV.prefs", mode, "ENV:Sys/ScreenMode.prefs")
     rt.write()
+    # The same part without Workbench's screen mode, in OpenRTG's drawer (Parts/OpenRTG/Upgrade): the Installer
+    # takes it where OpenRTG is installed already, so an upgrade brings openrtg.library (0.17's Native modes) and
+    # keeps the mode the user chose since. Up to 0.7.8 the mode came with the libraries on every install, so an
+    # upgrade left OpenRTG unticked rather than undo the mode, and a Novice upgrade never brought a newer
+    # openrtg.library. Parts/OpenRTG itself is as before: a new install, and Cradle's first start, set the mode.
+    up = rt.dir / "Upgrade"
+    up.mkdir()
+    up_lines = []
+    for line in rt.lines:
+        m = re.match(r'(copy|add|default) "([^"]+)" "([^"]+)"$', line)
+        if m and m.group(2).startswith("Prefs/ScreenMode"):
+            continue
+        if m:
+            (up / m.group(2)).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(rt.dir / m.group(2), up / m.group(2))
+        up_lines.append(line)
+    up_lines[1] = "; OpenRTG brought up to date where it is installed: Workbench's screen mode stays as it is"
+    (up / "Part").write_text("\n".join(up_lines) + "\n", encoding="latin-1")
 
     # OpenGPU: opengpu.library (openamigartg) and its drivers and modules in
     # LIBS:OpenGPU/. ACRTG.gpu (amigachrome-guest) puts the work on the ACRTG
@@ -1212,6 +1251,29 @@ def main() -> int:
     tb.line("startup Run >NIL: C:OpenTitle")
     tb.write()
 
+    # OpenDateTime: the date, the time and the region (openamigaprefs DateTime). The time zone is a place, and
+    # summer time follows it by itself (0.2); the clock is set through C:Date and C:SetClock with NIL: handles
+    # (0.2.1). A copy already there (put in SYS:Prefs by hand) is kept in SYS:Storage; its icon stays.
+    dtb = (a.openamigaprefs / "DateTime/build/os3/OpenDateTime").read_bytes()
+    dtp = Part(top, "OpenDateTime", binary_version(dtb, "OpenDateTime") or "0.2.1",
+               "OpenDateTime: the date, the time and the region, with summer time by itself")
+    dtp.add("Prefs/OpenDateTime", dtb, "SYS:Prefs/OpenDateTime")
+    dtp.add("Prefs/OpenDateTime.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenDateTime.info", default=True)
+    dtp.write()
+
+    # OpenBench: the Team's own Workbench (openamigabench desktop/), with the dock and the Open editors built in.
+    # It goes in SYS:System; the machine runs it where its Startup-Sequence starts SYS:System/OpenBench in
+    # LoadWB's place (falling back to LoadWB with Shift held, or without RTG). OpenUp doesn't change the
+    # Startup-Sequence yet, so elsewhere it is there to try. A copy already there is kept in SYS:Storage.
+    # openicon.library (icon.library R2) and icon.library R3 stay in openamigabench: neither is switched on.
+    bench = None
+    if a.openamigabench:
+        obb = (a.openamigabench / "build/os3/OpenBench").read_bytes()
+        bench = Part(top, "OpenBench", binary_version(obb, "OpenBench") or "0.1",
+                     "OpenBench: the Team's own Workbench, with the dock and the Open editors built in (preview)")
+        bench.add("System/OpenBench", obb, "SYS:System/OpenBench")
+        bench.write()
+
     # Sound: OpenPrefs Sound (the volume, Paula's and AHI's levels, the beep)
     # in SYS:Prefs/OpenSound (the OS's Sound goes to SYS:Prefs/Classic:
     # OpenUpTool RECONCILE), and OpenSpeaker on the menu bar (openamigaprefs).
@@ -1393,6 +1455,7 @@ def main() -> int:
                                              (menus.dir / "Prefs/Menus.info", "page"),
                                              (tb.dir / "Prefs/TitleBar.info", "page"),
                                              (setup.dir / "Prefs/OpenUp-Setup.info", "page"),
+                                             (dtp.dir / "Prefs/OpenDateTime.info", "page"),
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (of.dir / "Utilities/OpenFiles.info", files_art),
                                              (op.dir / "Utilities/OpenPlay.info", play_art),
