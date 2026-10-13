@@ -33,8 +33,8 @@
 ; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY,
 ; 1073741824 Tata (the last bit of this word).
 ; The second word, #parts2 (OpenUp 0.7.0): 1 OpenFTP, 2 Unofficial Telegram, 4 OpenGPU developer files,
-; 8 OpenInput, 16 OpenTLS, 32 OpenDrawer.
-; None of them is ticked by default on a new install; an upgrade ticks those already there (below).
+; 8 OpenInput, 16 OpenTLS, 32 OpenDrawer, 64 OpenBench, 128 OpenDateTime (OpenUp 0.7.9).
+; Of these only OpenDateTime is ticked by default on a new install; an upgrade ticks those already there (below).
 ; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos, OpenPuTTY
 ; and Tata (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D
 ; (295632378). Tata stays unticked while it is 0.x (the user, 8 October 2026), and is ticked from 1.0.
@@ -47,22 +47,27 @@
 ; An upgrade brings the parts already on this Amiga up to date, also those a new install leaves
 ; unticked (Tata, OpenMUI or OpenFTP picked before): each is ticked when its main file is there. A
 ; Novice user never sees the questions, so before 0.7.5 an upgrade left those parts at their old
-; versions. Not OpenRTG: its part writes Workbench's screen mode again (ENVARC: and ENV:), which would
-; undo a mode chosen since and asks Intuition to reset the Workbench screen while the Installer's
-; window is open; it stays a choice (Intermediate or Expert), as before.
+; versions. OpenRTG too, since 0.7.9: where it is installed, Parts/OpenRTG/Upgrade (the same part without
+; Workbench's screen mode) goes in, so an upgrade brings openrtg.library and keeps the mode chosen since.
+; Up to 0.7.8 the mode came with the libraries on every install; writing it again undid the user's mode and
+; asked Intuition to reset the Workbench screen while the Installer's window was open, so an upgrade left
+; OpenRTG unticked and a Novice upgrade never brought a newer openrtg.library.
+(set #rtgwas (and (exists "LIBS:openrtg.library") (exists "ENVARC:OpenAmiga/OpenUp.manifest")))
+(if #rtgwas (set #default (bitor #default 512)))
 (if (exists "LIBS:zunemaster.library") (set #default (bitor #default 65536)))
 (if (exists "SYS:Utilities/OpenMail/OpenMail") (set #default (bitor #default 2097152)))
 (if (exists "SYS:Utilities/OpenBrowser/OpenBrowser") (set #default (bitor #default 4194304)))
 (if (exists "SYS:Utilities/OpenDemos/OpenDemos") (set #default (bitor #default 134217728)))
 (if (exists "SYS:Utilities/OpenPuTTY/OpenPuTTY") (set #default (bitor #default 536870912)))
 (if (exists "SYS:C/Tata") (set #default (bitor #default 1073741824)))
-(set #default2 0)
+(set #default2 128)
 (if (exists "SYS:Utilities/OpenFTP/OpenFTP") (set #default2 (bitor #default2 1)))
 (if (exists "SYS:Utilities/UnofficialTelegram") (set #default2 (bitor #default2 2)))
 (if (exists "SYS:Developer/OpenGPU-SDK") (set #default2 (bitor #default2 4)))
 (if (exists "LIBS:openinput.library") (set #default2 (bitor #default2 8)))
 (if (exists "LIBS:opentls.library") (set #default2 (bitor #default2 16)))
 (if (exists "SYS:Utilities/OpenDrawer") (set #default2 (bitor #default2 32)))
+(if (exists "SYS:System/OpenBench") (set #default2 (bitor #default2 64)))
 (set #g1
     (askoptions
         (prompt "Which parts should OpenUp install? (1 of 5)")
@@ -104,8 +109,10 @@
     (askoptions
         (prompt "Which parts should OpenUp install? (2 of 5)")
         (help "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
-              "on AmigaChrome's graphics board. Picasso96's monitor for that board is put "
-              "aside in SYS:Storage, and Uninstall puts it back. New: off unless you pick it.\n\n"
+              "on AmigaChrome's graphics board, and its Native modes, which follow the size of "
+              "AmigaChrome's window. Picasso96's monitor for that board is put "
+              "aside in SYS:Storage, and Uninstall puts it back. Off unless you pick it; an upgrade "
+              "brings it up to date where it is installed, and keeps the screen mode you chose.\n\n"
               "OpenWindows: windows snap to edges and to each other, Amiga+Tab switches "
               "between them, the mouse wheel goes to the window under the pointer, and "
               "programs' windows open where you last left them. Windows in SYS:Prefs sets it.\n\n"
@@ -240,13 +247,22 @@
               "(new, off unless picked). It runs beside Workbench: its icon in SYS:Utilities "
               "opens SYS:, and drawers dropped on it open in its windows; in a Shell, OpenDrawer "
               "and the drawers to open. Snapshot keeps a window's place, view and order in the "
-              "drawer's icon, as Workbench does.")
+              "drawer's icon, as Workbench does.\n\n"
+              "OpenBench: the Team's own Workbench, with the dock and the Open preference "
+              "editors built in (new, a preview, off unless picked). It goes in SYS:System. The "
+              "Amiga runs it where its Startup-Sequence starts SYS:System/OpenBench in place of "
+              "LoadWB, as AmigaChrome's own instances do; OpenUp doesn't change the "
+              "Startup-Sequence. On AmigaChrome its Resize to Window fits Workbench to the window.\n\n"
+              "OpenDateTime: the date, the time and the region in one editor in SYS:Prefs (new). "
+              "You pick a place, not an offset, and summer time follows by itself.")
         (choices "OpenFTP: FTP and FTPS (new)"
                  "Telegram, unofficial: needs setting up (new)"
                  "OpenGPU developer files (new)"
                  "OpenInput: game controllers (new)"
                  "OpenTLS: secure connections (new)"
-                 "OpenDrawer: drawer windows (new)")
+                 "OpenDrawer: drawer windows (new)"
+                 "OpenBench: the Team's own Workbench (preview)"
+                 "OpenDateTime: date, time and region (new)")
         (default #default2)))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
@@ -425,7 +441,8 @@
 (if (bitand #parts 512)
     (
         (working "Installing OpenRTG")
-        (if (> (run (cat #tool " INSTALL Parts/OpenRTG >>T:OpenUp.log")) 5)
+        ; where OpenRTG is installed already, the part without Workbench's screen mode: the mode chosen since stays
+        (if (> (run (cat #tool (if #rtgwas " INSTALL Parts/OpenRTG/Upgrade" " INSTALL Parts/OpenRTG") " >>T:OpenUp.log")) 5)
             (message "OpenRTG didn't install completely. T:OpenUp.log says why."))))
 
 (if (bitand #parts 33554432)
@@ -634,6 +651,18 @@
             (working "Installing OpenDrawer")
             (if (> (run (cat #tool " INSTALL Parts/OpenDrawer >>T:OpenUp.log")) 5)
                 (message "OpenDrawer didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
+(if (bitand #parts2 64)
+    (if (exists "Parts/OpenBench/Part")
+        (
+            (working "Installing OpenBench")
+            (if (> (run (cat #tool " INSTALL Parts/OpenBench >>T:OpenUp.log")) 5)
+                (message "OpenBench didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
+(if (bitand #parts2 128)
+    (if (exists "Parts/OpenDateTime/Part")
+        (
+            (working "Installing OpenDateTime")
+            (if (> (run (cat #tool " INSTALL Parts/OpenDateTime >>T:OpenUp.log")) 5)
+                (message "OpenDateTime didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
 
 ; Gorilla's pictures after the parts, so the drawers a part makes (SYS:Developer and its OpenGPU-SDK, from
 ; the OpenGPU developer files) get theirs in the same run. An icon that has its picture already is left as
