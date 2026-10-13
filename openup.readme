@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       Dalsin Limited
 Type:         util/misc
-Version:      0.7.6
+Version:      0.7.9
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -97,7 +97,9 @@ choose:
 - OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
-  openrtg.library 0.16, with opengpu.library 0.15 and the board's driver;
+  openrtg.library 0.17, whose Native modes follow the size of AmigaChrome's
+  window, with opengpu.library 0.15 and the board's driver; an upgrade brings
+  it up to date where it is installed and keeps the screen mode you chose;
 - OpenGPU (new): opengpu.library 0.15, so programs' drawing and SDL 2 games
   run on the x86 or ARM64 cores and GL (Mesa) on the GPU, through
   AmigaChrome's graphics board, and on the Amiga's own CPU where there is no
@@ -156,7 +158,16 @@ choose:
 - OpenDrawer (new, off unless picked): drawer windows with an icon line,
   icons or a list sorted by name, size, date or kind, search and Snapshot,
   in the look's theme, beside Workbench (SYS:Utilities/OpenDrawer; drawers
-  dropped on its icon open in its windows).
+  dropped on its icon open in its windows);
+- OpenBench (new, a preview, off unless picked): the Team's own Workbench,
+  with the dock and the Open preference editors built in, in SYS:System; it
+  runs where the Startup-Sequence starts SYS:System/OpenBench in place of
+  LoadWB, as AmigaChrome's own instances do (OpenUp doesn't change the
+  Startup-Sequence); on AmigaChrome it follows the window, and Resize to
+  Window fits Workbench to it;
+- OpenDateTime (new): the date, the time and the region in one editor
+  (SYS:Prefs/OpenDateTime); you pick a place, not an offset, and summer time
+  follows by itself.
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,
