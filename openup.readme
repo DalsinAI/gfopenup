@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.7.9
+Version:      0.8.0
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -167,7 +167,15 @@ choose:
   Window fits Workbench to it;
 - OpenDateTime (new): the date, the time and the region in one editor
   (SYS:Prefs/OpenDateTime); you pick a place, not an offset, and summer time
-  follows by itself.
+  follows by itself;
+- OpenLibs (new, each off unless picked): the Team's own rewrites of
+  AmigaOS libraries in place of OS 3.2's, one switch each on the Installer's
+  sixth page, offered only once each one's test against OS 3.2's own, call
+  for call, is clean: utility.library 47.100 (a 68020 or later),
+  mathieeedoubbas.library 47.100 (a 68040 or 68060 with its FPU) and
+  input.device 50.2 (a 68020 or later). The ROM ones are loaded by OS 3.2's
+  own LoadModule, so the Amiga restarts once by itself as it starts;
+  unticking one puts OS 3.2's own back.
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,
