@@ -102,7 +102,8 @@ a Part file that C/OpenUpTool reads:
   OpenLibs/             the open libraries, one switch each, off by default (0.8.0): S:OpenLibs-Startup
                         (OS 3.2's LoadModule, from S:Pre-LoadModule-Startup), and a part of its own per library in
                         OpenLibs/<name> (utility.module, mathieeedoubbas.library, input.device
-                        50.2), which OpenUpTool REMOVE takes out alone (amigachrome-guest,
+                        50.2; from 0.8.1 also version, nonvolatile, realtime, amigaguide,
+                        rexxsyslib and lowlevel in LIBS:), which OpenUpTool REMOVE takes out alone (amigachrome-guest,
                         openamigainput; OPEN_LIBRARIES.md section 3)
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs), and
                         OpenAHI's files for the ACAHI sound board: acaudio.audio, its modes file
@@ -476,6 +477,10 @@ def build_parts(a):
     genv = {k: v for k, v in os.environ.items() if k not in ("STOVE", "CC")}
     run(["sh", g / "openutility/build-amiga.sh", "module"], env=dict(genv, OUT=str(ol / "openutility")))
     run(["sh", g / "openmathieee/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openmathieee")))
+    # 0.8.1: the six disk libraries with a clean lab run beside OS 3.2's own (amigachrome-guest #122 to #127),
+    # each with its own build-amiga.sh on its default os32-gcc16 stove
+    for d in OPENLIBS_DISK:
+        run(["sh", g / d / "build-amiga.sh"], env=dict(genv, OUT=str(ol / d)))
     if a.openamigainput:
         run(["sh", a.openamigainput / "device/build.sh", ol / "input"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
@@ -649,6 +654,24 @@ OPENLIBS = {
     "input": ("input/input.device", "Libs/OpenLibs/input.device", "LIBS:OpenLibs/input.device", "input.device",
               "input.device 50.2 in the ROM's place (openamigainput #9; a module, loaded by OS 3.2's LoadModule)"),
 }
+
+# 0.8.1: the disk libraries, each built for the 68000 by its own build-amiga.sh with the os32-gcc16 stove, and
+# each with a clean ABI test beside OS 3.2's own and swapped in, in labs copied from Instance-32 (amigachrome-guest
+# #122 to #127; OPEN_LIBRARIES.md section 1). Each goes in LIBS: in place of OS 3.2's, which OpenUpTool keeps in
+# SYS:Storage/OpenUp-Superseded and puts back on REMOVE. rexxsyslib.library is a face over OS 3.2's own, which
+# holds the ARexx interpreter: the Installer copies OS 3.2's to LIBS:OS32/rexxsyslib.library first (its DESIGN.md).
+#   amigachrome-guest directory: the library's name
+OPENLIBS_DISK = {
+    "openversion": "version",
+    "opennonvolatile": "nonvolatile",
+    "openrealtime": "realtime",
+    "openamigaguide": "amigaguide",
+    "openrexxsyslib": "rexxsyslib",
+    "openlowlevel": "lowlevel",
+}
+for _d, _n in OPENLIBS_DISK.items():
+    OPENLIBS[_n] = (f"{_d}/libs/{_n}.library", f"Libs/{_n}.library", f"LIBS:{_n}.library", f"{_n}.library",
+                    f"{_n}.library 47.100 in LIBS:, in place of OS 3.2's own")
 
 # S:OpenLibs-Startup, from S:Pre-LoadModule-Startup, which OS 3.2's Startup-Sequence runs first of all: the ROM
 # libraries switched on, in one call of OS 3.2's own C:LoadModule, as openamigainput #9's install notes do for
