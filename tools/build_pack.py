@@ -99,6 +99,11 @@ a Part file that C/OpenUpTool reads:
                         (--openamigabench). It runs where the Startup-Sequence starts
                         SYS:System/OpenBench in LoadWB's place; OpenUp doesn't change the
                         Startup-Sequence yet
+  OpenLibs/             the open libraries, one switch each, off by default (0.8.0): S:OpenLibs-Startup
+                        (OS 3.2's LoadModule, from S:Pre-LoadModule-Startup), and a part of its own per library in
+                        OpenLibs/<name> (utility.module, mathieeedoubbas.library, input.device
+                        50.2), which OpenUpTool REMOVE takes out alone (amigachrome-guest,
+                        openamigainput; OPEN_LIBRARIES.md section 3)
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs), and
                         OpenAHI's files for the ACAHI sound board: acaudio.audio, its modes file
                         and AHI's settings on Host mix, with OpenAHI's own ahi.device
@@ -461,6 +466,18 @@ def build_parts(a):
     if a.openamigainput:
         run(["sh", a.openamigainput / "library/build.sh", a.openamigainput / "build"], env=dict(env, STOVE=str(STOVE)))
         run(["sh", a.openamigaprefs / "Gamepads/build.sh"], env=dict(env, STOVE=str(STOVE)))
+    # OpenLibs (0.8.0): the open libraries the Installer offers one switch each, off by default
+    # (amigachrome-guest libraries/OPEN_LIBRARIES.md, section 3), each built with its own script as written:
+    # utility.module and the IEEE maths (amigachrome-guest, their default os32-gcc16 stove), and input.device 50.2
+    # (openamigainput device/build.sh, os32 stove). The ROM ones load with OS 3.2's own C:LoadModule (OPENLIBS_STARTUP).
+    # Their own stove: STOVE here is the os32 one, so it is left out of their environment.
+    ol = ROOT / "build/openlibs"
+    g = a.guest / "libraries"
+    genv = {k: v for k, v in os.environ.items() if k not in ("STOVE", "CC")}
+    run(["sh", g / "openutility/build-amiga.sh", "module"], env=dict(genv, OUT=str(ol / "openutility")))
+    run(["sh", g / "openmathieee/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openmathieee")))
+    if a.openamigainput:
+        run(["sh", a.openamigainput / "device/build.sh", ol / "input"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
         # make_sdk.py won't write over a kit: a rebuild's old one goes to archive/ beside it
         for old in Path(a.opengpu_sdk).glob("OpenGPU-SDK-*/"):
@@ -585,7 +602,7 @@ PART_MAIN = {
 # ahi.device (6.1.1), acaudio.audio and modes (AmigaChrome machines only). OpenImage 0.4 adds
 # opentga.datatype (47.1). A part's own version goes up when what it ships changes, so OpenUpTool UPDATE
 # and the Installer's log name the change.
-PART_OWN_VERSION = {"AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev",
+PART_OWN_VERSION = {"OpenLibs", "AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev",
                     "OpenPrint", "OpenMUI", "Sound"}
 
 
@@ -617,6 +634,84 @@ def opentls_part(top: Path, tls_src: Path):
     return tls
 
 
+# OpenLibs (0.8.0): the open libraries, one switch each in the Installer's sixth page, off by default
+# (amigachrome-guest libraries/OPEN_LIBRARIES.md, section 3: "default off until its ABI test is clean"). Only a
+# library whose ABI test against OS 3.2's own is clean, and which builds with the stoves as its script says, is
+# here; the others, and why, are in docs/releases/0.8.0/RELEASE-NOTES.md. Each is a part of its own in
+# Parts/OpenLibs/<name>, so OpenUpTool REMOVE takes it out alone and puts OS 3.2's own back.
+#   name: (the file built, the part's file, where it goes, the name its version is read under, what it is)
+OPENLIBS = {
+    "utility": ("openutility/modules/utility.module", "Libs/OpenLibs/utility.module", "LIBS:OpenLibs/utility.module",
+                "utility.library", "utility.library 47.100 in the ROM's place (a module, loaded by OS 3.2's LoadModule)"),
+    "mathieeedoubbas": ("openmathieee/libs/mathieeedoubbas.library", "Libs/mathieeedoubbas.library",
+                        "LIBS:mathieeedoubbas.library", "mathieeedoubbas.library",
+                        "mathieeedoubbas.library 47.100 in LIBS:, for a 68040 or 68060 with its FPU"),
+    "input": ("input/input.device", "Libs/OpenLibs/input.device", "LIBS:OpenLibs/input.device", "input.device",
+              "input.device 50.2 in the ROM's place (openamigainput #9; a module, loaded by OS 3.2's LoadModule)"),
+}
+
+# S:OpenLibs-Startup, from S:Pre-LoadModule-Startup, which OS 3.2's Startup-Sequence runs first of all: the ROM
+# libraries switched on, in one call of OS 3.2's own C:LoadModule, as openamigainput #9's install notes do for
+# input.device. LoadModule reloads the set and restarts the machine when what is in memory isn't that set, so after
+# a power-on the Amiga restarts once by itself, and a library switched off goes at the next start. One call only:
+# two LoadModule calls with different sets would restart the machine for ever. The Team's C:OpenModule
+# (amigachrome-guest #79) is not used yet: in a lab copy of Instance-32 its modules were gone at the second reset
+# while OpenModule LIST still listed them, so it never loaded them again, and OpenModule REMOVE then brought
+# Guru 81000005 (docs/releases/0.8.0/RELEASE-NOTES.md).
+OPENLIBS_STARTUP = """\
+; $VER: OpenLibs-Startup 1.0 (13.10.2026)
+; OpenUp's open ROM libraries (Install-OpenUp, page 6): each module in LIBS:OpenLibs, loaded in one call of
+; OS 3.2's own LoadModule, which restarts the Amiga once when they aren't in memory yet. Taking a file out of
+; LIBS:OpenLibs puts the ROM's own back at the next start. MIT, Copyright (c) 2026 Dalsin Limited.
+FailAt 21
+If EXISTS LIBS:OpenLibs/utility.module
+  If EXISTS LIBS:OpenLibs/input.device
+    C:LoadModule LIBS:OpenLibs/utility.module LIBS:OpenLibs/input.device >NIL:
+  Else
+    C:LoadModule LIBS:OpenLibs/utility.module >NIL:
+  EndIf
+Else
+  If EXISTS LIBS:OpenLibs/input.device
+    C:LoadModule LIBS:OpenLibs/input.device >NIL:
+  EndIf
+EndIf
+FailAt 10
+"""
+
+
+def openlibs_parts(top: Path, a) -> list:
+    """Parts/OpenLibs (the startup script and S:Pre-LoadModule-Startup, which the Installer adds with the first
+    library switched on and takes out with the last; it never writes over another program's
+    Pre-LoadModule-Startup) and Parts/OpenLibs/<name>, one per library."""
+    ol = ROOT / "build/openlibs"
+    base = Part(top, "OpenLibs", "1.0", "OpenLibs: the startup that loads the open ROM libraries with OS 3.2's LoadModule")
+    base.add("S/OpenLibs-Startup", OPENLIBS_STARTUP.encode("latin-1"), "S:OpenLibs-Startup", own=True)
+    base.add("S/Pre-LoadModule-Startup", b"; OpenUp's OpenLibs (Install-OpenUp, page 6)\nExecute S:OpenLibs-Startup\n",
+             "S:Pre-LoadModule-Startup", own=True)
+    base.write()
+    made = []
+    for name, (built, rel, dest, vername, title) in OPENLIBS.items():
+        f = ol / built
+        if not f.is_file():
+            print(f"  OpenLibs: {name} left out ({f} wasn't built)")
+            continue
+        data = f.read_bytes()
+        ver = binary_version(data, vername)
+        if not ver:
+            raise SystemExit(f"OpenLibs: {f} has no {vername} version")
+        p = Part(top, f"OpenLibs/{name}", ver, f"OpenLibs: {title}")
+        p.lines[0] = f"part OpenLibs-{name} {ver}"
+        p.add(rel, data, dest)
+        if name == "input":
+            p.add("C/InputProbe", (ol / "input/InputProbe").read_bytes(), "SYS:C/InputProbe")
+            p.add("Utilities/OpenUp/Licences/input.device.txt", (a.openamigainput / "LICENSE").read_bytes(),
+                  "SYS:Utilities/OpenUp/Licences/input.device.txt")
+        p.write()
+        made.append(name)
+    print(f"  OpenLibs: {', '.join(made)}")
+    return made
+
+
 def check_part_versions(parts: Path) -> None:
     """Stops the build when a part's declared version is not its main
     binary's $VER, or when a part says neither which binary that is nor
@@ -630,6 +725,14 @@ def check_part_versions(parts: Path) -> None:
             wrong.append(f"{name} {version}: no main binary in PART_MAIN (or add it to PART_OWN_VERSION)")
             continue
         rel, vername = PART_MAIN[name]
+        f = pf.parent / rel
+        got = binary_version(f.read_bytes(), vername) if f.is_file() else None
+        if got != version:
+            wrong.append(f"{name}: the part says {version}, {rel} says {got or 'no version'}")
+    # OpenLibs' libraries, one part each in Parts/OpenLibs/<name>: the version is the library's own
+    for pf in sorted(parts.glob("OpenLibs/*/Part")):
+        name, version = pf.read_text(encoding="latin-1").split("\n", 1)[0].split()[1:3]
+        _, rel, _, vername, _ = OPENLIBS[name.split("-", 1)[1]]
         f = pf.parent / rel
         got = binary_version(f.read_bytes(), vername) if f.is_file() else None
         if got != version:
@@ -1218,6 +1321,8 @@ def main() -> int:
                 "SYS:Utilities/OpenUp/Licences/OpenInput.txt")
         oin.line("startup SYS:Prefs/OpenGamepads USE")
         oin.write()
+
+    openlibs_parts(top, a)
 
     # GCC 16's FPCR clash (openamigartg tools/fpcr_check.py) must not be in
     # anything the graphics parts ship, whichever stove built it.
