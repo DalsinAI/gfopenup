@@ -2,6 +2,7 @@
  *
  *   OpenUpTool DETECT                 what this machine is; ENV:OpenUp/...
  *   OpenUpTool INSTALL <part drawer>  installs one part, as its Part file says
+ *   OpenUpTool REMOVE <part drawer>   takes one part out, putting back what it replaced (0.8.0)
  *   OpenUpTool STARTUP                writes the marked block in S:User-Startup
  *   OpenUpTool UNINSTALL              puts everything back
  *   OpenUpTool FIXTOOLS <table> [ALL] puts back default tools that OpenUp 0.6.14 to 0.7.0 changed
@@ -104,7 +105,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.7.8 (12.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.0 (13.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -848,6 +849,86 @@ static int install(const char *drawer)
     }
     Printf((STRPTR)"OpenUp: %s %s installed (%ld file%s changed)\n", (LONG)partname, (LONG)partver, files, (LONG)(files == 1 ? "" : "s"));
     return errors ? RETURN_ERROR : RETURN_OK;
+}
+
+/* ---- REMOVE: one part taken out (0.8.0) ------------------------------------------------------ */
+
+/* Takes out the files one part's Part file names, as UNINSTALL takes out everything: a file the part added
+ * is deleted, a file it replaced or retired gets its original back from SYS:Storage/OpenUp-Superseded, and
+ * its startup lines and its "part" line leave the manifest (STARTUP writes S:User-Startup again after). The
+ * directories it made go when empty. The OpenLibs switches use it: unticking a library puts OS 3.2's own
+ * back. Only a file the manifest lists is touched, so a file the part names but OpenUp never put there (the
+ * user's own) stays. 0 when the part isn't installed. */
+static int remove_part(const char *drawer)
+{
+    char path[220], *text, *p, *line, partname[64] = "";
+    int removed = 0, restored = 0, problems = 0, i;
+
+    strncpy(path, drawer, 200);
+    path[200] = 0;
+    AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
+    if (!(text = read_file(path, NULL))) {
+        say("OpenUp: can't read ", path, ". Run the Installer from the OpenUp drawer.");
+        return RETURN_FAIL;
+    }
+    manifest_load();
+    for (p = text; *p; ) {
+        char *w[12], dir[ENTRY_PATH];
+        const char *dest = NULL;
+        entry *e;
+        int n;
+        line = p;
+        while (*p && *p != '\n') p++;
+        if (*p) *p++ = 0;
+        if (!strncmp(line, "startup ", 8)) continue;
+        n = words(line, w, 12);
+        if (!n) continue;
+        if (!strcmp(w[0], "when") && n >= 4) { n -= 2; memmove(w, w + 2, n * sizeof w[0]); }
+        if (!strcmp(w[0], "part") && n >= 3) strncpy(partname, w[1], sizeof partname - 1);
+        else if (!strcmp(w[0], "retire") && n >= 2) dest = w[1];
+        else if ((!strcmp(w[0], "copy") || !strcmp(w[0], "default") || !strcmp(w[0], "add") || !strcmp(w[0], "face"))
+                 && n >= 3) dest = w[2];
+        if (!dest || !(e = find_entry(NULL, dest)))
+            continue;
+        if (!strcmp(e->kind, "new")) {
+            if (DeleteFile((STRPTR)e->a) || !exists(e->a)) { removed++; e->kind[0] = 0; }
+            else { say("OpenUp: can't delete ", e->a, "; is it in use?"); problems++; continue; }
+        } else if (!strcmp(e->kind, "replaced")) {
+            if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; e->kind[0] = 0; }
+            else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); problems++; continue; }
+        } else if (!strcmp(e->kind, "same")) {
+            e->kind[0] = 0;
+            continue;
+        } else continue;
+        /* the directories OpenUp made for it, deepest first, while empty */
+        parent_of(dest, dir, sizeof dir);
+        while (dir[0] && dir[strlen(dir) - 1] != ':') {
+            char up[ENTRY_PATH];
+            entry *d = find_entry("dir", dir);
+            if (!d || !DeleteFile((STRPTR)dir)) break;
+            d->kind[0] = 0;
+            parent_of(dir, up, sizeof up);
+            strcpy(dir, up);
+        }
+    }
+    FreeVec(text);
+    if (!partname[0] || !find_entry("part", partname)) {
+        if (!removed && !restored) {
+            Printf((STRPTR)"OpenUp: %s isn't installed\n", (LONG)(partname[0] ? partname : drawer));
+            return RETURN_OK;
+        }
+    }
+    for (i = 0; i < nents; i++)
+        if ((!strcmp(ents[i].kind, "startup") && !strcmp(ents[i].b, partname)) ||
+            (!strcmp(ents[i].kind, "part") && !strcmp(ents[i].a, partname)))
+            ents[i].kind[0] = 0;
+    if (!manifest_save()) {
+        say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
+        return RETURN_ERROR;
+    }
+    Printf((STRPTR)"OpenUp: %s taken out (%ld file%s removed, %ld put back as they were)\n", (LONG)partname, removed,
+           (LONG)(removed == 1 ? "" : "s"), restored);
+    return problems ? RETURN_ERROR : RETURN_OK;
 }
 
 /* ---- S:User-Startup ---------------------------------------------------------------------- */
@@ -2635,7 +2716,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -2645,6 +2726,7 @@ static int real_main(void)
     cmd = (const char *)args[0];
     if (same_word(cmd, "DETECT")) rc = detect();
     else if (same_word(cmd, "INSTALL") && args[1]) rc = install((const char *)args[1]);
+    else if (same_word(cmd, "REMOVE") && args[1]) rc = remove_part((const char *)args[1]);
     else if (same_word(cmd, "STARTUP")) rc = write_startup(0) ? RETURN_OK : (say("OpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL), RETURN_ERROR);
     else if (same_word(cmd, "UNINSTALL")) rc = uninstall();
     else if (same_word(cmd, "FIXTOOLS") && args[1]) rc = fix_tools((const char *)args[1], args[2] && same_word((const char *)args[2], "ALL"));
@@ -2684,7 +2766,7 @@ static int real_main(void)
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
