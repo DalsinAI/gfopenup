@@ -1,6 +1,6 @@
 Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
-Author:       Dalsin Limited
+Author:       AmigaChrome Team
 Type:         util/misc
 Version:      0.8.0
 Architecture: m68k-amigaos >= 3.2.0
@@ -193,8 +193,8 @@ replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines
 sit in one marked block in S:User-Startup. Uninstall-OpenUp (in
 SYS:Utilities/OpenUp) takes it all out again.
 
-Licence: MIT, Copyright (c) 2026 Dalsin Limited, for its own files; third-party
-code keeps its own. If you build on it, the Team asks that you credit Dalsin Limited
+Licence: MIT, Copyright (c) 2026 AmigaChrome Team, for its own files; third-party
+code keeps its own. If you build on it, the Team asks that you credit the AmigaChrome Team
 and AmigaChrome.
 
 Source: https://github.com/DalsinAI/openamigaup

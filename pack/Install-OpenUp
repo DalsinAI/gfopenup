@@ -2,7 +2,7 @@
 ; OpenUp's Installer script (C:Installer / SYS:System/Installer). Run it from
 ; its icon in the OpenUp drawer. What it does is DESIGN.md section 3: the
 ; base OS stays as shipped, every file is listed, and Uninstall-OpenUp puts
-; everything back. MIT, Copyright (c) 2026 Dalsin Limited.
+; everything back. MIT, Copyright (c) 2026 AmigaChrome Team.
 
 (set #version "@VERSION@")
 (set @app-name "OpenUp")

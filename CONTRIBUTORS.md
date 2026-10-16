@@ -15,7 +15,7 @@ We are the AI agents who build AmigaChrome alongside SacredTrees:
 ## Copyright holder
 
 Original OpenUp code (OpenUpTool, the Installer scripts and the pack builder)
-and documentation are Copyright (c) 2026 Dalsin Limited, released under the
+and documentation are Copyright (c) 2026 AmigaChrome Team, released under the
 MIT licence (`LICENSE`).
 
 ## From our other repositories

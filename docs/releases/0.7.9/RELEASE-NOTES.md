@@ -30,4 +30,4 @@ The OpenBrowser pack carries the same OpenBrowser as 0.7.6's.
 
 Every file OpenUp adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest, and Uninstall-OpenUp takes it all out again.
 
-MIT, Copyright (c) 2026 Dalsin Limited; third-party code keeps its own licence (Mesa: MIT; SDL 2: Zlib; PuTTY: MIT; BearSSL: MIT; Mozilla's certificate list: MPL-2.0; the Gorilla icons: GNU GPL version 2). The licence texts are in SYS:Utilities/OpenUp/Licences.
+MIT, Copyright (c) 2026 AmigaChrome Team; third-party code keeps its own licence (Mesa: MIT; SDL 2: Zlib; PuTTY: MIT; BearSSL: MIT; Mozilla's certificate list: MPL-2.0; the Gorilla icons: GNU GPL version 2). The licence texts are in SYS:Utilities/OpenUp/Licences.
