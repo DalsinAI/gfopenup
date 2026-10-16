@@ -2353,12 +2353,73 @@ static int default_out(const char *dest)
     return 0;
 }
 
+/* Gorilla's pictures OpenUp's list doesn't name where they are: icons RECONCILE moved (SYS:Prefs/Classic's old prefs
+ * editors), drawers and programs an older OpenUp or a hand change made from a faced icon (SYS:Prefs/Classic,
+ * SYS:Developer/OpenGPU-SDK...). Found on lab copies of Instance-32, 16 October 2026. Each icon on SYS: (three
+ * drawers deep, as ICONS walks) that shows one of Gorilla's pictures and isn't listed gets OpenIcons' picture
+ * instead, by its name from the pack's OpenIcons part, else of its kind (face_icon: its fields and place stay, the
+ * icon as it was goes to SYS:Storage/OpenUp-Superseded for UNINSTALL). Returns how many. */
+#define OI_PART "Parts/OpenIcons"
+static int old_icon(const char *path, int *type);
+static int sweep_n;
+
+static void gorilla_sweep(const char *dir, int depth)
+{
+    BPTR lock = Lock((STRPTR)dir, ACCESS_READ);
+    struct FileInfoBlock *fib;
+    char sub[256], from[256];
+    if (!lock) return;
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (Examine(lock, fib)) {
+            while (ExNext(lock, fib)) {
+                const char *n = (const char *)fib->fib_FileName;
+                int l = strlen(n), type = 0;
+                isig p;
+                strlcpy(sub, dir, sizeof sub);
+                if (sub[strlen(sub) - 1] != ':') str_cat(sub, "/", sizeof sub);
+                str_cat(sub, n, sizeof sub);
+                if (fib->fib_DirEntryType > 0) {
+                    if (depth < 3 && strcmp(n, "OpenUp-Superseded") && strcmp(n, "Parts") && strcmp(n, "T") &&
+                        strcmp(n, "Trashcan") && strncmp(n, ".", 1))
+                        gorilla_sweep(sub, depth + 1);
+                    continue;
+                }
+                if (l <= 5 || !same_word(n + l - 5, ".info") || find_entry(NULL, sub) || is_default_icon_name(sub) ||
+                    !file_sig(sub, &p, NULL) || !sig_in(&p, gorilla_pics, NGORILLA))
+                    continue;
+                strlcpy(from, OI_PART "/Icons/", sizeof from);
+                str_cat(from, n, sizeof from);
+                if (!exists(from)) {
+                    static const char *const kinds[] = { NULL, "Disk", "Drawer", "Tool", "Project", "Trashcan", NULL, NULL };
+                    old_icon(sub, &type);
+                    if (type < 1 || type > 5) continue;
+                    strlcpy(from, OI_PART "/Kinds/", sizeof from);
+                    str_cat(from, kinds[type], sizeof from);
+                    str_cat(from, ".info", sizeof from);
+                    if (!exists(from)) continue;
+                }
+                if (face_icon(from, sub) > 0) {
+                    say("OpenUp: ", sub, ": Gorilla's picture, unlisted: OpenIcons' given instead");
+                    sweep_n++;
+                }
+            }
+        }
+        FreeDosObject(DOS_FIB, fib);
+    }
+    UnLock(lock);
+}
+
 static int old_faces_out(void)
 {
     int i, n = 0;
     for (i = 0; i < (int)(sizeof default_icons / sizeof default_icons[0]); i++)
         n += default_out(default_icons[i]);     /* no Work: volume: exists() says so, with no requester */
     n += gorilla_out();
+    if (exists(OI_PART "/Part")) {                  /* run from the pack's drawer, as the Installer does */
+        sweep_n = 0;
+        gorilla_sweep("SYS:", 0);
+        n += sweep_n;
+    }
     /* what the GorillaIcons part copied (its PNGs and licence texts in SYS:Storage/Icons/Gorilla, its licence note)
      * and its part line: OpenUp's own, listed as new */
     for (i = 0; i < nents; i++) {
