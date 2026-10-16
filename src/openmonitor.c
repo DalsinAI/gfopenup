@@ -288,7 +288,7 @@ static void take_memory(void)
 }
 
 /* The cores the CPU cores board presents through AutoConfig (the user, 10 October 2026: "the cpu count
- * should read the amount of cores presented via autoconfig"): a Dalsin ($DA15) product 7 board carrying
+ * should read the amount of cores presented via autoconfig"): an AmigaChrome Team ($DA15) product 7 board carrying
  * the ACSV block, CLASS ($20) 2, UNITS ($24) its cores. 0 without the board. */
 static ULONG board_cores(void)
 {

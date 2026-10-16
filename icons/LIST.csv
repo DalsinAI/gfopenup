@@ -640,4 +640,4 @@ Apps: hardware and drivers,Monitor,Monitor setup,Monitor,P2,Gorilla: Devs/Monito
 Apps: hardware and drivers,Keyboard,Keyboard setup,Keyboard,P2,Gorilla: Prefs/Input,png/apps/Keyboard.info
 Apps: hardware and drivers,Gotek / floppy emulator,USB floppy emulator,Floppy drive with a screen,P3,,png/apps/Gotek.info; png/apps/floppy emulator.info
 Apps: hardware and drivers,IDE / SCSI,Hard disk controller tools,Controller board,P3,,png/apps/IDE.info; png/apps/SCSI.info
-Apps: hardware and drivers,AmigaChrome board,Dalsin board services,Board with the AmigaChrome mark,P1,,png/apps/AmigaChrome board.info
+Apps: hardware and drivers,AmigaChrome board,AmigaChrome Team board services,Board with the AmigaChrome mark,P1,,png/apps/AmigaChrome board.info
