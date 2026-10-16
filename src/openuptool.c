@@ -21,7 +21,9 @@
  *                                     its window (Workbench's prefs, WBConfig.prefs)
  *   OpenUpTool OLDLOOK                takes out the look's files OpenUp up to 0.8.1 wrote (C:OpenLook,
  *                                     the theme, Font and IControl prefs) where they are as it wrote them,
- *                                     and (0.8.3) the faces up to 0.8.2 gave the default icons and volumes
+ *                                     and the default icons in ENVARC:Sys and SYS:Disk.info: OS 3.2.3's
+ *                                     own and OpenUp's faces of them (0.8.3, 0.8.4), and Gorilla's faces
+ *                                     on the other icons, each where it is still as installed (0.8.4)
  *   OpenUpTool WBGAUGE                No fill gauge in a drive's window (Workbench's prefs, "No
  *                                     volume gauge": the bar down the left border that shows how
  *                                     full the disk is; the border is slim like any window's)
@@ -33,7 +35,8 @@
  *   OpenUpTool TIDY [ONCE]            the system's drawers cleaned up, sized to fit (at most 800 x 600) and
  *                                     snapshotted by Workbench itself, so they open neat (see TIDY)
  *   OpenUpTool ICONS [CHECK|APPLY]    old icons (four colours, NewIcons) found on SYS: and Work: and given
- *                                     our faces, by name from Gorilla's set, else by kind (see ICONS)
+ *                                     our faces, by name from OpenIcons' set, else by kind (see ICONS)
+ *   OpenUpTool ICONSIG <icon|drawer>  each icon's picture and whole signatures (see OLDLOOK)
  *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
  *                                     come back with UNINSTALL
  *   OpenUpTool UNPLACE <program>      drops the program's windows from OpenWindows' Places
@@ -108,7 +111,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.3 (16.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.4 (16.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -676,14 +679,15 @@ static int put_face(struct DiskObject *pic, struct DiskObject *old, const char *
     return ok;
 }
 
-/* A new face for an icon that stays the system's (Gorilla's pictures on SYS:'s
- * drawers and programs and on the default icons, ICONS.md section 8): the
+/* A new face for an icon that stays the system's (OpenIcons' pictures on SYS:'s
+ * drawers and programs and on the DefIcons file types, ICONS.md section 8): the
  * picture comes from the part's icon, and everything else (type, default
  * tool, tool types, stack, the drawer's window, its place) stays the icon's
  * own. The original goes to SYS:Storage/OpenUp-Superseded the first time, as
  * for a replaced file, so UNINSTALL puts it back. An icon the machine hasn't
  * got, or one that shows the picture already (same_picture), is left alone.
  * 1 changed, 0 nothing to do, -1 failed (said why). */
+static int still_face(const char *dest, const char *pic_name, const char *fields_name);
 static int face_icon(const char *from, const char *dest)
 {
     char backup[260], dir[260], fname[260], dname[260];
@@ -710,6 +714,21 @@ static int face_icon(const char *from, const char *dest)
         CloseLibrary(IconBase);
         IconBase = NULL;
         return 0;
+    }
+    /* 0.8.4: an icon OpenUp faced before gets a new face only while it is its original (OLDLOOK put it back
+     * from Gorilla's picture): one the user changed since keeps what they gave it */
+    if (e && !strcmp(e->kind, "replaced") && pic && old) {
+        FreeDiskObject(pic);                        /* still_face opens icon.library for itself */
+        FreeDiskObject(old);
+        CloseLibrary(IconBase);
+        IconBase = NULL;
+        if (!e->b || !exists(e->b) || !still_face(dest, e->b, e->b)) {
+            say("OpenUp: kept ", dest, ": it has been changed since OpenUp last gave it a picture");
+            return 0;
+        }
+        if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) return -1;
+        pic = GetIconTags((STRPTR)fname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+        old = GetIconTags((STRPTR)dname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
     }
     if (!e || !strcmp(e->kind, "same")) {          /* the first time: keep the original */
         parent_of(backup, dir, sizeof dir);
@@ -1923,40 +1942,197 @@ static int take_out_old(const char *dest, int (*was)(const UBYTE *, LONG, const 
     return ok;
 }
 
-/* ---- The default icons' and the volumes' faces earlier OpenUps gave, taken out (0.8.3) ----------------------------
+/* ---- Icon signatures (0.8.4) ----------------------------------------------------------------------------------
  *
- * The OpenKick ROM's icon.library has its own default icons (RAM, hard disk, floppy, CD, drawer, tool, project,
- * trashcan, Kickstart...), and the user, 16 October 2026: "ram disk needs to have one of our new icons as standard
- * ... so do all the volumes etc, they default to our equivalent set". A def_<kind>.info in ENVARC:Sys, or a volume's
- * own Disk.info, wins over them. Up to 0.8.2 the GorillaIcons part gave these Gorilla's pictures; 0.8.3 doesn't, and
- * an upgrade takes out each one that is still as OpenUp left it: the icon is written again into T: from the
- * original OpenUp kept (its type, default tool, tool types, stack) and the part's picture (Parts/GorillaIcons/
- * Retired, the same icons the part used), and the file goes only when the two are the same, byte for byte. Two
- * things are left out of the comparison: the icon's place (where it sits, its drawer window), which Workbench
- * writes whenever it is snapshot, and the memory addresses an icon file holds for its pointers, which icon.library
- * reads only as there or not there and which differ at every write. The original stays
- * in SYS:Storage/OpenUp-Superseded, listed, so UNINSTALL still puts it back; it isn't put back here, because the
- * OS 3.2.3 Installer's own def_RAM, def_Harddisk... would hide the ROM's icons just the same.
- * Work:Disk.info may not be in OpenUp's list: on Instance-32 the part found none there to face, yet the volume's
- * icon carries Gorilla's hard disk (from def_Harddisk, as OpenUp had faced it). Unlisted, it goes when it is exactly
- * that picture over its own type and fields: the icon written again from itself and the picture.
- * Anything else stays, and T:OpenUp.log says so. The DefIcons file types (def_ascii, def_picture...) keep their
- * faces: they aren't icon.library's own defaults. */
-#define RETIRED "Parts/GorillaIcons/Retired"
-static const char *const old_faces[][2] = {
-    { "SYS:Disk.info", "SYS_Disk" },
-    { "Work:Disk.info", "Work_Disk" },
-    { "ENVARC:Sys/def_RAM.info", "def_RAM" },
-    { "ENVARC:Sys/def_Harddisk.info", "def_Harddisk" },
-    { "ENVARC:Sys/def_Disk.info", "def_Disk" },
-    { "ENVARC:Sys/def_CDROM.info", "def_CDROM" },
-    { "ENVARC:Sys/def_Kick.info", "def_Kick" },
-    { "ENVARC:Sys/def_Drawer.info", "def_Drawer" },
-    { "ENVARC:Sys/def_Tool.info", "def_Tool" },
-    { "ENVARC:Sys/def_Project.info", "def_Project" },
-    { "ENVARC:Sys/def_Trashcan.info", "def_Trashcan" },
+ * What an icon shows and what it is, as icon.library reads it, in 64 bits: the picture (its size, frame, both
+ * images with their palettes and transparent colours; the planar images when it has no colour ones) and, for
+ * the whole icon, its type, default tool, tool types and stack too (a program's or project's stack: a disk's,
+ * drawer's or trashcan's means nothing, and Workbench's snapshot writes it anew). Its place and drawer window are left out:
+ * Workbench writes those whenever it is snapshot. OLDLOOK tells by them the pictures OpenUp gave up to 0.8.3
+ * (Gorilla's, which the pack no longer carries) and OS 3.2.3's own default icons as its install leaves them.
+ *   OpenUpTool ICONSIG <icon or drawer>   prints each icon's picture and whole signatures
+ *   OpenUpTool ICONSIG <icon> <fields>   says whether the icon is its own picture over the other icon's fields,
+ *                                         as OLDLOOK asks, and leaves what it compared with in T:OpenUp-oldface.info */
+typedef struct { ULONG a, b; } isig;
+
+static void sig_add(isig *s, const void *p, ULONG n)
+{
+    const UBYTE *b = (const UBYTE *)p;
+    while (n--) {
+        s->a = (s->a ^ *b) * 16777619UL;                    /* FNV-1a */
+        s->b = (s->b ^ *b++) * 0x5bd1e995UL + 0x9e3779b9UL;  /* and a second, unrelated one */
+    }
+}
+
+static void sig_long(isig *s, LONG v)
+{
+    UBYTE b[4];
+    b[0] = (UBYTE)(v >> 24); b[1] = (UBYTE)(v >> 16); b[2] = (UBYTE)(v >> 8); b[3] = (UBYTE)v;
+    sig_add(s, b, 4);
+}
+
+static void sig_text(isig *s, const char *t)
+{
+    if (!t) { sig_long(s, -1); return; }
+    sig_long(s, (LONG)strlen(t));
+    sig_add(s, t, strlen(t));
+}
+
+static void sig_planar(isig *s, struct Image *im)
+{
+    if (!im) { sig_long(s, -1); return; }
+    sig_long(s, im->Width); sig_long(s, im->Height); sig_long(s, im->Depth);
+    if (im->ImageData && im->Width > 0 && im->Height > 0 && im->Depth > 0)
+        sig_add(s, im->ImageData, (ULONG)((im->Width + 15) >> 4) * 2 * im->Height * im->Depth);
+}
+
+/* the picture's signature in pic; with whole, the icon's in whole */
+static void icon_sig(struct DiskObject *o, isig *pic, isig *whole)
+{
+    LONG w = 0, h = 0, pm = 0, fr = 0;
+    int k;
+    pic->a = 2166136261UL; pic->b = 0x12345678UL;
+    IconControl(o, ICONCTRLA_GetWidth, (ULONG)&w, ICONCTRLA_GetHeight, (ULONG)&h,
+                ICONCTRLA_IsPaletteMapped, (ULONG)&pm, ICONCTRLA_GetFrameless, (ULONG)&fr, TAG_DONE);
+    sig_long(pic, pm ? 1 : 0);
+    if (pm && w > 0 && h > 0) {
+        sig_long(pic, w); sig_long(pic, h); sig_long(pic, fr ? 1 : 0);
+        for (k = 0; k < 2; k++) {
+            UBYTE *img = NULL;
+            struct ColorRegister *pal = NULL;
+            LONG np = 0, tc = -1;
+            IconControl(o, k ? ICONCTRLA_GetImageData2 : ICONCTRLA_GetImageData1, (ULONG)&img,
+                        k ? ICONCTRLA_GetPalette2 : ICONCTRLA_GetPalette1, (ULONG)&pal,
+                        k ? ICONCTRLA_GetPaletteSize2 : ICONCTRLA_GetPaletteSize1, (ULONG)&np,
+                        k ? ICONCTRLA_GetTransparentColor2 : ICONCTRLA_GetTransparentColor1, (ULONG)&tc, TAG_DONE);
+            sig_long(pic, img ? 1 : 0); sig_long(pic, np); sig_long(pic, tc);
+            if (img) sig_add(pic, img, (ULONG)(w * h));
+            if (pal && np > 0) sig_add(pic, pal, (ULONG)np * sizeof(struct ColorRegister));
+        }
+    } else {                                                    /* a planar icon: its images */
+        sig_long(pic, o->do_Gadget.Width); sig_long(pic, o->do_Gadget.Height);
+        sig_planar(pic, (struct Image *)o->do_Gadget.GadgetRender);
+        sig_planar(pic, (o->do_Gadget.Flags & GFLG_GADGHIGHBITS) == GFLG_GADGHIMAGE ? (struct Image *)o->do_Gadget.SelectRender : NULL);
+    }
+    if (whole) {
+        *whole = *pic;
+        sig_long(whole, o->do_Type);
+        sig_text(whole, (const char *)o->do_DefaultTool);
+        if (o->do_ToolTypes) {
+            STRPTR *t;
+            for (t = o->do_ToolTypes; *t; t++) sig_text(whole, (const char *)*t);
+        }
+        sig_long(whole, -2);
+        if (o->do_Type != WBDISK && o->do_Type != WBDRAWER && o->do_Type != WBGARBAGE)
+            sig_long(whole, o->do_StackSize);           /* a window's icon: Workbench's snapshot rewrites it */
+    }
+}
+
+/* name with or without .info; 1 read */
+static int file_sig(const char *name, isig *pic, isig *whole)
+{
+    char n[260];
+    struct DiskObject *o;
+    int l, ok = 0;
+    strlcpy(n, name, sizeof n);
+    if ((l = strlen(n)) > 5 && same_word(n + l - 5, ".info")) n[l - 5] = 0;
+    if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) return 0;
+    if ((o = GetIconTags((STRPTR)n, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE))) {
+        icon_sig(o, pic, whole);
+        FreeDiskObject(o);
+        ok = 1;
+    }
+    CloseLibrary(IconBase);
+    IconBase = NULL;
+    return ok;
+}
+
+static int sig_in(const isig *s, const ULONG (*table)[2], int n)
+{
+    int i;
+    for (i = 0; i < n; i++)
+        if (table[i][0] == s->a && table[i][1] == s->b) return 1;
+    return 0;
+}
+
+static int print_sig(const char *path)
+{
+    isig p, w;
+    if (!file_sig(path, &p, &w)) { Printf((STRPTR)"%s: not an icon\n", (LONG)path); return 0; }
+    Printf((STRPTR)"0x%08lx,0x%08lx 0x%08lx,0x%08lx %s\n", p.a, p.b, w.a, w.b, (LONG)path);
+    return 1;
+}
+
+static int icon_sigs(const char *path)
+{
+    BPTR lock = Lock((STRPTR)path, ACCESS_READ);
+    struct FileInfoBlock *fib;
+    char sub[256];
+    if (!lock) return print_sig(path) ? RETURN_OK : RETURN_WARN;
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (Examine(lock, fib) && fib->fib_DirEntryType > 0) {
+            while (ExNext(lock, fib)) {
+                const char *n = (const char *)fib->fib_FileName;
+                int l = strlen(n);
+                if (fib->fib_DirEntryType > 0 || l <= 5 || !same_word(n + l - 5, ".info")) continue;
+                strlcpy(sub, path, sizeof sub);
+                AddPart((STRPTR)sub, (STRPTR)n, sizeof sub);
+                print_sig(sub);
+            }
+        } else print_sig(path);
+        FreeDosObject(DOS_FIB, fib);
+    }
+    UnLock(lock);
+    return RETURN_OK;
+}
+
+/* ---- The look up to 0.8.3 taken out, OpenIcons' put on (0.8.3, 0.8.4) --------------------------------------
+ *
+ * The user, 16 October 2026: "we should remove them and use ours". Up to 0.8.3 the GorillaIcons part gave the
+ * system's icons AROS's Gorilla pictures; 0.8.4's OpenIcons part gives them our own (OpenIcons look B), and the
+ * pack carries no Gorilla picture any more. So OLDLOOK tells Gorilla's pictures by their signatures (gorilla_pics,
+ * made with ICONSIG from 0.8.3's pack: every picture the part gave, its faces and the ones 0.8.3 retired):
+ *   - An icon OpenUp faced (listed "replaced", its original in SYS:Storage/OpenUp-Superseded) that is still as
+ *     OpenUp left it gets its original back. "As OpenUp left it" is W25's rule: the icon written again into T:
+ *     from its own picture over the original's fields is the same, byte for byte, as the file (its place and
+ *     the pointers an icon file stores left out), and that picture is one of Gorilla's. Where its colour images
+ *     are packed otherwise than icon.library packs them today, the same picture and fields as icon.library
+ *     reads them count (same_fields). The OpenIcons part then
+ *     gives it our picture; one OpenIcons has none for keeps its original.
+ *   - An icon the user changed since stays as it is, and so does its listing; face_icon leaves it too.
+ *
+ * The default icons. The OpenKick ROM's icon.library has its own default icons, OpenIcons look B (RAM, hard
+ * disk, floppy, CD, RAD, card, Kickstart, drawer, tool, project, trashcan), and a def_<kind>.info in ENVARC:Sys,
+ * or SYS:'s own Disk.info, wins over them. Each of those below goes when it is:
+ *   - OpenUp's face of it, as above (up to 0.8.2 the GorillaIcons part faced def_RAM, def_Harddisk... and SYS:);
+ *   - or OS 3.2.3's original: the original OpenUp kept, unchanged but for its place; or, never listed, an icon
+ *     whose whole signature is one of OS 3.2.3's (os_defaults, made with ICONSIG on a new 3.2.3 install). That
+ *     one is kept in SYS:Storage/OpenUp-Superseded first and listed, as RETIRE does.
+ * Every original stays in SYS:Storage/OpenUp-Superseded, listed, so UNINSTALL puts it back. A user's own
+ * default icon (any other picture, tool or tool types) stays, and T:OpenUp.log says so. Kickstart 3.2.3 has
+ * built-in icons for all of them, so the stock ROM shows a disk and a drawer still. Work:Disk.info may be
+ * unlisted and still carry Gorilla's hard disk (from the faced def_Harddisk, when the volume was snapshot):
+ * then it goes when it is that picture over its own fields. The DefIcons file types (def_ascii, def_picture...)
+ * stay, with OpenIcons' pictures. */
+static const ULONG gorilla_pics[][2] = {
+#include "gorilla_sigs.h"
+};
+static const ULONG os_defaults[][2] = {
+#include "os323_default_sigs.h"
+};
+#define NGORILLA ((int)(sizeof gorilla_pics / sizeof gorilla_pics[0]))
+#define NOSDEF ((int)(sizeof os_defaults / sizeof os_defaults[0]))
+
+static const char *const default_icons[] = {
+    "SYS:Disk.info", "Work:Disk.info",
+    "ENVARC:Sys/def_RAM.info", "ENVARC:Sys/def_Harddisk.info", "ENVARC:Sys/def_Disk.info",
+    "ENVARC:Sys/def_Drawer.info", "ENVARC:Sys/def_Tool.info", "ENVARC:Sys/def_Project.info",
+    "ENVARC:Sys/def_Trashcan.info", "ENVARC:Sys/def_cd0.info", "ENVARC:Sys/def_rad.info",
+    "ENVARC:Sys/def_card.info", "ENVARC:Sys/def_kickstart.info", "ENVARC:Sys/def_sys.info",
+    "ENVARC:Sys/def_work.info", "ENVARC:Sys/def_CDROM.info", "ENVARC:Sys/def_Kick.info",
 };
 #define FACE_TMP "T:OpenUp-oldface"
+static int keep_face_tmp;                          /* ICONSIG <icon> <fields>: T:OpenUp-oldface.info stays to look at */
 
 /* An icon file holds memory addresses where the structures had pointers: icon.library reads them only as "there"
  * or "not there", and each write has new ones. These are the DiskObject's (its gadget's, the default tool's, the
@@ -1995,37 +2171,49 @@ static int same_icon_bytes(const UBYTE *a, LONG la, const UBYTE *b, LONG lb)
     return 1;
 }
 
-/* 1 when dest is still the icon put_face made from the picture icon pic_name and the fields of fields_name (names
- * without .info). Its place stays out of it: where it sits and its drawer window are Workbench's to write (a
- * Snapshot of RAM Disk writes ENVARC:Sys/def_RAM.info, through the RAM:Disk.info link), so they come from dest. */
+static void no_info(char *dst, const char *src, int size)
+{
+    int n;
+    strlcpy(dst, src, size);
+    if ((n = strlen(dst)) > 5 && same_word(dst + n - 5, ".info")) dst[n - 5] = 0;
+}
+
+/* 1 when dest is still the icon put_face makes from the picture of icon pic_name and the fields of fields_name
+ * (either with or without .info; pic_name may be dest itself). Its place stays out of it: where it sits and its
+ * drawer window are Workbench's to write (a Snapshot of RAM Disk writes ENVARC:Sys/def_RAM.info, through the
+ * RAM:Disk.info link), so they come from dest. */
 static int still_face(const char *dest, const char *pic_name, const char *fields_name)
 {
     struct DiskObject *pic = NULL, *own = NULL, *cur = NULL;
     UBYTE *now = NULL, *want = NULL;
     LONG len = 0, wlen = 0;
-    char dname[260];
-    int same = 0, n;
-    strlcpy(dname, dest, sizeof dname);
-    if ((n = strlen(dname)) > 5 && same_word(dname + n - 5, ".info")) dname[n - 5] = 0;
+    char dname[260], pname[260], fname[260];
+    int same = 0;
+    no_info(dname, dest, sizeof dname);
+    no_info(pname, pic_name, sizeof pname);
+    no_info(fname, fields_name, sizeof fname);
     if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) return 0;
-    pic = GetIconTags((STRPTR)pic_name, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
-    own = GetIconTags((STRPTR)fields_name, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    pic = GetIconTags((STRPTR)pname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    own = GetIconTags((STRPTR)fname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
     cur = GetIconTags((STRPTR)dname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
     if (pic && own && cur) {
-        LONG x = own->do_CurrentX, y = own->do_CurrentY;
+        LONG x = own->do_CurrentX, y = own->do_CurrentY, st = own->do_StackSize;
         struct DrawerData *dd = own->do_DrawerData;
         WORD gl = pic->do_Gadget.LeftEdge, gt = pic->do_Gadget.TopEdge;
         own->do_CurrentX = cur->do_CurrentX; own->do_CurrentY = cur->do_CurrentY; own->do_DrawerData = cur->do_DrawerData;
+        if (own->do_Type == WBDISK || own->do_Type == WBDRAWER || own->do_Type == WBGARBAGE)
+            own->do_StackSize = cur->do_StackSize;  /* a window's icon: nothing runs with it; Workbench's snapshot
+                                                       writes 4096 where OS 3.2.3's own had 8192 */
         pic->do_Gadget.LeftEdge = cur->do_Gadget.LeftEdge; pic->do_Gadget.TopEdge = cur->do_Gadget.TopEdge;
         if (put_face(pic, own, FACE_TMP, 0)) {
             now = (UBYTE *)read_file(dest, &len);
             want = (UBYTE *)read_file(FACE_TMP ".info", &wlen);
             same = same_icon_bytes(now, len, want, wlen);
         }
-        own->do_CurrentX = x; own->do_CurrentY = y; own->do_DrawerData = dd;
+        own->do_CurrentX = x; own->do_CurrentY = y; own->do_DrawerData = dd; own->do_StackSize = st;
         pic->do_Gadget.LeftEdge = gl; pic->do_Gadget.TopEdge = gt;
     }
-    DeleteFile((STRPTR)FACE_TMP ".info");
+    if (!keep_face_tmp) DeleteFile((STRPTR)FACE_TMP ".info");
     if (now) FreeVec(now);
     if (want) FreeVec(want);
     if (pic) FreeDiskObject(pic);
@@ -2036,55 +2224,250 @@ static int still_face(const char *dest, const char *pic_name, const char *fields
     return same;
 }
 
-/* One icon: 1 taken out, 0 left. */
-static int take_out_face(const char *dest, const char *retired)
+static int same_text(const char *a, const char *b) { return (!a && !b) || (a && b && !strcmp(a, b)); }
+
+/* 1 when the two icons have the same type, default tool, tool types and (a program's or project's) stack, as
+ * icon.library reads them */
+static int same_fields(const char *a_name, const char *b_name)
 {
-    char pic[200], fields[260], dname[260];
-    entry *e = find_entry(NULL, dest);
-    int n;
-    if (!exists(dest)) return 0;
-    if (e && strcmp(e->kind, "replaced")) return 0;             /* "same" or "new": not a face OpenUp gave */
-    strlcpy(pic, RETIRED "/", sizeof pic);
-    str_cat(pic, retired, sizeof pic);
-    if (!exists(pic)) {
-        say("OpenUp: kept ", dest, ": this pack has no " RETIRED " to tell OpenUp's picture by");
-        return 0;
+    struct DiskObject *a, *b;
+    char an[260], bn[260];
+    int same = 0;
+    no_info(an, a_name, sizeof an);
+    no_info(bn, b_name, sizeof bn);
+    if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) return 0;
+    a = GetIconTags((STRPTR)an, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    b = GetIconTags((STRPTR)bn, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    if (a && b && a->do_Type == b->do_Type && same_text((char *)a->do_DefaultTool, (char *)b->do_DefaultTool) &&
+        (a->do_Type == WBDISK || a->do_Type == WBDRAWER || a->do_Type == WBGARBAGE || a->do_StackSize == b->do_StackSize)) {
+        STRPTR *ta = a->do_ToolTypes, *tb = b->do_ToolTypes;
+        same = 1;
+        while (ta && tb && *ta && *tb && same) same = !strcmp((char *)*ta++, (char *)*tb++);
+        if ((ta && *ta) || (tb && *tb)) same = 0;
     }
-    strlcpy(dname, dest, sizeof dname);
-    if ((n = strlen(dname)) > 5 && same_word(dname + n - 5, ".info")) dname[n - 5] = 0;
-    if (e) {                                                    /* the fields: the original OpenUp kept */
-        strlcpy(fields, e->b, sizeof fields);
-        if (!exists(fields)) {
-            say("OpenUp: kept ", dest, ": its original isn't in SYS:Storage/OpenUp-Superseded any more");
+    if (a) FreeDiskObject(a);
+    if (b) FreeDiskObject(b);
+    CloseLibrary(IconBase);
+    IconBase = NULL;
+    return same;
+}
+
+/* 1 when dest is still one of Gorilla's pictures, as OpenUp gave it, over the fields of fields_name: byte for
+ * byte (still_face), or, where the icon's colour images are packed otherwise than icon.library packs them now
+ * (SYS:Expansion.info on Instance-32, faced by an older OpenUp: the same pixels and palette, other bytes), the
+ * same picture and fields as icon.library reads them */
+static int still_gorilla(const char *dest, const char *fields_name)
+{
+    isig p;
+    if (!file_sig(dest, &p, NULL) || !sig_in(&p, gorilla_pics, NGORILLA)) return 0;
+    return still_face(dest, dest, fields_name) || same_fields(dest, fields_name);
+}
+
+/* dest written again from its original (backup), keeping dest's place and drawer window. 1 done. */
+static int put_original(const char *dest, const char *backup)
+{
+    struct DiskObject *own, *cur;
+    char dname[260], bname[260];
+    int ok = 0;
+    no_info(dname, dest, sizeof dname);
+    no_info(bname, backup, sizeof bname);
+    if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) return 0;
+    own = GetIconTags((STRPTR)bname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    cur = GetIconTags((STRPTR)dname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    if (own && cur) {
+        LONG x = own->do_CurrentX, y = own->do_CurrentY;
+        struct DrawerData *dd = own->do_DrawerData;
+        WORD gl = own->do_Gadget.LeftEdge, gt = own->do_Gadget.TopEdge;
+        own->do_CurrentX = cur->do_CurrentX; own->do_CurrentY = cur->do_CurrentY; own->do_DrawerData = cur->do_DrawerData;
+        own->do_Gadget.LeftEdge = cur->do_Gadget.LeftEdge; own->do_Gadget.TopEdge = cur->do_Gadget.TopEdge;
+        ok = PutIconTags((STRPTR)dname, own, ICONPUTA_NotifyWorkbench, TRUE, TAG_DONE) != 0;
+        own->do_CurrentX = x; own->do_CurrentY = y; own->do_DrawerData = dd;
+        own->do_Gadget.LeftEdge = gl; own->do_Gadget.TopEdge = gt;
+    }
+    if (own) FreeDiskObject(own);
+    if (cur) FreeDiskObject(cur);
+    CloseLibrary(IconBase);
+    IconBase = NULL;
+    return ok;
+}
+
+static int is_default_icon_name(const char *dest)
+{
+    int i;
+    for (i = 0; i < (int)(sizeof default_icons / sizeof default_icons[0]); i++)
+        if (same_word(dest, default_icons[i])) return 1;
+    return 0;
+}
+
+/* Gorilla's faces on everything but the default icons: each one still as OpenUp left it gets its original back
+ * (the OpenIcons part faces it after). Returns how many. */
+static int gorilla_out(void)
+{
+    int i, n = 0, l;
+    for (i = 0; i < nents; i++) {
+        entry *e = &ents[i];
+        if (strcmp(e->kind, "replaced") || !e->b || (l = strlen(e->a)) <= 5 || !same_word(e->a + l - 5, ".info") ||
+            is_default_icon_name(e->a) || !exists(e->a) || !exists(e->b))
+            continue;
+        if (!still_gorilla(e->a, e->b)) {
+            isig p;
+            if (file_sig(e->a, &p, NULL) && sig_in(&p, gorilla_pics, NGORILLA))
+                say("OpenUp: kept ", e->a, ": it has been changed since OpenUp gave it Gorilla's picture");
+            continue;
+        }
+        if (put_original(e->a, e->b)) { say("OpenUp: ", e->a, ": Gorilla's picture taken out"); n++; }
+        else say("OpenUp: can't put back ", e->a, "'s own picture; is the disk write-protected?");
+    }
+    return n;
+}
+
+/* One default icon: 1 taken out, 0 left. */
+static int default_out(const char *dest)
+{
+    entry *e = find_entry(NULL, dest);
+    isig p, w;
+    int theirs;
+    if (!exists(dest)) return 0;
+    if (e && !strcmp(e->kind, "replaced") && e->b && exists(e->b)) {
+        if (!still_face(dest, e->b, e->b) && !still_gorilla(dest, e->b)) {
+            say("OpenUp: kept ", dest, ": it has been changed since OpenUp listed it");
             return 0;
         }
-        if ((n = strlen(fields)) > 5 && same_word(fields + n - 5, ".info")) fields[n - 5] = 0;
-    } else if (!strcmp(dest, "Work:Disk.info")) {
-        strlcpy(fields, dname, sizeof fields);                  /* its own: Workbench wrote it from def_Harddisk */
-    } else return 0;                                            /* not OpenUp's */
-    pic[strlen(pic) - 5] = 0;                                   /* GetIconTags adds the .info */
-    if (!still_face(dest, pic, fields)) {
-        say("OpenUp: kept ", dest, ": it has been changed since OpenUp gave it its picture");
-        return 0;
+        if (!DeleteFile((STRPTR)dest)) { say("OpenUp: can't take out ", dest, "; is the disk write-protected?"); return 0; }
+        say("OpenUp: ", dest, ": taken out (the ROM's icon shows; its original stays in SYS:Storage/OpenUp-Superseded)");
+        return 1;
     }
-    if (!DeleteFile((STRPTR)dest)) {
-        say("OpenUp: can't take out ", dest, "; is the disk write-protected?");
-        return 0;
+    if (e) return 0;                                            /* "same" or "new": OpenUp's own file */
+    theirs = !file_sig(dest, &p, &w);
+    if (!theirs && sig_in(&w, os_defaults, NOSDEF)) {           /* OS 3.2.3's own, as installed */
+        if (retire_file(dest) != 1) return 0;
+        say("OpenUp: ", dest, ": OS 3.2.3's, taken out (the ROM's icon shows; kept in SYS:Storage/OpenUp-Superseded)");
+        return 1;
     }
-    say("OpenUp: ", dest, e ? ": taken out (the ROM's icon shows; its original stays in SYS:Storage/OpenUp-Superseded)"
-                            : ": taken out (the ROM's icon shows)");
-    return 1;
+    if (!theirs && same_word(dest, "Work:Disk.info") && sig_in(&p, gorilla_pics, NGORILLA) && still_face(dest, dest, dest)) {
+        if (!DeleteFile((STRPTR)dest)) return 0;
+        say("OpenUp: ", dest, ": taken out (the ROM's icon shows)");
+        return 1;
+    }
+    say("OpenUp: kept ", dest, ": not OS 3.2.3's own or OpenUp's picture");
+    return 0;
+}
+
+/* Gorilla's pictures OpenUp's list doesn't name where they are: icons RECONCILE moved (SYS:Prefs/Classic's old prefs
+ * editors), drawers and programs an older OpenUp or a hand change made from a faced icon (SYS:Prefs/Classic,
+ * SYS:Developer/OpenGPU-SDK...). Found on lab copies of Instance-32, 16 October 2026. Each icon on SYS: (three
+ * drawers deep, as ICONS walks) that shows one of Gorilla's pictures and isn't listed, or is listed as OpenUp's
+ * own file (SYS:Developer/OpenGPU-SDK.info, which the OpenGPUDev part makes), gets OpenIcons' picture
+ * instead: the part's own for that place (its face line), else by its name, else of its kind (face_icon: its
+ * fields and place stay, the
+ * icon as it was goes to SYS:Storage/OpenUp-Superseded for UNINSTALL). Returns how many. */
+#define OI_PART "Parts/OpenIcons"
+static int old_icon(const char *path, int *type);
+static int sweep_n;
+
+static char *oi_part_text;                         /* Parts/OpenIcons/Part, read once for gorilla_sweep */
+
+/* the OpenIcons part's own picture for dest (its face line), in from; 1 found */
+static int part_face_for(const char *dest, char *from, int size)
+{
+    char *p, *copy, *line;
+    int found = 0;
+    if (!oi_part_text || !(copy = AllocVec(strlen(oi_part_text) + 1, MEMF_ANY))) return 0;
+    strcpy(copy, oi_part_text);
+    for (p = copy; *p && !found; ) {
+        char *w[12];
+        int n;
+        line = p;
+        while (*p && *p != '\n') p++;
+        if (*p) *p++ = 0;
+        n = words(line, w, 12);
+        if (n >= 3 && !strcmp(w[0], "face") && same_word(w[2], dest)) {
+            strlcpy(from, OI_PART "/", size);
+            str_cat(from, w[1], size);
+            found = exists(from);
+        }
+    }
+    FreeVec(copy);
+    return found;
+}
+
+static void gorilla_sweep(const char *dir, int depth)
+{
+    BPTR lock = Lock((STRPTR)dir, ACCESS_READ);
+    struct FileInfoBlock *fib;
+    char sub[256], from[256];
+    if (!lock) return;
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (Examine(lock, fib)) {
+            while (ExNext(lock, fib)) {
+                const char *n = (const char *)fib->fib_FileName;
+                int l = strlen(n), type = 0;
+                isig p;
+                entry *e;
+                strlcpy(sub, dir, sizeof sub);
+                if (sub[strlen(sub) - 1] != ':') str_cat(sub, "/", sizeof sub);
+                str_cat(sub, n, sizeof sub);
+                if (fib->fib_DirEntryType > 0) {
+                    if (depth < 3 && strcmp(n, "OpenUp-Superseded") && strcmp(n, "Parts") && strcmp(n, "T") &&
+                        strcmp(n, "Trashcan") && strncmp(n, ".", 1))
+                        gorilla_sweep(sub, depth + 1);
+                    continue;
+                }
+                if (l <= 5 || !same_word(n + l - 5, ".info") || is_default_icon_name(sub) ||
+                    ((e = find_entry(NULL, sub)) && strcmp(e->kind, "new")) ||   /* OpenUp's own file is ours to face */
+                    !file_sig(sub, &p, NULL) || !sig_in(&p, gorilla_pics, NGORILLA))
+                    continue;
+                if (!part_face_for(sub, from, sizeof from)) {   /* the part's face for it, else by name */
+                    strlcpy(from, OI_PART "/Icons/", sizeof from);
+                    str_cat(from, n, sizeof from);
+                }
+                if (!exists(from)) {
+                    static const char *const kinds[] = { NULL, "Disk", "Drawer", "Tool", "Project", "Trashcan", NULL, NULL };
+                    old_icon(sub, &type);
+                    if (type < 1 || type > 5) continue;
+                    strlcpy(from, OI_PART "/Kinds/", sizeof from);
+                    str_cat(from, kinds[type], sizeof from);
+                    str_cat(from, ".info", sizeof from);
+                    if (!exists(from)) continue;
+                }
+                if (face_icon(from, sub) > 0) {
+                    say("OpenUp: ", sub, ": Gorilla's picture where the list has none: OpenIcons' given instead");
+                    sweep_n++;
+                }
+            }
+        }
+        FreeDosObject(DOS_FIB, fib);
+    }
+    UnLock(lock);
 }
 
 static int old_faces_out(void)
 {
     int i, n = 0;
-    for (i = 0; i < (int)(sizeof old_faces / sizeof old_faces[0]); i++) {
-        char name[64];
-        strlcpy(name, old_faces[i][1], sizeof name);
-        str_cat(name, ".info", sizeof name);
-        n += take_out_face(old_faces[i][0], name);     /* no Work: volume: exists() says so, with no requester */
+    for (i = 0; i < (int)(sizeof default_icons / sizeof default_icons[0]); i++)
+        n += default_out(default_icons[i]);     /* no Work: volume: exists() says so, with no requester */
+    n += gorilla_out();
+    if (exists(OI_PART "/Part")) {                  /* run from the pack's drawer, as the Installer does */
+        sweep_n = 0;
+        oi_part_text = read_file(OI_PART "/Part", NULL);
+        gorilla_sweep("SYS:", 0);
+        if (oi_part_text) { FreeVec(oi_part_text); oi_part_text = NULL; }
+        n += sweep_n;
     }
+    /* what the GorillaIcons part copied (its PNGs and licence texts in SYS:Storage/Icons/Gorilla, its licence note)
+     * and its part line: OpenUp's own, listed as new */
+    for (i = 0; i < nents; i++) {
+        entry *e = &ents[i];
+        if (!strcmp(e->kind, "part") && !strcmp(e->a, "GorillaIcons")) { e->kind[0] = 0; continue; }
+        if (strcmp(e->kind, "new") || !e->a) continue;
+        if (!strncmp(e->a, "SYS:Storage/Icons/Gorilla/", 26) || same_word(e->a, "SYS:Utilities/OpenUp/Licences/Gorilla.txt")) {
+            if (DeleteFile((STRPTR)e->a) || !exists(e->a)) { e->kind[0] = 0; n++; }
+        }
+    }
+    for (i = 0; i < nents; i++)
+        if (!strcmp(ents[i].kind, "dir") && ents[i].a && same_word(ents[i].a, "SYS:Storage/Icons/Gorilla") &&
+            (DeleteFile((STRPTR)ents[i].a) || !exists(ents[i].a)))
+            ents[i].kind[0] = 0;
     return n;
 }
 
@@ -2121,7 +2504,7 @@ static int old_look(void)
      * Workbench screen", seen in the Installer's run on a lab copy of Instance-32, 16 Oct 2026). */
     n += take_out_old("ENVARC:Sys/Font.prefs", was_font);
     n += take_out_old("ENVARC:Sys/IControl.prefs", was_titlebars);
-    n += old_faces_out();                           /* 0.8.3: the default icons' and volumes' faces */
+    n += old_faces_out();                           /* 0.8.3, 0.8.4: the default icons, and Gorilla's faces */
     if (!manifest_save()) {
         say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
         return RETURN_ERROR;
@@ -2790,14 +3173,15 @@ static int tidy(const char *once)
  * Storage and Parts left out) for old icons: the classic four-colour pictures and NewIcons, anything that
  * isn't an OS 3.5 colour icon or a PNG icon and isn't one OpenUp gave already. Each gets a new face, the
  * icon keeping its type, tool, tool types, stack, place and drawer window (face_icon, as the install does):
- *   - by its name, from the Gorilla set OpenUp carries (Work:OpenUp/Parts/GorillaIcons/Icons/<name>.info);
- *   - else by its kind, from the system's default icons (ENVARC:Sys/def_Drawer, def_Tool, def_Project...)
- *     where there are any (since 0.8.3 OpenUp gives them no faces and takes out those it gave: the ROM's own
- *     default icons show, and an icon with neither keeps its picture).
+ *   - by its name, from the OpenIcons set OpenUp carries (Work:OpenUp/Parts/OpenIcons/Icons/<name>.info);
+ *   - else by its kind, from OpenIcons' disk, drawer, tool, project and trashcan (Parts/OpenIcons/Kinds), the
+ *     pictures the ROM's own default icons have; with no OpenIcons part, from the system's default icons
+ *     where there are any (an icon with neither keeps its picture).
  * The originals go to SYS:Storage/OpenUp-Superseded; UNINSTALL puts them back.
  *   OpenUpTool ICONS [CHECK]    lists what it would change
  *   OpenUpTool ICONS APPLY      changes them, then has Workbench tidy the system's drawers (TIDY) */
-#define ICON_LIB "Work:OpenUp/Parts/GorillaIcons/Icons"
+#define ICON_LIB "Work:OpenUp/Parts/OpenIcons/Icons"
+#define ICON_KINDS "Work:OpenUp/Parts/OpenIcons/Kinds"
 #define ICONS_MAX 400
 static char *icon_found[ICONS_MAX], *icon_from[ICONS_MAX];
 static int icon_count;
@@ -2821,8 +3205,13 @@ static int old_icon(const char *path, int *type)
     return old;
 }
 
+/* the picture for an icon of this kind: OpenIcons' (the part's Kinds drawer, the ROM's look), else the
+ * system's default icon where there is one */
 static const char *kind_default(int type)
 {
+    static const char *const ours[] = { NULL, ICON_KINDS "/Disk.info", ICON_KINDS "/Drawer.info", ICON_KINDS "/Tool.info",
+                                        ICON_KINDS "/Project.info", ICON_KINDS "/Trashcan.info", NULL, NULL };
+    if (type >= WBDISK && type <= WBGARBAGE && exists(ours[type])) return ours[type];
     switch (type) {
     case WBDISK: return "ENVARC:Sys/def_Disk.info";
     case WBDRAWER: return "ENVARC:Sys/def_Drawer.info";
@@ -2862,7 +3251,7 @@ static void icons_walk(const char *dir, int depth)
                     continue;
                 }
                 if (l <= 5 || !same_word(n + l - 5, ".info") || find_entry(NULL, sub) || !old_icon(sub, &type)) continue;
-                /* the replacement: by name from Gorilla's set, else by kind */
+                /* the replacement: by name from OpenIcons' set, else by kind */
                 strlcpy(lib, ICON_LIB "/", sizeof lib);
                 str_cat(lib, n, sizeof lib);
                 if (!exists(lib)) {
@@ -3091,7 +3480,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -3115,6 +3504,16 @@ static int real_main(void)
     else if (same_word(cmd, "RECONCILE")) rc = reconcile((const char *)args[1], (const char *)args[2]);
     else if (same_word(cmd, "TIDY")) rc = tidy((const char *)args[1]);
     else if (same_word(cmd, "ICONS")) rc = icons((const char *)args[1]);
+    else if (same_word(cmd, "ICONSIG") && args[1] && args[2]) {
+        /* is the icon its own picture over these fields, as OLDLOOK asks? The icon it compared with stays in T: */
+        int same;
+        keep_face_tmp = 1;
+        same = still_face((const char *)args[1], (const char *)args[1], (const char *)args[2]);
+        Printf((STRPTR)"%s: %s the picture over %s's fields (T:OpenUp-oldface.info)\n", args[1],
+               (LONG)(same ? "is" : "is not"), args[2]);
+        rc = same ? RETURN_OK : RETURN_WARN;
+    }
+    else if (same_word(cmd, "ICONSIG") && args[1]) rc = icon_sigs((const char *)args[1]);
     else if (same_word(cmd, "SETTING") && args[1] && args[2]) {
         /* The text goes through T: so it is installed like any file. */
         char line[200];
@@ -3142,7 +3541,7 @@ static int real_main(void)
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;

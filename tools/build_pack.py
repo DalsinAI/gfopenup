@@ -32,8 +32,9 @@ a Part file that C/OpenUpTool reads:
   OpenPrint/            OpenPrint and OpenView (openamigaprint's package)
   AmigaChromeSharing/   accontrol.device, ACClip and ACDrop (amigachrome-guest)
   Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
-  GorillaIcons/         AROS's Gorilla icon set (GPL) as new pictures for the system's
-                        icons, fetched at a pinned AROS commit (tools/gorilla_icons.py)
+  OpenIcons/            OpenIcons look B, the Team's own icon set (MIT), as new pictures for
+                        the system's icons, made at build time by its generator from the
+                        amigachrome-guest checkout (--guest; tools/openicons_part.py)
   OpenTypes/            which program opens each kind of file (openamigaprefs)
   OpenCompress/         OpenCompress, its window and command (openamigacompress)
   OpenService/          openservice.device and Nursery: services from boards and
@@ -236,11 +237,10 @@ def os32_icons(oap: Path, icons_mod, jobs: list[tuple[Path, str | None]]) -> Non
 
 
 OPEN_ART = ROOT / "icons" / "open"     # the Open apps' pictures, 64 x 64 (tools/open_icons_art.py draws them)
-ICON_SCALE = 0.85                      # shown at 85 per cent, as Gorilla's are (the approved look)
+ICON_SCALE = 0.85                      # shown at 85 per cent (the approved look)
 
 
-def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Path, list[Path]],
-               gorilla_drawer: bytes | None = None) -> None:
+def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Path, list[Path]]) -> None:
     """The Open apps' own icons: each job's icon keeps what it is (type,
     default tool, tool types, stack) and gets its picture from icons/open as
     a GlowIcon, dithered for a 16-bit screen. Icons in drawers we share with
@@ -249,11 +249,8 @@ def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Pa
     the icons in it, which are laid out on a grid with the window sized to
     them (amigachrome's icon_theme, as Cradle's new icon set does).
 
-    Every picture is shown at ICON_SCALE. A drawer of our own (drawer-NAME)
-    is its badge (badge-NAME) on Gorilla's drawer when the pack ships Gorilla
-    (gorilla_drawer: its PNG, GPL like the rest of the set), else on our own
-    drawer (drawer-NAME.png)."""
-    import io
+    Every picture is shown at ICON_SCALE. A drawer of our own is
+    drawer-NAME.png: its badge on our own drawer."""
     from PIL import Image
     sys.path.insert(0, str(amigachrome / "scripts"))
     import amiga_icon
@@ -263,15 +260,7 @@ def open_icons(amigachrome: Path, jobs: list[tuple[Path, str]], drawers: dict[Pa
         return Image.open(OPEN_ART / f"{name}.png").convert("RGBA")
 
     def frames(name: str) -> list[Image.Image]:
-        """NAME.png at rest and NAME-selected.png chosen (ICONS.md), or a drawer's badge on Gorilla's drawer."""
-        if name.startswith("drawer-") and gorilla_drawer:
-            badge = name[len("drawer-"):]
-            out = []
-            for suffix in ("", "-selected"):
-                f = Image.open(io.BytesIO(gorilla_drawer)).convert("RGBA")
-                f.alpha_composite(picture(f"badge-{badge}{suffix}").resize(f.size, Image.LANCZOS))
-                out.append(f)
-            return out
+        """NAME.png at rest and NAME-selected.png chosen (ICONS.md)."""
         rest = picture(name)
         chosen = picture(f"{name}-selected") if (OPEN_ART / f"{name}-selected.png").exists() else rest
         if chosen.size != rest.size:
@@ -604,7 +593,7 @@ PART_MAIN = {
 # ahi.device (6.1.1), acaudio.audio and modes (AmigaChrome machines only). OpenImage 0.4 adds
 # opentga.datatype (47.1). A part's own version goes up when what it ships changes, so OpenUpTool UPDATE
 # and the Installer's log name the change.
-PART_OWN_VERSION = {"OpenLibs", "AmigaChromeSharing", "OpenImage", "Backdrops", "GorillaIcons", "OpenDemos", "OpenGPUDev",
+PART_OWN_VERSION = {"OpenLibs", "AmigaChromeSharing", "OpenImage", "Backdrops", "OpenIcons", "OpenDemos", "OpenGPUDev",
                     "OpenPrint", "OpenMUI", "Sound"}
 
 
@@ -794,7 +783,7 @@ def main() -> int:
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the OpenGPU developer kit is made (or, with --no-build, read): the OpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
-    ap.add_argument("--no-gorilla", action="store_true", help="leave out the Gorilla icons (they are fetched from AROS's repository)")
+    ap.add_argument("--no-openicons", action="store_true", help="leave out the OpenIcons part (made from --guest's icons/openicons)")
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
@@ -920,27 +909,17 @@ def main() -> int:
         bd.add(f"Backdrops/{png.name}", png.read_bytes(), f"SYS:Prefs/Presets/Backdrops/OpenUp/{png.name}")
     bd.write()
 
-    # Gorilla: AROS's icon set (GPL) as new pictures for the system's own icons
-    # (ICONS.md section 8). Fetched at the AROS commit pinned in
-    # tools/gorilla_icons.py and checked against tools/gorilla.lock; never committed.
-    gorilla_drawer = None                   # with Gorilla, our drawers' badges go on its drawer (open_icons)
-    if not a.no_gorilla:
+    # OpenIcons: the Team's own icon set (look B, MIT) as new pictures for the system's own icons
+    # (ICONS.md section 8). Its .info files are the generator's build output, never committed: they are made
+    # here from the amigachrome-guest checkout the pack is built with (--guest), so nothing is fetched from
+    # outside our repositories and the pack's icons are that commit's.
+    if not a.no_openicons:
         sys.path.insert(0, str(ROOT / "tools"))
-        import gorilla_icons
-        gorilla_drawer = gorilla_icons.drawer_png(ROOT / "build" / "cache")
-        gi = Part(top, "GorillaIcons", "0.1", "Gorilla, AROS's icon set (GPL): new pictures for the system's drawers, programs and default icons")
-        for text in gorilla_icons.build(gi.dir, a.amigachrome, ROOT / "build" / "cache"):
-            gi.line(text)
-        # beside Mesa's and SDL's: where the pictures come from and under what licence
-        gi.add("Utilities/OpenUp/Licences/Gorilla.txt", (
-            "Gorilla, the icon set of AROS (images/IconSets/Gorilla), is distributed under the\n"
-            "GNU General Public License, as its LEGAL file says; AROS ships version 2 of the\n"
-            "GPL with it, and so does OpenUp, in SYS:Storage/Icons/Gorilla/COPYING.\n\n"
-            f"Source: {gorilla_icons.AROS_URL}, commit {gorilla_icons.AROS_COMMIT}.\n"
-            "The PNG pictures the new icon faces were made from are in\n"
-            "SYS:Storage/Icons/Gorilla, with Gorilla's LEGAL file.\n").encode("latin-1"),
-            "SYS:Utilities/OpenUp/Licences/Gorilla.txt")
-        gi.write()
+        import openicons_part
+        oi = Part(top, "OpenIcons", "0.1", "OpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
+        for text in openicons_part.build(oi.dir, a.guest):
+            oi.line(text)
+        oi.write()
 
     # OpenTypes: which program opens each kind of file (openamigaprefs)
     ty = Part(top, "OpenTypes", "0.2.3", "OpenTypes: which program opens each kind of file")
@@ -1270,7 +1249,7 @@ def main() -> int:
         for f in sorted(p for p in kit.rglob("*") if p.is_file()):
             rel = f.relative_to(kit).as_posix()
             dev.add(f"Developer/OpenGPU-SDK/{rel}", f.read_bytes(), f"SYS:Developer/OpenGPU-SDK/{rel}")
-        # only where there is none (as Developer.info): the GorillaIcons part gives it Gorilla's picture, and
+        # only where there is none (as Developer.info): the OpenIcons part gives it OpenIcons' picture, and
         # "add" put the plain drawer back over that picture on every upgrade, so both parts wrote it each run
         dev.add("Developer/OpenGPU-SDK.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)),
                 "SYS:Developer/OpenGPU-SDK.info", default=True)
@@ -1586,7 +1565,7 @@ def main() -> int:
                      core.dir / "Utilities/OpenUp.info": [core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info"],
                      pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info")),
                      wr.dir / "Utilities/OpenWrite.info": [wr.dir / "Utilities/OpenWrite/OpenWrite.info"]},
-            gorilla_drawer=gorilla_drawer)
+            )
     except Exception as e:                  # an amigachrome checkout without amiga_icon (before #153): the icons above stay
         print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
