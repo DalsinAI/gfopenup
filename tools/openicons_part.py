@@ -154,6 +154,8 @@ def faces(rows: list[dict]) -> list[tuple[str, dict]]:
                     for a, b in (("SYS:Devs/", "SYS:Storage/"), ("SYS:Storage/", "SYS:Devs/")):
                         if path.startswith(a + twin + "/"):
                             dests = [path, b + path[len(a):]]
+        if path.startswith("SYS:Prefs/") and path.count("/") == 1 and e["wbtype"] == "tool":
+            dests.append("SYS:Prefs/Classic/" + path.split("/", 1)[1])   # where OpenUpTool RECONCILE moves the OS's editors
         for d in dests:
             add(d, e)
     for alias, name in TYPE_ALIASES.items():
