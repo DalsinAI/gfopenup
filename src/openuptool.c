@@ -77,7 +77,7 @@
  *   when AmigaChrome <copy|default|add|face|retire line>  (0.6.3: the line only on an AmigaChrome instance)
  * Words with spaces are quoted.
  *
- * MIT, Copyright (c) 2026 Dalsin Limited. */
+ * MIT, Copyright (c) 2026 AmigaChrome Team. */
 #include <exec/types.h>
 #include <exec/memory.h>
 #include <exec/resident.h>
@@ -107,7 +107,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.2 (16.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.2 (16.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;

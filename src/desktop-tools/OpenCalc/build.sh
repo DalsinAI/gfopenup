@@ -3,7 +3,7 @@
 # OpenUp Desktop Tools 0.1) and its Workbench window (src/calc_amiga.c).
 #   OpenCalc/build.sh [OUT_DIR]       (default build/os3)
 # 68020 with soft float, as every Open app; -lm for the engine's sin, cos, log and pow.
-# MIT, Copyright (c) 2026 Dalsin Limited.
+# MIT, Copyright (c) 2026 AmigaChrome Team.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 STOVE=${STOVE:-$HOME/AmigaChrome/stoves/os32}

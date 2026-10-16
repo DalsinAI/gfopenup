@@ -1,7 +1,7 @@
 ; $VER: Uninstall-OpenUp @VERSION@ (@DATE@)
 ; Takes OpenUp out: every file it added goes, every file it replaced comes
 ; back from SYS:Storage/OpenUp-Superseded, and its lines leave
-; S:User-Startup. MIT, Copyright (c) 2026 Dalsin Limited.
+; S:User-Startup. MIT, Copyright (c) 2026 AmigaChrome Team.
 
 (set @app-name "OpenUp")
 (set #tool (if (exists "C/OpenUpTool") "C/OpenUpTool" "C:OpenUpTool"))
