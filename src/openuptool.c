@@ -19,6 +19,8 @@
  *                                     prefs, Appearance Settings, Title Bar Extra Height)
  *   OpenUpTool WBBACKDROP             Workbench as a backdrop: no frame, scroll bars or size gadget on
  *                                     its window (Workbench's prefs, WBConfig.prefs)
+ *   OpenUpTool OLDLOOK                takes out the look's files OpenUp up to 0.8.1 wrote (C:OpenLook,
+ *                                     the theme, Font and IControl prefs) where they are as it wrote them
  *   OpenUpTool WBGAUGE                No fill gauge in a drive's window (Workbench's prefs, "No
  *                                     volume gauge": the bar down the left border that shows how
  *                                     full the disk is; the border is slim like any window's)
@@ -105,7 +107,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.0 (13.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.2 (16.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1319,31 +1321,41 @@ static int install_text(const char *dest, const char *text)
  *   OpenUpTool THEME <name> <look>   with a look saved already, only its theme becomes <name>, as OpenLook
  *                                    THEME <name> SAVE does (the mode and every other line stay); with none
  *                                    (a new install), <look> is the look. ENVARC: and ENV: both. */
-static int set_theme(const char *name, const char *look)
+/* The look THEME writes: with old (a look saved already) its first word becomes name and the rest stays; with
+ * none, look. NULL when out of memory; FreeVec it. OLDLOOK uses it to know what THEME wrote. */
+static char *look_text(const char *old, const char *name, const char *look)
 {
-    char *old = read_file(LOOK_ENVARC, NULL), *text, *p;
+    char *text;
+    const char *p;
     ULONG n;
-    int rc;
     if (!old) {
         n = strlen(look) + 2;
-        if (!(text = AllocVec(n, MEMF_ANY))) return RETURN_FAIL;
+        if (!(text = AllocVec(n, MEMF_ANY))) return NULL;
         strcpy(text, look);
         if (!*text || text[strlen(text) - 1] != '\n') strcat(text, "\n");
-    } else {
-        /* the first word goes; the rest of the first line (the mode) and every line after it stay */
-        for (p = old; *p == ' ' || *p == '\t'; p++) ;
-        if (*p == ';') p = NULL;                         /* a comment first: the name and light, before it */
-        else if (*p == '"') { for (p++; *p && *p != '"' && *p != '\n'; p++) ; if (*p == '"') p++; }
-        else while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') p++;
-        n = strlen(name) + strlen(old) + 10;
-        if (!(text = AllocVec(n, MEMF_ANY))) { FreeVec(old); return RETURN_FAIL; }
-        strcpy(text, name);
-        if (!p) { strcat(text, " light\n"); strcat(text, old); }
-        else if (*p == '\n' || *p == '\r' || !*p) { strcat(text, " light"); strcat(text, p); }
-        else strcat(text, p);
-        if (text[strlen(text) - 1] != '\n') strcat(text, "\n");
-        FreeVec(old);
+        return text;
     }
+    /* the first word goes; the rest of the first line (the mode) and every line after it stay */
+    for (p = old; *p == ' ' || *p == '\t'; p++) ;
+    if (*p == ';') p = NULL;                         /* a comment first: the name and light, before it */
+    else if (*p == '"') { for (p++; *p && *p != '"' && *p != '\n'; p++) ; if (*p == '"') p++; }
+    else while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') p++;
+    n = strlen(name) + strlen(old) + 10;
+    if (!(text = AllocVec(n, MEMF_ANY))) return NULL;
+    strcpy(text, name);
+    if (!p) { strcat(text, " light\n"); strcat(text, old); }
+    else if (*p == '\n' || *p == '\r' || !*p) { strcat(text, " light"); strcat(text, p); }
+    else strcat(text, p);
+    if (text[strlen(text) - 1] != '\n') strcat(text, "\n");
+    return text;
+}
+
+static int set_theme(const char *name, const char *look)
+{
+    char *old = read_file(LOOK_ENVARC, NULL), *text = look_text(old, name, look);
+    int rc;
+    if (old) FreeVec(old);
+    if (!text) return RETURN_FAIL;
     manifest_load();
     ensure_dir("ENV:OpenGadTools", 0);
     rc = install_text(LOOK_ENVARC, text);
@@ -1678,13 +1690,13 @@ static UBYTE *font_chunk(UBYTE *o, int type, int front, int back, int mode, int 
  * as text only (JAM1) in the pens it had; a shadow or an outline chosen in
  * OpenPrefs Look is kept. The system font (fp_Type 1, fixed width for the
  * Shell) stays as it is. */
-static int set_font(const char *font, LONG size)
+/* The Font.prefs FONT makes from old (NULL: none): the length in *lenp. NULL when out of memory; FreeVec it. */
+static UBYTE *font_prefs(const UBYTE *old, LONG oldlen, const char *font, LONG size, LONG *lenp)
 {
-    LONG oldlen = 0, k, len;
-    UBYTE *old = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &oldlen), *buf, *o;
-    int front = 1, back = 0, special = 0, ok;
-    if (size < 6 || size > 64 || strlen(font) > 120) { say("OpenUp: FONT wants a font name and a size from 6 to 64", NULL, NULL); if (old) FreeVec(old); return RETURN_FAIL; }
-    if (!(buf = prefs_start(old, oldlen, 2 * (FONT_CHUNK + 8), &o))) { if (old) FreeVec(old); return RETURN_FAIL; }
+    LONG k;
+    UBYTE *buf, *o;
+    int front = 1, back = 0, special = 0;
+    if (!(buf = prefs_start(old, oldlen, 2 * (FONT_CHUNK + 8), &o))) return NULL;
     if (old && oldlen > 12 && !memcmp(old, "FORM", 4)) {
         for (k = 12; k + 8 <= oldlen; ) {
             ULONG n = get32(old + k + 4), whole = 8 + n + (n & 1);
@@ -1700,9 +1712,21 @@ static int set_font(const char *font, LONG size)
     }
     o = font_chunk(o, 0, front, back, 0 /* JAM1 */, special, font, size);
     o = font_chunk(o, 2, 1, 0, 1 /* JAM2 */, 0, font, size);
-    len = o - buf;
-    put32(buf + 4, len - 8);
+    *lenp = o - buf;
+    put32(buf + 4, *lenp - 8);
+    return buf;
+}
+
+static int set_font(const char *font, LONG size)
+{
+    LONG oldlen = 0, len;
+    UBYTE *old, *buf;
+    int ok;
+    if (size < 6 || size > 64 || strlen(font) > 120) { say("OpenUp: FONT wants a font name and a size from 6 to 64", NULL, NULL); return RETURN_FAIL; }
+    old = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &oldlen);
+    buf = font_prefs(old, oldlen, font, size, &len);
     if (old) FreeVec(old);
+    if (!buf) return RETURN_FAIL;
     ok = install_prefs("Font.prefs", buf, len);
     FreeVec(buf);
     if (!ok) return RETURN_ERROR;
@@ -1714,15 +1738,13 @@ static int set_font(const char *font, LONG size)
 
 /* Title bar extra height: the last two bytes of ic_GUIGeometry (screen,
  * window), read by IPrefs only when ic_Flags has ICF_VERSIONED. */
-static int set_titlebars(LONG screen, LONG window)
+static UBYTE *ictl_prefs(const UBYTE *old, LONG oldlen, LONG screen, LONG window, LONG *lenp)
 {
     static const UBYTE defaults[ICTL_CHUNK] = {    /* as IControl saves with nothing changed */
         0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,  0,0x32, 0,0x40,  0x80,0,0,0x1e,  'N','M','V','B',  0,2, 0,0, 0,0, 0,0,0,0 };
-    LONG oldlen = 0, k, len;
-    UBYTE *old = (UBYTE *)read_file("ENVARC:Sys/IControl.prefs", &oldlen), *buf, *o, *mine = NULL;
-    int ok;
-    if (screen < 0 || screen > 16 || window < 0 || window > 16) { say("OpenUp: TITLEBARS wants two numbers from 0 to 16", NULL, NULL); if (old) FreeVec(old); return RETURN_FAIL; }
-    if (!(buf = prefs_start(old, oldlen, ICTL_CHUNK + 8, &o))) { if (old) FreeVec(old); return RETURN_FAIL; }
+    LONG k;
+    UBYTE *buf, *o, *mine = NULL;
+    if (!(buf = prefs_start(old, oldlen, ICTL_CHUNK + 8, &o))) return NULL;
     if (old && oldlen > 12 && !memcmp(old, "FORM", 4)) {
         for (k = 12; k + 8 <= oldlen; ) {
             ULONG n = get32(old + k + 4), whole = 8 + n + (n & 1);
@@ -1750,13 +1772,192 @@ static int set_titlebars(LONG screen, LONG window)
     if (!mine[28] && mine[29] < 2) mine[29] = 2;
     mine[36] = (UBYTE)screen;
     mine[37] = (UBYTE)window;
-    len = o - buf;
-    put32(buf + 4, len - 8);
+    *lenp = o - buf;
+    put32(buf + 4, *lenp - 8);
+    return buf;
+}
+
+static int set_titlebars(LONG screen, LONG window)
+{
+    LONG oldlen = 0, len;
+    UBYTE *old, *buf;
+    int ok;
+    if (screen < 0 || screen > 16 || window < 0 || window > 16) { say("OpenUp: TITLEBARS wants two numbers from 0 to 16", NULL, NULL); return RETURN_FAIL; }
+    old = (UBYTE *)read_file("ENVARC:Sys/IControl.prefs", &oldlen);
+    buf = ictl_prefs(old, oldlen, screen, window, &len);
     if (old) FreeVec(old);
+    if (!buf) return RETURN_FAIL;
     ok = install_prefs("IControl.prefs", buf, len);
     FreeVec(buf);
     if (!ok) return RETURN_ERROR;
     say("OpenUp: title bars have extra height (from the next reboot)", NULL, NULL);
+    return RETURN_OK;
+}
+
+/* ---- OLDLOOK: the look's files earlier OpenUps wrote, taken out (0.8.2) ------------------------------------------
+ *
+ * The OpenKick ROM draws Workbench's look itself (a 24-pixel screen bar in CGTriumvirate on a 1080-line screen,
+ * the icons on the backdrop), and on OS 3.2.3 the look is the OS's own; the files below only changed that (the
+ * user, 16 October 2026: "it should be default, straight from the rom"). OpenUp up to 0.8.1 wrote them through
+ * its OpenLook part; 0.8.2 writes none, and an upgrade takes out what an earlier one wrote:
+ *   C:OpenLook and its line in S:User-Startup
+ *   ENVARC: and ENV:OpenGadTools/Theme   (SETTING, a theme's name)
+ *   ENVARC: and ENV:OpenGadTools/Look    (THEME)
+ *   ENVARC:Sys/Font.prefs                (FONT CGTriumvirate.font 13, and RECONCILE's pens for the icons' text)
+ *   ENVARC:Sys/IControl.prefs            (TITLEBARS 0 2)
+ * A file goes only when the manifest lists it as OpenUp's and its bytes are what OpenUp wrote, worked out again
+ * from the original OpenUp kept (or from none, where there was none). The original comes back where there was
+ * one. A file the user has changed since (saved from Font prefs, say) stays as it is, and the log says so. */
+
+static UBYTE *font_of_type(UBYTE *d, LONG len, int type);
+
+static const char *const old_themes[] = { "Open", "Glass", "Graphite", "Ember", "Clear", "Sky", "Classic", NULL };
+
+static int same_bytes(const UBYTE *a, LONG la, const UBYTE *b, LONG lb) { return a && b && la == lb && !memcmp(a, b, la); }
+
+/* Theme: SETTING wrote a theme's name and a new line */
+static int was_theme(const UBYTE *cur, LONG len, const UBYTE *orig, LONG olen)
+{
+    int i;
+    (void)orig; (void)olen;
+    for (i = 0; old_themes[i]; i++) {
+        LONG n = strlen(old_themes[i]);
+        if (len == n + 1 && !memcmp(cur, old_themes[i], n) && cur[n] == '\n') return 1;
+    }
+    return 0;
+}
+
+/* Look: THEME's text for any theme, from the original or (a new install) from the Installer's own look */
+static int was_look(const UBYTE *cur, LONG len, const UBYTE *orig, LONG olen)
+{
+    char look[120];
+    int i, j, same = 0;
+    (void)olen;
+    for (i = 0; old_themes[i] && !same; i++)
+        for (j = 0; j < 2 && !same; j++) {
+            char *t;
+            if (!strcmp(old_themes[i], "Classic")) strcpy(look, "Classic light");
+            else {
+                strcpy(look, old_themes[i]);
+                strcat(look, " light\nzoom off\nscrollers auto");
+                if (j) strcat(look, "\nsizegadget off");
+            }
+            if (!(t = look_text((const char *)orig, old_themes[i], look))) return 0;
+            same = same_bytes(cur, len, (const UBYTE *)t, strlen(t));
+            FreeVec(t);
+        }
+    return same;
+}
+
+/* Font.prefs: FONT's CGTriumvirate 13 from the original. The icons' text pens and effect (bytes 16, 17 and 19 of
+ * its fp_Type 0 chunk) may be the original's or the ones RECONCILE sets for a light or a dark backdrop. */
+static int was_font(const UBYTE *cur, LONG len, const UBYTE *orig, LONG olen)
+{
+    LONG n, k;
+    UBYTE *want = font_prefs(orig, olen, "CGTriumvirate.font", 13, &n), *a, *b;
+    int same = 0;
+    if (!want) return 0;
+    if (n == len && (a = font_of_type((UBYTE *)cur, len, 0)) && (b = font_of_type(want, n, 0)) && a - cur == b - want) {
+        int f = a[16], bk = a[17], sp = a[19];
+        int pens = (f == b[16] && bk == b[17]) || (f == 2 && bk == 1) || (f == 1 && bk == 2);
+        same = pens && (sp == b[19] || sp == 0 || sp == 1 || sp == 2);
+        for (k = 0; k < len && same; k++) {
+            LONG at = k - (a - cur);
+            if (at == 16 || at == 17 || at == 19) continue;
+            if (cur[k] != want[k]) same = 0;
+        }
+    }
+    FreeVec(want);
+    return same;
+}
+
+/* IControl.prefs: TITLEBARS 0 2 from the original */
+static int was_titlebars(const UBYTE *cur, LONG len, const UBYTE *orig, LONG olen)
+{
+    LONG n;
+    UBYTE *want = ictl_prefs(orig, olen, 0, 2, &n);
+    int same = same_bytes(cur, len, want, n);
+    if (want) FreeVec(want);
+    return same;
+}
+
+/* One file: 1 taken out (or its original back), 0 left. env, when given, is its copy in ENV: that OpenUp didn't
+ * list (Font prefs, IControl prefs): it follows when it is the same as the file was. */
+static int take_out_old(const char *dest, const char *env, int (*was)(const UBYTE *, LONG, const UBYTE *, LONG))
+{
+    entry *e = find_entry(NULL, dest);
+    UBYTE *cur, *orig = NULL, *ec;
+    LONG len = 0, olen = 0, elen = 0;
+    int replaced, ok;
+    if (!e || !exists(dest)) return 0;
+    replaced = !strcmp(e->kind, "replaced");
+    if (!replaced && strcmp(e->kind, "new")) return 0;              /* "same": the user's own bytes already */
+    if (!(cur = (UBYTE *)read_file(dest, &len))) return 0;
+    if (replaced && !(orig = (UBYTE *)read_file(e->b, &olen))) {
+        FreeVec(cur);
+        say("OpenUp: kept ", dest, ": its original isn't in SYS:Storage/OpenUp-Superseded any more");
+        return 0;
+    }
+    if (!was(cur, len, orig, olen)) {
+        say("OpenUp: kept ", dest, ": it has been changed since OpenUp wrote it");
+        FreeVec(cur);
+        if (orig) FreeVec(orig);
+        return 0;
+    }
+    ok = replaced ? write_file(dest, (const char *)orig, olen) : (DeleteFile((STRPTR)dest) || !exists(dest));
+    if (ok && env && (ec = (UBYTE *)read_file(env, &elen))) {
+        if (same_bytes(ec, elen, cur, len)) {
+            if (replaced) write_file(env, (const char *)orig, olen);
+            else DeleteFile((STRPTR)env);
+        }
+        FreeVec(ec);
+    }
+    if (ok) {
+        if (replaced) DeleteFile((STRPTR)e->b);
+        e->kind[0] = 0;
+        say("OpenUp: ", dest, replaced ? ": its original is back" : ": taken out");
+    } else say("OpenUp: can't take out ", dest, "; is the disk write-protected?");
+    FreeVec(cur);
+    if (orig) FreeVec(orig);
+    return ok;
+}
+
+static int old_look(void)
+{
+    int n = 0, i, lines = 0;
+    entry *e;
+    manifest_load();
+    /* C:OpenLook, OpenUp's own copy (listed as new, and OpenLook's by its version string) */
+    if ((e = find_entry("new", "SYS:C/OpenLook")) && exists("SYS:C/OpenLook")) {
+        static char *mark[] = { "$VER: OpenLook " };
+        if (has_marker("SYS:C/OpenLook", mark, 1) && DeleteFile((STRPTR)"SYS:C/OpenLook")) {
+            e->kind[0] = 0;
+            say("OpenUp: SYS:C/OpenLook: taken out", NULL, NULL);
+            n++;
+        }
+    }
+    for (i = 0; i < nents; i++)
+        if ((!strcmp(ents[i].kind, "startup") && strstr(ents[i].a, "C:OpenLook")) ||
+            (!strcmp(ents[i].kind, "part") && !strcmp(ents[i].a, "OpenLook"))) {
+            if (!strcmp(ents[i].kind, "startup")) lines++;
+            ents[i].kind[0] = 0;
+        }
+    n += lines;
+    n += take_out_old("ENVARC:OpenGadTools/Theme", NULL, was_theme);
+    n += take_out_old("ENV:OpenGadTools/Theme", NULL, was_theme);
+    n += take_out_old(LOOK_ENVARC, NULL, was_look);
+    n += take_out_old(LOOK_ENV, NULL, was_look);
+    n += take_out_old("ENVARC:Sys/Font.prefs", "ENV:Sys/Font.prefs", was_font);
+    n += take_out_old("ENVARC:Sys/IControl.prefs", "ENV:Sys/IControl.prefs", was_titlebars);
+    if (!manifest_save()) {
+        say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
+        return RETURN_ERROR;
+    }
+    if (lines && !write_startup(0)) {
+        say("OpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL);
+        return RETURN_ERROR;
+    }
+    Printf((STRPTR)"OpenUp: the old look: %ld thing%s taken out\n", (LONG)n, (LONG)(n == 1 ? "" : "s"));
     return RETURN_OK;
 }
 
@@ -2716,7 +2917,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -2736,6 +2937,7 @@ static int real_main(void)
     else if (same_word(cmd, "TITLEBARS") && args[1] && args[2]) rc = set_titlebars(atol((const char *)args[1]), atol((const char *)args[2]));
     else if (same_word(cmd, "WBBACKDROP")) rc = set_wb_backdrop();
     else if (same_word(cmd, "WBGAUGE")) rc = set_wb_gauge();
+    else if (same_word(cmd, "OLDLOOK")) rc = old_look();
     else if (same_word(cmd, "RECONCILE")) rc = reconcile((const char *)args[1], (const char *)args[2]);
     else if (same_word(cmd, "TIDY")) rc = tidy((const char *)args[1]);
     else if (same_word(cmd, "ICONS")) rc = icons((const char *)args[1]);
@@ -2766,7 +2968,7 @@ static int real_main(void)
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;

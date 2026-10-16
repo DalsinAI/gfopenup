@@ -22,12 +22,11 @@ choose:
   MultiView's place, so whatever opened MultiView opens OpenView (MultiView is kept);
 - AmigaChrome sharing: the clipboard and files, shared in and out of the
   Amiga, and an optional Send Out icon to drop files on;
-- OpenLook: one look for every GadTools and ReAction program, title bars and
-  borders too (Open, Glass, Graphite, Ember, Clear, Sky or Classic), with a
-  clear screen font and a little more room in the title bars; Look in SYS:Prefs changes
-  it (dark by the clock, accent, Lite for a real 68040, desktop profiles); its frames
-  are drawn through OpenGfx, so OpenLook patches nothing in graphics.library;
-- Backgrounds: the look's desktop as Workbench's backdrop, for your screen;
+- Backgrounds: a theme's desktop as Workbench's backdrop, for your screen
+  (Open, Glass, Graphite, Ember, Clear or Sky). Since 0.8.2 that is all OpenUp
+  changes of Workbench's look: the rest is the OS's own, or the OpenKick ROM's,
+  and an upgrade takes out the look files an earlier OpenUp wrote (OpenLook,
+  its theme, Font and IControl prefs) where you haven't changed them;
 - OpenTypes: which program opens each kind of file (SYS:Prefs/OpenTypes);
 - OpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
   gzip, from its window in SYS:Utilities or from the Shell;
@@ -99,7 +98,9 @@ choose:
   board is put aside and comes back with the uninstaller. It brings
   openrtg.library 0.17, whose Native modes follow the size of AmigaChrome's
   window, with opengpu.library 0.15 and the board's driver; an upgrade brings
-  it up to date where it is installed and keeps the screen mode you chose;
+  it up to date where it is installed and keeps the screen mode you chose.
+  Since 0.8.2 OpenUp writes a screen mode only when a new install asks and you
+  say Yes (on the OpenKick ROM Workbench is on that screen by itself);
 - OpenGPU (new): opengpu.library 0.15, so programs' drawing and SDL 2 games
   run on the x86 or ARM64 cores and GL (Mesa) on the GPU, through
   AmigaChrome's graphics board, and on the Amiga's own CPU where there is no
