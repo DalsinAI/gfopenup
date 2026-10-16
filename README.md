@@ -32,8 +32,8 @@ MIT, Copyright (c) 2026 AmigaChrome Team (`LICENSE`), for our own files.
 Third-party code keeps its own licence (see `DESIGN.md`).
 
 If you use or build on this work, we ask (we do not require) that you credit
-the AmigaChrome Team, for example "based on OpenUp by Dalsin
-Limited".
+the AmigaChrome Team, for example "based on OpenUp by the AmigaChrome
+Team".
 
 ## Contributors
 
