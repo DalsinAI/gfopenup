@@ -13,7 +13,7 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 
 | Icon | At rest | Chosen |
 |---|---|---|
-| Drawers (OpenUp, OpenPrint, OpenBrowser, OpenWrite) | Gorilla's drawer, our badge at its foot on the right | The badge plays its own second frame (on our own drawer, files show too) |
+| Drawers (OpenUp, OpenPrint, OpenBrowser, OpenWrite) | Our own drawer, our badge at its foot on the right | The badge plays its own second frame (on our own drawer, files show too) |
 | OpenFiles | Two panes, a file chosen on the right | The choice moves to the left pane |
 | OpenView | Picture, magnifier beside it | Magnifier over the picture |
 | OpenEdit | Pad and pencil | Pencil moves on, a fresh line written |
@@ -61,17 +61,18 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 
 ## 3. Style
 
-**From 8 October 2026 the house style is Gorilla's** (section 8): the set
-OpenUp ships for the system's own icons. Our icons are redrawn to sit with
-it, in our own drawing (nothing traced from Gorilla), and new ones are drawn
-that way:
+**From 8 October 2026 to OpenUp 0.8.3 the house style was Gorilla's**, the
+AROS set OpenUp then gave the system's own icons. Our icons were redrawn to
+sit with it, in our own drawing (nothing traced from Gorilla), and the kit
+(`tools/gstyle.py`) still draws that way. Since 0.8.4 the system's icons are
+OpenIcons look B, our own set (section 8):
 
 - **A bold black outline** round every shape, about two pixels at 64.
 - **Light from the top left**, soft gradients, a gentle gloss on the upper part.
 - **A soft shadow** below and to the right.
 - **Mostly front-on** pages and windows; things that stand (disks, the
-  trashcan, drawers) a little from above. Drawers of our own are Gorilla's
-  drawer with our badge at its foot (those are GPL, as Gorilla's drawer is).
+  trashcan, drawers) a little from above. Drawers of our own are our own
+  drawer with our badge at its foot (`drawer-NAME`).
 - **Prefs editors** carry the prefs mark: a small blue monitor with a
   question mark, bottom left.
 - **85 per cent** of 64 when shown (the look approved on the canvas).
@@ -141,9 +142,8 @@ picture name `OpenMeters`, so it keeps the part's tooltypes and stack.
   icon the part made, loads `NAME.png` and `NAME-selected.png`, scales them
   to 85 per cent, hardens the alpha, dithers both frames, adds the glow to
   the second, and writes the icon back as a GlowIcon. For a drawer of our
-  own, when the pack ships Gorilla, the two frames are `badge-NAME` on
-  Gorilla's drawer (fetched and checked as in section 8, so those drawers
-  are GPL); without Gorilla (`--no-gorilla`) they are `drawer-NAME`, all ours. A missing icon file is skipped (a part may not
+  own, the two frames are `drawer-NAME`, all ours (since 0.8.4: no
+  drawer of another set under them). A missing icon file is skipped (a part may not
   make it in every build). A missing `-selected.png` falls back to the rest
   frame with the glow, but the rule above says every icon has one.
 - **drawers:** a map of each drawer of our own to the icons in it.
@@ -170,52 +170,63 @@ picture name `OpenMeters`, so it keeps the part's tooltypes and stack.
    `amiga_icon.pictures()` on the built `.info`).
 5. Put the new icon in the table in section 1.
 
-## 8. Gorilla: the system's icons, and what is still to draw
+## 8. OpenIcons: the system's icons, and what is still to draw
 
-**Gorilla** is AROS's icon set (`images/IconSets/Gorilla` in the AROS
-repository), under the GNU General Public License. It was chosen on
-8 October 2026 for OpenUp's look ("ship gorilla"): complete for a Workbench
-(a drawer for every SYS: drawer, the disks, RAM, the Shell, the prefs, the
-default icons), soft-shaded, at 60 pixels.
+**OpenIcons** is the Team's own icon set (amigachrome-guest `icons/openicons`,
+MIT): 1,988 icons drawn new from vector sources by its generator. Look B
+(up to 32 colours, soft gradient, bevel and shine) is the look the OpenKick
+ROM's own default icons have (amigachrome-guest #336). Since OpenUp 0.8.4 it
+gives the system's icons their pictures (Dale, 16 October 2026: "we should
+remove them and use ours"), in place of AROS's Gorilla set, which OpenUp
+0.6.17 to 0.8.3 fetched at build time. No AROS picture is in the pack.
 
-- **Fetched, never committed.** `tools/gorilla_icons.py` fetches it at the
-  AROS commit it pins, checks every file it uses against `tools/gorilla.lock`
-  (SHA-256), and the pack build (`build_pack.py`, `--no-gorilla` to leave it
-  out) makes the GorillaIcons part.
+- **Made at build time, never committed.** The set's `.info` files are its
+  generator's build output. `tools/openicons_part.py` runs the generator
+  from the amigachrome-guest checkout the pack is built with
+  (`build_pack.py --guest`, `--no-openicons` to leave it out): that commit's
+  manifest, look and `.info` writer, nothing fetched from outside our
+  repositories. The Part file names the commit.
 - **New faces, the icons' own selves.** For each icon the system has (the
-  SYS: drawers, OS 3.2.3's programs and prefs editors, the default icons in
-  `ENVARC:Sys`), the part holds a GlowIcon with only the picture, at 85 per
-  cent, and a `face` line: OpenUpTool 0.6 keeps the icon's type, default
-  tool, tool types, stack and drawer window and changes only its picture,
-  keeping the original in `SYS:Storage/OpenUp-Superseded` for UNINSTALL. An
-  icon the machine hasn't got is left alone.
-- **Not the default icons or the volumes (0.8.3).** The OpenKick ROM's
-  icon.library has its own default icons (RAM, hard disk, floppy, CD, drawer,
-  tool, project, trashcan, Kickstart), and a `def_<kind>.info` in
-  `ENVARC:Sys` or a volume's own `Disk.info` wins over them. Since 0.8.3 the
-  part faces none of these: `ENVARC:Sys/def_RAM`, `def_Harddisk`, `def_Disk`,
-  `def_CDROM`, `def_Kick`, `def_Drawer`, `def_Tool`, `def_Project`,
-  `def_Trashcan`, `SYS:Disk` and `Work:Disk`. Their icons stay in the part
-  as `Retired/`, with no face line, for `OpenUpTool OLDLOOK`: on an upgrade it
-  takes each one out that is still as OpenUp left it (the icon written again
-  from the original OpenUp kept and the retired picture, the same byte for
-  byte but for the icon's place and the memory addresses icon.library writes
-  as marks), and keeps any you changed. The DefIcons file types
-  (`def_ascii`, `def_picture`...) keep their faces.
-- **GlowIcons for now.** A GlowIcon has no partial transparency, so the soft
-  shadows end as a solid edge or nothing. The PNGs go in too
-  (`SYS:Storage/Icons/Gorilla`), with Gorilla's LEGAL and the GPL (COPYING):
-  they are the set's source under the GPL, and the pictures OpenUp will use
-  when it draws PNG icons (openworkbench.library, to come).
-- **Licences kept apart.** Gorilla's pictures, and anything drawn from them
-  (our drawers on Gorilla's drawer), are GPL and live apart from our own
-  icons (MIT). The GPL covers the pictures only, not the programs beside them.
+  SYS: drawers, OS 3.2.3's programs, prefs editors and commodities, the
+  monitors, printers, keymaps and DOS drivers, the DefIcons file types in
+  `ENVARC:Sys`), the part holds OpenIcons' icon and a `face` line:
+  OpenUpTool keeps the icon's type, default tool, tool types, stack and
+  drawer window and changes only its picture, keeping the original in
+  `SYS:Storage/OpenUp-Superseded` for UNINSTALL. An icon the machine hasn't
+  got is left alone, and so is one OpenUp faced before that you changed
+  since (0.8.4).
+- **Not the default icons or the volumes.** The OpenKick ROM's icon.library
+  has its own (RAM, hard disk, floppy, CD, RAD, card, Kickstart, drawer,
+  tool, project, trashcan), and a `def_<kind>.info` in `ENVARC:Sys` or
+  SYS:'s own `Disk.info` wins over them. The part faces none of them, and
+  `OpenUpTool OLDLOOK` (the Installer runs it before the parts) takes each
+  out: OS 3.2.3's own as installed (`def_RAM`, `def_harddisk`, `def_disk`,
+  `def_drawer`, `def_tool`, `def_project`, `def_trashcan`, `def_cd0`,
+  `def_rad`, `def_card`, `def_kickstart`, `def_sys`, `def_work`,
+  `SYS:Disk.info`) and the faces OpenUp gave them. Every original stays in
+  `SYS:Storage/OpenUp-Superseded`, listed, for UNINSTALL; one you changed
+  stays where it is. The DefIcons file types (`def_ascii`, `def_picture`...)
+  stay, with OpenIcons' pictures.
+- **Gorilla's faces out (0.8.4).** OLDLOOK gives each icon still showing the
+  Gorilla picture OpenUp gave it its original back, and the OpenIcons part
+  then faces it. Since the pack carries no Gorilla picture, OLDLOOK knows
+  them by signature (`src/gorilla_sigs.h`: numbers only, from
+  `OpenUpTool ICONSIG` over every GorillaIcons part kept; OS 3.2.3's own
+  default icons likewise in `src/os323_default_sigs.h`). "Still as OpenUp
+  gave it" is 0.8.3's rule: the icon written again into T: from its own
+  picture over the original's fields is the same, byte for byte, as the
+  file, but for its place, a window icon's stack and the pointers an icon
+  file stores. It also takes out `SYS:Storage/Icons/Gorilla` and the
+  GorillaIcons licence note.
+- **Kinds.** The part's `Kinds` drawer has OpenIcons' disk, drawer, tool,
+  project and trashcan, with no face line: `OpenUpTool ICONS` gives an old
+  icon OpenIcons has no picture for by name the one of its kind.
 
 **The icon library** is `icons/LIST.csv`: 640 rows, every Amiga thing that
 wants an icon (disks, drawers, prefs, the OS's tools and commodities, our
 apps, file types, situations, glyphs, pointers, and the programs people
 install), with what each is, what to draw, a priority (P1 ships with OpenUp
-on 3.2.3) and the Gorilla picture it corresponds to. The names follow what
+on 3.2.3) and, as a name only, the Gorilla picture it corresponded to (up to 0.8.3). The names follow what
 Aminet's icon packs (pix/icon) cover.
 
 On 8 October 2026 every row that is an icon was drawn in the house style
