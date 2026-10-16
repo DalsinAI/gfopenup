@@ -1950,7 +1950,9 @@ static int take_out_old(const char *dest, int (*was)(const UBYTE *, LONG, const 
  * drawer's or trashcan's means nothing, and Workbench's snapshot writes it anew). Its place and drawer window are left out:
  * Workbench writes those whenever it is snapshot. OLDLOOK tells by them the pictures OpenUp gave up to 0.8.3
  * (Gorilla's, which the pack no longer carries) and OS 3.2.3's own default icons as its install leaves them.
- *   OpenUpTool ICONSIG <icon or drawer>   prints each icon's picture and whole signatures */
+ *   OpenUpTool ICONSIG <icon or drawer>   prints each icon's picture and whole signatures
+ *   OpenUpTool ICONSIG <icon> <fields>   says whether the icon is its own picture over the other icon's fields,
+ *                                         as OLDLOOK asks, and leaves what it compared with in T:OpenUp-oldface.info */
 typedef struct { ULONG a, b; } isig;
 
 static void sig_add(isig *s, const void *p, ULONG n)
@@ -2093,7 +2095,9 @@ static int icon_sigs(const char *path)
  *   - An icon OpenUp faced (listed "replaced", its original in SYS:Storage/OpenUp-Superseded) that is still as
  *     OpenUp left it gets its original back. "As OpenUp left it" is W25's rule: the icon written again into T:
  *     from its own picture over the original's fields is the same, byte for byte, as the file (its place and
- *     the pointers an icon file stores left out), and that picture is one of Gorilla's. The OpenIcons part then
+ *     the pointers an icon file stores left out), and that picture is one of Gorilla's. Where its colour images
+ *     are packed otherwise than icon.library packs them today, the same picture and fields as icon.library
+ *     reads them count (same_fields). The OpenIcons part then
  *     gives it our picture; one OpenIcons has none for keeps its original.
  *   - An icon the user changed since stays as it is, and so does its listing; face_icon leaves it too.
  *
@@ -2128,6 +2132,7 @@ static const char *const default_icons[] = {
     "ENVARC:Sys/def_work.info", "ENVARC:Sys/def_CDROM.info", "ENVARC:Sys/def_Kick.info",
 };
 #define FACE_TMP "T:OpenUp-oldface"
+static int keep_face_tmp;                          /* ICONSIG <icon> <fields>: T:OpenUp-oldface.info stays to look at */
 
 /* An icon file holds memory addresses where the structures had pointers: icon.library reads them only as "there"
  * or "not there", and each write has new ones. These are the DiskObject's (its gadget's, the default tool's, the
@@ -2208,7 +2213,7 @@ static int still_face(const char *dest, const char *pic_name, const char *fields
         own->do_CurrentX = x; own->do_CurrentY = y; own->do_DrawerData = dd; own->do_StackSize = st;
         pic->do_Gadget.LeftEdge = gl; pic->do_Gadget.TopEdge = gt;
     }
-    DeleteFile((STRPTR)FACE_TMP ".info");
+    if (!keep_face_tmp) DeleteFile((STRPTR)FACE_TMP ".info");
     if (now) FreeVec(now);
     if (want) FreeVec(want);
     if (pic) FreeDiskObject(pic);
@@ -2219,11 +2224,43 @@ static int still_face(const char *dest, const char *pic_name, const char *fields
     return same;
 }
 
-/* 1 when dest is still one of Gorilla's pictures, as OpenUp gave it, over the fields of fields_name */
+static int same_text(const char *a, const char *b) { return (!a && !b) || (a && b && !strcmp(a, b)); }
+
+/* 1 when the two icons have the same type, default tool, tool types and (a program's or project's) stack, as
+ * icon.library reads them */
+static int same_fields(const char *a_name, const char *b_name)
+{
+    struct DiskObject *a, *b;
+    char an[260], bn[260];
+    int same = 0;
+    no_info(an, a_name, sizeof an);
+    no_info(bn, b_name, sizeof bn);
+    if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) return 0;
+    a = GetIconTags((STRPTR)an, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    b = GetIconTags((STRPTR)bn, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
+    if (a && b && a->do_Type == b->do_Type && same_text((char *)a->do_DefaultTool, (char *)b->do_DefaultTool) &&
+        (a->do_Type == WBDISK || a->do_Type == WBDRAWER || a->do_Type == WBGARBAGE || a->do_StackSize == b->do_StackSize)) {
+        STRPTR *ta = a->do_ToolTypes, *tb = b->do_ToolTypes;
+        same = 1;
+        while (ta && tb && *ta && *tb && same) same = !strcmp((char *)*ta++, (char *)*tb++);
+        if ((ta && *ta) || (tb && *tb)) same = 0;
+    }
+    if (a) FreeDiskObject(a);
+    if (b) FreeDiskObject(b);
+    CloseLibrary(IconBase);
+    IconBase = NULL;
+    return same;
+}
+
+/* 1 when dest is still one of Gorilla's pictures, as OpenUp gave it, over the fields of fields_name: byte for
+ * byte (still_face), or, where the icon's colour images are packed otherwise than icon.library packs them now
+ * (SYS:Expansion.info on Instance-32, faced by an older OpenUp: the same pixels and palette, other bytes), the
+ * same picture and fields as icon.library reads them */
 static int still_gorilla(const char *dest, const char *fields_name)
 {
     isig p;
-    return file_sig(dest, &p, NULL) && sig_in(&p, gorilla_pics, NGORILLA) && still_face(dest, dest, fields_name);
+    if (!file_sig(dest, &p, NULL) || !sig_in(&p, gorilla_pics, NGORILLA)) return 0;
+    return still_face(dest, dest, fields_name) || same_fields(dest, fields_name);
 }
 
 /* dest written again from its original (backup), keeping dest's place and drawer window. 1 done. */
@@ -3348,7 +3385,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> | UPDATE [CHECK|YES] | UNPLACE <program>\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -3372,6 +3409,15 @@ static int real_main(void)
     else if (same_word(cmd, "RECONCILE")) rc = reconcile((const char *)args[1], (const char *)args[2]);
     else if (same_word(cmd, "TIDY")) rc = tidy((const char *)args[1]);
     else if (same_word(cmd, "ICONS")) rc = icons((const char *)args[1]);
+    else if (same_word(cmd, "ICONSIG") && args[1] && args[2]) {
+        /* is the icon its own picture over these fields, as OLDLOOK asks? The icon it compared with stays in T: */
+        int same;
+        keep_face_tmp = 1;
+        same = still_face((const char *)args[1], (const char *)args[1], (const char *)args[2]);
+        Printf((STRPTR)"%s: %s the picture over %s's fields (T:OpenUp-oldface.info)\n", args[1],
+               (LONG)(same ? "is" : "is not"), args[2]);
+        rc = same ? RETURN_OK : RETURN_WARN;
+    }
     else if (same_word(cmd, "ICONSIG") && args[1]) rc = icon_sigs((const char *)args[1]);
     else if (same_word(cmd, "SETTING") && args[1] && args[2]) {
         /* The text goes through T: so it is installed like any file. */
@@ -3400,7 +3446,7 @@ static int real_main(void)
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
