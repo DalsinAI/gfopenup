@@ -32,7 +32,7 @@ Every file is byte for byte as received; the checksums are below. Left out on pu
 4. **The prefs file** is `ENV:OpenUp/OpenMouseAccel.prefs` here; OpenInput's design keeps its settings in `ENV:OpenInput/` and `ENVARC:OpenInput/`. One place should be chosen.
 5. **The preferences program** is MUI. The Open family's rule is GadTools (or MUI) and settings in OpenPrefs; the design's open question 2 asks whether this becomes a page of OpenPrefs' Input editor.
 6. **The OpenInput hook** (`oma_filter.c`) is a shim by design; the real registration waits on OpenInput's relative-pointer sources, which are not built yet.
-7. **No licence text** is in the files. They are kept here as the Team's files under this repository's MIT licence (Copyright (c) 2026 Dalsin Limited); to be confirmed when the component is built.
+7. **No licence text** is in the files. They are kept here as the Team's files under this repository's MIT licence (Copyright (c) 2026 AmigaChrome Team); to be confirmed when the component is built.
 8. **Wording** in the author's notes ("OpenUp/OpenInput", no person's name) already follows the Team's rules.
 
 ## Building it later

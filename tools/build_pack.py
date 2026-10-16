@@ -119,7 +119,7 @@ a Part file that C/OpenUpTool reads:
                         OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
-amiga-icon.js). MIT, Copyright (c) 2026 Dalsin Limited.
+amiga-icon.js). MIT, Copyright (c) 2026 AmigaChrome Team.
 """
 from __future__ import annotations
 
@@ -660,7 +660,7 @@ OPENLIBS_STARTUP = """\
 ; $VER: OpenLibs-Startup 1.0 (13.10.2026)
 ; OpenUp's open ROM libraries (Install-OpenUp, page 6): each module in LIBS:OpenLibs, loaded in one call of
 ; OS 3.2's own LoadModule, which restarts the Amiga once when they aren't in memory yet. Taking a file out of
-; LIBS:OpenLibs puts the ROM's own back at the next start. MIT, Copyright (c) 2026 Dalsin Limited.
+; LIBS:OpenLibs puts the ROM's own back at the next start. MIT, Copyright (c) 2026 AmigaChrome Team.
 FailAt 21
 If EXISTS LIBS:OpenLibs/utility.module
   If EXISTS LIBS:OpenLibs/input.device
