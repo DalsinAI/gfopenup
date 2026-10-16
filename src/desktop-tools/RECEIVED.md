@@ -28,7 +28,7 @@ Every file is byte for byte as received; the checksums are below. The zip held n
 5. **The windows.** Both components say "the project's MUI/OpenGUI wrapper". The Open family's rule is GadTools (or MUI), styled by OpenLook; OpenShell's tabs, transcript and completion pop-up are the larger part of its work.
 6. **OpenShell's transport** is the hard part: driving a real Shell process per tab (`NewShell`-style processes with a console of OpenShell's own, `SystemTags` with pipes, or a `CON:`-compatible handler), getting the directory and return code back without parsing commands, and Ctrl-C as a real break. AmigaOS's Shell and the Team's ACKitchen work both bear on it.
 7. **Where they belong:** in OpenUp as apps (the bundle's suggestion), or each in its own `openamiga<thing>` repository like the other Open apps.
-8. **No licence text** is in the files. They are kept as the Team's files under this repository's MIT licence (Copyright (c) 2026 Dalsin Limited); to be confirmed when they are built.
+8. **No licence text** is in the files. They are kept as the Team's files under this repository's MIT licence (Copyright (c) 2026 AmigaChrome Team); to be confirmed when they are built.
 
 ## Building it later
 
