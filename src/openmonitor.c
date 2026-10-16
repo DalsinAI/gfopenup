@@ -29,7 +29,7 @@
  * as idle. Over a second that is 50 looks: the numbers are good to a couple of per cent, like any sampling
  * monitor's.
  *
- * MIT, Copyright (c) 2026 Dalsin Limited. */
+ * MIT, Copyright (c) 2026 AmigaChrome Team. */
 
 #include <exec/types.h>
 #include <exec/execbase.h>
@@ -60,7 +60,7 @@
 #include "ogt_look.h"
 #include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3.1 (12.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3.1 (12.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 /* The window runs on 32 KB, however OpenMonitor is started (0.3.1). From a Shell (Run, a script) it got
  * the Shell's 4 KB, and closing the window rebooted the machine every time; with 32 KB it closes cleanly
  * (OpenUp 0.7.5's labs, 12 October 2026; OpenTypes 0.2.3 had the same). libnix's start code swaps to a
@@ -288,7 +288,7 @@ static void take_memory(void)
 }
 
 /* The cores the CPU cores board presents through AutoConfig (the user, 10 October 2026: "the cpu count
- * should read the amount of cores presented via autoconfig"): a Dalsin ($DA15) product 7 board carrying
+ * should read the amount of cores presented via autoconfig"): an AmigaChrome Team ($DA15) product 7 board carrying
  * the ACSV block, CLASS ($20) 2, UNITS ($24) its cores. 0 without the board. */
 static ULONG board_cores(void)
 {

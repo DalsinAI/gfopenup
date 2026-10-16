@@ -9,7 +9,7 @@
  * on the line). Typing goes to the line; Return works it out; Escape clears it. Nothing is shown as
  * NaN or infinity: the engine's errors are said in words.
  *
- * MIT, Copyright (c) 2026 Dalsin Limited. */
+ * MIT, Copyright (c) 2026 AmigaChrome Team. */
 #include <exec/types.h>
 #include <exec/memory.h>
 #include <exec/lists.h>
@@ -30,7 +30,7 @@
 
 #include "opencalc.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenCalc 0.3 (11.10.2026) OpenUp, MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenCalc 0.3 (11.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
 #define TITLE "Calculator"
 #define SCREEN_TITLE "OpenCalc 0.2"
 #define EXPR_MAX 200

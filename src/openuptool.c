@@ -78,7 +78,7 @@
  *   when AmigaChrome <copy|default|add|face|retire line>  (0.6.3: the line only on an AmigaChrome instance)
  * Words with spaces are quoted.
  *
- * MIT, Copyright (c) 2026 Dalsin Limited. */
+ * MIT, Copyright (c) 2026 AmigaChrome Team. */
 #include <exec/types.h>
 #include <exec/memory.h>
 #include <exec/resident.h>
@@ -108,7 +108,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.3 (16.10.2026) MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.3 (16.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -128,8 +128,8 @@ static int same_word(const char *a, const char *b)
 #define BLOCK_END ";END OpenUp"
 #define STARTUP_OFF "ENVARC:OpenAmiga/Startup.off"
 
-#define DALSIN 0xDA15
-#define DALSIN_OLD 2011
+#define AMIGACHROME_MFR 0xDA15
+#define AMIGACHROME_MFR_OLD 2011
 
 /* ---- small helpers ----------------------------------------------------------- */
 
@@ -455,7 +455,7 @@ static int has_marker(const char *path, char **markers, int n)
 
 static int board(UWORD product)
 {
-    return FindConfigDev(NULL, DALSIN, product) || FindConfigDev(NULL, DALSIN_OLD, product);
+    return FindConfigDev(NULL, AMIGACHROME_MFR, product) || FindConfigDev(NULL, AMIGACHROME_MFR_OLD, product);
 }
 
 static int is_amigachrome(void)

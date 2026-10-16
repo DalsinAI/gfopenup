@@ -24,7 +24,7 @@ solid edge or nothing (a pixel is solid at alpha 110 or more, as for our own
 icons); the PNGs go in too (SYS:Storage/Icons/Gorilla), for PNG icons once
 OpenUp draws them, and as the GPL's source, with Gorilla's LEGAL and the GPL.
 
-MIT for this script, Copyright (c) 2026 Dalsin Limited. The icons are AROS's,
+MIT for this script, Copyright (c) 2026 AmigaChrome Team. The icons are AROS's,
 GPL.
 """
 from __future__ import annotations
