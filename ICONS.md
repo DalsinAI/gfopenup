@@ -189,6 +189,19 @@ default icons), soft-shaded, at 60 pixels.
   tool, tool types, stack and drawer window and changes only its picture,
   keeping the original in `SYS:Storage/OpenUp-Superseded` for UNINSTALL. An
   icon the machine hasn't got is left alone.
+- **Not the default icons or the volumes (0.8.3).** The OpenKick ROM's
+  icon.library has its own default icons (RAM, hard disk, floppy, CD, drawer,
+  tool, project, trashcan, Kickstart), and a `def_<kind>.info` in
+  `ENVARC:Sys` or a volume's own `Disk.info` wins over them. Since 0.8.3 the
+  part faces none of these: `ENVARC:Sys/def_RAM`, `def_Harddisk`, `def_Disk`,
+  `def_CDROM`, `def_Kick`, `def_Drawer`, `def_Tool`, `def_Project`,
+  `def_Trashcan`, `SYS:Disk` and `Work:Disk`. Their icons stay in the part
+  as `Retired/`, with no face line, for `OpenUpTool OLDLOOK`: on an upgrade it
+  takes each one out that is still as OpenUp left it (the icon written again
+  from the original OpenUp kept and the retired picture, the same byte for
+  byte but for the icon's place and the memory addresses icon.library writes
+  as marks), and keeps any you changed. The DefIcons file types
+  (`def_ascii`, `def_picture`...) keep their faces.
 - **GlowIcons for now.** A GlowIcon has no partial transparency, so the soft
   shadows end as a solid edge or nothing. The PNGs go in too
   (`SYS:Storage/Icons/Gorilla`), with Gorilla's LEGAL and the GPL (COPYING):
