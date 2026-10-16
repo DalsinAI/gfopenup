@@ -31,8 +31,6 @@ a Part file that C/OpenUpTool reads:
                         that vendored payload as it is
   OpenPrint/            OpenPrint and OpenView (openamigaprint's package)
   AmigaChromeSharing/   accontrol.device, ACClip and ACDrop (amigachrome-guest)
-  OpenLook/             the look and its themes (opengadtools), and its editor,
-                        OpenPrefs Look, with the desktop profiles (openamigaprefs)
   Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
   GorillaIcons/         AROS's Gorilla icon set (GPL) as new pictures for the system's
                         icons, fetched at a pinned AROS commit (tools/gorilla_icons.py)
@@ -56,8 +54,9 @@ a Part file that C/OpenUpTool reads:
                         openrtg.library (Native modes that follow the host window from
                         0.17), its monitor driver and CyberGraphX compatibility, with
                         opengpu.library and ACRTG.gpu (openamigartg; AmigaChrome's ACRTG
-                        board). Its Upgrade/ drawer is the same part without Workbench's
-                        screen mode, which the Installer takes where OpenRTG is installed
+                        board). No screen mode: its Mode/ drawer (part OpenRTGMode) has
+                        Workbench's, which the Installer puts in only when a new install
+                        on Kickstart 3.2.3 says Yes
   OpenGPU/              opengpu.library and LIBS:OpenGPU/: ACRTG.gpu (the ACRTG
                         board's ring, amigachrome-guest), SDL2.module and GL.module
                         (Mesa), loaded when a program first asks; C:OpenGPUCheck.
@@ -564,7 +563,6 @@ PART_MAIN = {
     "OpenUp": ("Utilities/OpenUp/Uninstall-OpenUp", "Uninstall-OpenUp"),
     "OpenBlanker": ("Tools/Commodities/OpenBlanker", "OpenBlanker"),
     "OpenSocket": ("Libs/bsdsocket.library", "bsdsocket.library"),
-    "OpenLook": ("C/OpenLook", "OpenLook"),
     "OpenTypes": ("Prefs/OpenTypes", "OpenTypes"),
     "OpenCompress": ("Utilities/OpenCompress", "OpenCompress"),
     "OpenService": ("Devs/openservice.device", "openservice.device"),
@@ -906,19 +904,11 @@ def main() -> int:
         sh.add(f"WBStartup/{tool_name}.info", (icondir / f"{tool_name}.info").read_bytes(), f"SYS:WBStartup/{tool_name}.info")
     sh.write()
 
-    # OpenLook and its themes
+    # OpenLook (C:OpenLook, its themes, OpenPrefs Look and its profiles) was a part up to OpenUp 0.8.1. Since 0.8.2
+    # Workbench's look is the OS's own (the OpenKick ROM's: the user, 16 October 2026, "it should be default,
+    # straight from the rom ... only the background will be the one that gets the attention"), and the
+    # Installer's OLDLOOK takes out what an earlier OpenUp wrote for it.
     o = a.opengadtools
-    look = Part(top, "OpenLook", "0.9.0", "OpenLook: the OpenGadTools look for every GadTools and ReAction program, frames and title bars too (through OpenGfx), and its editor")
-    look.add("C/OpenLook", (o / "build/os3/OpenLook").read_bytes(), "SYS:C/OpenLook")
-    for t in sorted((o / "themes").glob("*.theme")):
-        look.add(f"Themes/{t.name}", t.read_bytes(), f"SYS:Prefs/Presets/Themes/{t.name}")
-    # OpenPrefs Look, OpenLook's editor, and the desktop profiles it offers
-    look.add("Prefs/Look", (a.openamigaprefs / "Look/build/os3/Look").read_bytes(), "SYS:Prefs/Look")
-    look.add("Prefs/Look.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Look.info")
-    for prof in sorted((a.openamigaprefs / "Look/profiles").glob("*.profile")):
-        look.add(f"Profiles/{prof.name}", prof.read_bytes(), f"SYS:Prefs/Presets/OpenPrefs/{prof.name}")
-    look.line("startup Run >NIL: C:OpenLook")
-    look.write()
 
     # The background pack: each theme's desktop at four screen shapes (opengadtools)
     bd = Part(top, "Backdrops", "0.1", "The themes' desktops as Workbench backdrops")
@@ -1073,30 +1063,21 @@ def main() -> int:
     rt.add("Libs/OpenRTG/cybergraphics.library", (rtg / "cybergraphics.library").read_bytes(), "LIBS:OpenRTG/cybergraphics.library")
     rt.add("C/OpenRTG", (rtg / "OpenRTG").read_bytes(), "C:OpenRTG")
     rt.add("Devs/Monitors/OpenRTG", (rtg / "OpenRTG-Monitor").read_bytes(), "DEVS:Monitors/OpenRTG")
-    # Width and Height on Default (0xFFFF, as ScreenMode prefs writes it): the screen is the size of whichever mode is
-    # chosen. A fixed 800 x 600 kept Workbench at 800 x 600 after the user picked 1920 x 1080 (10 Oct 2026).
-    mode = screenmode_prefs(0x61011100, 0xFFFF, 0xFFFF, 16)
-    rt.add("Prefs/ScreenMode.prefs", mode, "ENVARC:Sys/ScreenMode.prefs")
-    rt.add("Prefs/ScreenMode-ENV.prefs", mode, "ENV:Sys/ScreenMode.prefs")
     rt.write()
-    # The same part without Workbench's screen mode, in OpenRTG's drawer (Parts/OpenRTG/Upgrade): the Installer
-    # takes it where OpenRTG is installed already, so an upgrade brings openrtg.library (0.17's Native modes) and
-    # keeps the mode the user chose since. Up to 0.7.8 the mode came with the libraries on every install, so an
-    # upgrade left OpenRTG unticked rather than undo the mode, and a Novice upgrade never brought a newer
-    # openrtg.library. Parts/OpenRTG itself is as before: a new install, and Cradle's first start, set the mode.
-    up = rt.dir / "Upgrade"
-    up.mkdir()
-    up_lines = []
-    for line in rt.lines:
-        m = re.match(r'(copy|add|default) "([^"]+)" "([^"]+)"$', line)
-        if m and m.group(2).startswith("Prefs/ScreenMode"):
-            continue
-        if m:
-            (up / m.group(2)).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(rt.dir / m.group(2), up / m.group(2))
-        up_lines.append(line)
-    up_lines[1] = "; OpenRTG brought up to date where it is installed: Workbench's screen mode stays as it is"
-    (up / "Part").write_text("\n".join(up_lines) + "\n", encoding="latin-1")
+    # Workbench's screen mode is the user's (0.8.2; the user, 16 October 2026): the part writes none. On the OpenKick
+    # ROM Workbench opens on OpenRTG's 16-bit screen by itself; on Kickstart 3.2.3 a new install asks, and only a Yes
+    # installs Parts/OpenRTG/Mode. Width and Height on Default (0xFFFF, as ScreenMode prefs writes it): the screen is
+    # the size of whichever mode is chosen (a fixed 800 x 600 kept Workbench at 800 x 600 after the user picked
+    # 1920 x 1080, 10 Oct 2026). Up to 0.8.1 Parts/OpenRTG wrote it on every new install, and Parts/OpenRTG/Upgrade
+    # (the same part without it) was for upgrades; since the part itself has none, that drawer is gone.
+    mode = screenmode_prefs(0x61011100, 0xFFFF, 0xFFFF, 16)
+    md = rt.dir / "Mode"
+    (md / "Prefs").mkdir(parents=True)
+    (md / "Prefs/ScreenMode.prefs").write_bytes(mode)
+    (md / "Prefs/ScreenMode-ENV.prefs").write_bytes(mode)
+    (md / "Part").write_text(f"part OpenRTGMode {rtv}\n; Workbench on OpenRTG's 16-bit Native mode, asked for on a new install\n"
+                             'copy "Prefs/ScreenMode.prefs" "ENVARC:Sys/ScreenMode.prefs"\n'
+                             'copy "Prefs/ScreenMode-ENV.prefs" "ENV:Sys/ScreenMode.prefs"\n', encoding="latin-1")
 
     # OpenGPU: opengpu.library (openamigartg) and its drivers and modules in
     # LIBS:OpenGPU/. ACRTG.gpu (amigachrome-guest) puts the work on the ACRTG
@@ -1554,7 +1535,6 @@ def main() -> int:
         os32_icons(a.openamigaprint, icons, [(top / "Install-OpenUp.info", "install"), (top / "Uninstall-OpenUp.info", "install"),
                                              (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "install"),
                                              (ty.dir / "Prefs/OpenTypes.info", "page"),
-                                             (look.dir / "Prefs/Look.info", "page"),
                                              (ow.dir / "Prefs/Windows.info", "page"),
                                              (dock.dir / "Prefs/OpenDock.info", "page"),
                                              (menus.dir / "Prefs/Menus.info", "page"),
@@ -1586,7 +1566,7 @@ def main() -> int:
             (core.dir / "Utilities/OpenMonitor.info", "OpenMonitor"),
             (pr.dir / "Icons/OpenPrint.info", "drawer-OpenPrint"), (pr.dir / "Drawer/OpenView.info", "OpenView"),
             (pr.dir / "Drawer/Printers and Queue.info", "Printers and Queue"),
-            (ty.dir / "Prefs/OpenTypes.info", "OpenTypes"), (look.dir / "Prefs/Look.info", "Look"),
+            (ty.dir / "Prefs/OpenTypes.info", "OpenTypes"),
             (ow.dir / "Prefs/Windows.info", "Windows"), (dock.dir / "Prefs/OpenDock.info", "Dock"),
             (menus.dir / "Prefs/Menus.info", "Menus"), (tb.dir / "Prefs/TitleBar.info", "TitleBar"),
             (snd.dir / "Prefs/OpenSound.info", "Sound"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
