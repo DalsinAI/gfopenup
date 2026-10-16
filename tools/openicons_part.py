@@ -34,7 +34,7 @@ OUT_DIR/Icons AmigaChrome's own (OpenCalc, OpenClock...), with no face line:
 OpenUpTool ICONS, and OLDLOOK for a Gorilla picture OpenUp's list doesn't name,
 give an icon its picture by name, else the one of its kind.
 
-MIT, Copyright (c) 2026 Dalsin Limited.
+MIT, Copyright (c) 2026 AmigaChrome Team.
 """
 from __future__ import annotations
 

@@ -28,13 +28,13 @@ to set up, and to build and port for.
 
 ## Licence
 
-MIT, Copyright (c) 2026 Dalsin Limited (`LICENSE`), for our own files.
+MIT, Copyright (c) 2026 AmigaChrome Team (`LICENSE`), for our own files.
 Third-party code keeps its own licence (see `DESIGN.md`).
 
 If you use or build on this work, we ask (we do not require) that you credit
-Dalsin Limited and AmigaChrome, for example "based on OpenUp by Dalsin
-Limited".
+the AmigaChrome Team, for example "based on OpenUp by the AmigaChrome
+Team".
 
 ## Contributors
 
-OpenUp is created and maintained by [SacredTrees](https://github.com/SacredTrees) with the AmigaChrome agent team, copyright Dalsin Limited. Everyone whose work it includes is credited in [`CONTRIBUTORS.md`](CONTRIBUTORS.md).
+OpenUp is created and maintained by [SacredTrees](https://github.com/SacredTrees) with the AmigaChrome agent team, copyright AmigaChrome Team. Everyone whose work it includes is credited in [`CONTRIBUTORS.md`](CONTRIBUTORS.md).

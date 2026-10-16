@@ -10,7 +10,7 @@
  * No maths library and no floating point: the hands come from a table of sines for 60 positions,
  * scaled by 1024, so this runs on a plain 68020 with no FPU, as every Open app must.
  *
- * MIT, Copyright (c) 2026 Dalsin Limited. */
+ * MIT, Copyright (c) 2026 AmigaChrome Team. */
 #include <exec/types.h>
 #include <exec/memory.h>
 #include <dos/dos.h>
@@ -33,7 +33,7 @@
 #include "ogt_draw.h"
 #include "ogt_look.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenClock 0.1 (10.10.2026) OpenUp, MIT, Copyright (c) 2026 Dalsin Limited";
+static const char version[] __attribute__((used)) = "$VER: OpenClock 0.1 (10.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
 #define PREFS_ENV "ENV:OpenClock/Clock"
 #define PREFS_ENVARC "ENVARC:OpenClock/Clock"
 

@@ -3,7 +3,7 @@
 is an icon (not a title bar glyph or a pointer), drawn from the things in
 tools/gvocab.py, both frames, and written as an icon collection for
 AmigaChrome's icon library (PNG icons, the OS 4 format, which the new icon
-set turns into GlowIcons for OS 3.x). MIT, Copyright (c) 2026 Dalsin Limited.
+set turns into GlowIcons for OS 3.x). MIT, Copyright (c) 2026 AmigaChrome Team.
 
     python3 tools/icon_library_art.py OUT [--sheet] [--only TEXT]
         OUT/png/<folder>/<Name>.info   PNG icons, 64 x 64, both frames
@@ -864,7 +864,7 @@ def main(argv=None) -> int:
         "name": "OpenUp (Gorilla style)",
         "source": "openamigaup tools/icon_library_art.py, drawn from icons/LIST.csv with tools/gvocab.py",
         "licence": "MIT",
-        "notes": "Copyright (c) 2026 Dalsin Limited. Our own drawing in the Gorilla style (bold outlines, light from the top left, "
+        "notes": "Copyright (c) 2026 AmigaChrome Team. Our own drawing in the Gorilla style (bold outlines, light from the top left, "
                  "a soft shadow), nothing traced. png/: PNG icons, 64 pixels, two frames (the second moves something).",
         "rank": 3,
     }, indent=2) + "\n")
