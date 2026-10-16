@@ -2356,7 +2356,8 @@ static int default_out(const char *dest)
 /* Gorilla's pictures OpenUp's list doesn't name where they are: icons RECONCILE moved (SYS:Prefs/Classic's old prefs
  * editors), drawers and programs an older OpenUp or a hand change made from a faced icon (SYS:Prefs/Classic,
  * SYS:Developer/OpenGPU-SDK...). Found on lab copies of Instance-32, 16 October 2026. Each icon on SYS: (three
- * drawers deep, as ICONS walks) that shows one of Gorilla's pictures and isn't listed gets OpenIcons' picture
+ * drawers deep, as ICONS walks) that shows one of Gorilla's pictures and isn't listed, or is listed as OpenUp's
+ * own file (SYS:Developer/OpenGPU-SDK.info, which the OpenGPUDev part makes), gets OpenIcons' picture
  * instead, by its name from the pack's OpenIcons part, else of its kind (face_icon: its fields and place stay, the
  * icon as it was goes to SYS:Storage/OpenUp-Superseded for UNINSTALL). Returns how many. */
 #define OI_PART "Parts/OpenIcons"
@@ -2375,6 +2376,7 @@ static void gorilla_sweep(const char *dir, int depth)
                 const char *n = (const char *)fib->fib_FileName;
                 int l = strlen(n), type = 0;
                 isig p;
+                entry *e;
                 strlcpy(sub, dir, sizeof sub);
                 if (sub[strlen(sub) - 1] != ':') str_cat(sub, "/", sizeof sub);
                 str_cat(sub, n, sizeof sub);
@@ -2384,7 +2386,8 @@ static void gorilla_sweep(const char *dir, int depth)
                         gorilla_sweep(sub, depth + 1);
                     continue;
                 }
-                if (l <= 5 || !same_word(n + l - 5, ".info") || find_entry(NULL, sub) || is_default_icon_name(sub) ||
+                if (l <= 5 || !same_word(n + l - 5, ".info") || is_default_icon_name(sub) ||
+                    ((e = find_entry(NULL, sub)) && strcmp(e->kind, "new")) ||   /* OpenUp's own file is ours to face */
                     !file_sig(sub, &p, NULL) || !sig_in(&p, gorilla_pics, NGORILLA))
                     continue;
                 strlcpy(from, OI_PART "/Icons/", sizeof from);
@@ -2399,7 +2402,7 @@ static void gorilla_sweep(const char *dir, int depth)
                     if (!exists(from)) continue;
                 }
                 if (face_icon(from, sub) > 0) {
-                    say("OpenUp: ", sub, ": Gorilla's picture, unlisted: OpenIcons' given instead");
+                    say("OpenUp: ", sub, ": Gorilla's picture where the list has none: OpenIcons' given instead");
                     sweep_n++;
                 }
             }
