@@ -29,9 +29,10 @@ def_kickstart, def_sys, def_work) and the volumes' Disk.info. The ROM's own
 icons are OpenIcons look B already, and OpenUpTool OLDLOOK takes those files out
 (the user, 16 October 2026: "we should remove them and use ours").
 
-OUT_DIR/Kinds holds OpenIcons' disk, drawer, tool, project and trashcan, with no
-face line: OpenUpTool ICONS gives an old icon OpenIcons has no picture of by name
-the one of its kind.
+OUT_DIR/Kinds holds OpenIcons' disk, drawer, tool, project and trashcan, and
+OUT_DIR/Icons AmigaChrome's own (OpenCalc, OpenClock...), with no face line:
+OpenUpTool ICONS, and OLDLOOK for a Gorilla picture OpenUp's list doesn't name,
+give an icon its picture by name, else the one of its kind.
 
 MIT, Copyright (c) 2026 AmigaChrome Team.
 """
@@ -187,6 +188,14 @@ def build(out: Path, guest: Path) -> list[str]:
     for dest, e in todo:
         write_entry(e, picture(e), str(out / "Icons" / names[dest]))
         lines.append(f'face "Icons/{names[dest]}" "{dest}.info"')
+    # by name only, with no face line: AmigaChrome's own (OpenCalc, OpenClock...), for an icon OpenUpTool gives a
+    # picture by its name (ICONS, and OLDLOOK for a Gorilla picture OpenUp's list doesn't name)
+    used = {n.lower() for n in names.values()}
+    for e in rows:
+        n = e["name"] + ".info"
+        if e["group"] == "amigachrome" and len(n) <= FFS_NAME and n.lower() not in used and "/" not in e["name"]:
+            write_entry(e, picture(e), str(out / "Icons" / n))
+            used.add(n.lower())
     by_name = {e["name"]: e for e in rows if e["group"] == "os32"}
     for kind, name in KINDS.items():
         if name in by_name:
