@@ -365,7 +365,9 @@
 ; Each part: OpenUpTool INSTALL, its messages in T:OpenUp.log.
 (run "Delete >NIL: T:OpenUp.log")
 ; 0.8.2: the look's files an earlier OpenUp wrote (C:OpenLook and its startup line, the theme, Font and
-; IControl prefs) are taken out where they are still as it wrote them; the user's own stay (OpenUpTool OLDLOOK)
+; IControl prefs) are taken out where they are still as it wrote them; the user's own stay (OpenUpTool OLDLOOK).
+; 0.8.3: so are the faces the GorillaIcons part gave the default icons (ENVARC:Sys/def_RAM, def_Harddisk,
+; def_Disk, def_Drawer...) and the volumes (SYS:Disk.info, Work:Disk.info), so the ROM's own icons show.
 (working "Taking out the old look")
 (run (cat #tool " OLDLOOK >>T:OpenUp.log"))
 (working "Installing OpenUp")
