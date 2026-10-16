@@ -11,7 +11,7 @@ here: it is fetched at build time from AROS's repository at a pinned commit,
 and every file used is checked against its SHA-256 below.
 
 For each icon the system already has (a SYS: drawer, a program of OS 3.2.3's,
-a default icon in ENVARC:Sys), it writes a GlowIcon holding only the picture,
+a DefIcons file type's icon in ENVARC:Sys), it writes a GlowIcon holding only the picture,
 at 85 per cent of Gorilla's size (the look approved on the canvas), into
 OUT_DIR/Icons/<name>.info, and a Part file whose "face" lines give each
 system icon its new picture: OpenUpTool keeps the icon's type, default tool,
@@ -45,9 +45,6 @@ SCALE = 0.85                       # the approved look: 15 per cent smaller than
 
 # (the system icon, without .info; the Gorilla picture under Icons/Medium)
 FACES = [
-    # the boot volume and the second partition
-    ("SYS:Disk", "AROS/Prefs/Env-Archive/SYS/def_Harddisk.png"),
-    ("Work:Disk", "AROS/Prefs/Env-Archive/SYS/def_Harddisk.png"),
     # SYS:'s drawers
     ("SYS:Prefs", "AROS/Prefs.png"),
     ("SYS:Utilities", "AROS/Utilities.png"),
@@ -113,16 +110,7 @@ FACES = [
     ("SYS:Prefs/Workbench", "AROS/Prefs/Wanderer.png"),
     ("SYS:Prefs/ReqTools", "AROS/Prefs/ReqTools.png"),
     ("SYS:Prefs/AHI", "AROS/Prefs/AHI.png"),
-    # the default icons (ENVARC:Sys; Workbench's names, in any case)
-    ("ENVARC:Sys/def_Disk", "AROS/Prefs/Env-Archive/SYS/def_Disk.png"),
-    ("ENVARC:Sys/def_Drawer", "AROS/Prefs/Env-Archive/SYS/def_Drawer.png"),
-    ("ENVARC:Sys/def_Tool", "AROS/Prefs/Env-Archive/SYS/def_Tool.png"),
-    ("ENVARC:Sys/def_Project", "AROS/Prefs/Env-Archive/SYS/def_Project.png"),
-    ("ENVARC:Sys/def_Trashcan", "AROS/Prefs/Env-Archive/SYS/def_Trashcan.png"),
-    ("ENVARC:Sys/def_Kick", "AROS/Prefs/Env-Archive/SYS/def_KickDisk.png"),
-    ("ENVARC:Sys/def_RAM", "AROS/Prefs/Env-Archive/SYS/def_RAM.png"),
-    ("ENVARC:Sys/def_Harddisk", "AROS/Prefs/Env-Archive/SYS/def_Harddisk.png"),
-    ("ENVARC:Sys/def_CDROM", "AROS/Prefs/Env-Archive/SYS/def_CDROM.png"),
+    # the DefIcons file types (ENVARC:Sys; Workbench's names, in any case)
     ("ENVARC:Sys/def_ascii", "AROS/Prefs/Env-Archive/SYS/def_Text.png"),
     ("ENVARC:Sys/def_text", "AROS/Prefs/Env-Archive/SYS/def_Text.png"),
     ("ENVARC:Sys/def_document", "AROS/Prefs/Env-Archive/SYS/def_Document.png"),
@@ -156,6 +144,26 @@ FACES = [
     ("ENVARC:Sys/def_keymap", "AROS/Prefs/Env-Archive/SYS/def_Keymap.png"),
     ("ENVARC:Sys/def_pref", "AROS/Prefs/Env-Archive/SYS/def_Pref.png"),
     ("ENVARC:Sys/def_datatype", "AROS/Prefs/Env-Archive/SYS/def_DataType.png"),
+]
+
+# Faces up to OpenUp 0.8.2, given no more (0.8.3). The OpenKick ROM's icon.library has its own default icons,
+# and the user, 16 October 2026: "ram disk needs to have one of our new icons as standard ... so do all the
+# volumes etc, they default to our equivalent set". A def_<kind>.info in ENVARC:Sys or a volume's Disk.info
+# wins over the ROM's, so the part no longer faces them. Their icons still go in the part, in Retired/ with
+# no face line: OpenUpTool OLDLOOK writes each again from the original it kept and takes the icon out only
+# when it is still, byte for byte, as OpenUp left it.
+RETIRED = [
+    ("SYS:Disk", "AROS/Prefs/Env-Archive/SYS/def_Harddisk.png"),
+    ("Work:Disk", "AROS/Prefs/Env-Archive/SYS/def_Harddisk.png"),
+    ("ENVARC:Sys/def_Disk", "AROS/Prefs/Env-Archive/SYS/def_Disk.png"),
+    ("ENVARC:Sys/def_Drawer", "AROS/Prefs/Env-Archive/SYS/def_Drawer.png"),
+    ("ENVARC:Sys/def_Tool", "AROS/Prefs/Env-Archive/SYS/def_Tool.png"),
+    ("ENVARC:Sys/def_Project", "AROS/Prefs/Env-Archive/SYS/def_Project.png"),
+    ("ENVARC:Sys/def_Trashcan", "AROS/Prefs/Env-Archive/SYS/def_Trashcan.png"),
+    ("ENVARC:Sys/def_Kick", "AROS/Prefs/Env-Archive/SYS/def_KickDisk.png"),
+    ("ENVARC:Sys/def_RAM", "AROS/Prefs/Env-Archive/SYS/def_RAM.png"),
+    ("ENVARC:Sys/def_Harddisk", "AROS/Prefs/Env-Archive/SYS/def_Harddisk.png"),
+    ("ENVARC:Sys/def_CDROM", "AROS/Prefs/Env-Archive/SYS/def_CDROM.png"),
 ]
 
 # A face that is Gorilla's picture with one of our badges on it (icons/open/badge-NAME.png,
@@ -209,7 +217,7 @@ def drawer_png(cache: Path) -> bytes:
 
 
 def used_files() -> list[str]:
-    return sorted({f"{MEDIUM}/{p}" for _, p in FACES} | {f"{SET}/LEGAL", "LICENSE.GPL"})
+    return sorted({f"{MEDIUM}/{p}" for _, p in FACES + RETIRED} | {f"{SET}/LEGAL", "LICENSE.GPL"})
 
 
 def read_lock() -> dict[str, str]:
@@ -292,8 +300,16 @@ def short_names(paths: list[str], suffix: str) -> dict[str, str]:
     return out
 
 
+def icon(png: bytes, amiga_icon) -> bytes:
+    """A face's icon: the picture only (type, tool and the rest are the system icon's own)."""
+    w, h, rest, chosen = picture(png, amiga_icon)
+    meta = {"type": 4, "defaultTool": None, "toolTypes": [], "toolWindow": None, "stack": 4096,
+            "x": amiga_icon.NO_POSITION, "y": amiga_icon.NO_POSITION, "drawer": None}
+    return amiga_icon.write_os35(meta, [(w, h, rest), (w, h, chosen)])
+
+
 def build(out: Path, amigachrome: Path, cache: Path) -> list[str]:
-    """Writes OUT/Icons/*.info, OUT/Sources/*.png, LEGAL and COPYING; returns the Part's lines."""
+    """Writes OUT/Icons/*.info, OUT/Retired/*.info, OUT/Sources/*.png, LEGAL and COPYING; returns the Part's lines."""
     sys.path.insert(0, str(amigachrome / "scripts"))
     import amiga_icon
     root = fetch(cache)
@@ -309,17 +325,18 @@ def build(out: Path, amigachrome: Path, cache: Path) -> list[str]:
         png = (root / MEDIUM / rel).read_bytes()
         if dest in BADGED:
             png = with_badge(png, BADGED[dest])
-        w, h, rest, chosen = picture(png, amiga_icon)
-        meta = {"type": 4, "defaultTool": None, "toolTypes": [], "toolWindow": None, "stack": 4096,
-                "x": amiga_icon.NO_POSITION, "y": amiga_icon.NO_POSITION, "drawer": None}
         name = icon_names[dest]
-        (out / "Icons" / name).write_bytes(amiga_icon.write_os35(meta, [(w, h, rest), (w, h, chosen)]))
+        (out / "Icons" / name).write_bytes(icon(png, amiga_icon))
         lines.append(f'face "Icons/{name}" "{dest}.info"')
         src = src_names[rel[:-4]]
         if src not in done_src:
             (out / "Sources" / src).write_bytes(png)
             lines.append(f'copy "Sources/{src}" "SYS:Storage/Icons/Gorilla/{src}"')
             done_src.add(src)
+    (out / "Retired").mkdir(parents=True, exist_ok=True)       # OLDLOOK's reference, no face line (0.8.3)
+    for dest, name in short_names([d for d, _ in RETIRED], ".info").items():
+        rel = dict(RETIRED)[dest]
+        (out / "Retired" / name).write_bytes(icon((root / MEDIUM / rel).read_bytes(), amiga_icon))
     shutil.copyfile(root / SET / "LEGAL", out / "LEGAL")
     shutil.copyfile(root / "LICENSE.GPL", out / "COPYING")
     lines.append('copy "LEGAL" "SYS:Storage/Icons/Gorilla/LEGAL"')
