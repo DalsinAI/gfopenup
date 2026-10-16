@@ -29,7 +29,7 @@
 ; Bits: 1 OpenSocket, 2 OpenPrint, 4 AmigaChrome sharing, 8 OpenLook (up to 0.8.1; no longer offered), 16 backgrounds, 32 OpenTypes, 64 OpenCompress,
 ; 128 OpenService, 256 OpenImage, 512 OpenRTG, 1024 OpenWindows, 2048 OpenDock, 4096 OpenUp Setup, 8192 OpenMenus,
 ; 16384 OpenFiles, 32768 OpenPlay, 65536 OpenMUI, 131072 OpenTitle, 262144 Sound, 524288 OpenEdit,
-; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser, 8388608 OpenMulticore, 16777216 Icons (Gorilla),
+; 1048576 OpenWrite, 2097152 OpenMail, 4194304 OpenBrowser, 8388608 OpenMulticore, 16777216 Icons (OpenIcons; Gorilla up to 0.8.3),
 ; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY,
 ; 1073741824 Tata (the last bit of this word).
 ; The second word, #parts2 (OpenUp 0.7.0): 1 OpenFTP, 2 Unofficial Telegram, 4 OpenGPU developer files,
@@ -175,9 +175,10 @@
               "ARM64 cores and GL (Mesa) on the GPU, through AmigaChrome's graphics board; where there is "
               "no board they run on the Amiga's own CPU, as before (new). SDL 2 and GL are in "
               "LIBS:OpenGPU and load only when a program asks. OpenGPUCheck in a Shell checks it.\n\n"
-              "Icons: Gorilla, AROS's icon set, as new pictures for the system's own drawers, "
-              "programs and default icons (new). Each icon keeps what it does; the old "
-              "pictures are kept in SYS:Storage, and Uninstall-OpenUp puts them back.\n\n"
+              "Icons: OpenIcons, the Team's own icon set, as new pictures for the system's own drawers, "
+              "programs and kinds of file, in the look of the OpenKick ROM's own icons (new in 0.8.4, in "
+              "place of Gorilla). Each icon keeps what it does; the old pictures are kept in SYS:Storage, "
+              "and Uninstall-OpenUp puts them back.\n\n"
               "Warp3D and MiniGL: Warp3D.library 5.0 and minigl.library (OpenGL 1.1) for Warp3D "
               "and MiniGL games and programs, drawn through OpenGPU "
               "(new). It needs a 68040 or 68060 with its FPU. A Warp3D.library already there "
@@ -189,7 +190,7 @@
                  "OpenMail: mail (preview, needs AmiSSL 5)"
                  "OpenBrowser: a web browser (preview)"
                  "OpenMulticore: work on a cores board"
-                 "Icons: Gorilla's pictures on the system's icons"
+                 "Icons: OpenIcons' pictures on the system's icons"
                  "OpenGPU: SDL on the cores, GL on the GPU (new)"
                  "Warp3D and MiniGL: 3D on OpenGPU (new, 68040)")
         (default (bitand (shiftright #default 18) 511))))
@@ -368,6 +369,9 @@
 ; IControl prefs) are taken out where they are still as it wrote them; the user's own stay (OpenUpTool OLDLOOK).
 ; 0.8.3: so are the faces the GorillaIcons part gave the default icons (ENVARC:Sys/def_RAM, def_Harddisk,
 ; def_Disk, def_Drawer...) and the volumes (SYS:Disk.info, Work:Disk.info), so the ROM's own icons show.
+; 0.8.4: and OS 3.2.3's own default icons (def_cd0, def_rad, def_card, def_kickstart, def_sys, def_work too) and
+; SYS:Disk.info, where they are as the OS installed them; and Gorilla's pictures on the other icons, where they
+; are as OpenUp gave them, so the OpenIcons part below gives those its own. Originals stay in SYS:Storage.
 (working "Taking out the old look")
 (run (cat #tool " OLDLOOK >>T:OpenUp.log"))
 (working "Installing OpenUp")
@@ -741,16 +745,17 @@
                      "input.device switched on, the Amiga restarts once by itself as it starts, "
                      "so they take the ROM's place."))))
 
-; Gorilla's pictures after the parts, so the drawers a part makes (SYS:Developer and its OpenGPU-SDK, from
-; the OpenGPU developer files) get theirs in the same run. An icon that has its picture already is left as
-; it is (OpenUpTool 0.7.5). A pack built with --no-gorilla has no Parts/GorillaIcons: the icons keep their pictures.
+; OpenIcons' pictures after the parts, so the drawers a part makes (SYS:Developer, from the OpenGPU developer
+; files) get theirs in the same run. An icon that has its picture already is left as it is (OpenUpTool 0.7.5),
+; and so is one the user changed since OpenUp last gave it a picture (0.8.4). A pack built with --no-openicons
+; has no Parts/OpenIcons: the icons keep their pictures.
 (if (bitand #parts 16777216)
-    (if (exists "Parts/GorillaIcons/Part")
+    (if (exists "Parts/OpenIcons/Part")
         (
-            (working "Giving the system's icons Gorilla's pictures")
-            (if (> (run (cat #tool " INSTALL Parts/GorillaIcons >>T:OpenUp.log")) 5)
+            (working "Giving the system's icons OpenIcons' pictures")
+            (if (> (run (cat #tool " INSTALL Parts/OpenIcons >>T:OpenUp.log")) 5)
                 (message "Some icons kept their old pictures. T:OpenUp.log says why; nothing else changed.")))
-        (message "This pack was made without Gorilla's icons, so the system's icons keep their pictures.")))
+        (message "This pack was made without OpenIcons, so the system's icons keep their pictures.")))
 
 ; OpenUp 0.6.14 to 0.7.0 changed the default tool of about 40 of AmigaOS 3.2.3's own
 ; icons (datatype descriptors, pointer presets, DOSDrivers, the Picasso96 guides...) to
