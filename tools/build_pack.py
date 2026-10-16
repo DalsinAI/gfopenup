@@ -353,9 +353,13 @@ def build_parts(a):
     run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
     ogt = a.opengadtools / "lib"                              # OpenMonitor draws in the theme's font, as the Open apps
-    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common", f"-I{ogt}",
-         "-o", ROOT / "build/os3/OpenMonitor", ROOT / "src/openmonitor.c",
-         ogt / "ogt_look.c", ogt / "ogt_theme.c", ogt / "ogt_font.c"], env=env)
+    # OpenMonitor 0.3.2 is built resident (libnix -resident: each run its own variables), so one seglist
+    # serves every run: Resident ... PURE, or the ROM's copy. The ROM's is the 68040 build (build/os3-040).
+    (ROOT / "build/os3-040").mkdir(parents=True, exist_ok=True)
+    for cpu, out in (("-m68020", "build/os3/OpenMonitor"), ("-m68040", "build/os3-040/OpenMonitor")):
+        run([CC, "-noixemul", cpu, "-resident", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common", f"-I{ogt}",
+             "-o", ROOT / out, ROOT / "src/openmonitor.c",
+             ogt / "ogt_look.c", ogt / "ogt_theme.c", ogt / "ogt_font.c"], env=env)
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
     run(["sh", a.opengadtools / "workbench/build.sh"], env=env)   # OpenDrawer
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)

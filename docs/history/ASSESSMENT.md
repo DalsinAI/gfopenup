@@ -74,7 +74,7 @@
 
 1. **OpenUp 0.1 for AmigaChrome instances:**
    - **The pack:** the Installer with the manifest, the marked startup
-     block, the uninstaller, and detection of the Dalsin boards;
+     block, the uninstaller, and detection of the AmigaChrome Team boards;
    - **What it installs:** OpenSocket 4.2, OpenPrint and OpenView,
      OpenMail (once it sends), the sharing tools, AmiSSL, and AAText as an
      option.
