@@ -1881,13 +1881,12 @@ static int was_titlebars(const UBYTE *cur, LONG len, const UBYTE *orig, LONG ole
     return same;
 }
 
-/* One file: 1 taken out (or its original back), 0 left. env, when given, is its copy in ENV: that OpenUp didn't
- * list (Font prefs, IControl prefs): it follows when it is the same as the file was. */
-static int take_out_old(const char *dest, const char *env, int (*was)(const UBYTE *, LONG, const UBYTE *, LONG))
+/* One file: 1 taken out (or its original back), 0 left. */
+static int take_out_old(const char *dest, int (*was)(const UBYTE *, LONG, const UBYTE *, LONG))
 {
     entry *e = find_entry(NULL, dest);
-    UBYTE *cur, *orig = NULL, *ec;
-    LONG len = 0, olen = 0, elen = 0;
+    UBYTE *cur, *orig = NULL;
+    LONG len = 0, olen = 0;
     int replaced, ok;
     if (!e || !exists(dest)) return 0;
     replaced = !strcmp(e->kind, "replaced");
@@ -1905,13 +1904,6 @@ static int take_out_old(const char *dest, const char *env, int (*was)(const UBYT
         return 0;
     }
     ok = replaced ? write_file(dest, (const char *)orig, olen) : (DeleteFile((STRPTR)dest) || !exists(dest));
-    if (ok && env && (ec = (UBYTE *)read_file(env, &elen))) {
-        if (same_bytes(ec, elen, cur, len)) {
-            if (replaced) write_file(env, (const char *)orig, olen);
-            else DeleteFile((STRPTR)env);
-        }
-        FreeVec(ec);
-    }
     if (ok) {
         if (replaced) DeleteFile((STRPTR)e->b);
         e->kind[0] = 0;
@@ -1943,12 +1935,15 @@ static int old_look(void)
             ents[i].kind[0] = 0;
         }
     n += lines;
-    n += take_out_old("ENVARC:OpenGadTools/Theme", NULL, was_theme);
-    n += take_out_old("ENV:OpenGadTools/Theme", NULL, was_theme);
-    n += take_out_old(LOOK_ENVARC, NULL, was_look);
-    n += take_out_old(LOOK_ENV, NULL, was_look);
-    n += take_out_old("ENVARC:Sys/Font.prefs", "ENV:Sys/Font.prefs", was_font);
-    n += take_out_old("ENVARC:Sys/IControl.prefs", "ENV:Sys/IControl.prefs", was_titlebars);
+    n += take_out_old("ENVARC:OpenGadTools/Theme", was_theme);
+    n += take_out_old("ENV:OpenGadTools/Theme", was_theme);
+    n += take_out_old(LOOK_ENVARC, was_look);
+    n += take_out_old(LOOK_ENV, was_look);
+    /* ENVARC: only, as FONT and TITLEBARS write them: ENV: has them from the next boot. Writing ENV:Sys/Font.prefs
+     * while Workbench is open had IPrefs ask to reset the Workbench screen ("Intuition is attempting to reset the
+     * Workbench screen", seen in the Installer's run on a lab copy of Instance-32, 16 Oct 2026). */
+    n += take_out_old("ENVARC:Sys/Font.prefs", was_font);
+    n += take_out_old("ENVARC:Sys/IControl.prefs", was_titlebars);
     if (!manifest_save()) {
         say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
         return RETURN_ERROR;
