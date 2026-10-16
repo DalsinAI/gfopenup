@@ -1,4 +1,4 @@
-/* OpenMonitor 0.3.1: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
+/* OpenMonitor 0.3.2: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
  * (the user, 10 October 2026: "a cpu / task / process app similar to task manager in windows or resources
  * in ubuntu ... have it show gpu too").
  *
@@ -29,6 +29,11 @@
  * as idle. Over a second that is 50 looks: the numbers are good to a couple of per cent, like any sampling
  * monitor's.
  *
+ * Started from a Shell (0.3.2), it starts itself again as a Shell process of its own and the prompt comes
+ * straight back; `OpenMonitor WAIT` stays in the Shell as before. A second start, from a Shell or its icon,
+ * brings the open window to the front. It is built resident (libnix's -resident: every run gets its own
+ * copy of the variables), so `Resident OpenMonitor PURE` and a ROM: copy share one seglist.
+ *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
 
 #include <exec/types.h>
@@ -39,6 +44,7 @@
 #include <devices/timer.h>
 #include <dos/dos.h>
 #include <dos/dosextens.h>
+#include <dos/dostags.h>
 #include <hardware/intbits.h>
 #include <intuition/intuition.h>
 #include <intuition/screens.h>
@@ -60,7 +66,7 @@
 #include "ogt_look.h"
 #include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3.1 (12.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3.2 (16.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 /* The window runs on 32 KB, however OpenMonitor is started (0.3.1). From a Shell (Run, a script) it got
  * the Shell's 4 KB, and closing the window rebooted the machine every time; with 32 KB it closes cleanly
  * (OpenUp 0.7.5's labs, 12 October 2026; OpenTypes 0.2.3 had the same). libnix's start code swaps to a
@@ -83,7 +89,12 @@ static struct Interrupt vbi;
 /* 50 times a second, in the interrupt: which task is running (0 in d0: the next server runs too) */
 static ULONG vb_server(REG(a1, struct samp *s))
 {
-    struct Task *t = SysBase->ThisTask;
+    /* exec's base from address 4, not the SysBase variable: built resident (0.3.2), the variables are
+     * reached through a4, which holds nothing of ours in an interrupt */
+    struct ExecBase *eb;
+    struct Task *t;
+    __asm volatile ("move.l 4.w,%0" : "=a" (eb));
+    t = eb->ThisTask;
     ULONG i;
     s->total++;
     if (!t || t->tc_State != TS_RUN) { s->idle++; return 0; }
@@ -341,6 +352,7 @@ static void push(int g, ULONG v)
 }
 
 static struct Window *win;
+static struct MsgPort *front_port;              /* a second start's message: the window to the front (0.3.2) */
 static APTR vi;
 static struct DrawInfo *dri;
 static ogt_theme theme;                         /* the Open apps' look: its font is OpenMonitor's */
@@ -415,6 +427,22 @@ static void right_text(struct RastPort *rp, int right, int y, const char *s)
     Move(rp, right - w, y);
     Text(rp, (STRPTR)s, strlen(s));
 }
+
+/* The list's hook is entered through lv_entry, which puts this run's a4 (kept in h_Data) in place around
+ * lv_render. Built resident (0.3.2), each run has its own variables and a4 points at them; a hook gets the
+ * caller's registers, so a4 is this run's only when the caller is OpenMonitor's own code. */
+__asm__(
+    "    .text\n"
+    "    .even\n"
+    "_lv_entry:\n"
+    "    move.l  %a4,-(%sp)\n"
+    "    move.l  16(%a0),%a4\n"          /* h_Data */
+    "    pea     1f(%pc)\n"              /* lv_render comes back to 1 */
+    "    move.l  12(%a0),-(%sp)\n"       /* h_SubEntry: lv_render, with a0-a2 as they came */
+    "    rts\n"
+    "1:  move.l  (%sp)+,%a4\n"
+    "    rts\n");
+extern void lv_entry(void) __asm("_lv_entry");   /* code: its address is not a4-relative */
 
 static ULONG lv_render(REG(a0, struct Hook *h), REG(a2, struct Node *node), REG(a1, struct LVDrawMsg *msg))
 {
@@ -1290,7 +1318,13 @@ static int gui(void)
         graph_pen[i] = ObtainBestPen(scr->ViewPort.ColorMap, (graph_rgb[i] >> 16) * 0x01010101UL,
                                      ((graph_rgb[i] >> 8) & 255) * 0x01010101UL, (graph_rgb[i] & 255) * 0x01010101UL,
                                      OBP_Precision, PRECISION_GUI, TAG_DONE);
-    lv_hook.h_Entry = (__typeof__(lv_hook.h_Entry))lv_render;   /* whatever type this NDK gives h_Entry */
+    {
+        APTR a4v;
+        __asm volatile ("move.l %%a4,%0" : "=r" (a4v));
+        lv_hook.h_Entry = (__typeof__(lv_hook.h_Entry))lv_entry;     /* whatever type this NDK gives h_Entry */
+        lv_hook.h_SubEntry = (__typeof__(lv_hook.h_SubEntry))lv_render;
+        lv_hook.h_Data = a4v;
+    }
     list_init(&rowlist);
 
     g = CreateContext(&glist);
@@ -1317,7 +1351,7 @@ static int gui(void)
     g = gad[G_STATUS] = CreateGadget(TEXT_KIND, g, &ng, GTTX_Text, (ULONG)status_text, GTTX_Border, TRUE, TAG_DONE);
     if (!g) { rc = RETURN_FAIL; goto out; }
 
-    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.3.1", WA_PubScreen, (ULONG)scr,
+    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.3.2", WA_PubScreen, (ULONG)scr,
                          WA_Left, (scr->Width - W - scr->WBorLeft - scr->WBorRight) / 2,
                          WA_Top, scr->BarHeight + 1 + (scr->Height - scr->BarHeight - 1 - H - tb - scr->WBorBottom) / 2,
                          WA_InnerWidth, W, WA_InnerHeight, H, WA_Gadgets, (ULONG)glist,
@@ -1355,8 +1389,16 @@ static int gui(void)
     while (!quit) {
         struct IntuiMessage *m;
         ULONG tsig = timer ? 1UL << tport->mp_SigBit : 0;
-        ULONG got = Wait((1UL << win->UserPort->mp_SigBit) | tsig | SIGBREAKF_CTRL_C);
+        ULONG fsig = front_port ? 1UL << front_port->mp_SigBit : 0;
+        ULONG got = Wait((1UL << win->UserPort->mp_SigBit) | tsig | fsig | SIGBREAKF_CTRL_C);
         if (got & SIGBREAKF_CTRL_C) quit = 1;
+        if (got & fsig) {
+            struct Message *fm;
+            while ((fm = GetMsg(front_port))) ReplyMsg(fm);
+            ScreenToFront(win->WScreen);
+            WindowToFront(win);
+            ActivateWindow(win);
+        }
         if (got & tsig) timer_due();
         while (!quit && (m = GT_GetIMsg(win->UserPort))) {
             ULONG cls = m->Class;
@@ -1420,7 +1462,120 @@ out:
     return rc;
 }
 
+/* ---- one window, and leaving the Shell (0.3.2) ---------------------------------------------- */
+
+/* A second start brings the open window to the front: the running one keeps a public port by this name,
+ * and a start that finds it sends it a message and ends. */
+#define FRONT_PORT "OpenMonitor"
+
+/* Under Forbid, so the port can't go between FindPort and PutMsg: 1 when a running OpenMonitor had it. */
+static int send_to_front(void)
+{
+    struct MsgPort *reply = CreateMsgPort(), *p;
+    struct Message msg;
+    int sent = 0;
+    if (!reply) return 0;
+    memset(&msg, 0, sizeof msg);
+    msg.mn_ReplyPort = reply;
+    msg.mn_Length = sizeof msg;
+    Forbid();
+    if ((p = FindPort((STRPTR)FRONT_PORT))) { PutMsg(p, &msg); sent = 1; }
+    Permit();
+    if (sent) { WaitPort(reply); GetMsg(reply); }
+    DeleteMsgPort(reply);
+    return sent;
+}
+
+/* Takes the name for this run, or, when a running one has it, sends it to the front: NULL then. */
+static struct MsgPort *claim_front(int *other)
+{
+    struct MsgPort *p = CreateMsgPort();
+    *other = 0;
+    if (!p) return NULL;
+    p->mp_Node.ln_Name = (char *)FRONT_PORT;
+    p->mp_Node.ln_Pri = 0;
+    Forbid();
+    if (FindPort((STRPTR)FRONT_PORT)) *other = 1; else AddPort(p);
+    Permit();
+    if (*other) { DeleteMsgPort(p); send_to_front(); return NULL; }
+    return p;
+}
+
+static void release_front(struct MsgPort *p)
+{
+    struct Message *m;
+    if (!p) return;
+    Forbid();
+    RemPort(p);
+    Permit();
+    while ((m = GetMsg(p))) ReplyMsg(m);        /* a start that came while closing: answered, it ends */
+    DeleteMsgPort(p);
+}
+
+/* From a Shell: OpenMonitor starts again as a Shell process of its own, as Run would, with NIL: for its
+ * input and output, and this command ends at once. The new process is started with WAIT, so it opens
+ * the window where it is. It runs the same copy this one came from:
+ *   - a resident one (Resident, or ROM: commands): by its name, which the new Shell finds in the resident
+ *     list. Its seglist is shared; this run doesn't take the Shell's cli_Module, unload or free anything;
+ *   - a file (SYS:Utilities, C: or anywhere): by its full path, from PROGDIR: and its name. The new Shell
+ *     loads and unloads its own copy, and this Shell unloads this one as for any command.
+ * 0 when it couldn't (no memory, no name): OpenMonitor then runs in this Shell, as before 0.3.2. */
+static int detach(void)
+{
+    struct CommandLineInterface *cli = Cli();
+    struct Segment *seg;
+    char name[108], cmd[320];
+    const char *base;
+    BPTR in, out, dir;
+    LONG rc;
+    int resident;
+    if (!cli || !GetProgramName((STRPTR)name, sizeof name)) return 0;
+    base = (const char *)FilePart((STRPTR)name);
+    Forbid();
+    seg = FindSegment((STRPTR)base, NULL, FALSE);
+    if (!seg || seg->seg_Seg != cli->cli_Module) seg = FindSegment((STRPTR)base, NULL, TRUE);
+    resident = seg && seg->seg_Seg == cli->cli_Module;
+    Permit();
+    if (resident) snprintf(cmd, sizeof cmd, "\"%s\" WAIT", base);
+    else {
+        char path[256];
+        if (!(dir = GetProgramDir()) || !NameFromLock(dir, (STRPTR)path, sizeof path) ||
+            !AddPart((STRPTR)path, (STRPTR)base, sizeof path))
+            return 0;
+        snprintf(cmd, sizeof cmd, "\"%s\" WAIT", path);
+    }
+    in = Open((STRPTR)"NIL:", MODE_OLDFILE);
+    out = Open((STRPTR)"NIL:", MODE_NEWFILE);
+    if (!in || !out) { if (in) Close(in); if (out) Close(out); return 0; }
+    /* No console task and no window of this Shell's. Given this Shell's console task, a new process whose
+     * Shell had already ended (EndCLI just after it) never opened its window and didn't answer Ctrl-C
+     * (lab t5-monitor, 16 October 2026); with none, it opens as when the Shell stays. */
+    rc = SystemTags((STRPTR)cmd, SYS_Input, (ULONG)in, SYS_Output, (ULONG)out, SYS_Asynch, TRUE,
+                    NP_StackSize, (ULONG)__stack, NP_ConsoleTask, (ULONG)NULL, NP_WindowPtr, (ULONG)NULL, TAG_DONE);
+    if (rc == -1) { Close(in); Close(out); return 0; }   /* started, the new Shell closes them */
+    return 1;
+}
+
 int main(void)
 {
-    return gui();
+    struct MsgPort *fp;
+    int other, rc;
+    if (Cli()) {
+        /* WAIT/S: stay in this Shell until the window closes (as before 0.3.2; the detached start uses it) */
+        LONG arg[1] = { 0 };
+        struct RDArgs *ra = ReadArgs((STRPTR)"WAIT/S", arg, NULL);
+        if (!ra) { PrintFault(IoErr(), (STRPTR)"OpenMonitor"); return RETURN_ERROR; }
+        FreeArgs(ra);
+        if (!arg[0]) {
+            if (send_to_front()) return RETURN_OK;
+            if (detach()) return RETURN_OK;
+        }
+    }
+    fp = claim_front(&other);
+    if (other) return RETURN_OK;
+    front_port = fp;
+    rc = gui();
+    front_port = NULL;
+    release_front(fp);
+    return rc;
 }
