@@ -2358,11 +2358,38 @@ static int default_out(const char *dest)
  * SYS:Developer/OpenGPU-SDK...). Found on lab copies of Instance-32, 16 October 2026. Each icon on SYS: (three
  * drawers deep, as ICONS walks) that shows one of Gorilla's pictures and isn't listed, or is listed as OpenUp's
  * own file (SYS:Developer/OpenGPU-SDK.info, which the OpenGPUDev part makes), gets OpenIcons' picture
- * instead, by its name from the pack's OpenIcons part, else of its kind (face_icon: its fields and place stay, the
+ * instead: the part's own for that place (its face line), else by its name, else of its kind (face_icon: its
+ * fields and place stay, the
  * icon as it was goes to SYS:Storage/OpenUp-Superseded for UNINSTALL). Returns how many. */
 #define OI_PART "Parts/OpenIcons"
 static int old_icon(const char *path, int *type);
 static int sweep_n;
+
+static char *oi_part_text;                         /* Parts/OpenIcons/Part, read once for gorilla_sweep */
+
+/* the OpenIcons part's own picture for dest (its face line), in from; 1 found */
+static int part_face_for(const char *dest, char *from, int size)
+{
+    char *p, *copy, *line;
+    int found = 0;
+    if (!oi_part_text || !(copy = AllocVec(strlen(oi_part_text) + 1, MEMF_ANY))) return 0;
+    strcpy(copy, oi_part_text);
+    for (p = copy; *p && !found; ) {
+        char *w[12];
+        int n;
+        line = p;
+        while (*p && *p != '\n') p++;
+        if (*p) *p++ = 0;
+        n = words(line, w, 12);
+        if (n >= 3 && !strcmp(w[0], "face") && same_word(w[2], dest)) {
+            strlcpy(from, OI_PART "/", size);
+            str_cat(from, w[1], size);
+            found = exists(from);
+        }
+    }
+    FreeVec(copy);
+    return found;
+}
 
 static void gorilla_sweep(const char *dir, int depth)
 {
@@ -2390,8 +2417,10 @@ static void gorilla_sweep(const char *dir, int depth)
                     ((e = find_entry(NULL, sub)) && strcmp(e->kind, "new")) ||   /* OpenUp's own file is ours to face */
                     !file_sig(sub, &p, NULL) || !sig_in(&p, gorilla_pics, NGORILLA))
                     continue;
-                strlcpy(from, OI_PART "/Icons/", sizeof from);
-                str_cat(from, n, sizeof from);
+                if (!part_face_for(sub, from, sizeof from)) {   /* the part's face for it, else by name */
+                    strlcpy(from, OI_PART "/Icons/", sizeof from);
+                    str_cat(from, n, sizeof from);
+                }
                 if (!exists(from)) {
                     static const char *const kinds[] = { NULL, "Disk", "Drawer", "Tool", "Project", "Trashcan", NULL, NULL };
                     old_icon(sub, &type);
@@ -2420,7 +2449,9 @@ static int old_faces_out(void)
     n += gorilla_out();
     if (exists(OI_PART "/Part")) {                  /* run from the pack's drawer, as the Installer does */
         sweep_n = 0;
+        oi_part_text = read_file(OI_PART "/Part", NULL);
         gorilla_sweep("SYS:", 0);
+        if (oi_part_text) { FreeVec(oi_part_text); oi_part_text = NULL; }
         n += sweep_n;
     }
     /* what the GorillaIcons part copied (its PNGs and licence texts in SYS:Storage/Icons/Gorilla, its licence note)
