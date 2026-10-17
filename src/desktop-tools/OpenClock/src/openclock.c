@@ -8,7 +8,7 @@
  * in ENVARC:OpenClock/Clock, so the window comes back as it was left.
  *
  * No maths library and no floating point: the hands come from a table of sines for 60 positions,
- * scaled by 1024, so this runs on a plain 68020 with no FPU, as every Open app must.
+ * scaled by 1024, so this runs with no FPU, as every Open app must.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
 #include <exec/types.h>

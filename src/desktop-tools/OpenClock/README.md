@@ -16,7 +16,7 @@ OpenLook's theme, a digital line under it, and the date. It takes over
 
 ## How it is built
 
-68020, no FPU and no maths library: the hands come from a table of sines for the
+68040, no FPU and no maths library: the hands come from a table of sines for the
 60 positions, scaled by 1024, so an A1200 with no FPU draws them as fast as an
 AC090 does. The face, the marks and the text are the theme's colours through
 `ogt_draw`, so light and dark follow OpenLook with no settings of its own.
