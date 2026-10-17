@@ -348,18 +348,19 @@ def build_parts(a):
     """Each part's own build, into its own build folder."""
     env = dict(os.environ, AMIGA_CC=str(CC), PATH=f"{CC.parent}:{os.environ['PATH']}")
     (ROOT / "build/os3").mkdir(parents=True, exist_ok=True)   # a fresh checkout has no build folder
-    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
+    run([CC, "-noixemul", "-m68040", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
-    run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
+    run([CC, "-noixemul", "-m68040", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
     ogt = a.opengadtools / "lib"                              # OpenMonitor draws in the theme's font, as the Open apps
     # OpenMonitor 0.3.3 is built resident (libnix -resident: each run its own variables), so one seglist
-    # serves every run: Resident ... PURE, or the ROM's copy. The ROM's is the 68040 build (build/os3-040).
+    # serves every run: Resident ... PURE, or the ROM's copy. One 68040 build (builds are 68040 only); the ROM
+    # takes the same file from build/os3-040.
     (ROOT / "build/os3-040").mkdir(parents=True, exist_ok=True)
-    for cpu, out in (("-m68020", "build/os3/OpenMonitor"), ("-m68040", "build/os3-040/OpenMonitor")):
-        run([CC, "-noixemul", cpu, "-resident", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common", f"-I{ogt}",
-             "-o", ROOT / out, ROOT / "src/openmonitor.c",
-             ogt / "ogt_look.c", ogt / "ogt_theme.c", ogt / "ogt_font.c"], env=env)
+    run([CC, "-noixemul", "-m68040", "-resident", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common", f"-I{ogt}",
+         "-o", ROOT / "build/os3/OpenMonitor", ROOT / "src/openmonitor.c",
+         ogt / "ogt_look.c", ogt / "ogt_theme.c", ogt / "ogt_font.c"], env=env)
+    shutil.copy2(ROOT / "build/os3/OpenMonitor", ROOT / "build/os3-040/OpenMonitor")
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
     run(["sh", a.opengadtools / "workbench/build.sh"], env=env)   # OpenDrawer
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
@@ -367,8 +368,8 @@ def build_parts(a):
     out = g / "build/guest/os32"
     run(["sh", g / "devices/accontrol.device/build.sh", out], env=env)
     inc = g / "devices/accontrol.device/include"
-    run([CC, "-noixemul", "-m68020", "-O2", NULL_OK, "-Wall", f"-I{inc}", g / "tools/acclip/acclip.c", "-o", out / "ACClip"], env=env)
-    run([CC, "-noixemul", "-m68020", "-O2", NULL_OK, "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
+    run([CC, "-noixemul", "-m68040", "-O2", NULL_OK, "-Wall", f"-I{inc}", g / "tools/acclip/acclip.c", "-o", out / "ACClip"], env=env)
+    run([CC, "-noixemul", "-m68040", "-O2", NULL_OK, "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
     run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=env)        # OpenGPU's driver for the ACRTG board
     # opengfx.library 1.2: the stub that sends opengfx.library's calls to opengpu.library 0.6 (GCC 16)
