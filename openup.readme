@@ -189,6 +189,9 @@ QUIT" takes them out.
 OpenMonitor (new, SYS:Utilities) shows the tasks, the CPU and the cores,
 memory and the GPU in the theme's font, and ends a program from its
 right-click menu.
+LIBS:softfpu.library (new, with OpenUp itself): the FPU in software for a
+68LC040 or 68EC040 under the OpenKick ROM, which opens it at boot; with an
+FPU, or under OS 3.2's own ROM, nothing opens it.
 Every file it adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest;
 replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines
 sit in one marked block in S:User-Startup. Uninstall-OpenUp (in
