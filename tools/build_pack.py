@@ -43,12 +43,16 @@ a Part file that C/OpenUpTool reads:
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through OpenService (openamigaimage)
   OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
+  OpenPrefs/            OpenPrefs, every editor of ours as a section of one program with one icon
+                        (SYS:Prefs/OpenPrefs), its small body C:OpenPrefs (the boot's one
+                        OpenPrefs APPLY line), and a stub with no icon for each old editor's
+                        name in SYS:Prefs; the old icons retired. Always installed (openamigaprefs)
   OpenWindows/          snapping, Amiga+Tab, double-click to front, the wheel under the
-                        pointer and window places, with its editor, OpenPrefs Windows (openamigaprefs)
+                        pointer and window places; its editor is OpenPrefs's Windows (openamigaprefs)
   OpenDock/             a dock, which takes over ToolManager's, AmiDock's or AmiStart's
-                        buttons, and its editor, OpenPrefs Dock (openamigaprefs)
-  OpenMenus/            OpenMenus, the Team's own menus (pull-down or pop-up), and their editor,
-                        OpenPrefs Menus (openamigaprefs)
+                        buttons; its editor is OpenPrefs's Dock (openamigaprefs)
+  OpenMenus/            OpenMenus, the Team's own menus (pull-down or pop-up); their editor is
+                        OpenPrefs's Menus (openamigaprefs)
   OpenUpSetup/          OpenUp Setup: the first-start wizard and the startup switches
                         (openamigaprefs)
   OpenRTG/              Workbench on OpenRTG's own 16-bit screen, without Picasso96:
@@ -88,13 +92,14 @@ a Part file that C/OpenUpTool reads:
                         SYS:Developer/OpenGPU-SDK with the OpenGPU-SDK: assign, off by
                         default (--opengpu-sdk DIR: the kit is made in, or read from, DIR)
   OpenInput/            openinput.library (game controllers for every program), C:OIList,
-                        OpenPrefs Gamepads in SYS:Prefs and the docs; off by default; its
-                        startup line is Gamepads USE (--openamigainput)
+                        and the docs (Gamepads is OpenPrefs's); off by default; the boot's
+                        Gamepads USE is in OpenPrefs APPLY (--openamigainput)
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
-  OpenTitle/            OpenTitle and OpenPrefs Title bar: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
-  OpenDateTime/         OpenDateTime in SYS:Prefs: the date, the time and the region, a place
-                        rather than an offset, with summer time by itself (openamigaprefs)
+  OpenTitle/            OpenTitle: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
+  OpenDateTime/         OpenDateTime in SYS:Prefs (OpenPrefs's Date and time section since W48): the date,
+                        the time and the region, a place rather than an offset, with summer time
+                        by itself (openamigaprefs)
   OpenBench/            OpenBench, the Team's own Workbench, in SYS:System, off unless picked
                         (--openamigabench). It runs where the Startup-Sequence starts
                         SYS:System/OpenBench in LoadWB's place; OpenUp doesn't change the
@@ -375,6 +380,9 @@ def build_parts(a):
     gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmigaChrome/stoves/os32-gcc16"))
     run(["sh", g / "libraries/opengfx/build-amiga.sh"], env=dict(os.environ, STOVE=gcc16_root))
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
+    # OpenPrefs: every editor of ours as a section of one program (W48), its small body (C:OpenPrefs) and the
+    # old names' stubs
+    run(["sh", a.openamigaprefs / "OpenPrefs/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Look/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Windows/build.sh"], env=env)
     run(["sh", a.openamigaprefs / "Blanker/build.sh"], env=env)
@@ -550,6 +558,11 @@ def binary_version(data: bytes, name: str) -> str | None:
     return m.group(1).decode() if m else None
 
 
+# The old editors' names: each a stub in SYS:Prefs that opens its section of OpenPrefs (W48)
+OPENPREFS_NAMES = ("Look", "OpenLook", "Windows", "TitleBar", "Menus", "OpenDock", "OpenSound", "OpenInput",
+                   "OpenGamepads", "OpenDateTime", "OpenSerial", "OpenTypes", "OpenSystem")
+
+
 # Each part's main binary: the part's declared version (its Part file, the
 # Installer's log, the manifest) must be that binary's $VER version.
 PART_MAIN = {
@@ -557,6 +570,7 @@ PART_MAIN = {
     "OpenBlanker": ("Tools/Commodities/OpenBlanker", "OpenBlanker"),
     "OpenSocket": ("Libs/bsdsocket.library", "bsdsocket.library"),
     "OpenTypes": ("Prefs/OpenTypes", "OpenTypes"),
+    "OpenPrefs": ("Prefs/OpenPrefs", "OpenPrefs"),
     "OpenCompress": ("Utilities/OpenCompress", "OpenCompress"),
     "OpenService": ("Devs/openservice.device", "openservice.device"),
     "OpenMulticore": ("Libs/openmulticore.library", "openmulticore.library"),
@@ -589,7 +603,7 @@ PART_MAIN = {
 # without a binary of their own to read. OpenPrint 0.4 is OpenPrint (0.3) with
 # OpenView 0.5 and the copy at SYS:Utilities/MultiView; OpenMUI 0.2.1 is
 # zunemaster.library (0.1, with the datatypes cache's Stricmp fix of 12 October 2026) with the
-# muimaster.library face (19.1). Sound 0.2.1 is OpenPrefs Sound and OpenSpeaker (0.1.4) with OpenAHI's
+# muimaster.library face (19.1). Sound 0.2.2 is OpenSpeaker (0.1.4; the editor is OpenPrefs's since W48) with OpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmigaChrome machines only). OpenImage 0.4 adds
 # opentga.datatype (47.1). A part's own version goes up when what it ships changes, so OpenUpTool UPDATE
 # and the Installer's log name the change.
@@ -921,10 +935,32 @@ def main() -> int:
             oi.line(text)
         oi.write()
 
-    # OpenTypes: which program opens each kind of file (openamigaprefs)
-    ty = Part(top, "OpenTypes", "0.2.3", "OpenTypes: which program opens each kind of file")
-    ty.add("Prefs/OpenTypes", (a.openamigaprefs / "OpenTypes/build/os3/OpenTypes").read_bytes(), "SYS:Prefs/OpenTypes")
-    ty.add("Prefs/OpenTypes.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenTypes.info")
+    # OpenPrefs (W48, Dale, 17 Oct 2026: "We should just combine them into a single app, prefs editors that is"):
+    # every editor of ours as a section of one program with one icon, SYS:Prefs/OpenPrefs; C:OpenPrefs, its
+    # small body, serves the boot's one OpenPrefs APPLY (in place of SYS:Prefs/OpenSound USE and
+    # SYS:Prefs/OpenGamepads USE) without loading the app; and each old editor's name in SYS:Prefs is a stub
+    # with no icon that runs OpenPrefs at that editor's section, with its arguments (OpenSound USE,
+    # OpenDock SAVE). The old editors' icons are retired, so the Prefs drawer shows one OpenPrefs icon. With
+    # every install, before the parts whose names it serves.
+    opb = a.openamigaprefs / "OpenPrefs/build/os3"
+    opapp = (opb / "OpenPrefs").read_bytes()
+    opp = Part(top, "OpenPrefs", binary_version(opapp, "OpenPrefs") or "2.0",
+               "OpenPrefs: every Open editor in one window with one icon; the old names open its sections")
+    opp.add("Prefs/OpenPrefs", opapp, "SYS:Prefs/OpenPrefs")
+    opp.add("Prefs/OpenPrefs.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Prefs/OpenPrefs.info")
+    opp.add("C/OpenPrefs", (opb / "OpenPrefs.small").read_bytes(), "SYS:C/OpenPrefs")
+    for n in OPENPREFS_NAMES:
+        opp.add(f"Prefs/{n}", (opb / "stubs" / n).read_bytes(), f"SYS:Prefs/{n}")
+    for n in OPENPREFS_NAMES:
+        opp.line(f'retire "SYS:Prefs/{n}.info"')
+    opp.line("startup OpenPrefs APPLY")
+    opp.write()
+
+    # OpenTypes: which program opens each kind of file (openamigaprefs); since W48 a section of OpenPrefs, and
+    # this part its name's stub
+    tys = (opb / "stubs/OpenTypes").read_bytes()
+    ty = Part(top, "OpenTypes", binary_version(tys, "OpenTypes") or "2.0", "OpenTypes: which program opens each kind of file (in OpenPrefs)")
+    ty.add("Prefs/OpenTypes", tys, "SYS:Prefs/OpenTypes")
     ty.write()
 
     # OpenCompress: one program, the window from Workbench and the command in
@@ -962,8 +998,6 @@ def main() -> int:
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
     ow = Part(top, "OpenWindows", "0.8.4", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
-    ow.add("Prefs/Windows", (a.openamigaprefs / "Windows/build/os3/Windows").read_bytes(), "SYS:Prefs/Windows")
-    ow.add("Prefs/Windows.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Windows.info")
     ow.add("Tools/Commodities/OpenWindows", (a.openamigaprefs / "Windows/build/os3/OpenWindows").read_bytes(),
            "SYS:Tools/Commodities/OpenWindows")
     ow.line("startup Run >NIL: SYS:Tools/Commodities/OpenWindows")
@@ -990,9 +1024,7 @@ def main() -> int:
     # old "Run >NIL: C:OpenDock" line left by an earlier OpenUp does no harm.
     dock = Part(top, "OpenDock", "0.6.6", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
-    # 10 October 2026: every editor of ours in SYS:Prefs is Open... (the user: "either all are Open x or none are")
-    dock.add("Prefs/OpenDock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/OpenDock")
-    dock.add("Prefs/OpenDock.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenDock.info")
+    # its editor is OpenPrefs's Dock section (W48), SYS:Prefs/OpenDock its name's stub (the OpenPrefs part)
     # Workbench as a backdrop: OpenDock sits just above it, so Workbench's own
     # window would cover the dock. A stock 3.2.3 opens Workbench as a window;
     # the backdrop flag is the word at offset 16 of WBConfig.prefs' WBCF chunk
@@ -1005,8 +1037,6 @@ def main() -> int:
     # The Installer takes MagicMenu's settings over once, when there are any.
     menus = Part(top, "OpenMenus", "0.4.4", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
-    menus.add("Prefs/Menus", (a.openamigaprefs / "Menus/build/os3/Menus").read_bytes(), "SYS:Prefs/Menus")
-    menus.add("Prefs/Menus.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/Menus.info")
     menus.line("startup Run >NIL: C:OpenMenus")
     menus.write()
 
@@ -1275,8 +1305,7 @@ def main() -> int:
                    "OpenInput: game controllers for every program, and Gamepads in Prefs (on AmigaChrome: the Amiga's ports for now)")
         oin.add("Libs/openinput.library", oil, "LIBS:openinput.library")
         oin.add("C/OIList", (oib / "OIList").read_bytes(), "SYS:C/OIList")
-        # no icon: OpenGamepads lives under OpenInput (its Gamepads... button), the user, 10 October 2026
-        oin.add("Prefs/OpenGamepads", (a.openamigaprefs / "Gamepads/build/os3/Gamepads").read_bytes(), "SYS:Prefs/OpenGamepads")
+        # Gamepads is a section of OpenPrefs (W48); its name's stub is in the OpenPrefs part
         d = "Utilities/OpenUp/Docs"
         for name, src in (("OpenInput.txt", a.openamigainput / "README.md"),
                           ("Design-OpenInput.txt", a.openamigainput / "Design-OpenInput.md"),
@@ -1286,7 +1315,7 @@ def main() -> int:
         oin.add("Utilities/OpenUp/Docs.info", icons.icon(icons.WBDRAWER, "drawer", window=(320, 120)), "SYS:Utilities/OpenUp/Docs.info", default=True)
         oin.add("Utilities/OpenUp/Licences/OpenInput.txt", (a.openamigainput / "LICENSE").read_bytes(),
                 "SYS:Utilities/OpenUp/Licences/OpenInput.txt")
-        oin.line("startup SYS:Prefs/OpenGamepads USE")
+        # the boot's Gamepads USE is in OpenPrefs APPLY (the OpenPrefs part) since W48
         oin.write()
 
     openlibs_parts(top, a)
@@ -1316,21 +1345,21 @@ def main() -> int:
 
     # OpenTitle: the title bar's logo, free memory, clock and settings cog, and its editor (openamigaprefs)
     tbo = a.openamigaprefs / "TitleBar/build/os3"
-    tb = Part(top, "OpenTitle", "0.6.15", "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
-    tb.add("C/OpenTitle", (tbo / "OpenTitle").read_bytes(), "SYS:C/OpenTitle")
-    tb.add("Prefs/TitleBar", (tbo / "TitleBar").read_bytes(), "SYS:Prefs/TitleBar")
-    tb.add("Prefs/TitleBar.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/TitleBar.info")
+    tbb = (tbo / "OpenTitle").read_bytes()
+    tb = Part(top, "OpenTitle", binary_version(tbb, "OpenTitle") or "0.7",
+              "OpenTitle: AmigaChrome's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
+    tb.add("C/OpenTitle", tbb, "SYS:C/OpenTitle")
     tb.line("startup Run >NIL: C:OpenTitle")
     tb.write()
 
     # OpenDateTime: the date, the time and the region (openamigaprefs DateTime). The time zone is a place, and
     # summer time follows it by itself (0.2); the clock is set through C:Date and C:SetClock with NIL: handles
     # (0.2.1). A copy already there (put in SYS:Prefs by hand) is kept in SYS:Storage; its icon stays.
-    dtb = (a.openamigaprefs / "DateTime/build/os3/OpenDateTime").read_bytes()
-    dtp = Part(top, "OpenDateTime", binary_version(dtb, "OpenDateTime") or "0.2.1",
-               "OpenDateTime: the date, the time and the region, with summer time by itself")
+    # Since W48 a section of OpenPrefs: this part is its name's stub (SYS:Prefs/OpenDateTime)
+    dtb = (a.openamigaprefs / "OpenPrefs/build/os3/stubs/OpenDateTime").read_bytes()
+    dtp = Part(top, "OpenDateTime", binary_version(dtb, "OpenDateTime") or "2.0",
+               "OpenDateTime: the date, the time and the region, with summer time by itself (in OpenPrefs)")
     dtp.add("Prefs/OpenDateTime", dtb, "SYS:Prefs/OpenDateTime")
-    dtp.add("Prefs/OpenDateTime.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenDateTime.info", default=True)
     dtp.write()
 
     # OpenBench: the Team's own Workbench (openamigabench desktop/), with the dock and the Open editors built in.
@@ -1350,10 +1379,8 @@ def main() -> int:
     # in SYS:Prefs/OpenSound (the OS's Sound goes to SYS:Prefs/Classic:
     # OpenUpTool RECONCILE), and OpenSpeaker on the menu bar (openamigaprefs).
     so = a.openamigaprefs / "Sound/build/os3"
-    snd = Part(top, "Sound", "0.2.1", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and OpenAHI on AmigaChrome")
-    snd.add("Prefs/OpenSound", (so / "Sound").read_bytes(), "SYS:Prefs/OpenSound")
-    snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")
-    snd.add("Prefs/OpenSound.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenSound.info")
+    snd = Part(top, "Sound", "0.2.2", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and OpenAHI on AmigaChrome")
+    snd.add("C/OpenSpeaker", (so / "OpenSpeaker").read_bytes(), "SYS:C/OpenSpeaker")   # the editor: OpenPrefs's Sound (W48)
     # OpenAHI, folded into Sound (the user, 9 Oct 2026), is the Team's own AHI for the ACAHI board: ahi.device
     # (devices/ahi.device, MIT, no Aminet code), acaudio.audio and DEVS:AudioModes/ACAUDIO (amigachrome's
     # vendor/amigachrome-guest/devices/acaudio.audio, built here) and AHI's settings on the board's Host mix
@@ -1381,7 +1408,7 @@ def main() -> int:
             "use AHI work unchanged. MIT licence, as follows.\n\n" + lic)
     snd.add("Utilities/OpenUp/Licences/OpenAHI.txt", note.encode("latin-1", "replace"), "SYS:Utilities/OpenUp/Licences/OpenAHI.txt")
     snd.lines[n_before:] = ["when AmigaChrome " + l for l in snd.lines[n_before:]]
-    snd.line("startup SYS:Prefs/OpenSound USE")
+    # the boot's Sound USE is in OpenPrefs APPLY (the OpenPrefs part) since W48
     snd.write()
 
     # OpenEdit: the text editor (openamigaedit), with its kinds of file in ENVARC:
@@ -1520,13 +1547,8 @@ def main() -> int:
     try:
         os32_icons(a.openamigaprint, icons, [(top / "Install-OpenUp.info", "install"), (top / "Uninstall-OpenUp.info", "install"),
                                              (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "install"),
-                                             (ty.dir / "Prefs/OpenTypes.info", "page"),
-                                             (ow.dir / "Prefs/Windows.info", "page"),
-                                             (dock.dir / "Prefs/OpenDock.info", "page"),
-                                             (menus.dir / "Prefs/Menus.info", "page"),
-                                             (tb.dir / "Prefs/TitleBar.info", "page"),
+                                             (opp.dir / "Prefs/OpenPrefs.info", "page"),
                                              (setup.dir / "Prefs/OpenUp-Setup.info", "page"),
-                                             (dtp.dir / "Prefs/OpenDateTime.info", "page"),
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (of.dir / "Utilities/OpenFiles.info", files_art),
                                              (op.dir / "Utilities/OpenPlay.info", play_art),
@@ -1552,10 +1574,7 @@ def main() -> int:
             (core.dir / "Utilities/OpenMonitor.info", "OpenMonitor"),
             (pr.dir / "Icons/OpenPrint.info", "drawer-OpenPrint"), (pr.dir / "Drawer/OpenView.info", "OpenView"),
             (pr.dir / "Drawer/Printers and Queue.info", "Printers and Queue"),
-            (ty.dir / "Prefs/OpenTypes.info", "OpenTypes"),
-            (ow.dir / "Prefs/Windows.info", "Windows"), (dock.dir / "Prefs/OpenDock.info", "Dock"),
-            (menus.dir / "Prefs/Menus.info", "Menus"), (tb.dir / "Prefs/TitleBar.info", "TitleBar"),
-            (snd.dir / "Prefs/OpenSound.info", "Sound"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
+            (opp.dir / "Prefs/OpenPrefs.info", "OpenPrefs"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
             (setup.dir / "WBStartup/OpenUp-Setup.info", "OpenUp-Setup"), (oc.dir / "Utilities/OpenCompress.info", "OpenCompress"),
             (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
             (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/OpenEdit.info", "OpenEdit"),
