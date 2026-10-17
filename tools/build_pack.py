@@ -353,7 +353,7 @@ def build_parts(a):
     run([CC, "-noixemul", "-m68020", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
     ogt = a.opengadtools / "lib"                              # OpenMonitor draws in the theme's font, as the Open apps
-    # OpenMonitor 0.3.2 is built resident (libnix -resident: each run its own variables), so one seglist
+    # OpenMonitor 0.3.3 is built resident (libnix -resident: each run its own variables), so one seglist
     # serves every run: Resident ... PURE, or the ROM's copy. The ROM's is the 68040 build (build/os3-040).
     (ROOT / "build/os3-040").mkdir(parents=True, exist_ok=True)
     for cpu, out in (("-m68020", "build/os3/OpenMonitor"), ("-m68040", "build/os3-040/OpenMonitor")):
@@ -981,10 +981,14 @@ def main() -> int:
     bl.line("startup Run >NIL: SYS:Tools/Commodities/OpenBlanker")
     bl.write()
 
-    # OpenDock: the dock, started at boot, and its editor (openamigaprefs). The
-    # Installer runs "SYS:Prefs/OpenDock SAVE" once, on a first install, so the
-    # dock starts with the buttons of a dock already there.
-    dock = Part(top, "OpenDock", "0.6.5", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    # OpenDock: the dock and its editor (openamigaprefs). The Installer runs
+    # "SYS:Prefs/OpenDock SAVE" once, on a first install, so the dock has the
+    # buttons of a dock already there; that save starts it (its editor 0.5.3).
+    # No User-Startup line (Dale, 17 Oct 2026): OpenBench 0.1.23 starts the dock
+    # (the ROM's or this C:OpenDock, the newer by $VER) when ENV:OpenDock/Dock
+    # is there, and OpenDock 0.6.6 ends at once when one runs already, so an
+    # old "Run >NIL: C:OpenDock" line left by an earlier OpenUp does no harm.
+    dock = Part(top, "OpenDock", "0.6.6", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     # 10 October 2026: every editor of ours in SYS:Prefs is Open... (the user: "either all are Open x or none are")
     dock.add("Prefs/OpenDock", (a.openamigaprefs / "Dock/build/os3/Dock").read_bytes(), "SYS:Prefs/OpenDock")
@@ -995,7 +999,6 @@ def main() -> int:
     # (Workbench writes it on Window > Snapshot, not when Backdrop is toggled).
     # OpenUpTool keeps the original in SYS:Storage and UNINSTALL puts it back.
     dock.add("Prefs/Env-Archive/Sys/WBConfig.prefs", wbconfig_backdrop(), "ENVARC:Sys/WBConfig.prefs")
-    dock.line("startup Run >NIL: C:OpenDock")
     dock.write()
 
     # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
