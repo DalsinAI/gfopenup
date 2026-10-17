@@ -606,8 +606,25 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
 static int retire_file(const char *dest)
 {
     char backup[260], dir[260];
-    if (!exists(dest) || find_entry(NULL, dest))
-        return 0;                                   /* absent, or OpenUp's already */
+    entry *e;
+    if (!exists(dest))
+        return 0;                                   /* absent */
+    if ((e = find_entry(NULL, dest))) {
+        /* OpenUp's own file, from an earlier part that the retiring part has taken over: it goes. A "new"
+         * one leaves the manifest with it; a "replaced" one keeps its entry, so UNINSTALL still puts the
+         * original back from SYS:Storage. A "same" file is the user's own bytes and stays. Before, every
+         * file in the manifest was left: on Dale's disk (OpenUp 0.7.9's parts) OpenPrefs's retire lines
+         * left seven old editors' icons beside OpenPrefs's (lab t5-events, W53) */
+        if (strcmp(e->kind, "new") && strcmp(e->kind, "replaced"))
+            return 0;
+        if (!DeleteFile((STRPTR)dest)) {
+            say("OpenUp: can't move ", dest, " out of the way. Is it in use, or the disk write-protected?");
+            return -1;
+        }
+        if (!strcmp(e->kind, "new"))
+            e->kind[0] = 0;                         /* manifest_save leaves it out */
+        return 1;
+    }
     backup_path(dest, backup, sizeof backup);
     parent_of(backup, dir, sizeof dir);
     if (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0)) {
