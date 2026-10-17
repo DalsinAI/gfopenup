@@ -6,12 +6,14 @@
 # MIT, Copyright (c) 2026 AmigaChrome Team.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
+# soft float: link libnix's libm020, not libm881 (specs/m68k-soft-m68040.specs)
+SPECS="$(cd "$HERE/../../.." && pwd)/specs/m68k-soft-m68040.specs"
 STOVE=${STOVE:-$HOME/AmigaChrome/stoves/os32}
 CC=${CC:-"$STOVE/prefix/bin/m68k-amigaos-gcc"}
 OGT=${OGT:-$HERE/../../../../opengadtools}
 OUT=${1:-$HERE/build/os3}
 [ -f "$OGT/lib/ogt_draw.c" ] || { echo "build.sh: set OGT to a checkout of opengadtools (lib/ogt_draw.c)" >&2; exit 1; }
-CFLAGS="-noixemul -m68040 -std=gnu99 -Wall -Werror -O2 -fno-delete-null-pointer-checks -fno-common -I$OGT/lib"
+CFLAGS="-noixemul -m68040 -specs=$SPECS -std=gnu99 -Wall -Werror -O2 -fno-delete-null-pointer-checks -fno-common -I$OGT/lib"
 mkdir -p "$OUT"
 "$CC" $CFLAGS -o "$OUT/OpenClock" "$HERE/src/openclock.c" \
     "$OGT/lib/ogt_theme.c" "$OGT/lib/ogt_draw.c" "$OGT/lib/ogt_look.c"
