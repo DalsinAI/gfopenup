@@ -1,4 +1,4 @@
-/* OpenMonitor 0.3.2: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
+/* OpenMonitor 0.3.3: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
  * (the user, 10 October 2026: "a cpu / task / process app similar to task manager in windows or resources
  * in ubuntu ... have it show gpu too").
  *
@@ -66,7 +66,7 @@
 #include "ogt_look.h"
 #include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3.2 (16.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3.3 (17.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 /* The window runs on 32 KB, however OpenMonitor is started (0.3.1). From a Shell (Run, a script) it got
  * the Shell's 4 KB, and closing the window rebooted the machine every time; with 32 KB it closes cleanly
  * (OpenUp 0.7.5's labs, 12 October 2026; OpenTypes 0.2.3 had the same). libnix's start code swaps to a
@@ -1351,7 +1351,7 @@ static int gui(void)
     g = gad[G_STATUS] = CreateGadget(TEXT_KIND, g, &ng, GTTX_Text, (ULONG)status_text, GTTX_Border, TRUE, TAG_DONE);
     if (!g) { rc = RETURN_FAIL; goto out; }
 
-    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.3.2", WA_PubScreen, (ULONG)scr,
+    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.3.3", WA_PubScreen, (ULONG)scr,
                          WA_Left, (scr->Width - W - scr->WBorLeft - scr->WBorRight) / 2,
                          WA_Top, scr->BarHeight + 1 + (scr->Height - scr->BarHeight - 1 - H - tb - scr->WBorBottom) / 2,
                          WA_InnerWidth, W, WA_InnerHeight, H, WA_Gadgets, (ULONG)glist,
@@ -1534,7 +1534,11 @@ static int detach(void)
     Forbid();
     seg = FindSegment((STRPTR)base, NULL, FALSE);
     if (!seg || seg->seg_Seg != cli->cli_Module) seg = FindSegment((STRPTR)base, NULL, TRUE);
-    resident = seg && seg->seg_Seg == cli->cli_Module;
+    /* 0.3.3: or a resident entry of that name and no program directory. ROM:'s commands (amigachrome-guest
+     * commands/rom/ROMVOL.md) are entered as a stub that is pointed at the real seglist at the first run, so
+     * cli_Module isn't seg_Seg: from ROM:C, 0.3.2 found neither and stayed in the Shell (lab t5-romprefs,
+     * 17 October 2026). A run with no program directory came from no file, so it is started by name too. */
+    resident = seg && (seg->seg_Seg == cli->cli_Module || !GetProgramDir());
     Permit();
     if (resident) snprintf(cmd, sizeof cmd, "\"%s\" WAIT", base);
     else {
