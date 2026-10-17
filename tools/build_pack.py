@@ -24,7 +24,9 @@ a Part file that C/OpenUpTool reads:
 
   OpenUp/               OpenUpTool and the uninstaller, OpenUpMenu: the
                         Tools menu's OpenUp and Preferences sub-menus, and
-                        OpenMonitor in SYS:Utilities (tasks, CPU, cores, memory, GPU)
+                        OpenMonitor in SYS:Utilities (tasks, CPU, cores, memory, GPU);
+                        LIBS:softfpu.library, the FPU in software for a 68LC040 or
+                        68EC040 under the open ROM (amigachrome-guest libraries/opensoftfpu)
   OpenSocket/           bsdsocket.library 4.3 and its tools, built from openamigasocket
                         (--openamigasocket) and laid out by the manifest of amigachrome's
                         vendored payload (vendor/opensocket-os32); without the checkout,
@@ -479,6 +481,8 @@ def build_parts(a):
     genv = {k: v for k, v in os.environ.items() if k not in ("STOVE", "CC")}
     run(["sh", g / "openutility/build-amiga.sh", "module"], env=dict(genv, OUT=str(ol / "openutility")))
     run(["sh", g / "openmathieee/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openmathieee")))
+    # softfpu.library (amigachrome-guest libraries/opensoftfpu, its default os32-gcc16 stove): the OpenUp part's
+    run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
     if a.openamigainput:
         run(["sh", a.openamigainput / "device/build.sh", ol / "input"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
@@ -858,6 +862,14 @@ def main() -> int:
     # OpenMonitor: tasks, CPU and the cores, memory and the GPU, as Task Manager or Resources show them
     core.add("Utilities/OpenMonitor", (ROOT / "build/os3/OpenMonitor").read_bytes(), "SYS:Utilities/OpenMonitor")
     core.add("Utilities/OpenMonitor.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenMonitor.info")
+    # softfpu.library (amigachrome-guest libraries/opensoftfpu): the FPU in software, out of the 1M open ROM since
+    # W61 (no room). On a 68LC040 or 68EC040 the open ROM's dos opens it from LIBS: before the Startup-Sequence
+    # (the F-line emulator) and the open maths libraries open it by name; with an FPU, or under OS 3.2's own ROM,
+    # nothing opens it. In every install, as the CPU can change under the same disk.
+    sfl = ROOT / "build/opensoftfpu/libs/softfpu.library"
+    if not sfl.is_file():
+        raise SystemExit(f"{sfl} wasn't built (amigachrome-guest libraries/opensoftfpu/build-amiga.sh)")
+    core.add("Libs/softfpu.library", sfl.read_bytes(), "LIBS:softfpu.library")
     core.write()
 
     # OpenSocket: the files and places amigachrome's vendored payload's manifest lists (the same list Cradle's own
