@@ -964,7 +964,7 @@ def main() -> int:
     if not a.no_openicons:
         sys.path.insert(0, str(ROOT / "tools"))
         import openicons_part
-        oi = Part(top, "OpenIcons", "0.1", "OpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
+        oi = Part(top, "OpenIcons", "0.2", "OpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
         for text in openicons_part.build(oi.dir, a.guest):
             oi.line(text)
         oi.write()
@@ -1624,6 +1624,17 @@ def main() -> int:
             )
     except Exception as e:                  # an amigachrome checkout without amiga_icon (before #153): the icons above stay
         print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
+    # OpenUp's own drawers as OpenIcons look B drawers with their program's motif (W78, 18 October 2026, Dale:
+    # "we need to fix those older icons to our new style"), over the Gorilla-era drawer-NAME and Boxie drawers
+    # above; each keeps its window and place. The apps' own animated icons stay as ICONS.md section 1 has them.
+    if not a.no_openicons:
+        import openicons_part
+        n = openicons_part.own_drawers(a.guest, [a.out / "OpenUp.info", core.dir / "Utilities/OpenUp.info",
+                                                 pr.dir / "Icons/OpenPrint.info", wr.dir / "Utilities/OpenWrite.info"]
+                                       + ([dm.dir / "Utilities/OpenDemos.info"] if dm else [])
+                                       + ([dev.dir / "Developer/OpenGPU-SDK.info", dev.dir / "Developer.info"] if dev else [])
+                                       + ([oin.dir / "Utilities/OpenUp/Docs.info"] if oin else []))
+        print(f"  OpenUp's own drawers in OpenIcons look B: {n}")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
     check_part_versions(top / "Parts")
     if browser_top:
