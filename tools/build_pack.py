@@ -496,10 +496,12 @@ def build_parts(a):
             old.rename(arch / f"{old.name}-{time.strftime('%Y%m%dT%H%M%S')}")
         run([sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
              "--gl", gl_out, a.opengpu_sdk], env=dict(os.environ))
-    # OpenBench (openamigabench desktop/build.sh, os32 stove): the desktop with the dock and the Open
-    # editors built in, from this build's opengadtools, openamigaprefs and openamigatata
+    # OpenBench (openamigabench desktop/build.sh, GCC 16 since openamigabench #31: it stops when given the
+    # os32 stove's GCC 6.5): the desktop with the dock and the Open editors built in, from this build's
+    # opengadtools, openamigaprefs, openamigatata and openamigafilemanager (its drag and drop)
     if a.openamigabench:
-        bench_env = dict(env, STOVE=str(STOVE), OGT=str(a.opengadtools), OAP=str(a.openamigaprefs))
+        bench_env = dict(env, STOVE=gcc16_root, OGT=str(a.opengadtools), OAP=str(a.openamigaprefs),
+                         FILES=str(a.openamigafilemanager))
         if a.openamigatata:
             bench_env["TATA"] = str(a.openamigatata)
         run(["sh", a.openamigabench / "desktop/build.sh"], env=bench_env)
