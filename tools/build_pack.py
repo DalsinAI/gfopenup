@@ -109,7 +109,7 @@ a Part file that C/OpenUpTool reads:
   OpenLibs/             the open libraries, one switch each, off by default (0.8.0): S:OpenLibs-Startup
                         (OS 3.2's LoadModule, from S:Pre-LoadModule-Startup), and a part of its own per library in
                         OpenLibs/<name> (utility.module, mathieeedoubbas.library, input.device
-                        50.2), which OpenUpTool REMOVE takes out alone (amigachrome-guest,
+                        50.2, OpenRexx's ARexx libraries), which OpenUpTool REMOVE takes out alone (amigachrome-guest,
                         openamigainput; OPEN_LIBRARIES.md section 3)
   Sound/                OpenPrefs Sound and OpenSpeaker, the menu bar speaker (openamigaprefs), and
                         OpenAHI's files for the ACAHI sound board: acaudio.audio, its modes file
@@ -481,6 +481,9 @@ def build_parts(a):
     genv = {k: v for k, v in os.environ.items() if k not in ("STOVE", "CC")}
     run(["sh", g / "openutility/build-amiga.sh", "module"], env=dict(genv, OUT=str(ol / "openutility")))
     run(["sh", g / "openmathieee/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openmathieee")))
+    # OpenRexx (amigachrome-guest libraries/openrexx, its default os32-gcc16 stove): rexxsyslib.library,
+    # rexxsupport.library and RexxMast
+    run(["sh", g / "openrexx/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openrexx")))
     # softfpu.library (amigachrome-guest libraries/opensoftfpu, its default os32-gcc16 stove): the OpenUp part's
     run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
     if a.openamigainput:
@@ -660,6 +663,12 @@ OPENLIBS = {
                         "mathieeedoubbas.library 47.100 in LIBS:, for a 68040 or 68060 with its FPU"),
     "input": ("input/input.device", "Libs/OpenLibs/input.device", "LIBS:OpenLibs/input.device", "input.device",
               "input.device 50.2 in the ROM's place (openamigainput #9; a module, loaded by OS 3.2's LoadModule)"),
+    # ARexx stays on the disk (Dale, 18 Oct 2026): OpenRexx's two libraries in OS 3.2's place in LIBS:, and its
+    # RexxMast only where there is none (OS 3.2.3's RexxMast works with them, measured: amigachrome-guest
+    # docs/design/openrexx.md, and under stock Kickstart 3.2.3: W75). Off by default, as every switch here is.
+    "rexx": ("openrexx/libs/rexxsyslib.library", "Libs/rexxsyslib.library", "LIBS:rexxsyslib.library",
+             "rexxsyslib.library", "OpenRexx, ARexx's rexxsyslib.library and rexxsupport.library in OS 3.2's place, "
+             "for a 68040 or 68060 with its FPU"),
 }
 
 # S:OpenLibs-Startup, from S:Pre-LoadModule-Startup, which OS 3.2's Startup-Sequence runs first of all: the ROM
@@ -718,6 +727,12 @@ def openlibs_parts(top: Path, a) -> list:
             p.add("C/InputProbe", (ol / "input/InputProbe").read_bytes(), "SYS:C/InputProbe")
             p.add("Utilities/OpenUp/Licences/input.device.txt", (a.openamigainput / "LICENSE").read_bytes(),
                   "SYS:Utilities/OpenUp/Licences/input.device.txt")
+        if name == "rexx":
+            sup = (ol / "openrexx/libs/rexxsupport.library").read_bytes()
+            if binary_version(sup, "rexxsupport.library") != ver:
+                raise SystemExit(f"OpenLibs: rexxsupport.library isn't {ver} as rexxsyslib.library is")
+            p.add("Libs/rexxsupport.library", sup, "LIBS:rexxsupport.library")
+            p.add("System/RexxMast", (ol / "openrexx/C/RexxMast").read_bytes(), "SYS:System/RexxMast", default=True)
         p.write()
         made.append(name)
     print(f"  OpenLibs: {', '.join(made)}")
