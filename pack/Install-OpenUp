@@ -269,12 +269,15 @@
 ; The sixth page, OpenLibs (OpenUp 0.8.0): the Team's open libraries, one switch each, in place of OS 3.2's
 ; own (amigachrome-guest libraries/OPEN_LIBRARIES.md, section 3). Only libraries whose ABI test against
 ; OS 3.2's own is clean are offered, and none is ticked on a new install. Bits of #libs: 1 utility.library,
-; 2 mathieeedoubbas.library, 4 input.device. A library switched on already is ticked, so an upgrade (a
-; Novice one never shows the question) changes nothing; unticking one puts OS 3.2's own back.
+; 2 mathieeedoubbas.library, 4 input.device, 8 OpenRexx. A library switched on already is ticked, so an
+; upgrade (a Novice one never shows the question) changes nothing; unticking one puts OS 3.2's own back.
+; OpenRexx is on when LIBS:rexxsyslib.library is 48 or later (OS 3.2's is 47.2).
 (set #libs0 0)
 (if (exists "LIBS:OpenLibs/utility.module") (set #libs0 (bitor #libs0 1)))
 (if (exists "SYS:Storage/OpenUp-Superseded/LIBS/mathieeedoubbas.library") (set #libs0 (bitor #libs0 2)))
 (if (exists "LIBS:OpenLibs/input.device") (set #libs0 (bitor #libs0 4)))
+(if (exists "LIBS:rexxsyslib.library")
+    (if (>= (getversion "LIBS:rexxsyslib.library") 3145728) (set #libs0 (bitor #libs0 8))))
 (set #libs
     (askoptions
         (prompt "Open libraries, in place of OS 3.2's own (6 of 6)")
@@ -289,10 +292,15 @@
               "AmigaChrome. Needs a 68040 or 68060 with its FPU.\n\n"
               "input.device 50.2: the keyboard and the mouse, with AmigaChrome's pointer placed exactly "
               "where the host's is, one setting for key repeat and acceleration for relative mice. "
-              "InputProbe INFO in a Shell says which input.device runs. Needs a 68020 or later.")
+              "InputProbe INFO in a Shell says which input.device runs. Needs a 68020 or later.\n\n"
+              "OpenRexx 48: ARexx, the Team's own rexxsyslib.library and rexxsupport.library in OS 3.2's "
+              "place in LIBS:. OS 3.2's RexxMast and Rexxc commands work with them; OpenRexx's RexxMast is "
+              "added only where there is none. It takes over at the next start. Needs a 68040 or 68060 "
+              "with its FPU.")
         (choices "utility.library 47.100 (68020)"
                  "mathieeedoubbas.library 47.100 (68040 + FPU)"
-                 "input.device 50.2 (68020)")
+                 "input.device 50.2 (68020)"
+                 "OpenRexx 48: ARexx (68040 + FPU)")
         (default #libs0)))
 (set #cpu (database "cpu"))
 ; The ROM ones are loaded from S:Pre-LoadModule-Startup. Another program's file there keeps its place, and a
@@ -302,16 +310,20 @@
     (
         (message "S:Pre-LoadModule-Startup belongs to another program (it loads modules of its own), so "
                  "utility.library and input.device were left out. Nothing else changed.")
-        (set #libs (bitand #libs 2))))
+        (set #libs (bitand #libs 10))))
 (if (and (bitand #libs 5) (or (= #cpu "68000") (= #cpu "68010")))
     (
         (message "utility.library and input.device need a 68020 or later, and this Amiga has a "
                  #cpu ", so they were left out.")
-        (set #libs (bitand #libs 2))))
+        (set #libs (bitand #libs 10))))
 (if (and (bitand #libs 2) (or (= (database "fpu") "NOFPU") (and (<> #cpu "68040") (<> #cpu "68060"))))
     (
         (message "mathieeedoubbas.library needs a 68040 or 68060 with its FPU, so it was left out.")
-        (set #libs (bitand #libs 5))))
+        (set #libs (bitand #libs 13))))
+(if (and (bitand #libs 8) (or (= (database "fpu") "NOFPU") (and (<> #cpu "68040") (<> #cpu "68060"))))
+    (
+        (message "OpenRexx needs a 68040 or 68060 with its FPU, so it was left out.")
+        (set #libs (bitand #libs 7))))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
 ; OpenFTP's FTPS needs OpenTLS, and OpenTLS does its sums with OpenCrypto
@@ -742,6 +754,11 @@
                 (message "input.device didn't install completely. T:OpenUp.log says why."))
             (if (bitand #libs0 4)
                 (run (cat #tool " REMOVE Parts/OpenLibs/input >>T:OpenUp.log"))))
+        (if (bitand #libs 8)
+            (if (> (run (cat #tool " INSTALL Parts/OpenLibs/rexx >>T:OpenUp.log")) 5)
+                (message "OpenRexx didn't install completely. T:OpenUp.log says why."))
+            (if (bitand #libs0 8)
+                (run (cat #tool " REMOVE Parts/OpenLibs/rexx >>T:OpenUp.log"))))
         (if (and (bitand #libs0 5) (not (bitand #libs 5)))
             (run "C:LoadModule REMOVE NOREBOOT >>T:OpenUp.log"))
         (if (and (not #libs) #libs0)
