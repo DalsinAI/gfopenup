@@ -29,6 +29,13 @@ def_kickstart, def_sys, def_work) and the volumes' Disk.info. The ROM's own
 icons are OpenIcons look B already, and OpenUpTool OLDLOOK takes those files out
 (the user, 16 October 2026: "we should remove them and use ours").
 
+0.2 (W78, 18 October 2026): also the drawers it names in a second place
+(ELSEWHERE: OS 3.2.3's Presets/Backdrops, Presets/Pointers, Storage/WBStartup
+and RECONCILE's Prefs/Classic; AmigaChrome's Apps, Games and Demos on either
+volume), and own_drawers(), which build_pack.py runs on OpenUp's own drawer
+icons (OpenUp, OpenPrint, OpenWrite, OpenDemos, Developer...) so they are look
+B drawers with their program's motif, not the Gorilla-era or Boxie drawers.
+
 OUT_DIR/Kinds holds OpenIcons' disk, drawer, tool, project and trashcan, and
 OUT_DIR/Icons AmigaChrome's own (OpenCalc, OpenClock...), with no face line:
 OpenUpTool ICONS, and OLDLOOK for a Gorilla picture OpenUp's list doesn't name,
@@ -76,6 +83,69 @@ TYPE_ALIASES = {
 
 # OpenUpTool ICONS: a picture by kind (the part's Kinds drawer), from these manifest entries
 KINDS = {"Disk": "def_disk", "Drawer": "def_drawer", "Tool": "def_tool", "Project": "def_project", "Trashcan": "def_trashcan"}
+
+# Drawers the manifest names that a machine also has elsewhere (W78, 18 October 2026: "we need to fix those
+# older icons to our new style"): OS 3.2.3's own in a second place, and AmigaChrome's on either volume (the
+# amigachrome recipe makes Work:Apps and Work:Games). Each gets a face line; a machine without it is left alone.
+ELSEWHERE = {
+    "SYS:Prefs/Presets/Backdrops": "Backdrops", "SYS:Prefs/Presets/Pointers": "Pointers",
+    "SYS:Storage/WBStartup": "WBStartup", "SYS:Prefs/Classic": "Prefs",
+    "SYS:Apps": "Apps", "Work:Apps": "Apps", "SYS:Games": "Games", "Work:Games": "Games",
+    "SYS:Demos": "Demos", "Work:Demos": "Demos", "SYS:Developer/OpenGPU-SDK": "OpenGPU-SDK",
+}
+
+# OpenUp's own drawers (the pack's, ICONS.md section 1), drawn as OpenIcons look B drawers with the program's
+# motif. Until 0.8.4 they were the Gorilla-era drawer with a badge (drawer-NAME) or Boxie's blue drawer.
+OWN_DRAWERS = {
+    "OpenUp": "install", "OpenPrint": "printer", "OpenWrite": "pages", "OpenBrowser": "globe",
+    "OpenDemos": "film", "OpenGPU-SDK": "cube", "Developer": "code", "Docs": "page", "OpenFTP": "swap",
+    "OpenPuTTY": "terminal", "Licences": "scroll", "Samples": "pages",
+}
+
+
+def own_drawer(name: str) -> dict:
+    """A manifest-like entry for one of OpenUp's own drawers: look B's drawer with the program's motif."""
+    return {"name": name, "group": "openup", "wbtype": "drawer", "base": "drawer", "motif": OWN_DRAWERS[name],
+            "badge": "", "mv": {}, "bv": {}, "text": "", "body": "", "default_tool": "", "stack": 0, "path": ""}
+
+
+def face_bytes(old: bytes, entry: dict, pic: dict, guest: Path) -> bytes:
+    """old (an icon file's bytes) with look B's picture pic for entry: its type, default tool, tool types,
+    stack, place and drawer window stay its own, as OpenUpTool's face keeps them (put_face)."""
+    generator(guest)
+    from openicons import info as infofmt
+    from openicons.build import info_dict
+    was = infofmt.read_info(old)
+    icon = info_dict(dict(entry, wbtype=was["type"]), pic)
+    icon["default_tool"] = was.get("default_tool")
+    icon["tooltypes"] = was.get("tooltypes") or []
+    icon["stack"] = was.get("stack", 0)
+    if "drawer" in icon:
+        icon["drawer"] = dict(icon["drawer"], **(was.get("drawer") or {}))
+    new = bytearray(infofmt.write_info(icon))
+    new[58:66] = old[58:66]                     # do_CurrentX, do_CurrentY: the icon's place
+    if was.get("drawer") and "drawer" in icon:
+        new[126:134] = old[126:134]             # dd_CurrentX, dd_CurrentY: where the window was scrolled to
+    return bytes(new)
+
+
+def own_drawers(guest: Path, files: list[Path]) -> int:
+    """Gives each of OpenUp's own drawer icons in files (a missing one is skipped) look B's drawer with its
+    program's motif (OWN_DRAWERS, by the icon's name), in place. Returns how many it changed."""
+    generator(guest)
+    from openicons.build import load_looks, render_icon
+    import oi
+    look = load_looks()[LOOK]
+    done = 0
+    for f in files:
+        name = f.name[:-5] if f.name.endswith(".info") else f.name
+        if not f.is_file() or name not in OWN_DRAWERS:
+            continue
+        e = own_drawer(name)
+        f.write_bytes(face_bytes(f.read_bytes(), e, render_icon(oi.spec_of(e), look), guest))
+        done += 1
+    return done
+
 
 FFS_NAME = 30          # the longest name a standard FFS volume keeps; longer ones are cut short
 
@@ -161,6 +231,10 @@ def faces(rows: list[dict]) -> list[tuple[str, dict]]:
     for alias, name in TYPE_ALIASES.items():
         if name in by_name:
             add(f"ENVARC:Sys/{alias}", by_name[name])
+    drawers = {e["name"]: e for e in rows if e["group"] in ("os32", "amigachrome") and e["wbtype"] == "drawer"}
+    for dest, name in ELSEWHERE.items():
+        if name in drawers:
+            add(dest, drawers[name])
     return out
 
 
@@ -211,7 +285,7 @@ def main(argv=None) -> int:
     ap.add_argument("--guest", type=Path, required=True, help="the amigachrome-guest checkout (icons/openicons)")
     a = ap.parse_args(argv)
     lines = build(a.out, a.guest)
-    (a.out / "Part").write_text("part OpenIcons 0.1\n" + "\n".join(lines) + "\n")
+    (a.out / "Part").write_text("part OpenIcons 0.2\n" + "\n".join(lines) + "\n")
     print(f"{len(lines) - 1} faces in {a.out}")
     return 0
 
