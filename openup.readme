@@ -128,7 +128,8 @@ choose:
 - OpenCrypto (new): opencrypto.library 2.0, the sums behind secure
   connections (SSH's key exchanges, host keys, SHA-2, AES), on the x86 or
   ARM64 cores on AmigaChrome and on the Amiga's own CPU elsewhere;
-- OpenTLS (new, off unless picked; it comes with OpenFTP): opentls.library,
+- OpenTLS (new, off unless picked; it comes with OpenFTP, OpenMail and
+  OpenAmigaPython): opentls.library,
   secure connections (TLS 1.2) for the Open programs, OpenFTP's FTPS first,
   with its sums through OpenCrypto; the server's certificate is checked
   against Mozilla's list of certificate authorities (S:OpenTLS, MPL-2.0,
@@ -174,6 +175,12 @@ choose:
 - OpenDateTime (new): the date, the time and the region in one editor
   (SYS:Prefs/OpenDateTime); you pick a place, not an offset, and summer time
   follows by itself;
+- OpenAmigaPython (new, off unless picked): Python 2.7.18 for AmigaOS 3,
+  OpenAmigaPython 2.7.18-ac3, in SYS:Tools/OpenAmigaPython, with Python:
+  assigned and on the Shell's path from the next start; ssl and https work
+  through OpenTLS, which comes with it, and sockets need a network stack
+  (OpenSocket, Roadshow or AmiTCP); any Amiga with a 68020 or later, no FPU
+  needed;
 - OpenLibs (new, each off unless picked): the Team's own rewrites of
   AmigaOS libraries in place of OS 3.2's, one switch each on the Installer's
   sixth page, offered only once each one's test against OS 3.2's own, call
