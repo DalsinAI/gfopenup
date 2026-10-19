@@ -33,7 +33,8 @@
 ; 33554432 OpenGPU, 67108864 Warp3D, 134217728 OpenDemos, 268435456 OpenCrypto, 536870912 OpenPuTTY,
 ; 1073741824 Tata (the last bit of this word).
 ; The second word, #parts2 (OpenUp 0.7.0): 1 OpenFTP, 2 Unofficial Telegram, 4 OpenGPU developer files,
-; 8 OpenInput, 16 OpenTLS, 32 OpenDrawer, 64 OpenBench, 128 OpenDateTime (OpenUp 0.7.9).
+; 8 OpenInput, 16 OpenTLS, 32 OpenDrawer, 64 OpenBench, 128 OpenDateTime (OpenUp 0.7.9),
+; 256 OpenAmigaPython (19 October 2026; the ninth choice of the fifth page).
 ; Of these only OpenDateTime is ticked by default on a new install; an upgrade ticks those already there (below).
 ; AmigaChrome's defaults: everything but OpenRTG, OpenMUI, OpenMail, OpenBrowser, OpenDemos, OpenPuTTY
 ; and Tata (396295679); elsewhere also without OpenSocket, AmigaChrome sharing, OpenGPU and Warp3D
@@ -71,6 +72,7 @@
 (if (exists "LIBS:opentls.library") (set #default2 (bitor #default2 16)))
 (if (exists "SYS:Utilities/OpenDrawer") (set #default2 (bitor #default2 32)))
 (if (exists "SYS:System/OpenBench") (set #default2 (bitor #default2 64)))
+(if (exists "SYS:Tools/OpenAmigaPython") (set #default2 (bitor #default2 256)))
 (set #g1
     (askoptions
         (prompt "Which parts should OpenUp install? (1 of 6)")
@@ -241,8 +243,8 @@
               "for now: the pads on the x86 or ARM64 cores come with a later AmigaChrome.\n\n"
               "OpenTLS: secure connections for the Open programs (opentls.library, new): TLS 1.2 "
               "with the server's certificate checked against Mozilla's list of certificate "
-              "authorities, in S:OpenTLS (put your own in ENVARC:OpenTLS/certs). OpenFTP's FTPS "
-              "and OpenMail use it, so it comes with either whatever is picked here; it brings OpenCrypto, "
+              "authorities, in S:OpenTLS (put your own in ENVARC:OpenTLS/certs). OpenFTP's FTPS, "
+              "OpenMail and OpenAmigaPython use it, so it comes with each of them whatever is picked here; it brings OpenCrypto, "
               "which does its sums on the x86 or ARM64 cores on AmigaChrome.\n\n"
               "OpenDrawer: drawer windows with an icon line (back, forward, the parent, places, "
               "search), icons or a list sorted by name, size, date or kind, in the look's theme "
@@ -256,7 +258,12 @@
               "LoadWB, as AmigaChrome's own instances do; OpenUp doesn't change the "
               "Startup-Sequence. On AmigaChrome its Resize to Window fits Workbench to the window.\n\n"
               "OpenDateTime: the date, the time and the region in one editor in SYS:Prefs (new). "
-              "You pick a place, not an offset, and summer time follows by itself.")
+              "You pick a place, not an offset, and summer time follows by itself.\n\n"
+              "OpenAmigaPython: Python 2.7.18 for AmigaOS 3, OpenAmigaPython 2.7.18-ac3 (new, off "
+              "unless picked), in SYS:Tools/OpenAmigaPython, about 17 MB. Python: is assigned and "
+              "Python is on the Shell's path from the next start. ssl and https work through OpenTLS, "
+              "which comes with it; sockets need a network stack (OpenSocket, Roadshow or AmiTCP). "
+              "It needs a 68020 or later, and no FPU.")
         (choices "OpenFTP: FTP and FTPS (new)"
                  "Telegram, unofficial: needs setting up (new)"
                  "OpenGPU developer files (new)"
@@ -264,7 +271,8 @@
                  "OpenTLS: secure connections (new)"
                  "OpenDrawer: drawer windows (new)"
                  "OpenBench: the Team's own Workbench (preview)"
-                 "OpenDateTime: date, time and region (new)")
+                 "OpenDateTime: date, time and region (new)"
+                 "OpenAmigaPython: Python 2.7 (new)")
         (default #default2)))
 ; The sixth page, OpenLibs (OpenUp 0.8.0): the Team's open libraries, one switch each, in place of OS 3.2's
 ; own (amigachrome-guest libraries/OPEN_LIBRARIES.md, section 3). Only libraries whose ABI test against
@@ -326,9 +334,17 @@
         (set #libs (bitand #libs 7))))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
-; OpenFTP's FTPS and OpenMail need OpenTLS, and OpenTLS does its sums with OpenCrypto
+; OpenAmigaPython is built for a 68020 or later (no FPU): on a 68000 or 68010 it is left out, so
+; it doesn't pull in OpenTLS either
+(if (and (bitand #parts2 256) (or (= #cpu "68000") (= #cpu "68010")))
+    (
+        (message "OpenAmigaPython needs a 68020 or later, and this Amiga has a " #cpu
+                 ", so it was left out. Nothing else changed.")
+        (set #parts2 (bitand #parts2 255))))
+; OpenFTP's FTPS, OpenMail and OpenAmigaPython's ssl need OpenTLS, and OpenTLS does its sums with OpenCrypto
 (if (bitand #parts2 1) (set #parts2 (bitor #parts2 16)))
 (if (bitand #parts 2097152) (set #parts2 (bitor #parts2 16)))
+(if (bitand #parts2 256) (set #parts2 (bitor #parts2 16)))
 (if (bitand #parts2 16) (set #parts (bitor #parts 268435456)))
 ; OpenPuTTY needs OpenCrypto
 (if (bitand #parts 536870912) (set #parts (bitor #parts 268435456)))
@@ -686,6 +702,19 @@
                 (message "OpenFTP is installed, and plain FTP works now.\n\n"
                          "For FTPS (encrypted FTP) it needs OpenTLS (opentls.library), and it isn't "
                          "on this Amiga yet. Install OpenUp's OpenTLS part when you want FTPS.")))))
+; OpenAmigaPython, after OpenTLS (its ssl module opens opentls.library): the Part its release makes,
+; in SYS:Tools/OpenAmigaPython/<version>; STARTUP below writes its Assign Python: and Path lines
+(if (bitand #parts2 256)
+    (if (exists "Parts/OpenAmigaPython/Part")
+        (
+            (working "Installing OpenAmigaPython")
+            (if (> (run (cat #tool " INSTALL Parts/OpenAmigaPython >>T:OpenUp.log")) 5)
+                (message "OpenAmigaPython didn't install completely. T:OpenUp.log says why; nothing else changed."))
+            (if (not (exists "LIBS:opentls.library"))
+                (message "OpenAmigaPython is installed. Its ssl module (https) needs OpenTLS "
+                         "(opentls.library), and it isn't on this Amiga yet: install OpenUp's "
+                         "OpenTLS part for it. Everything else works now.")))
+        (message "This pack was made without OpenAmigaPython, so it wasn't installed. Nothing else changed.")))
 (if (bitand #parts2 2)
     (if (exists "Parts/Telegram/Part")
         (
