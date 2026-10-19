@@ -164,7 +164,7 @@
               "OWConvert converts documents from a Shell. Needs a 68020.\n\n"
               "OpenMail: a mail reader for IMAP mail over TLS, with Gmail, Outlook and others "
               "set up from the address (new, a preview: reading only; off unless you pick it). "
-              "It needs AmiSSL 5, which AmigaOS 3.2.3 doesn't include.\n\n"
+              "It reaches mail servers through OpenTLS, which comes with it.\n\n"
               "OpenBrowser: a web browser built on WebKit (new, a preview; off unless you pick "
               "it). It needs an FPU and is best on a 68040. It comes in its own archive, "
               "OpenUp-" #version "-OpenBrowser.lha, because it is large.\n\n"
@@ -187,7 +187,7 @@
         (choices "Sound: levels and a menu bar speaker"
                  "OpenEdit: a text editor"
                  "OpenWrite: a word processor"
-                 "OpenMail: mail (preview, needs AmiSSL 5)"
+                 "OpenMail: mail (preview)"
                  "OpenBrowser: a web browser (preview)"
                  "OpenMulticore: work on a cores board"
                  "Icons: OpenIcons' pictures on the system's icons"
@@ -222,8 +222,8 @@
         (prompt "Which parts should OpenUp install? (5 of 6)")
         (help "OpenFTP: FTP and FTPS in two panes, with a site manager and the Open family's "
               "look (new, off unless picked). In SYS:Utilities/OpenFTP. Plain FTP works as it is. "
-              "FTPS (encrypted FTP) works with OpenTLS (opentls.library); AmiSSL 5 is still used "
-              "if present. It needs a network stack (OpenSocket, Roadshow or AmiTCP).\n\n"
+              "FTPS (encrypted FTP) works through OpenTLS (opentls.library), which comes with it. "
+              "It needs a network stack (OpenSocket, Roadshow or AmiTCP).\n\n"
               "Unofficial Telegram for Amiga (Open): Telegram chats in a window on the Amiga (new, "
               "a preview, off unless picked). It isn't made by Telegram. It needs setting up before "
               "it can reach Telegram: your own Telegram API key (free, from my.telegram.org), and "
@@ -242,7 +242,7 @@
               "OpenTLS: secure connections for the Open programs (opentls.library, new): TLS 1.2 "
               "with the server's certificate checked against Mozilla's list of certificate "
               "authorities, in S:OpenTLS (put your own in ENVARC:OpenTLS/certs). OpenFTP's FTPS "
-              "uses it, so it comes with OpenFTP whatever is picked here; it brings OpenCrypto, "
+              "and OpenMail use it, so it comes with either whatever is picked here; it brings OpenCrypto, "
               "which does its sums on the x86 or ARM64 cores on AmigaChrome.\n\n"
               "OpenDrawer: drawer windows with an icon line (back, forward, the parent, places, "
               "search), icons or a list sorted by name, size, date or kind, in the look's theme "
@@ -326,8 +326,9 @@
         (set #libs (bitand #libs 7))))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft #g4 27)))
 (set #parts2 #g5)
-; OpenFTP's FTPS needs OpenTLS, and OpenTLS does its sums with OpenCrypto
+; OpenFTP's FTPS and OpenMail need OpenTLS, and OpenTLS does its sums with OpenCrypto
 (if (bitand #parts2 1) (set #parts2 (bitor #parts2 16)))
+(if (bitand #parts 2097152) (set #parts2 (bitor #parts2 16)))
 (if (bitand #parts2 16) (set #parts (bitor #parts 268435456)))
 ; OpenPuTTY needs OpenCrypto
 (if (bitand #parts 536870912) (set #parts (bitor #parts 268435456)))
@@ -647,12 +648,7 @@
     (
         (working "Installing OpenMail")
         (if (> (run (cat #tool " INSTALL Parts/OpenMail >>T:OpenUp.log")) 5)
-            (message "OpenMail didn't install completely. T:OpenUp.log says why; nothing else changed."))
-        (if (not (exists "LIBS:amisslmaster.library"))
-            (message "OpenMail is installed, but it needs AmiSSL 5 to reach mail servers, and "
-                     "AmiSSL isn't on this Amiga yet.\n\n"
-                     "Install AmiSSL 5 for OS 3 (Aminet: util/libs), then start OpenMail "
-                     "from SYS:Utilities/OpenMail."))))
+            (message "OpenMail didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
 (if (bitand #parts 4194304)
     (if (not (exists "Parts/OpenBrowser/Part"))
@@ -675,16 +671,21 @@
             (working "Installing OpenTLS")
             (if (> (run (cat #tool " INSTALL Parts/OpenTLS >>T:OpenUp.log")) 5)
                 (message "OpenTLS didn't install completely. T:OpenUp.log says why; nothing else changed.")))))
+; OpenMail (installed above) reaches mail servers only through OpenTLS
+(if (and (bitand #parts 2097152) (not (exists "LIBS:opentls.library")))
+    (message "OpenMail is installed, but it needs OpenTLS (opentls.library) to reach mail servers, "
+             "and it isn't on this Amiga yet.\n\n"
+             "Install OpenUp's OpenTLS part, then start OpenMail from SYS:Utilities/OpenMail."))
 (if (bitand #parts2 1)
     (if (exists "Parts/OpenFTP/Part")
         (
             (working "Installing OpenFTP")
             (if (> (run (cat #tool " INSTALL Parts/OpenFTP >>T:OpenUp.log")) 5)
                 (message "OpenFTP didn't install completely. T:OpenUp.log says why; nothing else changed."))
-            (if (and (not (exists "LIBS:opentls.library")) (not (exists "LIBS:amisslmaster.library")))
+            (if (not (exists "LIBS:opentls.library"))
                 (message "OpenFTP is installed, and plain FTP works now.\n\n"
-                         "For FTPS (encrypted FTP) it needs OpenTLS (opentls.library) or AmiSSL 5, "
-                         "and neither is on this Amiga yet. Install either when you want FTPS.")))))
+                         "For FTPS (encrypted FTP) it needs OpenTLS (opentls.library), and it isn't "
+                         "on this Amiga yet. Install OpenUp's OpenTLS part when you want FTPS.")))))
 (if (bitand #parts2 2)
     (if (exists "Parts/Telegram/Part")
         (

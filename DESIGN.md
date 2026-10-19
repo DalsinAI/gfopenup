@@ -35,8 +35,9 @@ PiStorm (Emu68), in an AmigaChrome instance, and on the appliance.
   when it's ready;
 - the SDL and Mesa runtime libraries.
 
-AmiSSL is another project's: the Installer offers it as it is published,
-with its notices.
+TLS is OpenTLS's (opentls.library, with OpenCrypto): OpenMail, OpenFTP's
+FTPS, OpenPrint's IPPS and httpget use it, and the pack doesn't look for
+or offer AmiSSL.
 
 ## 3. Rules
 

@@ -79,7 +79,8 @@ choose:
   (SYS:Utilities/OpenWrite), and C:OWConvert for scripts;
 - OpenMail (new, a preview, off unless picked): a mail reader for IMAP mail
   over TLS, set up from the address for Gmail, Outlook and others
-  (SYS:Utilities/OpenMail); it needs AmiSSL 5 (Aminet util/libs);
+  (SYS:Utilities/OpenMail); it reaches mail servers through OpenTLS,
+  which comes with it;
 - OpenBrowser (new, a preview, off unless picked): a web browser built on
   WebKit, in its own archive, OpenUp-<version>-OpenBrowser.lha, unpacked
   beside the pack; it needs an FPU and is best on a 68040;
@@ -144,8 +145,8 @@ choose:
   (S:Tata.known), and asks first; its window is SYS:Prefs/Tata, its icon
   sits on the title bar, and "Tata OFF" in a Shell turns it off;
 - OpenFTP (new, off unless picked): FTP and FTPS in two panes, with a site
-  manager (SYS:Utilities/OpenFTP); plain FTP works as it is; FTPS works with
-  OpenTLS (opentls.library), and AmiSSL 5 is still used if present;
+  manager (SYS:Utilities/OpenFTP); plain FTP works as it is; FTPS works
+  through OpenTLS (opentls.library), which comes with it;
 - Unofficial Telegram for Amiga (Open) (new, a preview, off unless picked):
   Telegram chats in a window (SYS:Utilities/UnofficialTelegram); it isn't
   made by Telegram, and it needs setting up first: your own Telegram API key
