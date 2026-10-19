@@ -195,6 +195,17 @@ remove them and use ours"), in place of AROS's Gorilla set, which OpenUp
   `SYS:Storage/OpenUp-Superseded` for UNINSTALL. An icon the machine hasn't
   got is left alone, and so is one OpenUp faced before that you changed
   since (0.8.4).
+- **Drawers in a second place, and OpenUp's own drawers (OpenIcons 0.2).**
+  The part also faces the drawers the manifest names where a machine has them
+  elsewhere: OS 3.2.3's `Prefs/Presets/Backdrops`, `Prefs/Presets/Pointers`,
+  `Storage/WBStartup` and RECONCILE's `Prefs/Classic`, and AmigaChrome's
+  `Apps`, `Games` and `Demos` on SYS: or Work: (`ELSEWHERE` in
+  `tools/openicons_part.py`). OpenUp's own drawers (OpenUp, OpenPrint,
+  OpenWrite, OpenDemos, OpenGPU-SDK, Developer, Docs) are made as OpenIcons
+  look B drawers with their program's motif at pack-build time
+  (`own_drawers`, after `open_icons()`), in place of the Gorilla-era
+  `drawer-NAME` pictures and Boxie's blue drawer; each keeps its window and
+  place. The apps' own animated icons (section 1) are unchanged.
 - **Not the default icons or the volumes.** The OpenKick ROM's icon.library
   has its own (RAM, hard disk, floppy, CD, RAD, card, Kickstart, drawer,
   tool, project, trashcan), and a `def_<kind>.info` in `ENVARC:Sys` or

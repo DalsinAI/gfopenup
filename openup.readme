@@ -120,7 +120,8 @@ choose:
   part is left out, so the card keeps drawing;
 - Icons: OpenIcons, the Team's own icon set (look B, the look of the OpenKick
   ROM's own icons), as new pictures for the system's own drawers, programs
-  and file types' icons (0.8.4, in place of Gorilla); the old pictures are
+  and file types' icons (0.8.4, in place of Gorilla), and OpenUp's own
+  drawers drawn the same way (OpenIcons 0.2); the old pictures are
   kept and come back with the uninstaller. Not the default icons (RAM, hard
   disk, floppy, drawer, tool, project, trashcan...) or SYS:'s own disk icon:
   those are the ROM's own, and an upgrade takes out OS 3.2.3's and the ones
