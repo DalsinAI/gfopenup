@@ -456,7 +456,7 @@ def build_parts(a):
                 env=dict(os.environ, STOVE=gcc16_root, FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
             run([sys.executable, a.openamigatls / "tools/make_ca_bundle.py", a.openamigatls / "build-ca-bundle"])
         if a.openamigaputty:
-            run(["sh", a.openamigaputty / "build.sh"], env=dict(os.environ, OS32_GCC16=gcc16_root, CPU="020",
+            run(["sh", a.openamigaputty / "build.sh"], env=dict(os.environ, OS32_GCC16=gcc16_root, CPU="040",
                                                                 OPENCRYPTO=str(a.openamigatls)))
             run([sys.executable, a.openamigaputty / "tools/make_icons.py", a.amigachrome / "scripts/amiga_icon.py",
                  a.openamigaputty / "build/icons"])
@@ -979,7 +979,7 @@ def main() -> int:
     payload = a.amigachrome / "vendor/opensocket-os32"
     m = json.loads((payload / "manifest.json").read_text())
     so_out = ROOT / "build/opensocket" if a.openamigasocket else None
-    sock = Part(top, "OpenSocket", "4.3", "bsdsocket.library 4.3 through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
+    sock = Part(top, "OpenSocket", "4.4", "bsdsocket.library 4.3 through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
     sock.line("needs AmigaChrome")
     sock.line('keep "SYS:Libs/bsdsocket.library" ' + " ".join(f'"{x}"' for x in OPENSOCKET_MARKERS))
     for f in m["files"]:
@@ -1112,7 +1112,7 @@ def main() -> int:
     img.write()
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
-    ow = Part(top, "OpenWindows", "0.8.4", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
+    ow = Part(top, "OpenWindows", "0.9.1", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
     ow.add("Tools/Commodities/OpenWindows", (a.openamigaprefs / "Windows/build/os3/OpenWindows").read_bytes(),
            "SYS:Tools/Commodities/OpenWindows")
     ow.line("startup Run >NIL: SYS:Tools/Commodities/OpenWindows")
@@ -1150,14 +1150,14 @@ def main() -> int:
 
     # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "OpenMenus", "0.4.4", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
+    menus = Part(top, "OpenMenus", "0.4.5", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
     menus.line("startup Run >NIL: C:OpenMenus")
     menus.write()
 
     # OpenUp Setup: the first-start wizard (openamigaprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:OpenAmiga/Setup.done.
-    setup = Part(top, "OpenUpSetup", "0.1.3", "OpenUp Setup: the first-start wizard, with the startup switches")
+    setup = Part(top, "OpenUpSetup", "0.1.4", "OpenUp Setup: the first-start wizard, with the startup switches")
     setup.add("Prefs/OpenUp-Setup", (a.openamigaprefs / "Setup/build/os3/OpenUp-Setup").read_bytes(), "SYS:Prefs/OpenUp-Setup")
     setup.add("Prefs/OpenUp-Setup.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenUp-Setup.info")
     setup.add("WBStartup/OpenUp-Setup", b"", "SYS:WBStartup/OpenUp-Setup")
@@ -1217,7 +1217,7 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the OpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "OpenGPU", "0.15", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp = Part(top, "OpenGPU", "0.16", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
     gp.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
     gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
@@ -1319,9 +1319,9 @@ def main() -> int:
     if a.openamigatls and a.openamigaputty:
         pu = a.openamigaputty
         pv = re.search(r'OPENPUTTY_VERSION "([0-9.]+)"', (pu / "amiga/main.c").read_text(errors="replace"))
-        stripped = pu / "build/os3-020/OpenPuTTY.stripped"
+        stripped = pu / "build/os3-040/OpenPuTTY.stripped"
         gcc16 = Path(os.environ.get("OS32_GCC16", Path.home() / "AmigaChrome/stoves/os32-gcc16"))
-        run([gcc16 / "prefix/bin/m68k-amigaos-strip", "-o", stripped, pu / "build/os3-020/OpenPuTTY"])
+        run([gcc16 / "prefix/bin/m68k-amigaos-strip", "-o", stripped, pu / "build/os3-040/OpenPuTTY"])
         pi = pu / "build/icons"
         pt = Part(top, "OpenPuTTY", pv.group(1) if pv else "0.2", "OpenPuTTY: PuTTY's SSH, Telnet and serial terminal, on OpenCrypto")
         d = "Utilities/OpenPuTTY"
@@ -1451,7 +1451,7 @@ def main() -> int:
 
     # OpenFiles: the file manager (openamigafilemanager). Double-click opens
     # files with their icon's program, else OpenView (the OpenPrint part).
-    of = Part(top, "OpenFiles", "0.3.1", "OpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
+    of = Part(top, "OpenFiles", "0.4.1", "OpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
     of.add("Utilities/OpenFiles", (a.openamigafilemanager / "build/os3/OpenFiles").read_bytes(), "SYS:Utilities/OpenFiles")
     of.add("Utilities/OpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenFiles.info")
     of.write()
