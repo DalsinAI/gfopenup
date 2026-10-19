@@ -9,7 +9,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
-        [--openamigasocket DIR] [--openamigabench DIR] [--no-build] [--lha]
+        [--openamigasocket DIR] [--openamigabench DIR] [--openamigapython FILE] [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
 the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
@@ -123,6 +123,12 @@ a Part file that C/OpenUpTool reads:
   OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (openamigamulticore)
   OpenMail/             OpenMail, the mail reader, and C:OpenMailCheck; needs OpenTLS (openamigamail)
+  OpenAmigaPython/      OpenAmigaPython, Python 2.7.18 for AmigaOS 3 (any Amiga with a 68020 or
+                        later), in SYS:Tools/OpenAmigaPython/<version> with Python: and the Shell's
+                        path; off by default, and OpenTLS comes with it. Not built here (VBCC and
+                        PosixLib aren't on the stoves): the Part its release makes, from the
+                        release's OpenAmigaPython-<version>-OpenUp.lha, pinned by its sha256
+                        (OPENAMIGAPYTHON below; --openamigapython FILE)
   OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
                         OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser)
 
@@ -623,8 +629,78 @@ PART_MAIN = {
 # ahi.device (6.1.1), acaudio.audio and modes (AmigaChrome machines only). OpenImage 0.4 adds
 # opentga.datatype (47.1). A part's own version goes up when what it ships changes, so OpenUpTool UPDATE
 # and the Installer's log name the change.
+# OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
+# binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
 PART_OWN_VERSION = {"OpenLibs", "AmigaChromeSharing", "OpenImage", "Backdrops", "OpenIcons", "OpenDemos", "OpenGPUDev",
-                    "OpenPrint", "OpenMUI", "Sound"}
+                    "OpenPrint", "OpenMUI", "Sound", "OpenAmigaPython"}
+
+
+# OpenAmigaPython (SacredTrees/openamigapython, the ac3-classic line): the pack takes the Part
+# its release makes (Tools/release/build_release.py), as it is. Python isn't built here: its
+# VBCC and PosixLib aren't on the stoves. The release's archive is pinned by its sha256, so a
+# new release is a new pin here. Fetch it with
+#   gh release download v2.7.18-ac3 -R SacredTrees/openamigapython \
+#       -p OpenAmigaPython-2.7.18-ac3-OpenUp.lha -D build
+# (build/ is where --openamigapython looks first). The Part has no "needs" line: it goes on any
+# Amiga. The Installer checks for a 68020 and installs OpenTLS (with OpenCrypto) with it.
+OPENAMIGAPYTHON = {
+    "version": "2.7.18-ac3",
+    "asset": "OpenAmigaPython-2.7.18-ac3-OpenUp.lha",
+    "sha256": "61cb642d3855d2ea1f6948923e3cb15efb116f7ec4dc938873e55e5e2ae7a626",
+    "release": "https://github.com/SacredTrees/openamigapython/releases/tag/v2.7.18-ac3",
+}
+
+
+def openamigapython_part(top: Path, archive: Path) -> Path:
+    """Parts/OpenAmigaPython from the release's OpenUp archive (OpenUp/Parts/OpenAmigaPython,
+    Part and Payload/), copied as it is. Stops the build unless the archive's sha256 is the
+    pinned one, its Part is the pinned version with no "needs" line and every copy line's file
+    in it, and every payload file is the one the release's own SHA256SUMS names."""
+    import hashlib
+    import tempfile
+    pin = OPENAMIGAPYTHON
+    where = f"{pin['asset']} from {pin['release']}"
+    got = hashlib.sha256(archive.read_bytes()).hexdigest()
+    if got != pin["sha256"]:
+        raise SystemExit(f"--openamigapython: {archive} has sha256 {got}; the pack takes {where}, "
+                         f"sha256 {pin['sha256']}")
+    tmp = Path(tempfile.mkdtemp(prefix="openamigapython-"))
+    try:
+        run([shutil.which("jlha") or "lha", "xq", archive.resolve()], cwd=tmp)
+        src = tmp / "OpenUp/Parts/OpenAmigaPython"
+        payload = src / "Payload"
+        lines = (src / "Part").read_text(encoding="latin-1").splitlines()
+        wrong = []
+        if lines[0].split()[:3] != ["part", "OpenAmigaPython", pin["version"]]:
+            wrong.append(f"its Part begins {lines[0]!r}")
+        if any(line.startswith("needs") for line in lines):
+            wrong.append("its Part has a needs line, so OpenUp would leave it out on some Amigas")
+        sums = {}
+        for line in (payload / "SHA256SUMS").read_text(encoding="latin-1").splitlines():
+            digest, rel = line.split("  ", 1)
+            sums[rel] = digest
+        have = {p.relative_to(payload).as_posix() for p in payload.rglob("*") if p.is_file()}
+        if have - {"SHA256SUMS"} != set(sums):
+            wrong.append(f"its payload and SHA256SUMS differ: {sorted(have.symmetric_difference(set(sums) | {'SHA256SUMS'}))[:5]}")
+        wrong += [f"{rel} isn't the file SHA256SUMS names" for rel, digest in sorted(sums.items())
+                  if rel in have and hashlib.sha256((payload / rel).read_bytes()).hexdigest() != digest]
+        if json.loads((payload / "openamigapython-release.json").read_text())["version"] != pin["version"]:
+            wrong.append("its openamigapython-release.json is another version")
+        copies = [re.match(r'copy "([^"]+)" "([^"]+)"$', line) for line in lines if line.startswith("copy ")]
+        wrong += [f"its Part copies {m.group(1) if m else '?'}, which isn't there"
+                  for m in copies if not m or not (src / m.group(1)).is_file()]
+        if len(copies) != len(have):
+            wrong.append(f"its Part copies {len(copies)} files of the {len(have)} in its payload")
+        if wrong:
+            raise SystemExit(f"--openamigapython: {where}: " + "; ".join(wrong[:8]))
+        dest = top / "Parts" / "OpenAmigaPython"
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print(f"  OpenAmigaPython {pin['version']}: {len(copies)} files; sha256 and SHA256SUMS checked")
+    return dest
 
 
 def opentls_part(top: Path, tls_src: Path):
@@ -820,6 +896,11 @@ def main() -> int:
                          "vendored payload, which can be older than openamigasocket's main)")
     ap.add_argument("--openamigabench", type=Path, default=first(DEV / "openamigabench", DEV.parent / "openamigabench"),
                     help="openamigabench checkout: OpenBench, the Team's own Workbench (desktop/build.sh)")
+    py_asset = ROOT / "build" / OPENAMIGAPYTHON["asset"]
+    ap.add_argument("--openamigapython", type=Path, default=py_asset if py_asset.is_file() else None,
+                    help=f"OpenAmigaPython's release archive {OPENAMIGAPYTHON['asset']} (from "
+                         f"{OPENAMIGAPYTHON['release']}; build/ is looked in first), for the "
+                         "OpenAmigaPython part, taken only with its pinned sha256 (left out without it)")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the OpenGPU developer kit is made (or, with --no-build, read): the OpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -1226,6 +1307,11 @@ def main() -> int:
     # OpenUp ("add": only OpenUp's own copy is replaced). The user's own CAs
     # go in ENVARC:OpenTLS/certs/, which OpenUp never touches.
     tls = opentls_part(top, a.openamigatls) if a.openamigatls else None
+
+    # OpenAmigaPython: its release's own Part, pinned (OPENAMIGAPYTHON). Off by default; the
+    # Installer leaves it out below a 68020 and installs OpenTLS (with OpenCrypto) with it.
+    if a.openamigapython:
+        openamigapython_part(top, a.openamigapython)
 
     # OpenPuTTY (openamigaputty), as its release lays it out, in a drawer in
     # SYS:Utilities; its opencrypto.library is the OpenCrypto part's
