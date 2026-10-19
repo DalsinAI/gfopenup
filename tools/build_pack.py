@@ -9,7 +9,8 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
-        [--openamigasocket DIR] [--openamigabench DIR] [--openamigapython FILE] [--no-build] [--lha]
+        [--openamigasocket DIR] [--openamigabench DIR] [--openamigapython FILE]
+        [--openamigabrowser DIR] [--openamigalayout DIR] [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
 the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
@@ -129,6 +130,11 @@ a Part file that C/OpenUpTool reads:
                         PosixLib aren't on the stoves): the Part its release makes, from the
                         release's OpenAmigaPython-<version>-OpenUp.lha, pinned by its sha256
                         (OPENAMIGAPYTHON below; --openamigapython FILE)
+  OpenBrowserLite/      OpenBrowser Lite 0.4, the small web browser (GadTools, no WebKit, about
+                        100 KB), in SYS:Utilities/OpenBrowserLite: pages laid out by its weblayout
+                        engine on OpenLayout (built in), pictures through datatypes, CSS; https://
+                        through OpenTLS. In the standard set: ticked on a new install on a 68040
+                        or 68060 with its FPU (--openamigabrowser; --openamigalayout)
   OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
                         OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser)
 
@@ -439,6 +445,11 @@ def build_parts(a):
     run(["sh", a.openamigawrite / "build-os3.sh"], env=dict(env, ZLIB_SRC=str(a.zlib)))
     # OpenMail: GCC 16 (its build-os3.sh's own default), TLS through OpenTLS, whose headers it carries
     run(["sh", a.openamigamail / "build-os3.sh"], env=dict(env, STOVE=gcc16_root))
+    # OpenBrowser Lite: GCC 16, for the 68040 with its FPU, OpenLayout (openamigalayout) built
+    # in, TLS through OpenTLS, whose headers it carries (its scripts/build-openbrowser.sh)
+    if a.openamigabrowser:
+        run(["sh", a.openamigabrowser / "scripts/build-openbrowser.sh"],
+            env=dict(env, STOVE=gcc16_root, OPENLAYOUT_SRC=str(a.openamigalayout)))
     # openmulticore.library with the os32 stove, as its build.sh says (built with
     # os32-gcc16 it passes jobs the wrong arguments, 8 October 2026)
     omc_env = {k: v for k, v in env.items() if k not in ("CC", "AMIGA_CC")}
@@ -620,6 +631,7 @@ PART_MAIN = {
     "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
     "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
+    "OpenBrowserLite": ("Utilities/OpenBrowserLite/OpenBrowserLite", "OpenBrowserLite"),
 }
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read. OpenPrint 0.4 is OpenPrint (0.3) with
@@ -887,6 +899,10 @@ def main() -> int:
                     help="openamigatata, for the Tata part (left out without it)")
     ap.add_argument("--openamigaftp", type=Path, default=first(DEV / "openamigaftp", DEV.parent / "openamigaftp"),
                     help="openamigaftp, for the OpenFTP part (left out without it)")
+    ap.add_argument("--openamigabrowser", type=Path, default=first(DEV / "openamigabrowser", DEV.parent / "openamigabrowser"),
+                    help="openamigabrowser, for the OpenBrowserLite part (needs --openamigalayout; left out without it)")
+    ap.add_argument("--openamigalayout", type=Path, default=first(DEV / "openamigalayout", DEV.parent / "openamigalayout"),
+                    help="openamigalayout: OpenLayout, which OpenBrowser Lite builds in")
     ap.add_argument("--openamigatelegram", type=Path, default=first(DEV / "openamigatelegram", DEV.parent / "openamigatelegram"),
                     help="openamigatelegram, for the Telegram part (left out without it)")
     ap.add_argument("--openamigainput", type=Path, default=first(DEV / "openamigainput", DEV.parent / "openamigainput"),
@@ -912,6 +928,8 @@ def main() -> int:
                  "openamigamui", "openamigaedit", "openamigawrite", "zlib"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
+    if a.openamigabrowser and not (a.openamigalayout and a.openamigalayout.is_dir()):
+        ap.error("--openamigabrowser: OpenBrowser Lite needs --openamigalayout (OpenLayout's checkout)")
     if not a.no_build:
         build_parts(a)
     icons = icon_maker(a.openamigaprint)
@@ -1628,6 +1646,24 @@ def main() -> int:
     ml.add("Utilities/OpenMail.info", (mi / "Drawer.info").read_bytes(), "SYS:Utilities/OpenMail.info", own=True)
     ml.add("C/OpenMailCheck", (mb / "OpenMailCheck").read_bytes(), "SYS:C/OpenMailCheck")
     ml.write()
+
+    # OpenBrowser Lite (openamigabrowser): the small browser, in a drawer in SYS:Utilities.
+    # https:// goes through OpenTLS, which the Installer picks with it. It needs a 68040
+    # (or 68060) with its FPU; the Installer leaves it out elsewhere. Ticked on a new install.
+    if a.openamigabrowser:
+        bs = a.openamigabrowser
+        lb = bs / "build/os3"
+        vl = re.search(rb"\$VER: OpenBrowserLite ([0-9.]+)", (lb / "OpenBrowserLite").read_bytes())
+        bl = Part(top, "OpenBrowserLite", vl.group(1).decode() if vl else "0.4.1",
+                  "OpenBrowser Lite: a small web browser (no WebKit); https:// through OpenTLS")
+        d = "Utilities/OpenBrowserLite"
+        bl.add(f"{d}/OpenBrowserLite", (lb / "OpenBrowserLite").read_bytes(), f"SYS:{d}/OpenBrowserLite")
+        bl.add(f"{d}/OpenBrowserLite.info", icons.icon(icons.WBTOOL, "page", stack=16384), f"SYS:{d}/OpenBrowserLite.info")
+        for name, src in (("OpenBrowserLite.readme", "openbrowserlite.readme"), ("LICENSE", "LICENSE")):
+            bl.add(f"{d}/{name}", (bs / src).read_bytes(), f"SYS:{d}/{name}")
+        bl.add("Utilities/OpenBrowserLite.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)),
+               "SYS:Utilities/OpenBrowserLite.info", own=True)
+        bl.write()
 
     # OpenBrowser: too big for the pack (its engine is about 100 MB), so it
     # comes in its own archive, OpenUp-<version>-OpenBrowser.lha, which unpacks
