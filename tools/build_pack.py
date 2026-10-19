@@ -86,7 +86,7 @@ a Part file that C/OpenUpTool reads:
                         the list" reads Parts/Tata/S/Tata.known); off by default while
                         Tata is 0.x (--openamigatata)
   OpenFTP/              OpenFTP, FTP and FTPS in SYS:Utilities/OpenFTP, off by default;
-                        FTPS works with OpenTLS; AmiSSL is still used if present (--openamigaftp)
+                        FTPS works through OpenTLS (--openamigaftp)
   Telegram/             Unofficial Telegram for Amiga (Open), SYS:Utilities/UnofficialTelegram,
                         off by default; it needs setting up: the user's own Telegram API
                         key and the telegram.td/1 service (--openamigatelegram)
@@ -122,7 +122,7 @@ a Part file that C/OpenUpTool reads:
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
   OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (openamigamulticore)
-  OpenMail/             OpenMail, the mail reader, and C:OpenMailCheck; needs AmiSSL 5 (openamigamail)
+  OpenMail/             OpenMail, the mail reader, and C:OpenMailCheck; needs OpenTLS (openamigamail)
   OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
                         OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser)
 
@@ -405,13 +405,13 @@ def build_parts(a):
     run(["sh", a.amigachrome / "vendor/amigachrome-guest/devices/ahi.device/build.sh", ROOT / "build/ahidevice"],
         env=dict(env, STOVE=str(STOVE)))
     # OpenSocket from its own repository's main, with its own scripts and the os32 stove (as the vendored
-    # payload's manifest says it was built), httpget with the AmiSSL SDK's headers. OpenUp 0.7.5 took the
+    # payload's manifest says it was built), httpget with OpenTLS's headers (its own copy). OpenUp 0.7.5 took the
     # vendored payload, last refreshed on 4 October, so it shipped OpenSocketControl 1.0 after 1.0.1 and
     # 1.0.2 (the addresses' byte order) were merged in openamigasocket.
     if a.openamigasocket:
         so_out = ROOT / "build/opensocket"
         run(["sh", a.openamigasocket / "guest/network/acnet/build.sh", so_out], env=dict(env, STOVE=str(STOVE)))
-        run(["sh", a.openamigasocket / "tools/actcptools/build.sh", so_out], env=dict(env, STOVE=str(STOVE), AMISSL=str(a.amissl)))
+        run(["sh", a.openamigasocket / "tools/actcptools/build.sh", so_out], env=dict(env, STOVE=str(STOVE)))
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
     run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
@@ -431,7 +431,8 @@ def build_parts(a):
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     # OpenWrite carries its own OpenGadTools copy; DOCX and ODT need zlib's source (--zlib)
     run(["sh", a.openamigawrite / "build-os3.sh"], env=dict(env, ZLIB_SRC=str(a.zlib)))
-    run(["sh", a.openamigamail / "build-os3.sh", a.amissl], env=env)
+    # OpenMail: GCC 16 (its build-os3.sh's own default), TLS through OpenTLS, whose headers it carries
+    run(["sh", a.openamigamail / "build-os3.sh"], env=dict(env, STOVE=gcc16_root))
     # openmulticore.library with the os32 stove, as its build.sh says (built with
     # os32-gcc16 it passes jobs the wrong arguments, 8 October 2026)
     omc_env = {k: v for k, v in env.items() if k not in ("CC", "AMIGA_CC")}
@@ -456,12 +457,11 @@ def build_parts(a):
     # Tata: its own build.sh (os32 stove; its window with this OpenGadTools' lib/)
     if a.openamigatata:
         run(["sh", a.openamigatata / "build.sh"], env=dict(os.environ, STOVE=str(STOVE), OGT=str(a.opengadtools)))
-    # OpenFTP: GCC 16, OpenGadTools' lib/, and the AmiSSL SDK's headers (build only:
-    # AmiSSL itself is not shipped). opentls.library's headers come with openamigaftp.
-    # FTPS works with OpenTLS, and with AmiSSL if that is what is installed.
+    # OpenFTP: GCC 16 and OpenGadTools' lib/. FTPS works through OpenTLS, whose
+    # headers come with openamigaftp.
     if a.openamigaftp:
         run(["sh", a.openamigaftp / "build-os3.sh"], env=dict(os.environ, OS32_GCC16=gcc16_root, OGT=str(a.opengadtools),
-                                                             AMISSL=str(a.amissl), FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
+                                                             FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
     # Unofficial Telegram for Amiga (Open): the Amiga program (os32 stove)
     if a.openamigatelegram:
         run(["sh", a.openamigatelegram / "build-os3.sh"], env=dict(os.environ, STOVE=str(STOVE)))
@@ -505,10 +505,14 @@ def build_parts(a):
         if a.openamigatata:
             bench_env["TATA"] = str(a.openamigatata)
         run(["sh", a.openamigabench / "desktop/build.sh"], env=bench_env)
+    # OpenPrint, OpenPrint's browser and OpenView with GCC 16 (OpenNDK's os32 libamiga.a, for GCC 6.5,
+    # has no SetRexxVar, which OpenView calls); IPPS through OpenTLS, whose headers openamigaprint carries
     p = a.openamigaprint
+    cc16 = Path(gcc16_root) / "prefix/bin/m68k-amigaos-gcc"
+    print_env = dict(os.environ, AMIGA_CC=str(cc16), PATH=f"{cc16.parent}:{os.environ['PATH']}")
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
-        run(["sh", p / script], cwd=p, env=env)
-    run([sys.executable, p / "tools/make_package.py", "--out", p / "build/package"], cwd=p, env=env)
+        run(["sh", p / script], cwd=p, env=print_env)
+    run([sys.executable, p / "tools/make_package.py", "--out", p / "build/package"], cwd=p, env=print_env)
 
 
 def files_art() -> bytes:
@@ -793,8 +797,6 @@ def main() -> int:
     ap.add_argument("--openamigawrite", type=Path, default=first(DEV / "openamigawrite", DEV.parent / "openamigawrite"))
     ap.add_argument("--openamigamulticore", type=Path, default=first(DEV / "openamigamulticore", DEV.parent / "openamigamulticore"))
     ap.add_argument("--openamigamail", type=Path, default=first(DEV / "openamigamail", DEV.parent / "openamigamail"))
-    ap.add_argument("--amissl", type=Path, default=DEV / "sdk/amissl/AmiSSL/Developer/include",
-                    help="the AmiSSL 5 SDK's include folder, for OpenMail")
     ap.add_argument("--openbrowser", type=Path, help="a built OpenBrowser release (.lha or its unpacked folder): "
                     "makes OpenUp-<version>-OpenBrowser.lha beside the pack")
     ap.add_argument("--zlib", type=Path, help="zlib 1.3 source for OpenWrite's DOCX and ODT (Chromium's, as the 1.0 release)",
@@ -1266,16 +1268,16 @@ def main() -> int:
         tt.line("startup Run >NIL: C:Tata START")
         tt.write()
 
-    # OpenFTP (openamigaftp), in a drawer in SYS:Utilities. FTPS works with
-    # OpenTLS (opentls.library); AmiSSL is still used if present. Plain FTP
-    # works with neither, and OpenFTP says in words that FTPS needs OpenTLS
-    # (or AmiSSL). Off by default.
+    # OpenFTP (openamigaftp), in a drawer in SYS:Utilities. FTPS works through
+    # OpenTLS (opentls.library), which the Installer picks with it. Plain FTP
+    # works without it, and OpenFTP says in words that FTPS needs OpenTLS.
+    # Off by default.
     ftp = None
     if a.openamigaftp:
         fs = a.openamigaftp
         fv = re.search(r'#define VERSION_STRING "([0-9.]+)"', (fs / "app/openftp.c").read_text(errors="replace"))
         ftp = Part(top, "OpenFTP", fv.group(1) if fv else "0.1",
-                   "OpenFTP: FTP and FTPS in two panes (FTPS works with OpenTLS; AmiSSL is still used if present)")
+                   "OpenFTP: FTP and FTPS in two panes (FTPS works through OpenTLS)")
         d = "Utilities/OpenFTP"
         for rel, data in (("OpenFTP", (fs / "build/os3/OpenFTP").read_bytes()), ("OpenFTP.info", (fs / "package/OpenFTP.info").read_bytes()),
                           ("ReadMe", (fs / "README.md").read_bytes()), ("ReadMe.info", (fs / "package/ReadMe.info").read_bytes()),
@@ -1520,12 +1522,12 @@ def main() -> int:
     mc.write()
 
     # OpenMail: the mail reader (openamigamail), in a drawer with its providers
-    # and themes beside it (PROGDIR:Providers); OpenMailCheck in C:. It needs
-    # AmiSSL 5, which OS 3.2.3 doesn't have: the Installer says so.
+    # and themes beside it (PROGDIR:Providers); OpenMailCheck in C:. It reaches
+    # mail servers through OpenTLS (opentls.library), which the Installer picks with it.
     mb = a.openamigamail / "build/os3"
     vm = re.search(rb"\$VER: OpenMail ([0-9.]+)", (mb / "OpenMail").read_bytes())   # the program's own version
     mv = vm.group(1).decode() if vm else "0.3"
-    ml = Part(top, "OpenMail", mv, "OpenMail: a mail reader for IMAP over TLS (needs AmiSSL 5), and C:OpenMailCheck")
+    ml = Part(top, "OpenMail", mv, "OpenMail: a mail reader for IMAP over TLS (through OpenTLS), and C:OpenMailCheck")
     ml.add("Utilities/OpenMail/OpenMail", (mb / "OpenMail").read_bytes(), "SYS:Utilities/OpenMail/OpenMail")
     mi = a.openamigamail / "package/icons"
     ml.add("Utilities/OpenMail/OpenMail.info", (mi / "OpenMail.info").read_bytes(), "SYS:Utilities/OpenMail/OpenMail.info")
