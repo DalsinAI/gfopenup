@@ -1,6 +1,7 @@
 /* OpenUpTool: what OpenUp's Installer scripts call (DESIGN.md section 3).
  *
- *   OpenUpTool DETECT                 what this machine is; ENV:OpenUp/...
+ *   OpenUpTool DETECT                 what this machine is; ENV:OpenUp/... (ROM: OpenKick or Kickstart,
+ *                                     0.8.7; OpenRTG: where openrtg.library is, 0.8.7)
  *   OpenUpTool INSTALL <part drawer>  installs one part, as its Part file says
  *   OpenUpTool REMOVE <part drawer>   takes one part out, putting back what it replaced (0.8.0)
  *   OpenUpTool STARTUP                writes the marked block in S:User-Startup
@@ -20,7 +21,8 @@
  *   OpenUpTool WBBACKDROP             Workbench as a backdrop: no frame, scroll bars or size gadget on
  *                                     its window (Workbench's prefs, WBConfig.prefs)
  *   OpenUpTool OLDLOOK                takes out the look's files OpenUp up to 0.8.1 wrote (C:OpenLook,
- *                                     the theme, Font and IControl prefs) where they are as it wrote them,
+ *                                     the theme) where they are as it wrote them (Font and IControl
+ *                                     prefs stay: they are the user's settings, 0.8.7),
  *                                     and the default icons in ENVARC:Sys and SYS:Disk.info: OS 3.2.3's
  *                                     own and OpenUp's faces of them (0.8.3, 0.8.4), and Gorilla's faces
  *                                     on the other icons, each where it is still as installed (0.8.4)
@@ -67,6 +69,7 @@
  *   part <name> <version>
  *   needs AmigaChrome                  (only on an AmigaChrome instance)
  *   needs ACRTG                        (only with an ACRTG graphics board)
+ *   needs Kickstart                    (not on the OpenKick ROM: for OS 3.2's LoadModule, 0.8.7)
  *   keep <dest> <marker> [<marker>...]  (dest must be absent or contain a marker)
  *   copy <file in the drawer> <dest>
  *   default <file in the drawer> <dest> (copied only when dest is missing)
@@ -111,7 +114,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.4 (16.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.7 (20.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -473,6 +476,19 @@ static int acrtg_board(void)
     return board(9) || board(15);
 }
 
+/* The OpenKick ROM (0.8.7): OpenKickROM's header mark, the long 'OKR1' at the main ROM's start + $14, $F80014
+ * (amigachrome-guest libraries/openexec/exec_boot.h, OEXB_OKR1), or its system-startup module's ID string, which
+ * says "OpenKick". A Kickstart 3.2.3 ROM has neither. OS 3.2's LoadModule and S:Pre-LoadModule-Startup are for
+ * Kickstart ROMs: on Instance-32 (OpenKick) the OpenLibs startup stopped the boot with "device not mounted". */
+static int openkick_rom(void)
+{
+    const volatile ULONG *mark = (const volatile ULONG *)0xF80014;
+    struct Resident *r;
+    if (*mark == 0x4F4B5231UL) return 1;                           /* 'OKR1' */
+    r = FindResident((STRPTR)"system-startup");
+    return r && r->rt_IdString && strstr((const char *)r->rt_IdString, "OpenKick") != NULL;
+}
+
 static void set_env(const char *name, const char *value)
 {
     ensure_dir("ENV:OpenUp", 0);
@@ -508,7 +524,7 @@ static int detect(void)
     char summary[600], theme[80];
     const char *machine;
     UWORD attn = ((struct ExecBase *)SysBase)->AttnFlags;
-    int ac = is_amigachrome();
+    int ac = is_amigachrome(), okick = openkick_rom();
     if (ac) machine = "AmigaChrome";
     else if (OpenResource((STRPTR)"devicetree.resource")) machine = "PiStorm";
     else machine = "Amiga";
@@ -519,12 +535,20 @@ static int detect(void)
     set_env("OpenUp/Theme", theme);
     set_env("OpenUp/RTG", acrtg_board() ? "ACRTG" : "");
     set_env("OpenUp/Network", board(6) ? "OpenSocket card" : "");
+    /* 0.8.7: the ROM, so the Installer leaves OS 3.2's LoadModule (OpenLibs' ROM modules) out on the OpenKick ROM;
+     * and where openrtg.library is, so an upgrade (a Novice one never sees the questions) brings OpenRTG up to date
+     * wherever OpenUp put it or the ROM has it, not only where LIBS:openrtg.library is on the disk */
+    set_env("OpenUp/ROM", okick ? "OpenKick" : "Kickstart");
+    manifest_load();
+    set_env("OpenUp/OpenRTG", find_entry("part", "OpenRTG") ? "OpenUp"
+                              : exists("SYS:Libs/openrtg.library") ? "LIBS"
+                              : FindResident((STRPTR)"openrtg.library") ? "ROM" : "");
     strcpy(summary, "This is ");
     strcat(summary, ac ? "an AmigaChrome instance" : !strcmp(machine, "PiStorm") ? "a PiStorm (Emu68)" : "an Amiga");
     strcat(summary, ", with a ");
     strcat(summary, attn & AFF_68060 ? "68060" : attn & AFF_68040 ? "68040" : attn & AFF_68030 ? "68030" : attn & AFF_68020 ? "68020" : "68000");
     strcat(summary, attn & (AFF_68881 | AFF_FPU40) ? " and an FPU" : " and no FPU");
-    strcat(summary, ".\n");
+    strcat(summary, okick ? ", on the OpenKick ROM.\n" : ".\n");
     if (ac) {
         strcat(summary, acrtg_board() ? "RTG: an ACRTG card.\n" : "RTG: none.\n");
         strcat(summary, board(6) ? "Network: the OpenSocket card is fitted.\n"
@@ -843,6 +867,10 @@ static int install(const char *drawer)
             } else if (pass == 0 && !strcmp(w[0], "needs") && n >= 2) {
                 if (!strcmp(w[1], "AmigaChrome") && !is_amigachrome()) {
                     say("OpenUp: ", partname, " is for AmigaChrome instances; left out here.");
+                    refused = 1;
+                }
+                if (!strcmp(w[1], "Kickstart") && openkick_rom()) {
+                    say("OpenUp: ", partname, " is loaded by OS 3.2's LoadModule, which is for Kickstart ROMs; the OpenKick ROM has its own, so it is left out here.");
                     refused = 1;
                 }
                 if (!strcmp(w[1], "ACRTG") && !acrtg_board()) {
@@ -1764,7 +1792,7 @@ static UBYTE *font_prefs(const UBYTE *old, LONG oldlen, const char *font, LONG s
 
 static int set_font(const char *font, LONG size)
 {
-    LONG oldlen = 0, len;
+    LONG oldlen = 0, len = 0;
     UBYTE *old, *buf;
     int ok;
     if (size < 6 || size > 64 || strlen(font) > 120) { say("OpenUp: FONT wants a font name and a size from 6 to 64", NULL, NULL); return RETURN_FAIL; }
@@ -1824,7 +1852,7 @@ static UBYTE *ictl_prefs(const UBYTE *old, LONG oldlen, LONG screen, LONG window
 
 static int set_titlebars(LONG screen, LONG window)
 {
-    LONG oldlen = 0, len;
+    LONG oldlen = 0, len = 0;
     UBYTE *old, *buf;
     int ok;
     if (screen < 0 || screen > 16 || window < 0 || window > 16) { say("OpenUp: TITLEBARS wants two numbers from 0 to 16", NULL, NULL); return RETURN_FAIL; }
@@ -1848,11 +1876,15 @@ static int set_titlebars(LONG screen, LONG window)
  *   C:OpenLook and its line in S:User-Startup
  *   ENVARC: and ENV:OpenGadTools/Theme   (SETTING, a theme's name)
  *   ENVARC: and ENV:OpenGadTools/Look    (THEME)
- *   ENVARC:Sys/Font.prefs                (FONT CGTriumvirate.font 13, and RECONCILE's pens for the icons' text)
- *   ENVARC:Sys/IControl.prefs            (TITLEBARS 0 2)
  * A file goes only when the manifest lists it as OpenUp's and its bytes are what OpenUp wrote, worked out again
  * from the original OpenUp kept (or from none, where there was none). The original comes back where there was
- * one. A file the user has changed since (saved from Font prefs, say) stays as it is, and the log says so. */
+ * one. A file the user has changed since stays as it is, and the log says so.
+ *
+ * Font prefs and IControl prefs (FONT CGTriumvirate.font 13, TITLEBARS 0 2) are no longer taken out (0.8.7). Up to
+ * 0.8.6 OLDLOOK put back the stock Font.prefs and deleted IControl.prefs where their bytes were still FONT's and
+ * TITLEBARS's, but bytes alone can't say whether the user chose them since: on Instance-32 (20 October 2026) the
+ * 0.8.6 upgrade put the stock font back and took IControl prefs away from under the user. They are the user's
+ * settings now and stay as they are; the originals stay in SYS:Storage/OpenUp-Superseded, for UNINSTALL. */
 
 static UBYTE *font_of_type(UBYTE *d, LONG len, int type);
 
@@ -1891,38 +1923,6 @@ static int was_look(const UBYTE *cur, LONG len, const UBYTE *orig, LONG olen)
             same = same_bytes(cur, len, (const UBYTE *)t, strlen(t));
             FreeVec(t);
         }
-    return same;
-}
-
-/* Font.prefs: FONT's CGTriumvirate 13 from the original. The icons' text pens and effect (bytes 16, 17 and 19 of
- * its fp_Type 0 chunk) may be the original's or the ones RECONCILE sets for a light or a dark backdrop. */
-static int was_font(const UBYTE *cur, LONG len, const UBYTE *orig, LONG olen)
-{
-    LONG n, k;
-    UBYTE *want = font_prefs(orig, olen, "CGTriumvirate.font", 13, &n), *a, *b;
-    int same = 0;
-    if (!want) return 0;
-    if (n == len && (a = font_of_type((UBYTE *)cur, len, 0)) && (b = font_of_type(want, n, 0)) && a - cur == b - want) {
-        int f = a[16], bk = a[17], sp = a[19];
-        int pens = (f == b[16] && bk == b[17]) || (f == 2 && bk == 1) || (f == 1 && bk == 2);
-        same = pens && (sp == b[19] || sp == 0 || sp == 1 || sp == 2);
-        for (k = 0; k < len && same; k++) {
-            LONG at = k - (a - cur);
-            if (at == 16 || at == 17 || at == 19) continue;
-            if (cur[k] != want[k]) same = 0;
-        }
-    }
-    FreeVec(want);
-    return same;
-}
-
-/* IControl.prefs: TITLEBARS 0 2 from the original */
-static int was_titlebars(const UBYTE *cur, LONG len, const UBYTE *orig, LONG olen)
-{
-    LONG n;
-    UBYTE *want = ictl_prefs(orig, olen, 0, 2, &n);
-    int same = same_bytes(cur, len, want, n);
-    if (want) FreeVec(want);
     return same;
 }
 
@@ -2516,11 +2516,11 @@ static int old_look(void)
     n += take_out_old("ENV:OpenGadTools/Theme", was_theme);
     n += take_out_old(LOOK_ENVARC, was_look);
     n += take_out_old(LOOK_ENV, was_look);
-    /* ENVARC: only, as FONT and TITLEBARS write them: ENV: has them from the next boot. Writing ENV:Sys/Font.prefs
-     * while Workbench is open had IPrefs ask to reset the Workbench screen ("Intuition is attempting to reset the
-     * Workbench screen", seen in the Installer's run on a lab copy of Instance-32, 16 Oct 2026). */
-    n += take_out_old("ENVARC:Sys/Font.prefs", was_font);
-    n += take_out_old("ENVARC:Sys/IControl.prefs", was_titlebars);
+    /* ENVARC:Sys/Font.prefs and IControl.prefs stay: the user's settings (0.8.7, above) */
+    if (exists("ENVARC:Sys/Font.prefs") && find_entry(NULL, "ENVARC:Sys/Font.prefs"))
+        say("OpenUp: kept ENVARC:Sys/Font.prefs", ": the user's settings stay", NULL);
+    if (exists("ENVARC:Sys/IControl.prefs") && find_entry(NULL, "ENVARC:Sys/IControl.prefs"))
+        say("OpenUp: kept ENVARC:Sys/IControl.prefs", ": the user's settings stay", NULL);
     n += old_faces_out();                           /* 0.8.3, 0.8.4: the default icons, and Gorilla's faces */
     if (!manifest_save()) {
         say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
