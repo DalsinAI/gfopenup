@@ -74,9 +74,9 @@ a Part file that C/OpenUpTool reads:
                         (openamigartg; needs a 68040 or 68060 with its FPU)
   OpenDemos/            Boing, Chrome Gears and Copper Tunnel on GL.module, off
                         by default (--openamigamesa)
-  OpenCrypto/           opencrypto.library 2.0: SSH's and TLS's sums, on x86 or ARM64 cores through
+  OpenCrypto/           opencrypto.library 2.1: SSH's and TLS's sums, on x86 or ARM64 cores through
                         AC090 on AmigaChrome, on the 68k elsewhere (--openamigatls)
-  OpenTLS/              opentls.library (a TLS client on BearSSL, its maths through OpenCrypto)
+  OpenTLS/              opentls.library (a TLS 1.3 and 1.2 client, its maths through OpenCrypto)
                         and S:OpenTLS/: Mozilla's CA list (MPL-2.0) from this machine's
                         ca-certificates package, with its licence; off by default, picked with
                         OpenFTP (--openamigatls)
@@ -723,7 +723,7 @@ OPENBROWSERLITE = {
     "version": "0.4.1",
     "asset": "OpenBrowserLite-0.4.1.lha",
     "url": "https://github.com/DalsinAI/openamigabrowser/releases/download/v0.4.1/OpenBrowserLite-0.4.1.lha",
-    "sha256": "PLACEHOLDER: fill in after openamigabrowser v0.4.1 is published",
+    "sha256": "16e1dfed30743d1d1b00087a724f9454b341f132622adefc3622369211c380f3",
     "release": "https://github.com/DalsinAI/openamigabrowser/releases/tag/v0.4.1",
 }
 
