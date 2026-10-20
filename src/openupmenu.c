@@ -67,6 +67,7 @@ static const struct entry entries[] = {
     { M_OPENUP, HOW_WB,  "OpenCompress", "SYS:Utilities/OpenCompress",           NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "OpenMail",     "SYS:Utilities/OpenMail/OpenMail",      NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "OpenBrowser",  "SYS:Utilities/OpenBrowser/OpenBrowser", NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "OpenBrowser Lite", "SYS:Utilities/OpenBrowserLite/OpenBrowserLite", NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "OpenFTP",      "SYS:Utilities/OpenFTP/OpenFTP",        NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "Telegram (unofficial)", "SYS:Utilities/UnofficialTelegram", NULL, NULL, NULL },
     { M_OPENUP, HOW_SEP, "---",          NULL, NULL, NULL, NULL },
