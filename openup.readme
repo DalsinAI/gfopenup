@@ -81,7 +81,7 @@ choose:
   over TLS, set up from the address for Gmail, Outlook and others
   (SYS:Utilities/OpenMail); it reaches mail servers through OpenTLS,
   which comes with it;
-- OpenBrowser Lite 0.4 (new): a small web browser, about 100 KB and no
+- OpenBrowser Lite 0.4.1 (new): a small web browser, about 100 KB and no
   WebKit (SYS:Utilities/OpenBrowserLite): pages laid out with headings,
   lists, links, pictures through datatypes and their CSS, no JavaScript;
   https:// through OpenTLS, which comes with it. Ticked on a 68040 or 68060
