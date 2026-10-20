@@ -9,7 +9,8 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
-        [--openamigasocket DIR] [--openamigabench DIR] [--openamigapython FILE] [--no-build] [--lha]
+        [--openamigasocket DIR] [--openamigabench DIR] [--openamigapython FILE]
+        [--openbrowserlite FILE] [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
 the os32-gcc16 stove; GL_WORK names its work directory (about 1 GB). OpenDemos
@@ -73,9 +74,9 @@ a Part file that C/OpenUpTool reads:
                         (openamigartg; needs a 68040 or 68060 with its FPU)
   OpenDemos/            Boing, Chrome Gears and Copper Tunnel on GL.module, off
                         by default (--openamigamesa)
-  OpenCrypto/           opencrypto.library 2.0: SSH's and TLS's sums, on x86 or ARM64 cores through
+  OpenCrypto/           opencrypto.library 2.1: SSH's and TLS's sums, on x86 or ARM64 cores through
                         AC090 on AmigaChrome, on the 68k elsewhere (--openamigatls)
-  OpenTLS/              opentls.library (a TLS client on BearSSL, its maths through OpenCrypto)
+  OpenTLS/              opentls.library (a TLS 1.3 and 1.2 client, its maths through OpenCrypto)
                         and S:OpenTLS/: Mozilla's CA list (MPL-2.0) from this machine's
                         ca-certificates package, with its licence; off by default, picked with
                         OpenFTP (--openamigatls)
@@ -129,6 +130,13 @@ a Part file that C/OpenUpTool reads:
                         PosixLib aren't on the stoves): the Part its release makes, from the
                         release's OpenAmigaPython-<version>-OpenUp.lha, pinned by its sha256
                         (OPENAMIGAPYTHON below; --openamigapython FILE)
+  OpenBrowserLite/      OpenBrowser Lite 0.4.1, the small web browser (GadTools, no WebKit, about
+                        100 KB), in SYS:Utilities/OpenBrowserLite: pages laid out by its weblayout
+                        engine on OpenLayout (built in), pictures through datatypes, CSS; https://
+                        through OpenTLS. In the standard set: ticked on a new install on a 68040
+                        or 68060 with its FPU. Not built here: the program from openamigabrowser's
+                        release OpenBrowserLite-<version>.lha, fetched by its address and pinned by
+                        its sha256 (OPENBROWSERLITE below; --openbrowserlite FILE)
   OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
                         OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser)
 
@@ -620,6 +628,7 @@ PART_MAIN = {
     "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
     "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
+    "OpenBrowserLite": ("Utilities/OpenBrowserLite/OpenBrowserLite", "OpenBrowserLite"),
 }
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read. OpenPrint 0.4 is OpenPrint (0.3) with
@@ -701,6 +710,79 @@ def openamigapython_part(top: Path, archive: Path) -> Path:
         shutil.rmtree(tmp, ignore_errors=True)
     print(f"  OpenAmigaPython {pin['version']}: {len(copies)} files; sha256 and SHA256SUMS checked")
     return dest
+
+
+# OpenBrowser Lite (DalsinAI/openamigabrowser): the pack takes the program, its readme and its
+# licence from the release's archive, as its CI built and packed them; it isn't built here. The
+# archive is pinned by its address and sha256, so a new release is a new pin here. build/ is
+# looked in first; without the archive there it is fetched from "url" into build/. Until the
+# release is published the sha256 is a placeholder, and the pack stops (it never leaves the
+# part out): publish openamigabrowser's v0.4.1 (its docs/RELEASE_0.4.1.md), then put the
+# sha256 its CI printed (OpenBrowserLite-0.4.1.lha.sha256 beside the asset) here.
+OPENBROWSERLITE = {
+    "version": "0.4.1",
+    "asset": "OpenBrowserLite-0.4.1.lha",
+    "url": "https://github.com/DalsinAI/openamigabrowser/releases/download/v0.4.1/OpenBrowserLite-0.4.1.lha",
+    "sha256": "16e1dfed30743d1d1b00087a724f9454b341f132622adefc3622369211c380f3",
+    "release": "https://github.com/DalsinAI/openamigabrowser/releases/tag/v0.4.1",
+}
+
+
+def check_openbrowserlite_pin():
+    """Stops the build while OPENBROWSERLITE's sha256 is not a sha256 (the placeholder)."""
+    pin = OPENBROWSERLITE
+    if not re.fullmatch(r"[0-9a-f]{64}", pin["sha256"]):
+        raise SystemExit(f"OpenBrowserLite: OPENBROWSERLITE's sha256 is still the placeholder "
+                         f"({pin['sha256']!r}). Publish openamigabrowser's v{pin['version']} release, then "
+                         f"put the sha256 of {pin['url']} in tools/build_pack.py's OPENBROWSERLITE.")
+
+
+def openbrowserlite_files(archive: Path | None) -> dict:
+    """OpenBrowser Lite's files from its pinned release archive (OPENBROWSERLITE): the archive
+    from build/ (or --openbrowserlite), else fetched from its address into build/. Stops the
+    build while the pin's sha256 is the placeholder, when the archive can't be had, when its
+    sha256 isn't the pinned one, or when its drawer lacks a file or holds another version.
+    Returns {name in the drawer: bytes}."""
+    import hashlib
+    import tempfile
+    import urllib.request
+    pin = OPENBROWSERLITE
+    where = f"{pin['asset']} from {pin['release']}"
+    check_openbrowserlite_pin()
+    if archive is None:
+        archive = ROOT / "build" / pin["asset"]
+        if not archive.is_file():
+            archive.parent.mkdir(parents=True, exist_ok=True)
+            print(f"  fetching {pin['url']}", flush=True)
+            part = archive.with_suffix(".part")
+            try:
+                with urllib.request.urlopen(pin["url"], timeout=120) as r, open(part, "wb") as f:
+                    shutil.copyfileobj(r, f)
+            except OSError as e:
+                part.unlink(missing_ok=True)
+                raise SystemExit(f"OpenBrowserLite: could not fetch {pin['url']}: {e}")
+            part.replace(archive)
+    got = hashlib.sha256(archive.read_bytes()).hexdigest()
+    if got != pin["sha256"]:
+        raise SystemExit(f"OpenBrowserLite: {archive} has sha256 {got}; the pack takes {where}, "
+                         f"sha256 {pin['sha256']}")
+    tmp = Path(tempfile.mkdtemp(prefix="openbrowserlite-"))
+    try:
+        run([shutil.which("jlha") or "lha", "xq", archive.resolve()], cwd=tmp)
+        drawer = tmp / "OpenBrowserLite"
+        files = {}
+        for name in ("OpenBrowserLite", "OpenBrowserLite.readme", "LICENSE"):
+            if not (drawer / name).is_file():
+                raise SystemExit(f"OpenBrowserLite: {where} has no OpenBrowserLite/{name}")
+            files[name] = (drawer / name).read_bytes()
+        vl = re.search(rb"\$VER: OpenBrowserLite ([0-9.]+)", files["OpenBrowserLite"])
+        if not vl or vl.group(1).decode() != pin["version"]:
+            raise SystemExit(f"OpenBrowserLite: {where}'s program is "
+                             f"{vl.group(1).decode() if vl else 'of no version'}, not {pin['version']}")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print(f"  OpenBrowser Lite {pin['version']}: {pin['asset']}, sha256 checked")
+    return files
 
 
 def opentls_part(top: Path, tls_src: Path):
@@ -887,6 +969,10 @@ def main() -> int:
                     help="openamigatata, for the Tata part (left out without it)")
     ap.add_argument("--openamigaftp", type=Path, default=first(DEV / "openamigaftp", DEV.parent / "openamigaftp"),
                     help="openamigaftp, for the OpenFTP part (left out without it)")
+    ap.add_argument("--openbrowserlite", type=Path, default=None,
+                    help=f"OpenBrowser Lite's release archive {OPENBROWSERLITE['asset']} (default: build/'s, "
+                         f"else fetched from {OPENBROWSERLITE['url']} into build/), for the OpenBrowserLite "
+                         "part, taken only with its pinned sha256; the pack stops without it")
     ap.add_argument("--openamigatelegram", type=Path, default=first(DEV / "openamigatelegram", DEV.parent / "openamigatelegram"),
                     help="openamigatelegram, for the Telegram part (left out without it)")
     ap.add_argument("--openamigainput", type=Path, default=first(DEV / "openamigainput", DEV.parent / "openamigainput"),
@@ -912,6 +998,7 @@ def main() -> int:
                  "openamigamui", "openamigaedit", "openamigawrite", "zlib"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
+    check_openbrowserlite_pin()            # before hours of building, not after
     if not a.no_build:
         build_parts(a)
     icons = icon_maker(a.openamigaprint)
@@ -1628,6 +1715,22 @@ def main() -> int:
     ml.add("Utilities/OpenMail.info", (mi / "Drawer.info").read_bytes(), "SYS:Utilities/OpenMail.info", own=True)
     ml.add("C/OpenMailCheck", (mb / "OpenMailCheck").read_bytes(), "SYS:C/OpenMailCheck")
     ml.write()
+
+    # OpenBrowser Lite (openamigabrowser's release, pinned: OPENBROWSERLITE): the small
+    # browser, in a drawer in SYS:Utilities. https:// goes through OpenTLS, which the Installer
+    # picks with it. It needs a 68040 (or 68060) with its FPU; the Installer leaves it out
+    # elsewhere. Ticked on a new install, so the pack always has it: no archive, no pack.
+    lf = openbrowserlite_files(a.openbrowserlite)
+    bl = Part(top, "OpenBrowserLite", OPENBROWSERLITE["version"],
+              "OpenBrowser Lite: a small web browser (no WebKit); https:// through OpenTLS")
+    d = "Utilities/OpenBrowserLite"
+    bl.add(f"{d}/OpenBrowserLite", lf["OpenBrowserLite"], f"SYS:{d}/OpenBrowserLite")
+    bl.add(f"{d}/OpenBrowserLite.info", icons.icon(icons.WBTOOL, "page", stack=16384), f"SYS:{d}/OpenBrowserLite.info")
+    for name in ("OpenBrowserLite.readme", "LICENSE"):
+        bl.add(f"{d}/{name}", lf[name], f"SYS:{d}/{name}")
+    bl.add("Utilities/OpenBrowserLite.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)),
+           "SYS:Utilities/OpenBrowserLite.info", own=True)
+    bl.write()
 
     # OpenBrowser: too big for the pack (its engine is about 100 MB), so it
     # comes in its own archive, OpenUp-<version>-OpenBrowser.lha, which unpacks
