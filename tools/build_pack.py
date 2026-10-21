@@ -46,10 +46,11 @@ a Part file that C/OpenUpTool reads:
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through OpenService (openamigaimage)
   OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
-  OpenPrefs/            OpenPrefs, every editor of ours as a section of one program with one icon
+  OpenPrefs/            OpenPrefs, every editor of ours as a section of one program
                         (SYS:Prefs/OpenPrefs), its small body C:OpenPrefs (the boot's one
-                        OpenPrefs APPLY line), and a stub with no icon for each old editor's
-                        name in SYS:Prefs; the old icons retired. Always installed (openamigaprefs)
+                        OpenPrefs APPLY line), and a stub with its own icon for each section
+                        in SYS:Prefs (the old editors' names and OpenScreenMode, OpenFonts...).
+                        Always installed (openamigaprefs)
   OpenWindows/          snapping, Amiga+Tab, double-click to front, the wheel under the
                         pointer and window places; its editor is OpenPrefs's Windows (openamigaprefs)
   OpenDock/             a dock, which takes over ToolManager's, AmiDock's or AmiStart's
@@ -591,7 +592,19 @@ def binary_version(data: bytes, name: str) -> str | None:
 
 # The old editors' names: each a stub in SYS:Prefs that opens its section of OpenPrefs (W48)
 OPENPREFS_NAMES = ("Look", "OpenLook", "Windows", "TitleBar", "Menus", "OpenDock", "OpenSound", "OpenInput",
-                   "OpenGamepads", "OpenDateTime", "OpenSerial", "OpenTypes", "OpenSystem")
+                   "OpenGamepads", "OpenDateTime", "OpenSerial", "OpenTypes", "OpenSystem",
+                   # a name for each section no editor had (openamigaprefs, 21 Oct 2026)
+                   "OpenScreenMode", "OpenPointer", "OpenFonts", "OpenColours", "OpenBackdrops", "OpenWorkbench",
+                   "OpenFileRequesters", "OpenBlanker", "OpenIControl")
+
+# An icon per section (Dale, 21 Oct 2026): each section's name and its picture in icons/open. OpenLook has
+# none, as Look is the same section.
+OPENPREFS_ICONS = {"Look": "Look", "Windows": "Windows", "TitleBar": "TitleBar", "Menus": "Menus", "OpenDock": "Dock",
+                   "OpenSound": "Sound", "OpenInput": "MouseKeys", "OpenGamepads": "Gamepads", "OpenDateTime": "DateTime",
+                   "OpenSerial": "Serial", "OpenTypes": "OpenTypes", "OpenSystem": "System", "OpenScreenMode": "ScreenMode",
+                   "OpenPointer": "Pointer", "OpenFonts": "Fonts", "OpenColours": "Colours", "OpenBackdrops": "Backdrops",
+                   "OpenWorkbench": "Workbench", "OpenFileRequesters": "FileRequesters", "OpenBlanker": "Blanker",
+                   "OpenIControl": "IControl"}
 
 
 # Each part's main binary: the part's declared version (its Part file, the
@@ -1192,19 +1205,24 @@ def main() -> int:
     # small body, serves the boot's one OpenPrefs APPLY (in place of SYS:Prefs/OpenSound USE and
     # SYS:Prefs/OpenGamepads USE) without loading the app; and each old editor's name in SYS:Prefs is a stub
     # with no icon that runs OpenPrefs at that editor's section, with its arguments (OpenSound USE,
-    # OpenDock SAVE). The old editors' icons are retired, so the Prefs drawer shows one OpenPrefs icon. With
+    # OpenDock SAVE). The old editors' icons are retired, so the Prefs drawer shows one OpenPrefs icon. Since
+    # 21 Oct 2026 (Dale: an icon per section) every section has a name's stub with its own icon
+    # (OPENPREFS_ICONS, pictures from icons/open), as a 3.2.3 Prefs drawer has an icon per editor. With
     # every install, before the parts whose names it serves.
     opb = a.openamigaprefs / "OpenPrefs/build/os3"
     opapp = (opb / "OpenPrefs").read_bytes()
     opp = Part(top, "OpenPrefs", binary_version(opapp, "OpenPrefs") or "2.0",
-               "OpenPrefs: every Open editor in one window with one icon; the old names open its sections")
+               "OpenPrefs: every Open editor in one window, and an icon per section")
     opp.add("Prefs/OpenPrefs", opapp, "SYS:Prefs/OpenPrefs")
     opp.add("Prefs/OpenPrefs.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Prefs/OpenPrefs.info")
     opp.add("C/OpenPrefs", (opb / "OpenPrefs.small").read_bytes(), "SYS:C/OpenPrefs")
     for n in OPENPREFS_NAMES:
         opp.add(f"Prefs/{n}", (opb / "stubs" / n).read_bytes(), f"SYS:Prefs/{n}")
+    for n, art in OPENPREFS_ICONS.items():
+        opp.add(f"Prefs/{n}.info", icons.icon(icons.WBTOOL, "page", stack=16384), f"SYS:Prefs/{n}.info")
     for n in OPENPREFS_NAMES:
-        opp.line(f'retire "SYS:Prefs/{n}.info"')
+        if n not in OPENPREFS_ICONS:
+            opp.line(f'retire "SYS:Prefs/{n}.info"')
     opp.line("startup OpenPrefs APPLY")
     opp.write()
 
@@ -1846,7 +1864,9 @@ def main() -> int:
             (core.dir / "Utilities/OpenMonitor.info", "OpenMonitor"),
             (pr.dir / "Icons/OpenPrint.info", "drawer-OpenPrint"), (pr.dir / "Drawer/OpenView.info", "OpenView"),
             (pr.dir / "Drawer/Printers and Queue.info", "Printers and Queue"),
-            (opp.dir / "Prefs/OpenPrefs.info", "OpenPrefs"), (setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
+            (opp.dir / "Prefs/OpenPrefs.info", "OpenPrefs")]
+            + [(opp.dir / f"Prefs/{n}.info", art) for n, art in OPENPREFS_ICONS.items()]
+            + [(setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
             (setup.dir / "WBStartup/OpenUp-Setup.info", "OpenUp-Setup"), (oc.dir / "Utilities/OpenCompress.info", "OpenCompress"),
             (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
             (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/OpenEdit.info", "OpenEdit"),

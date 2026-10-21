@@ -719,6 +719,253 @@ def telegram(sel):
         paper_plane(ic, 45, 20, 1.05)
     return ic
 
+# ---- OpenPrefs and its sections (Dale, 21 October 2026: an icon per section) ---------------------
+
+
+def monitor(ic, x0, y0, x1, y1, screen=None):
+    """A monitor on a foot; screen fills its glass (default: Workbench blue). Returns the glass box."""
+    cx = (x0 + x1) / 2
+    ic.add(poly([(cx - 5, y1), (cx + 5, y1), (cx + 8, y1 + 6), (cx - 8, y1 + 6)]), linear((0, y1), (0, y1 + 6), rgb('#C9CED6'), rgb('#7E8794')), outline=1.4)
+    ic.add(rrect(x0, y0, x1, y1, 3), linear((x0, y0), (x1, y1), rgb('#F2F4F7'), rgb('#9CA4B0')), gloss=0.2)
+    g = (x0 + 3, y0 + 3, x1 - 3, y1 - 3)
+    ic.detail(rect(*g), screen or linear((0, g[1]), (0, g[3]), rgb('#5E86BE'), rgb('#1D3A66')))
+    return g
+
+
+def openprefs(sel):
+    """A cog over a slider panel; chosen, the cog turns and a knob slides on."""
+    ic = Icon()
+    ic.add(rrect(6, 30, 52, 58, 4), linear((6, 30), (52, 58), rgb('#F2F4F7'), rgb('#AEB6C2')), gloss=0.25)
+    for i, (k, c) in enumerate(((0.3, BLUE), (0.7, GREEN), (0.5, ORANGE))):
+        y = 36 + i * 7
+        ic.detail(rrect(11, y, 47, y + 2.2, 1.1), rgb('#5A616B'))
+        k = (k + 0.25) if sel and i == 1 else k
+        x = 11 + 36 * min(k, 0.95)
+        ic.add(rrect(x - 2.6, y - 2.4, x + 2.6, y + 4.6, 1.2), linear((x, y - 2), (x, y + 4), lighter(c, 0.3), darker(c, 0.25)), outline=1.0)
+    cx, cy, r = 42, 18, 13
+    turn = math.radians(22.5 if sel else 0)
+    teeth = []
+    for k in range(8):
+        a = turn + k * math.pi / 4
+        n = perp(a)
+        at = lambda t, u: (cx + math.cos(a) * t + n[0] * u, cy + math.sin(a) * t + n[1] * u)
+        teeth.append(poly([at(r - 3, -3.2), at(r + 3, -2.4), at(r + 3, 2.4), at(r - 3, 3.2)]))
+    cog = cut(union(ellipse(cx - r, cy - r, cx + r, cy + r), *teeth), ellipse(cx - 4.5, cy - 4.5, cx + 4.5, cy + 4.5))
+    ic.add(cog, linear((cx - r, cy - r), (cx + r, cy + r), rgb('#C9CED6'), rgb('#5A616B')), gloss=0.35)
+    prefs_badge(ic, 2, 6, 1.35)
+    return ic
+
+
+def screenmode(sel):
+    """A monitor showing a screen; chosen, the screen grows to the overscan corners."""
+    ic = Icon()
+    g = monitor(ic, 4, 6, 60, 46)
+    m = 3.5 if sel else 9
+    x0, y0, x1, y1 = g[0] + m, g[1] + m * 0.7, g[2] - m, g[3] - m * 0.7
+    ic.detail(rect(x0, y0, x1, y1), linear((0, y0), (0, y1), rgb('#A9C4EA'), rgb('#5C8FD6')))
+    ic.detail(rect(x0, y0, x1, y0 + 2.6), (255, 255, 255))
+    for (cx, cy, dx, dy) in ((g[0] + 1.2, g[1] + 1.2, 1, 1), (g[2] - 1.2, g[1] + 1.2, -1, 1), (g[0] + 1.2, g[3] - 1.2, 1, -1), (g[2] - 1.2, g[3] - 1.2, -1, -1)):
+        ic.detail(stroke([(cx + dx * 4, cy), (cx, cy), (cx, cy + dy * 4)], 1.2), GOLD)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
+def pointer(sel):
+    """The pointer; chosen, it leans over and a busy clock shows beside it."""
+    ic = Icon()
+    px, py, s = (20, 6, 1.0) if not sel else (16, 4, 1.0)
+    pts = [(0, 0), (0, 34), (8.5, 26), (14, 39), (20, 36.5), (14.5, 24), (25, 24)]
+    ic.add(poly([(px + x * s, py + y * s) for x, y in pts]), linear((px, py), (px + 25, py + 39), rgb('#FFFFFF'), rgb('#C9CED6')), outline=2.2, gloss=0.2)
+    ic.detail(poly([(px + 2.4, py + 5), (px + 2.4, py + 13), (px + 8, py + 9)]), RED)
+    if sel:
+        clock_face(ic, 46, 40, 11, 40, 200)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
+def fonts(sel):
+    """A big A and a small one on a sheet; chosen, the small one grows."""
+    ic = Icon()
+    page(ic, 8, 4, 56, 58, holes=False)
+    ic.add(union(poly([(14, 46), (24, 14), (30, 14), (40, 46), (34, 46), (31.5, 37.5), (22.5, 37.5), (20, 46)])), linear((14, 14), (40, 46), lighter(BLUE, 0.2), BLUE_LO), outline=1.4)
+    ic.detail(poly([(23.6, 33), (27, 21), (30.4, 33)]), (255, 255, 255))
+    k = 0.55 if sel else 0.4                  # the small A, as a part of the big one
+    A = lambda x, y: (40 + (x - 14) * k, 46 + (y - 46) * k)
+    ic.add(poly([A(14, 46), A(24, 14), A(30, 14), A(40, 46), A(34, 46), A(31.5, 37.5), A(22.5, 37.5), A(20, 46)]),
+           linear(A(14, 14), A(40, 46), lighter(ORANGE, 0.2), ORANGE_LO), outline=1.1)
+    ic.detail(poly([A(23.6, 33), A(27, 21), A(30.4, 33)]), (255, 255, 255))
+    for i in range(3):
+        ic.detail(rect(14, 50 + i * 2.6, 50 - i * 8, 51 + i * 2.6), CONTENT)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
+def colours(sel):
+    """A painter's palette of the screen's pens; chosen, one pen is picked out."""
+    ic = Icon()
+    body = cut(ellipse(4, 10, 60, 54), ellipse(36, 36, 46, 46))
+    ic.add(body, linear((4, 10), (60, 54), rgb('#E9C79A'), rgb('#A87A45')), gloss=0.3)
+    cols = [(BLUE, BLUE_LO), (RED, RED_LO), (GOLD, GOLD_LO), (GREEN, GREEN_LO), (rgb('#F4F5F6'), rgb('#9CA4B0')), (DARK, DARK_LO)]
+    spots = [(16, 22), (28, 17), (41, 18), (50, 27), (14, 36), (24, 44)]
+    for i, ((c, lo), (x, y)) in enumerate(zip(cols, spots)):
+        r = 5.6 if (sel and i == 1) else 4.4
+        ic.add(ellipse(x - r, y - r, x + r, y + r), linear((x - r, y - r), (x + r, y + r), lighter(c, 0.3), lo), outline=1.6 if (sel and i == 1) else 1.0, gloss=0.4)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
+def backdrops(sel):
+    """A window over a tiled backdrop; chosen, the pattern changes to a picture."""
+    ic = Icon()
+    ic.add(rrect(4, 6, 60, 52, 2), solid(rgb('#DDE4EE')))
+    if sel:
+        ic.detail(rect(4, 6, 60, 52), linear((0, 6), (0, 52), rgb('#7FB0F0'), rgb('#D9E6F7')))
+        ic.detail(poly([(4, 52), (4, 38), (18, 26), (30, 36), (44, 22), (60, 38), (60, 52)]), linear((0, 22), (0, 52), GREEN, GREEN_LO))
+        ic.detail(ellipse(46, 10, 54, 18), GOLD)
+    else:
+        for i in range(8):
+            for j in range(7):
+                if (i + j) % 2 == 0:
+                    ic.detail(rect(4 + i * 7, 6 + j * 6.6, 11 + i * 7, 12.6 + j * 6.6), rgb('#AFC3DD'))
+    window(ic, 24, 14, 52, 36, active=True)
+    prefs_badge(ic, 2, 40, 1.35)
+    return ic
+
+
+def workbench(sel):
+    """A drawer of icons; chosen, the drawer opens and an icon lifts out."""
+    ic = Icon()
+    ic.add(rrect(6, 24, 58, 54, 3), linear((6, 24), (58, 54), rgb('#F6D78A'), rgb('#C08A2E')), gloss=0.3)
+    ic.detail(rrect(26, 36, 38, 40, 1.5), rgb('#7A4A18'))
+    lift = 10 if sel else 0
+    for i, (c, lo) in enumerate(((BLUE, BLUE_LO), (GREEN, GREEN_LO))):
+        x = 14 + i * 20
+        up = lift if i == 1 else 0
+        ic.add(rrect(x, 10 - up, x + 14, 24 - up, 2), linear((x, 10 - up), (x + 14, 24 - up), lighter(c, 0.3), lo), outline=1.4, gloss=0.4)
+    prefs_badge(ic, 2, 40, 1.35)
+    return ic
+
+
+def filerequesters(sel):
+    """A file requester's list; chosen, the choice moves down a row."""
+    ic = Icon()
+    window(ic, 4, 4, 60, 54, active=True)
+    ic.detail(rect(8, 12, 52, 44), (255, 255, 255))
+    lit = 2 if sel else 0
+    for i in range(5):
+        y = 14 + i * 6
+        if i == lit:
+            ic.detail(rect(8.5, y - 1, 51.5, y + 4.2), BLUE)
+        ic.detail(rect(11, y + 0.6, 11 + (24 if i % 2 else 30), y + 2.2), (255, 255, 255) if i == lit else DARK)
+    ic.detail(rect(53, 12, 56, 44), rgb('#C9CED6'))
+    ic.detail(rect(53.4, 13 + lit * 4, 55.6, 22 + lit * 4), rgb('#7E8794'))
+    for x in (9, 38):
+        ic.add(rrect(x, 46.5, x + 15, 51.5, 1.4), linear((0, 46), (0, 52), rgb('#F2F4F7'), rgb('#B6BBC2')), outline=0.9)
+    prefs_badge(ic, 2, 40, 1.35)
+    return ic
+
+
+def mousekeys(sel):
+    """A mouse beside a key; chosen, the left button and the key are pressed."""
+    ic = Icon()
+    mx, my = 30, 6
+    ic.add(rrect(mx, my, mx + 26, my + 40, 12), linear((mx, my), (mx + 26, my + 40), rgb('#F2F4F7'), rgb('#9CA4B0')), gloss=0.35)
+    ic.detail(rect(mx + 12.6, my + 1, mx + 13.4, my + 16), INK)
+    ic.detail(rect(mx + 1, my + 16, mx + 25, my + 16.8), INK)
+    if sel:
+        ic.detail(inter(rrect(mx, my, mx + 26, my + 40, 12), rect(mx, my, mx + 12.6, my + 16)), lighter(BLUE, 0.2))
+    ic.add(stroke([(mx + 13, my), (mx + 13, my - 3), (mx + 22, my - 6)], 1.4), solid(DARK))
+    d = 1.6 if sel else 0
+    ic.add(rrect(4, 26, 26, 48, 3), linear((0, 26), (0, 48), rgb('#C9CED6'), rgb('#6C7480')))
+    ic.add(rrect(6, 27 + d, 24, 43 + d, 2.5), linear((0, 27), (0, 43), rgb('#FAFBFC'), rgb('#D4D8DE')), outline=1.0)
+    ic.detail(union(stroke([(10, 33 + d), (15, 33 + d), (15, 37 + d)], 1.6), poly([(9, 33 + d), (12, 30.6 + d), (12, 35.4 + d)])), DARK)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
+def datetime_(sel):
+    """A calendar page and a clock; chosen, the hands move on and the next day is ringed."""
+    ic = Icon()
+    ic.add(rrect(4, 10, 38, 46, 3), solid(PAPER))
+    ic.detail(inter(rrect(4, 10, 38, 46, 3), rect(4, 10, 38, 18)), linear((0, 10), (0, 18), lighter(RED, 0.2), RED_LO))
+    for x in (12, 30):
+        ic.add(rrect(x - 1.2, 6, x + 1.2, 13, 1), solid(DARK), outline=0.8)
+    for j in range(4):
+        for i in range(5):
+            x, y = 7.5 + i * 6, 21 + j * 6
+            ring_it = (i, j) == ((2, 2) if sel else (1, 2))
+            ic.detail(rect(x, y, x + 3.4, y + 3), RED if ring_it else CONTENT)
+    if sel:
+        clock_face(ic, 44, 40, 15, 75, 220)
+    else:
+        clock_face(ic, 44, 40, 15, 30, 150)
+    prefs_badge(ic, 2, 44, 1.2)
+    return ic
+
+
+def serial(sel):
+    """A serial plug and its lead; chosen, bits run along the lead."""
+    ic = Icon()
+    ic.add(stroke([(10, 50), (18, 40), (30, 36), (40, 30)], 3.2), solid(rgb('#3B3F46')))
+    ic.add(poly([(36, 14), (62, 14), (58, 34), (40, 34)]), linear((36, 14), (62, 34), rgb('#E9ECF0'), rgb('#8E96A2')), gloss=0.3)
+    ic.add(poly([(39.5, 17), (58.5, 17), (55.8, 31), (42.2, 31)]), solid(rgb('#2A2F37')), outline=0.8)
+    for k in range(5):
+        ic.detail(ellipse(42 + k * 3.4, 20, 43.6 + k * 3.4, 21.6), GOLD)
+    for k in range(4):
+        ic.detail(ellipse(43.8 + k * 3.4, 26, 45.4 + k * 3.4, 27.6), GOLD)
+    off = 4 if sel else 0
+    for k, (x, y) in enumerate(((14, 45), (22, 39), (31, 35.6))):
+        c = GREEN if sel else rgb('#9CA4B0')
+        ic.detail(rect(x - 1.6 + off * 0.6, y - 5 - off * 0.3, x + 1.6 + off * 0.6, y - 2 - off * 0.3), c)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
+def system(sel):
+    """A chip on a board; chosen, its light comes on."""
+    ic = Icon()
+    ic.add(rrect(4, 10, 60, 52, 3), linear((4, 10), (60, 52), rgb('#5DBB4C'), rgb('#2E7D2A')), gloss=0.2)
+    for k in range(6):
+        ic.detail(rect(8, 14 + k * 6, 16, 15 + k * 6), GOLD)
+        ic.detail(rect(48, 14 + k * 6, 56, 15 + k * 6), GOLD)
+    ic.add(rrect(18, 16, 46, 44, 2), linear((18, 16), (46, 44), rgb('#5A616B'), rgb('#1B1E23')), gloss=0.25)
+    ic.detail(rect(24, 27, 40, 28.4), rgb('#C9CED6'))
+    ic.detail(rect(24, 31, 34, 32.4), rgb('#C9CED6'))
+    ic.add(ellipse(50, 42, 56, 48), RED if sel else rgb('#5A2420'), outline=1.0, gloss=0.5 if sel else 0)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
+def blanker(sel):
+    """A monitor; chosen, it blanks to a dark screen with stars."""
+    ic = Icon()
+    if sel:
+        g = monitor(ic, 4, 6, 60, 46, screen=solid(rgb('#0B0F18')))
+        for x, y, r in ((16, 16, 1.1), (34, 13, 0.8), (46, 22, 1.2), (24, 30, 0.9), (40, 34, 0.7), (52, 14, 0.6), (14, 36, 0.7)):
+            ic.detail(ellipse(x - r, y - r, x + r, y + r), (255, 255, 255))
+    else:
+        g = monitor(ic, 4, 6, 60, 46)
+        window(ic, g[0] + 4, g[1] + 4, g[2] - 10, g[3] - 6, active=True)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
+def icontrol(sel):
+    """Two screens, the front one dragged by the Amiga key; chosen, it slides down."""
+    ic = Icon()
+    ic.add(rrect(4, 4, 52, 40, 2), linear((0, 4), (0, 40), rgb('#DDE4EE'), rgb('#9CA4B0')))
+    ic.detail(inter(rrect(4, 4, 52, 40, 2), rect(4, 4, 52, 9)), linear((0, 4), (0, 9), lighter(BLUE, 0.2), BLUE_LO))
+    d = 10 if sel else 0
+    ic.add(rrect(12, 16 + d, 60, 52 + d * 0.2, 2), linear((0, 16), (0, 52), rgb('#F7F8F9'), rgb('#C9CED6')))
+    ic.detail(inter(rrect(12, 16 + d, 60, 52 + d * 0.2, 2), rect(12, 16 + d, 60, 21 + d)), linear((0, 16), (0, 21), lighter(BLUE, 0.2), BLUE_LO))
+    ic.add(rrect(36, 32, 54, 50, 3), linear((0, 32), (0, 50), rgb('#C9CED6'), rgb('#6C7480')))
+    ic.add(rrect(38, 33 + (1.2 if sel else 0), 52, 46 + (1.2 if sel else 0), 2.5), linear((0, 33), (0, 46), rgb('#FAFBFC'), rgb('#D4D8DE')), outline=1.0)
+    y = 35.5 + (1.2 if sel else 0)
+    ic.detail(union(stroke([(41, y + 8), (45, y)], 1.5), stroke([(45, y), (49, y + 8)], 1.5), stroke([(42.6, y + 5), (47.4, y + 5)], 1.3)), RED)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
 ICONS = {
     "OpenFiles": openfiles, "OpenView": openview, "OpenEdit": openedit, "OpenWrite": openwrite,
     "OpenPlay": openplay, "OpenBrowser": openbrowser, "OpenCompress": opencompress,
@@ -726,6 +973,9 @@ ICONS = {
     "OpenUp-Setup": setup, "ZuneTest": zunetest, "OpenMonitor": openmonitor, "OpenMeters": openmeters,
     "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
     "Gamepads": gamepads, "KindsGallery": kindsgallery, "OpenTata": opentata, "Telegram": telegram,
+    "OpenPrefs": openprefs, "ScreenMode": screenmode, "Pointer": pointer, "Fonts": fonts, "Colours": colours,
+    "Backdrops": backdrops, "Workbench": workbench, "FileRequesters": filerequesters, "MouseKeys": mousekeys,
+    "DateTime": datetime_, "Serial": serial, "System": system, "Blanker": blanker, "IControl": icontrol,
 }
 BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write,
           "Expansion": badge_expansion}
