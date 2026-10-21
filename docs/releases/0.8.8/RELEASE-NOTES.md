@@ -13,7 +13,7 @@ OpenBrowser 0.7 as the companion, and OpenRTG with a version C:Version can read.
   - WebBrowserEngine quits after 60 s idle and gives back about 120-270 MB; `ENV:WebBrowserIdleQuit` sets the
     seconds, 0 means never.
 
-  The archive's sha256 goes into the pin once it is built.
+  Archive sha256 eb85e19b…, built on the home PC at -Os (OpenBrowser.engine 94.2 MB).
 - **OpenRTG 0.19.1.** openrtg.library has a `$VER:` string (openamigartg #103), so C:Version finds it, and its
   version goes up from 0.19 (#105) so the update brings it to machines that have 0.19.
 - OpenUpTool 0.8.8. Every other part is at its repository's main, as in 0.8.7. OpenBrowser Lite (v0.4.1) and
