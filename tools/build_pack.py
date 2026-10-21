@@ -138,7 +138,8 @@ a Part file that C/OpenUpTool reads:
                         release OpenBrowserLite-<version>.lha, fetched by its address and pinned by
                         its sha256 (OPENBROWSERLITE below; --openbrowserlite FILE)
   OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
-                        OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser)
+                        OpenUp-<version>-OpenBrowser.lha (--openbrowser; openamigabrowser, pinned by commit
+                        and sha256: OPENBROWSER below)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
 amiga-icon.js). MIT, Copyright (c) 2026 AmigaChrome Team.
@@ -785,6 +786,45 @@ def openbrowserlite_files(archive: Path | None) -> dict:
     return files
 
 
+# OpenBrowser, the WebKit browser, in its own archive beside the pack (OpenUp-<version>-OpenBrowser.lha): the engine
+# from openamigabrowser's main at "commit", built and packed on the home PC (about 100 MB; scripts/build-webcore.sh
+# and build-openbrowser.sh need the OAB_DEPS prefix, which only that machine has), so it is pinned by the commit and
+# by the sha256 of the archive made from it, as OpenBrowser Lite's is by its release. There is no GitHub release of
+# 0.6 yet. Until the archive's sha256 is put here, "sha256" is the placeholder and --openbrowser stops, printing the
+# archive's sha256 (the pack itself, without --openbrowser, is not held up):
+#   1. in an openamigabrowser checkout at "commit": build the engine and the browser as for 0.5 and pack the drawer
+#      OpenBrowser/ (the program, its Libs/, readme and licences) as OpenBrowser-0.6-68040.lha;
+#   2. sha256sum OpenBrowser-0.6-68040.lha, and put that in "sha256" below;
+#   3. python3 tools/build_pack.py ... --openbrowser /path/to/OpenBrowser-0.6-68040.lha --lha
+OPENBROWSER = {
+    "version": "0.6",
+    "commit": "12a7380de1de314208fb176b809d07974a5a0525",
+    "asset": "OpenBrowser-0.6-68040.lha",
+    "sha256": "2f697d1e0f5ed5667c9e17e403e436c1afdc3dd07ace918469143f8b8b269483",
+    "source": "https://github.com/DalsinAI/openamigabrowser/commit/12a7380de1de314208fb176b809d07974a5a0525",
+}
+
+
+def check_openbrowser_pin(archive: Path) -> None:
+    """Stops the build unless the OpenBrowser archive given (--openbrowser) is the pinned one: its sha256, and the
+    program's $VER at the pinned version (checked again by check_part_versions). An unpacked folder can't be
+    pinned by its sha256: only its version is checked, and the build says so."""
+    import hashlib
+    pin = OPENBROWSER
+    if archive.is_file():
+        got = hashlib.sha256(archive.read_bytes()).hexdigest()
+        if not re.fullmatch(r"[0-9a-f]{64}", pin["sha256"]):
+            raise SystemExit(f"OpenBrowser: OPENBROWSER's sha256 is still the placeholder. {archive} has sha256 {got}: "
+                             f"if it is OpenBrowser {pin['version']} built from {pin['commit'][:7]}, put that in "
+                             f"tools/build_pack.py's OPENBROWSER and build again.")
+        if got != pin["sha256"]:
+            raise SystemExit(f"OpenBrowser: {archive} has sha256 {got}; the pack takes {pin['asset']} "
+                             f"(openamigabrowser {pin['commit'][:7]}), sha256 {pin['sha256']}")
+        print(f"  OpenBrowser {pin['version']}: {archive.name}, sha256 checked")
+    else:
+        print(f"  OpenBrowser: {archive} is a folder, so its sha256 isn't checked; its version must be {pin['version']}")
+
+
 def opentls_part(top: Path, tls_src: Path):
     """The OpenTLS part from an openamigatls checkout built by
     build-amiga-tls.sh and tools/make_ca_bundle.py (build-ca-bundle/), or
@@ -870,6 +910,10 @@ def openlibs_parts(top: Path, a) -> list:
     Pre-LoadModule-Startup) and Parts/OpenLibs/<name>, one per library."""
     ol = ROOT / "build/openlibs"
     base = Part(top, "OpenLibs", "1.0", "OpenLibs: the startup that loads the open ROM libraries with OS 3.2's LoadModule")
+    # OS 3.2's LoadModule is for Kickstart ROMs: on the OpenKick ROM S:Pre-LoadModule-Startup stopped the boot with
+    # "device not mounted" (Instance-32, 20 October 2026), so OpenUpTool 0.8.7 leaves this part, and the ROM modules'
+    # parts below, out there (as amigachrome's openup_cradle.arm leaves the screen mode out after its OpenKick check)
+    base.line("needs Kickstart")
     base.add("S/OpenLibs-Startup", OPENLIBS_STARTUP.encode("latin-1"), "S:OpenLibs-Startup", own=True)
     base.add("S/Pre-LoadModule-Startup", b"; OpenUp's OpenLibs (Install-OpenUp, page 6)\nExecute S:OpenLibs-Startup\n",
              "S:Pre-LoadModule-Startup", own=True)
@@ -886,6 +930,8 @@ def openlibs_parts(top: Path, a) -> list:
             raise SystemExit(f"OpenLibs: {f} has no {vername} version")
         p = Part(top, f"OpenLibs/{name}", ver, f"OpenLibs: {title}")
         p.lines[0] = f"part OpenLibs-{name} {ver}"
+        if dest.startswith("LIBS:OpenLibs/"):         # a ROM module, loaded by OS 3.2's LoadModule
+            p.line("needs Kickstart")
         p.add(rel, data, dest)
         if name == "input":
             p.add("C/InputProbe", (ol / "input/InputProbe").read_bytes(), "SYS:C/InputProbe")
@@ -999,6 +1045,8 @@ def main() -> int:
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     check_openbrowserlite_pin()            # before hours of building, not after
+    if a.openbrowser:
+        check_openbrowser_pin(a.openbrowser)
     if not a.no_build:
         build_parts(a)
     icons = icon_maker(a.openamigaprint)
@@ -1746,9 +1794,8 @@ def main() -> int:
             run([shutil.which("jlha") or "lha", "xq", src.resolve()], cwd=tmp)
             src = tmp
         ob_root = src / "OpenBrowser" if (src / "OpenBrowser" / "OpenBrowser").is_file() else src
-        bv = re.search(r"OpenBrowser-([0-9.]+)", a.openbrowser.name)
         browser_top = a.out / "companion" / "OpenUp"
-        bp = Part(browser_top, "OpenBrowser", bv.group(1) if bv else "0.5",
+        bp = Part(browser_top, "OpenBrowser", OPENBROWSER["version"],
                   "OpenBrowser: a web browser on WebKit (needs an FPU; best on a 68040)")
         for f in sorted(ob_root.rglob("*")):
             if not f.is_file():
