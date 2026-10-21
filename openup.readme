@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.8.7
+Version:      0.8.8
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -104,7 +104,7 @@ choose:
   board, since 0.8.7): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
-  openrtg.library 0.19, whose Native modes follow the size of AmigaChrome's
+  openrtg.library 0.19.1, whose Native modes follow the size of AmigaChrome's
   window, with opengpu.library 0.16 and the board's driver; an upgrade brings
   it up to date where it is installed and keeps the screen mode you chose.
   Since 0.8.2 OpenUp writes a screen mode only when a new install asks and you
