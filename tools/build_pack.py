@@ -802,7 +802,7 @@ OPENBROWSER = {
     "version": "0.7",
     "commit": "4717764f776034276c3261d4c0df868de4b61bf1",
     "asset": "OpenBrowser-0.7-68040.lha",
-    "sha256": "placeholder: the sha256 of OpenBrowser-0.7-68040.lha built from the commit above",
+    "sha256": "eb85e19b48c365637223365f6f208c31cde811071f37075e1a5c30353b20198c",
     "source": "https://github.com/DalsinAI/openamigabrowser/commit/4717764f776034276c3261d4c0df868de4b61bf1",
 }
 
