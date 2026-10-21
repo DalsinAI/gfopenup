@@ -15,6 +15,10 @@
 (set #machine (getenv "OpenUp/Machine"))
 (set #summary (getenv "OpenUp/Summary"))
 (set #ac (= #machine "AmigaChrome"))
+; 0.8.7: the ROM (OpenUpTool's DETECT reads OpenKickROM's 'OKR1' mark) and where openrtg.library is ("OpenUp": the
+; manifest lists the OpenRTG part; "LIBS": on the disk; "ROM": in the ROM; "": nowhere)
+(set #openkick (= (getenv "OpenUp/ROM") "OpenKick"))
+(set #rtgwhere (getenv "OpenUp/OpenRTG"))
 
 ; Short: the 3.2 Installer's welcome window has room for a few lines above
 ; its user-level buttons. The rest is a message Intermediate users see.
@@ -58,8 +62,12 @@
 ; Up to 0.7.8 the mode came with the libraries on every install; writing it again undid the user's mode and
 ; asked Intuition to reset the Workbench screen while the Installer's window was open, so an upgrade left
 ; OpenRTG unticked and a Novice upgrade never brought a newer openrtg.library.
-(set #rtgwas (and (exists "LIBS:openrtg.library") (exists "ENVARC:OpenAmiga/OpenUp.manifest")))
+; 0.8.7: also where OpenUp's list has the part (LIBS: can name the ROM's copy too), and on the OpenKick ROM with an
+; ACRTG board, where Workbench is on OpenRTG already: there a Novice upgrade left OpenRTG unticked, so
+; Instance-32 stayed at OpenRTG 0.17 under OpenUp 0.8.6, whose part is 0.19.
+(set #rtgwas (or (and (exists "LIBS:openrtg.library") (exists "ENVARC:OpenAmiga/OpenUp.manifest")) (= #rtgwhere "OpenUp")))
 (if #rtgwas (set #default (bitor #default 512)))
+(if (and #openkick (= (getenv "OpenUp/RTG") "ACRTG")) (set #default (bitor #default 512)))
 (if (exists "LIBS:zunemaster.library") (set #default (bitor #default 65536)))
 (if (exists "SYS:Utilities/OpenMail/OpenMail") (set #default (bitor #default 2097152)))
 (if (exists "SYS:Utilities/OpenBrowser/OpenBrowser") (set #default (bitor #default 4194304)))
@@ -119,7 +127,8 @@
         (help "OpenRTG: Workbench on OpenRTG's own 16-bit screen instead of Picasso96's, "
               "on AmigaChrome's graphics board, and its Native modes, which follow the size of "
               "AmigaChrome's window. Picasso96's monitor for that board is put "
-              "aside in SYS:Storage, and Uninstall puts it back. Off unless you pick it; an upgrade "
+              "aside in SYS:Storage, and Uninstall puts it back. Off unless you pick it, but on the "
+              "OpenKick ROM with an ACRTG board, where Workbench is on OpenRTG already; an upgrade "
               "brings it up to date where it is installed. The screen mode stays yours: OpenUp writes "
               "one only when you say Yes to its question.\n\n"
               "OpenWindows: windows snap to edges and to each other, Amiga+Tab switches "
@@ -291,6 +300,9 @@
 ; 2 mathieeedoubbas.library, 4 input.device, 8 OpenRexx. A library switched on already is ticked, so an
 ; upgrade (a Novice one never shows the question) changes nothing; unticking one puts OS 3.2's own back.
 ; OpenRexx is on when LIBS:rexxsyslib.library is 48 or later (OS 3.2's is 47.2).
+; 0.8.7: on the OpenKick ROM utility.library and input.device (OS 3.2's LoadModule, from S:Pre-LoadModule-Startup)
+; are never ticked, and one an earlier OpenUp switched on is taken out: under OpenKick that startup stopped the
+; boot with "device not mounted" (Instance-32, 20 October 2026). Their parts say "needs Kickstart" as well.
 (set #libs0 0)
 (if (exists "LIBS:OpenLibs/utility.module") (set #libs0 (bitor #libs0 1)))
 (if (exists "SYS:Storage/OpenUp-Superseded/LIBS/mathieeedoubbas.library") (set #libs0 (bitor #libs0 2)))
@@ -320,8 +332,14 @@
                  "mathieeedoubbas.library 47.100 (68040 + FPU)"
                  "input.device 50.2 (68020)"
                  "OpenRexx 48: ARexx (68040 + FPU)")
-        (default #libs0)))
+        (default (if #openkick (bitand #libs0 10) #libs0))))
 (set #cpu (database "cpu"))
+(if (and #openkick (bitand (bitor #libs #libs0) 5))
+    (
+        (message "This Amiga runs the OpenKick ROM. utility.library and input.device are loaded by OS 3.2's "
+                 "LoadModule, which is for Kickstart ROMs, so they are left out, and S:Pre-LoadModule-Startup "
+                 "is taken out where OpenUp put it. The ROM's own are used. Nothing else changed.")
+        (set #libs (bitand #libs 10))))
 ; The ROM ones are loaded from S:Pre-LoadModule-Startup. Another program's file there keeps its place, and a
 ; second LoadModule with another set would restart the Amiga for ever, so they are left out then.
 (if (and (bitand #libs 5) (exists "S:Pre-LoadModule-Startup")
@@ -534,7 +552,7 @@
         ; only on Yes (Parts/OpenRTG/Mode). An upgrade never asks: the mode in place stays.
         (if (> (run (cat #tool " INSTALL Parts/OpenRTG >>T:OpenUp.log")) 5)
             (message "OpenRTG didn't install completely. T:OpenUp.log says why.")
-            (if (not #rtgwas)
+            (if (and (not #rtgwas) (not #openkick))
                 (if (askbool
                         (prompt "Put Workbench on OpenRTG's 16-bit screen now?\n\n"
                                 "On the OpenKick ROM it is there already: choose No. On Kickstart 3.2.3 "
@@ -791,7 +809,9 @@
 (set #libchange (<> #libs #libs0))
 (if (exists "Parts/OpenLibs/Part")
     (
-        (if #libs
+        ; the startup (S:OpenLibs-Startup and S:Pre-LoadModule-Startup) only with a ROM module: utility or input
+        ; (0.8.7; up to 0.8.6 with any library, so mathieeedoubbas.library or OpenRexx alone armed it too)
+        (if (bitand #libs 5)
             (
                 (working "Installing OpenLibs")
                 (if (> (run (cat #tool " INSTALL Parts/OpenLibs >>T:OpenUp.log")) 5)
@@ -816,9 +836,9 @@
                 (message "OpenRexx didn't install completely. T:OpenUp.log says why."))
             (if (bitand #libs0 8)
                 (run (cat #tool " REMOVE Parts/OpenLibs/rexx >>T:OpenUp.log"))))
-        (if (and (bitand #libs0 5) (not (bitand #libs 5)))
+        (if (and (and (bitand #libs0 5) (not (bitand #libs 5))) (not #openkick))
             (run "C:LoadModule REMOVE NOREBOOT >>T:OpenUp.log"))
-        (if (and (not #libs) #libs0)
+        (if (and (not (bitand #libs 5)) (exists "S:OpenLibs-Startup"))
             (run (cat #tool " REMOVE Parts/OpenLibs >>T:OpenUp.log")))
         (if #libchange
             (message "The open libraries change at the next start. With utility.library or "

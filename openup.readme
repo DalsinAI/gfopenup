@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.8.0
+Version:      0.8.7
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -25,8 +25,9 @@ choose:
 - Backgrounds: a theme's desktop as Workbench's backdrop, for your screen
   (Open, Glass, Graphite, Ember, Clear or Sky). Since 0.8.2 that is all OpenUp
   changes of Workbench's look: the rest is the OS's own, or the OpenKick ROM's,
-  and an upgrade takes out the look files an earlier OpenUp wrote (OpenLook,
-  its theme, Font and IControl prefs) where you haven't changed them;
+  and an upgrade takes out the look files an earlier OpenUp wrote (OpenLook
+  and its theme) where you haven't changed them. Your Font and IControl prefs
+  stay as they are (0.8.7);
 - OpenTypes: which program opens each kind of file (SYS:Prefs/OpenTypes);
 - OpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
   gzip, from its window in SYS:Utilities or from the Shell;
@@ -99,11 +100,12 @@ choose:
   (version 19, MUI 3.8's) that passes every call to Zune, so MUI programs
   run; a MUI you installed is never touched, and the uninstaller removes the
   face;
-- OpenRTG (new, off unless picked): Workbench on OpenRTG's own 16-bit screen
+- OpenRTG (new, off unless picked; ticked on the OpenKick ROM with an ACRTG
+  board, since 0.8.7): Workbench on OpenRTG's own 16-bit screen
   on AmigaChrome's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
-  openrtg.library 0.17, whose Native modes follow the size of AmigaChrome's
-  window, with opengpu.library 0.15 and the board's driver; an upgrade brings
+  openrtg.library 0.19, whose Native modes follow the size of AmigaChrome's
+  window, with opengpu.library 0.16 and the board's driver; an upgrade brings
   it up to date where it is installed and keeps the screen mode you chose.
   Since 0.8.2 OpenUp writes a screen mode only when a new install asks and you
   say Yes (on the OpenKick ROM Workbench is on that screen by itself);
@@ -196,7 +198,9 @@ choose:
   rexxsyslib.library and rexxsupport.library (a 68040 or 68060 with its
   FPU; OS 3.2's RexxMast and Rexxc commands work with them). The ROM ones are loaded by OS 3.2's
   own LoadModule, so the Amiga restarts once by itself as it starts;
-  unticking one puts OS 3.2's own back.
+  unticking one puts OS 3.2's own back. On the OpenKick ROM, which has its
+  own, those two are left out (0.8.7), and an S:Pre-LoadModule-Startup an
+  earlier OpenUp wrote there is taken out.
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,
