@@ -790,18 +790,20 @@ def openbrowserlite_files(archive: Path | None) -> dict:
 # from openamigabrowser's main at "commit", built and packed on the home PC (about 100 MB; scripts/build-webcore.sh
 # and build-openbrowser.sh need the OAB_DEPS prefix, which only that machine has), so it is pinned by the commit and
 # by the sha256 of the archive made from it, as OpenBrowser Lite's is by its release. There is no GitHub release of
-# 0.6 yet. Until the archive's sha256 is put here, "sha256" is the placeholder and --openbrowser stops, printing the
+# it. Until the archive's sha256 is put here, "sha256" is the placeholder and --openbrowser stops, printing the
 # archive's sha256 (the pack itself, without --openbrowser, is not held up):
-#   1. in an openamigabrowser checkout at "commit": build the engine and the browser as for 0.5 and pack the drawer
-#      OpenBrowser/ (the program, its Libs/, readme and licences) as OpenBrowser-0.6-68040.lha;
-#   2. sha256sum OpenBrowser-0.6-68040.lha, and put that in "sha256" below;
-#   3. python3 tools/build_pack.py ... --openbrowser /path/to/OpenBrowser-0.6-68040.lha --lha
+#   1. in an openamigabrowser checkout at "commit": build the engine and the browser and pack the drawer
+#      OpenBrowser/ (the program, its Libs/, readme and licences) as OpenBrowser-<version>-68040.lha;
+#   2. sha256sum that archive, and put it in "sha256" below;
+#   3. python3 tools/build_pack.py ... --openbrowser /path/to/OpenBrowser-<version>-68040.lha --lha
+# 0.7 (OpenUp 0.8.8): 4717764 is 137cd2f (OpenBrowser 0.7, WebKit patches 0001-0035) with only a lab script changed
+# after it (#44), so the engine is the same.
 OPENBROWSER = {
-    "version": "0.6",
-    "commit": "12a7380de1de314208fb176b809d07974a5a0525",
-    "asset": "OpenBrowser-0.6-68040.lha",
-    "sha256": "2f697d1e0f5ed5667c9e17e403e436c1afdc3dd07ace918469143f8b8b269483",
-    "source": "https://github.com/DalsinAI/openamigabrowser/commit/12a7380de1de314208fb176b809d07974a5a0525",
+    "version": "0.7",
+    "commit": "4717764f776034276c3261d4c0df868de4b61bf1",
+    "asset": "OpenBrowser-0.7-68040.lha",
+    "sha256": "placeholder: the sha256 of OpenBrowser-0.7-68040.lha built from the commit above",
+    "source": "https://github.com/DalsinAI/openamigabrowser/commit/4717764f776034276c3261d4c0df868de4b61bf1",
 }
 
 
