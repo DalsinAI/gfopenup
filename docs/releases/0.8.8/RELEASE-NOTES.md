@@ -3,7 +3,7 @@
 OpenBrowser 0.7 as the companion, and OpenRTG with a version C:Version can read.
 
 - **OpenBrowser companion 0.7.** `--openbrowser` takes only the archive pinned in `OPENBROWSER`: OpenBrowser 0.7 from
-  openamigabrowser 4717764 (0.7's version string, #43, with only a lab script after it). Over 0.6 (12a7380) it adds
+  openamigabrowser d41a340 (0.7's version string, #43, with only a lab script after it). Over 0.6 it adds
   WebKit patches 0033-0035 and the engine's idle quit:
   - 0033: each JavaScript thread keeps its own 68k interpreter registers, so a web worker no longer corrupts the
     main thread's. reddit loads again (it stopped about 50 s in, when reCAPTCHA started its worker).
