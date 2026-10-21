@@ -796,14 +796,14 @@ def openbrowserlite_files(archive: Path | None) -> dict:
 #      OpenBrowser/ (the program, its Libs/, readme and licences) as OpenBrowser-<version>-68040.lha;
 #   2. sha256sum that archive, and put it in "sha256" below;
 #   3. python3 tools/build_pack.py ... --openbrowser /path/to/OpenBrowser-<version>-68040.lha --lha
-# 0.7 (OpenUp 0.8.8): 4717764 is 137cd2f (OpenBrowser 0.7, WebKit patches 0001-0035) with only a lab script changed
+# 0.7 (OpenUp 0.8.8): d41a340 is 7530314 (OpenBrowser 0.7, WebKit patches 0001-0035) with only a lab script changed
 # after it (#44), so the engine is the same.
 OPENBROWSER = {
     "version": "0.7",
-    "commit": "4717764f776034276c3261d4c0df868de4b61bf1",
+    "commit": "d41a340e4bf0711022587007948d26c6b65c1e8e",
     "asset": "OpenBrowser-0.7-68040.lha",
     "sha256": "eb85e19b48c365637223365f6f208c31cde811071f37075e1a5c30353b20198c",
-    "source": "https://github.com/DalsinAI/openamigabrowser/commit/4717764f776034276c3261d4c0df868de4b61bf1",
+    "source": "https://github.com/DalsinAI/openamigabrowser/commit/d41a340e4bf0711022587007948d26c6b65c1e8e",
 }
 
 
