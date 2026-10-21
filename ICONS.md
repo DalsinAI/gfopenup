@@ -31,6 +31,20 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 | Look | Window of swatches, brush | Brush dips into the red, swatch chosen |
 | Windows | Three windows stacked | Front window slides out and goes active |
 | OpenTypes | Documents, arrow to a program | Arrow moves on |
+| OpenPrefs | A cog over a panel of sliders | The cog turns, a knob slides on |
+| OpenScreenMode | A monitor showing a screen | The screen grows to the overscan corners |
+| OpenPointer | The pointer | It leans over, a busy clock beside it |
+| OpenFonts | A big A and a small one on a sheet | The small one grows |
+| OpenColours | A palette of the screen's pens | One pen is picked out |
+| OpenBackdrops | A window over a tiled backdrop | The pattern becomes a picture |
+| OpenWorkbench | A drawer, two icons on it | An icon lifts out |
+| OpenFileRequesters | A file requester's list | The choice moves down a row |
+| OpenInput (Mouse and keys) | A mouse beside a key | The left button and the key pressed |
+| OpenDateTime | A calendar page and a clock | Hands move on, the next day marked |
+| OpenSerial | A serial plug and its lead | Bits run along the lead |
+| OpenSystem | A chip on a board | Its light comes on |
+| OpenBlanker | A monitor with a window | It blanks to stars |
+| OpenIControl | Two screens and the Amiga key | The front screen is dragged down |
 | OpenUp-Setup | Box and wand | Star flares and sparkles |
 | ZuneTest | A window of gadgets | A gadget pressed |
 | OpenMonitor | Monitor: the CPU's and GPU's graphs over the cores' bars, a meter at its foot | The load climbs: graphs up, cores full, the needle in the red |
