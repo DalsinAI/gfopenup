@@ -798,10 +798,10 @@ def openbrowserlite_files(archive: Path | None) -> dict:
 #   3. python3 tools/build_pack.py ... --openbrowser /path/to/OpenBrowser-0.6-68040.lha --lha
 OPENBROWSER = {
     "version": "0.6",
-    "commit": "940a807d0ce95b0dc36c5c3b9131519c4994566a",
+    "commit": "12a7380de1de314208fb176b809d07974a5a0525",
     "asset": "OpenBrowser-0.6-68040.lha",
-    "sha256": "PLACEHOLDER: the sha256 of OpenBrowser-0.6-68040.lha built from commit 940a807 (see above)",
-    "source": "https://github.com/DalsinAI/openamigabrowser/commit/940a807d0ce95b0dc36c5c3b9131519c4994566a",
+    "sha256": "2f697d1e0f5ed5667c9e17e403e436c1afdc3dd07ace918469143f8b8b269483",
+    "source": "https://github.com/DalsinAI/openamigabrowser/commit/12a7380de1de314208fb176b809d07974a5a0525",
 }
 
 

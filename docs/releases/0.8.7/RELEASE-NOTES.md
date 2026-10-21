@@ -15,7 +15,7 @@ Three fixes from installing 0.8.6 on Instance-32, which runs the OpenKick ROM.
   an ACRTG board, where Workbench runs on OpenRTG already. A Novice install then brings the pack's openrtg.library
   0.19 instead of leaving 0.17. On OpenKick the Installer doesn't ask about the screen mode.
 - **OpenBrowser companion.** `--openbrowser` takes only the archive pinned in `OPENBROWSER`: OpenBrowser 0.6 from
-  openamigabrowser 940a807. That archive is built on the home PC, and its sha256 is put in the pin before the
-  companion is made.
+  openamigabrowser 12a7380 (WebKit patches 0001-0032: the 68k JavaScript JIT, the HTTP disk cache, XML through
+  OXP), archive sha256 2f697d1e…
 - OpenUpTool 0.8.7. Every other part is at its repository's main, as in 0.8.6. OpenBrowser Lite (v0.4.1) and
   OpenAmigaPython (v2.7.18-ac3) stay pinned to their latest releases.
