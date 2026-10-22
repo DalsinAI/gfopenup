@@ -441,7 +441,8 @@ def build_parts(a):
         run(["sh", a.openamigamesa / "demos/build.sh"],
             env=dict(os.environ, RTG=str(a.openamigartg), CROSS="mesa/cross/m68k-amigaos.ini", GL_OUT=str(gl_out),
                      PATH=f"{stove16 / 'bin'}:{os.environ['PATH']}"))
-    run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
+    # OpenFiles' zlib is our openzlib, from the guest checkout (GUEST), not a libz.a beside it
+    run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest)))
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamui / "os3/build.sh"], env=env)
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
