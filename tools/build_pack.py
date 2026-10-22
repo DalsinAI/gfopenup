@@ -6,7 +6,7 @@ archive (DESIGN.md sections 3 and 4).
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
         [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR]
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
-        [--openamigaedit DIR] [--openamigawrite DIR] [--zlib DIR]
+        [--openamigaedit DIR] [--openamigawrite DIR] [--openamigalayout DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
         [--openamigasocket DIR] [--openamigabench DIR] [--openamigapython FILE]
@@ -120,7 +120,8 @@ a Part file that C/OpenUpTool reads:
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenDrawer/           OpenDrawer, the drawer windows of the Team's own Workbench, beside the OS's
                         Workbench, in SYS:Utilities; off by default (opengadtools workbench/)
-  OpenWrite/            OpenWrite 1.0.2, the word processor, and C:OWConvert (openamigawrite)
+  OpenWrite/            OpenWrite, the word processor, C:OWConvert, and z.library, ours, for its DOCX
+                        and ODT (openamigawrite, openamigalayout; amigachrome-guest's openzlib)
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
   OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (openamigamulticore)
@@ -446,8 +447,11 @@ def build_parts(a):
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamui / "os3/build.sh"], env=env)
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
-    # OpenWrite carries its own OpenGadTools copy; DOCX and ODT need zlib's source (--zlib)
-    run(["sh", a.openamigawrite / "build-os3.sh"], env=dict(env, ZLIB_SRC=str(a.zlib)))
+    # OpenWrite carries its own OpenGadTools copy and needs GCC 16 (its build-os3.sh stops on the os32
+    # stove's 6.5); its pages are OpenLayout's. DOCX and ODT go through z.library (openzlib, below), so
+    # there is no zlib source in the build
+    run(["sh", a.openamigawrite / "build-os3.sh"],
+        env=dict(env, OS32_GCC16=gcc16_root, OPENLAYOUT_SRC=str(a.openamigalayout)))
     # OpenMail: GCC 16 (its build-os3.sh's own default), TLS through OpenTLS, whose headers it carries
     run(["sh", a.openamigamail / "build-os3.sh"], env=dict(env, STOVE=gcc16_root))
     # openmulticore.library with the os32 stove, as its build.sh says (built with
@@ -501,6 +505,9 @@ def build_parts(a):
     # OpenRexx (amigachrome-guest libraries/openrexx, its default os32-gcc16 stove): rexxsyslib.library,
     # rexxsupport.library and RexxMast
     run(["sh", g / "openrexx/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openrexx")))
+    # z.library 53.12 (amigachrome-guest libraries/openzlib, GCC 16): OpenWrite's, which opens it when a
+    # document first needs deflate or inflate
+    run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
     # softfpu.library (amigachrome-guest libraries/opensoftfpu, its default os32-gcc16 stove): the OpenUp part's
     run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
     if a.openamigainput:
@@ -1019,8 +1026,8 @@ def main() -> int:
     ap.add_argument("--openamigamail", type=Path, default=first(DEV / "openamigamail", DEV.parent / "openamigamail"))
     ap.add_argument("--openbrowser", type=Path, help="a built OpenBrowser release (.lha or its unpacked folder): "
                     "makes OpenUp-<version>-OpenBrowser.lha beside the pack")
-    ap.add_argument("--zlib", type=Path, help="zlib 1.3 source for OpenWrite's DOCX and ODT (Chromium's, as the 1.0 release)",
-                    default=first(DEV / "webkit-os32/deps/src/zlib", Path(os.environ.get("ZLIB_SRC", "/nonexistent"))))
+    ap.add_argument("--openamigalayout", type=Path, default=first(DEV / "openamigalayout", DEV.parent / "openamigalayout"),
+                    help="openamigalayout, OpenWrite's pages (OpenLayout)")
     ap.add_argument("--openamigamesa", type=Path, default=first(DEV / "openamigamesa", DEV.parent / "openamigamesa"),
                     help="openamigamesa, for the OpenDemos part (left out without it)")
     ap.add_argument("--openamigatls", type=Path, default=first(DEV / "openamigatls", DEV.parent / "openamigatls"),
@@ -1057,7 +1064,7 @@ def main() -> int:
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
                  "openamigaimage", "openamigartg", "openamigafilemanager", "openamigamediaplayer",
-                 "openamigamui", "openamigaedit", "openamigawrite", "zlib"):
+                 "openamigamui", "openamigaedit", "openamigawrite", "openamigalayout"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     check_openbrowserlite_pin()            # before hours of building, not after
@@ -1711,7 +1718,8 @@ def main() -> int:
 
     # OpenWrite: the word processor (openamigawrite), as its 1.0 release lays it
     # out: a drawer, with the dictionary beside the program, where it looks
-    # (PROGDIR:Dictionaries), and OWConvert in C: for scripts
+    # (PROGDIR:Dictionaries), and OWConvert in C: for scripts. Both open
+    # LIBS:z.library (openzlib) for DOCX and ODT, so it comes with them
     ow_src = a.openamigawrite
     ob = ow_src / "build/os3"
     wr = Part(top, "OpenWrite", "2.0.1", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
@@ -1728,6 +1736,7 @@ def main() -> int:
         wr.add(f"Utilities/OpenWrite/licenses/{lic.name}", lic.read_bytes(), f"SYS:Utilities/OpenWrite/licenses/{lic.name}")
     wr.add("Utilities/OpenWrite.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/OpenWrite.info", own=True)
     wr.add("C/OWConvert", (ob / "OWConvert").read_bytes(), "SYS:C/OWConvert")
+    wr.add("Libs/z.library", (ROOT / "build/openzlib/libs/z.library").read_bytes(), "LIBS:z.library")
     wr.write()
 
     # OpenMUI: zunemaster.library, MUI from Zune for OS 3.x (openamigamui), a
