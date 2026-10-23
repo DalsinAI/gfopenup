@@ -1275,13 +1275,20 @@ def main() -> int:
     packer = a.opendatatypes / "tools/build_pack.py"
     if packer.is_file():
         pk = ROOT / "build/opendatatypes"
-        run([sys.executable, packer, "--no-build", "--out", pk, "--library-out", pk / "no-library"])
+        run([sys.executable, packer, "--no-build", "--out", pk, "--library-out", pk / "no-library",
+             "--zlib-out", ROOT / "build/openzlib"])
         man = json.loads((pk / "OpenDatatypes.json").read_text())
         for c in man["choices"] + man["always"]:
             for f in c["files"]:
                 name = f["dest"].rsplit("/", 1)[-1]
                 img.add(f["pack"], (pk / "OpenDatatypes" / f["pack"]).read_bytes(), f["dest"],
                         own=not f["pack"].startswith("Classes/") or name in ("webp.datatype", "webm.datatype"))
+        # z.library is the Team's OpenZlib (the user, 23 October 2026), the same file OpenWrite's part carries:
+        # gzip.datatype and openpng.datatype open it, so it comes with them too. The pack lists it under "zlib"
+        # when it was built (opendatatypes builds it from the guest checkout).
+        if man.get("zlib"):
+            zl = man["zlib"]["files"][0]
+            img.add(zl["pack"], (pk / "OpenDatatypes" / zl["pack"]).read_bytes(), zl["dest"])
     else:
         dt = a.opendatatypes / "Datatypes/out"
         for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
