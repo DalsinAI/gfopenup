@@ -4,7 +4,7 @@ archive (DESIGN.md sections 3 and 4).
 
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
-        [--guest DIR] [--openamigaservice DIR] [--openamigaimage DIR] [--openamigartg DIR]
+        [--guest DIR] [--openamigaservice DIR] [--opendatatypes DIR] [--openamigartg DIR]
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--openamigawrite DIR] [--openamigalayout DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
@@ -44,7 +44,7 @@ a Part file that C/OpenUpTool reads:
                         paired Cradles (openamigaservice)
   OpenImage/            datatypes: PNG, Targa (TGA), WebP, WebM and music modules (MOD,
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
-                        through OpenService (openamigaimage)
+                        through OpenService (opendatatypes)
   OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
   OpenPrefs/            OpenPrefs, every editor of ours as a section of one program
                         (SYS:Prefs/OpenPrefs), its small body C:OpenPrefs (the boot's one
@@ -431,7 +431,7 @@ def build_parts(a):
         run(["sh", a.openamigasocket / "tools/actcptools/build.sh", so_out], env=dict(env, STOVE=str(STOVE)))
     run(["sh", a.openamigacompress / "build-os3.sh"], env=env)
     run(["sh", a.openamigaservice / "build.sh"], env=dict(os.environ))   # its own compiler (os32-gcc16)
-    run(["sh", a.openamigaimage / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
+    run(["sh", a.opendatatypes / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
     run(["sh", a.openamigartg / "library/build.sh"], env=env)   # also Warp3D and, with the GCC 16 stove, SDL2.module
     run(["sh", a.openamigartg / "tools/build.sh"], env=env)     # OpenGPUCheck
     # GL.module (Mesa) with the GCC 16 stove, which its script puts first on PATH; then OpenDemos on it
@@ -1013,7 +1013,9 @@ def main() -> int:
     ap.add_argument("--openamigaprefs", type=Path, default=first(DEV / "openamigaprefs"))
     ap.add_argument("--openamigacompress", type=Path, default=first(DEV / "openamigacompress"))
     ap.add_argument("--openamigaservice", type=Path, default=first(DEV / "openamigaservice", DEV.parent / "openamigaservice"))
-    ap.add_argument("--openamigaimage", type=Path, default=first(DEV / "openamigaimage", DEV.parent / "openamigaimage"))
+    ap.add_argument("--opendatatypes", "--openamigaimage", dest="opendatatypes", type=Path,
+                    default=first(DEV / "opendatatypes", DEV.parent / "opendatatypes"),
+                    help="opendatatypes, for the OpenImage part's datatypes (every datatype has lived there since 23 October 2026; --openamigaimage is the old name of this option)")
     ap.add_argument("--openamigartg", type=Path, default=first(DEV / "openamigartg", DEV.parent / "openamigartg"))
     ap.add_argument("--openamigafilemanager", type=Path,
                     default=first(DEV / "openamigafilemanager", DEV.parent / "openamigafilemanager"))
@@ -1063,7 +1065,7 @@ def main() -> int:
     ap.add_argument("--lha", action="store_true", help="also make OpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
-                 "openamigaimage", "openamigartg", "openamigafilemanager", "openamigamediaplayer",
+                 "opendatatypes", "openamigartg", "openamigafilemanager", "openamigamediaplayer",
                  "openamigamui", "openamigaedit", "openamigawrite", "openamigalayout"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
@@ -1255,7 +1257,7 @@ def main() -> int:
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
     sv.write()
 
-    # OpenImage: datatypes (openamigaimage). PNG, Targa (opentga.datatype), WebP, WebM and music modules
+    # OpenImage: datatypes (opendatatypes). PNG, Targa (opentga.datatype), WebP, WebM and music modules
     # (openmodule.datatype: MOD, MED, Oktalyzer, DigiBooster, XM, S3M, IT,
     # played by libxmp on the Amiga itself) decode on the 68k; the rest ask
     # media.decode/1 or doc.render/1 through OpenService. Every class and
@@ -1264,14 +1266,37 @@ def main() -> int:
     # stays: ours only go where nothing is or where OpenUp put them (so a
     # newer pack updates them), and a machine without a Cradle keeps what it
     # had. Their own classes have names nobody else uses.
-    dt = a.openamigaimage / "Datatypes/out"
+    # The files are the OpenDatatypes pack's (opendatatypes' tools/build_pack.py, the user's word of 23 October
+    # 2026: "OpenUp uses the pack"), laid out by it from what Datatypes/build.sh made and read from its manifest, so
+    # OpenImage and the pack never differ. Its datatypes.library and system classes stay out: an open library goes
+    # in OpenLibs, off by default, once its ABI test is clean (below). A checkout without the pack builder yet
+    # gives Datatypes/out as before.
     img = Part(top, "OpenImage", "0.4", "OpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
-    for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
-        img.add(f"Classes/DataTypes/{c.name}", c.read_bytes(), f"SYS:Classes/DataTypes/{c.name}",
-                own=c.name in ("webp.datatype", "webm.datatype"))
-    for d in sorted((dt / "Devs/DataTypes").iterdir()):
-        if d.is_file() and not d.name.endswith(".info"):
-            img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", own=True)
+    packer = a.opendatatypes / "tools/build_pack.py"
+    if packer.is_file():
+        pk = ROOT / "build/opendatatypes"
+        run([sys.executable, packer, "--no-build", "--out", pk, "--library-out", pk / "no-library",
+             "--zlib-out", ROOT / "build/openzlib"])
+        man = json.loads((pk / "OpenDatatypes.json").read_text())
+        for c in man["choices"] + man["always"]:
+            for f in c["files"]:
+                name = f["dest"].rsplit("/", 1)[-1]
+                img.add(f["pack"], (pk / "OpenDatatypes" / f["pack"]).read_bytes(), f["dest"],
+                        own=not f["pack"].startswith("Classes/") or name in ("webp.datatype", "webm.datatype"))
+        # z.library is the Team's OpenZlib (the user, 23 October 2026), the same file OpenWrite's part carries:
+        # gzip.datatype and openpng.datatype open it, so it comes with them too. The pack lists it under "zlib"
+        # when it was built (opendatatypes builds it from the guest checkout).
+        if man.get("zlib"):
+            zl = man["zlib"]["files"][0]
+            img.add(zl["pack"], (pk / "OpenDatatypes" / zl["pack"]).read_bytes(), zl["dest"])
+    else:
+        dt = a.opendatatypes / "Datatypes/out"
+        for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
+            img.add(f"Classes/DataTypes/{c.name}", c.read_bytes(), f"SYS:Classes/DataTypes/{c.name}",
+                    own=c.name in ("webp.datatype", "webm.datatype"))
+        for d in sorted((dt / "Devs/DataTypes").iterdir()):
+            if d.is_file() and not d.name.endswith(".info"):
+                img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", own=True)
     img.write()
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
