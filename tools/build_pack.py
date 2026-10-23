@@ -1266,14 +1266,30 @@ def main() -> int:
     # stays: ours only go where nothing is or where OpenUp put them (so a
     # newer pack updates them), and a machine without a Cradle keeps what it
     # had. Their own classes have names nobody else uses.
-    dt = a.opendatatypes / "Datatypes/out"
+    # The files are the OpenDatatypes pack's (opendatatypes' tools/build_pack.py, the user's word of 23 October
+    # 2026: "OpenUp uses the pack"), laid out by it from what Datatypes/build.sh made and read from its manifest, so
+    # OpenImage and the pack never differ. Its datatypes.library and system classes stay out: an open library goes
+    # in OpenLibs, off by default, once its ABI test is clean (below). A checkout without the pack builder yet
+    # gives Datatypes/out as before.
     img = Part(top, "OpenImage", "0.4", "OpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
-    for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
-        img.add(f"Classes/DataTypes/{c.name}", c.read_bytes(), f"SYS:Classes/DataTypes/{c.name}",
-                own=c.name in ("webp.datatype", "webm.datatype"))
-    for d in sorted((dt / "Devs/DataTypes").iterdir()):
-        if d.is_file() and not d.name.endswith(".info"):
-            img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", own=True)
+    packer = a.opendatatypes / "tools/build_pack.py"
+    if packer.is_file():
+        pk = ROOT / "build/opendatatypes"
+        run([sys.executable, packer, "--no-build", "--out", pk, "--library-out", pk / "no-library"])
+        man = json.loads((pk / "OpenDatatypes.json").read_text())
+        for c in man["choices"] + man["always"]:
+            for f in c["files"]:
+                name = f["dest"].rsplit("/", 1)[-1]
+                img.add(f["pack"], (pk / "OpenDatatypes" / f["pack"]).read_bytes(), f["dest"],
+                        own=not f["pack"].startswith("Classes/") or name in ("webp.datatype", "webm.datatype"))
+    else:
+        dt = a.opendatatypes / "Datatypes/out"
+        for c in sorted((dt / "Classes/DataTypes").glob("*.datatype")):
+            img.add(f"Classes/DataTypes/{c.name}", c.read_bytes(), f"SYS:Classes/DataTypes/{c.name}",
+                    own=c.name in ("webp.datatype", "webm.datatype"))
+        for d in sorted((dt / "Devs/DataTypes").iterdir()):
+            if d.is_file() and not d.name.endswith(".info"):
+                img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", own=True)
     img.write()
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
