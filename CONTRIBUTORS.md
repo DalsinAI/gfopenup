@@ -23,7 +23,7 @@ MIT licence (`LICENSE`).
 `tools/build_pack.py` builds each part of the pack with its own repository's
 scripts: DalsinAI/amigachrome (OpenSocket, ACBuild's icon writer),
 amigachrome-guest, openamigaprint, opengadtools, openamigaprefs,
-openamigacompress, openamigaservice, openamigaimage, openamigartg,
+openamigacompress, openamigaservice, opendatatypes, openamigartg,
 openamigafilemanager, openamigamediaplayer and openamigamui. Each of those
 credits its own third-party work.
 
