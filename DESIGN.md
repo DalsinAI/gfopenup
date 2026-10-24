@@ -33,7 +33,12 @@ PiStorm (Emu68), in an AmigaChrome instance, and on the appliance.
 - OpenGadTools' classes and the look;
 - OpenPrint and OpenView, OpenTypes, OpenCompress, OpenMail, and OpenBrowser
   when it's ready;
-- the SDL and Mesa runtime libraries.
+- the SDL and Mesa runtime libraries;
+- the Shell's font: DejaVu Sans Mono in `FONTS:` as Amiga bitmap fonts, 12
+  to 20 pixels high (openamigafont's `fonts/amiga`), made the system default
+  text at a size for the screen where there are no Font prefs yet
+  (`OpenUpTool SHELLFONT`, 24 October 2026). Only that entry is written: the
+  screens' and the icons' text stay the ROM's or the OS's own.
 
 TLS is OpenTLS's (opentls.library, with OpenCrypto): OpenMail, OpenFTP's
 FTPS, OpenPrint's IPPS and httpget use it, and the pack doesn't look for
