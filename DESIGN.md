@@ -38,7 +38,8 @@ PiStorm (Emu68), in an AmigaChrome instance, and on the appliance.
   to 24 pixels high (openamigafont's `fonts/amiga`), for Font prefs' System
   Default Text (24 October 2026). The OpenKick ROM carries the 11 and makes
   it the system default text where no Font prefs name one; OpenUp writes no
-  Font prefs.
+  Font prefs. [docs/shell-font.png](docs/shell-font.png): the Shell in topaz 8,
+  in the 12 from Font prefs, and in the ROM's 11 on its dark background.
 
 TLS is OpenTLS's (opentls.library, with OpenCrypto): OpenMail, OpenFTP's
 FTPS, OpenPrint's IPPS and httpget use it, and the pack doesn't look for
