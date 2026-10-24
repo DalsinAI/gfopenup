@@ -88,7 +88,9 @@ struct Library *UtilityBase;
 #define PRI_WAIT 4                  /* waiting for a hotkey: answered at once while a program is busy */
 #define PRI_SAVE 0                  /* encoding and saving: no more than any other program */
 #ifndef PNG_LEVEL
-#define PNG_LEVEL -1                /* z.library's deflate level: its default */
+/* z.library's quickest deflate: in the lab (a 68040 on a busy PC) a 1920 x 1200 Workbench took 2.5 s at 1,
+ * 3.5 s at 3 and 5.7 s at the default, 6, and its PNG was 23% bigger at 1 than at 6 */
+#define PNG_LEVEL 1
 #endif
 
 static struct {
@@ -271,26 +273,30 @@ static const char *read_pixels(struct Screen *scr, LONG x, LONG y, ULONG w, ULON
         InitRastPort(&rp);
         rp.BitMap = bm;
         /* the GPU's drawing is done before the pixels come back (OpenRTG's ReadPixels waits for it) */
-        ReadPixelArray(s->argb, 0, 0, (UWORD)(w * 4), &rp, (UWORD)x, (UWORD)y, (UWORD)w, (UWORD)h, RECTFMT_ARGB);
+        if (!ReadPixelArray(s->argb, 0, 0, (UWORD)(w * 4), &rp, (UWORD)x, (UWORD)y, (UWORD)w, (UWORD)h, RECTFMT_ARGB))
+            return "the screen's pixels couldn't be read";
         if (depth <= 8) {
-            /* a screen with a palette: each colour back to its pen, for an ILBM with a CMAP */
+            /* a screen with a palette: each colour back to its pen, for an ILBM with a CMAP; the last pen of
+             * each of 1024 colours is kept, so a dithered picture doesn't search the palette for every pixel */
             uint32_t *pal = p->palette;
             ULONG n = 1UL << depth;
+            ULONG *seen = AllocVec(1024 * 2 * sizeof(ULONG), MEMF_ANY);
             palette_of(vp, n, pal);
-            if ((s->pens = AllocVec(w * h, MEMF_ANY))) {
-                ULONG last = 0xFFFFFFFF, lastpen = 0;
+            if (seen && (s->pens = AllocVec(w * h, MEMF_ANY))) {
+                for (i = 0; i < 1024; i++) seen[2 * i] = 0xFFFFFFFF;
                 for (i = 0; i < w * h; i++) {
-                    ULONG c = s->argb[i] & 0xFFFFFF, k;
-                    if (c != last) {
+                    ULONG c = s->argb[i] & 0xFFFFFF, slot = ((c >> 14) ^ (c >> 4) ^ c) & 1023, k;
+                    if (seen[2 * slot] != c) {
                         for (k = 0; k < n && (pal[k] & 0xFFFFFF) != c; k++) ;
                         if (k == n) break;                /* a colour not in the palette: keep it truecolour */
-                        last = c; lastpen = k;
+                        seen[2 * slot] = c; seen[2 * slot + 1] = k;
                     }
-                    s->pens[i] = (uint8_t)lastpen;
+                    s->pens[i] = (uint8_t)seen[2 * slot + 1];
                 }
                 if (i == w * h) { p->planes = depth ? depth : 8; p->pens = s->pens; }
                 else { FreeVec(s->pens); s->pens = NULL; }
             }
+            if (seen) FreeVec(seen);
         }
         for (i = 0; i < w * h; i++) s->argb[i] |= 0xFF000000;
         if (!p->planes) p->argb = s->argb;
@@ -307,9 +313,14 @@ static const char *read_pixels(struct Screen *scr, LONG x, LONG y, ULONG w, ULON
         for (yy = 0; yy < h; yy++) {
             uint8_t *out = s->pens + yy * w;
             for (d = 0; d < depth; d++) {
-                const UBYTE *row = (const UBYTE *)bm->Planes[d] + (y + yy) * bm->BytesPerRow;
+                const UBYTE *row;
                 uint8_t bit = (uint8_t)(1 << d);
-                if (!bm->Planes[d]) continue;
+                if (!bm->Planes[d]) continue;                 /* a plane of 0s */
+                if (bm->Planes[d] == (PLANEPTR)-1) {          /* a plane of 1s */
+                    for (xx = 0; xx < w; xx++) out[xx] |= bit;
+                    continue;
+                }
+                row = (const UBYTE *)bm->Planes[d] + (y + yy) * bm->BytesPerRow;
                 for (xx = 0; xx < w && x + xx < bw; xx++)
                     if (row[(x + xx) >> 3] & (0x80 >> ((x + xx) & 7))) out[xx] |= bit;
             }
@@ -565,13 +576,14 @@ static void snap(int kind, struct timerequest *tr)
     }
     Amiga2Date(ds.ds_Days * 86400 + ds.ds_Minute * 60 + ds.ds_Tick / TICKS_PER_SECOND, &cd);
 
-    /* the ILBM: for the clipboard, and the file when there is no PNG */
-    if ((ilbm = AllocVec(osp_ilbm_max(&s.pic), MEMF_ANY)) && (row = AllocVec(osp_rowbytes(s.pic.w) + 4, MEMF_ANY)))
-        ilbmsize = osp_ilbm(&s.pic, ilbm, row);
-    lap("ILBM");
     png = encode_png(&s, &pngsize);
     lap(png ? "PNG" : "no PNG");
     asiff = !png;
+    /* the ILBM: for the clipboard, and the file when there is no PNG */
+    if ((set.clipboard || asiff) && (ilbm = AllocVec(osp_ilbm_max(&s.pic), MEMF_ANY))
+        && (row = AllocVec(osp_rowbytes(s.pic.w) + 4, MEMF_ANY)))
+        ilbmsize = osp_ilbm(&s.pic, ilbm, row);
+    lap("ILBM");
 
     if (!make_drawer(set.drawer)) {
         cant_save(set.drawer);

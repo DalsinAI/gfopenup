@@ -1,6 +1,6 @@
-/* Host test of src/opensnap_pic.h, OpenSnap's ILBM writer, HAM and Extra Half-Brite colours and file names.
+/* Host test of src/opensnap/opensnap_pic.h, OpenSnap's ILBM writer, HAM and Extra Half-Brite colours and file names.
  *
- *   cc -std=c99 -Wall -Werror -Isrc tests/test_opensnap_pic.c -o test_opensnap_pic && ./test_opensnap_pic
+ *   cc -std=c99 -Wall -Werror -Isrc/opensnap tests/test_opensnap_pic.c -o test_opensnap_pic && ./test_opensnap_pic
  *
  * Every ILBM it writes is read back here by a reader of its own (FORM, BMHD, CMAP, CAMG, BODY, ByteRun1
  * unpacked) and compared pixel for pixel. tests/test_build_pack.py runs it.
