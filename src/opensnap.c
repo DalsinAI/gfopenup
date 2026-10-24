@@ -87,6 +87,9 @@ struct Library *UtilityBase;
 #define EV_WINDOW 2
 #define PRI_WAIT 4                  /* waiting for a hotkey: answered at once while a program is busy */
 #define PRI_SAVE 0                  /* encoding and saving: no more than any other program */
+#ifndef PNG_LEVEL
+#define PNG_LEVEL -1                /* z.library's deflate level: its default */
+#endif
 
 static struct {
     char screenkey[64], windowkey[64], drawer[256];
@@ -472,7 +475,7 @@ static UBYTE *encode_png(const struct shot *s, ULONG *size)
                 m.oiep_Height = s->pic.h;
                 m.oiep_Stride = s->pic.w * 4;
                 m.oiep_Flags = OIEF_OPAQUE;
-                m.oiep_Level = -1;
+                m.oiep_Level = PNG_LEVEL;
                 m.oiep_Data = NULL;
                 m.oiep_Size = 0;
                 m.oiep_Error = 0;
@@ -595,10 +598,10 @@ static void snap(int kind, struct timerequest *tr)
         if (saved) {
             strcpy(t, name);
             strcat(t, " saved");
-            if (asiff) strcat(t, " (as IFF: PNG needs OpenImage's openpng.datatype 47.4 and z.library)");
+            if (asiff) strcat(t, " (no PNG writer: OpenImage)");
         }
         if (set.clipboard) {
-            if (saved) strcat(t, clip ? ", and on the clipboard" : "; the clipboard didn't take it");
+            if (saved) strcat(t, clip ? ", and on the clipboard" : "; not on the clipboard");
             else strcpy(t, clip ? "OpenSnap: on the clipboard" : "OpenSnap: not saved");
         }
         say(s.pubname, s.active, t, tr);
