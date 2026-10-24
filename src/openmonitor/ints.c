@@ -34,8 +34,8 @@ struct irow {
     char name[36];
     const char *where;
 };
-static struct irow rows[MAXI];
-static int nrows, order[MAXI], ticks;
+static struct irow *rows;               /* allocated, as the other views' */
+static int nrows, *order, ticks;
 
 static const char *const vec_name[16] = { "TBE", "DSKBLK", "SOFTINT", "PORTS", "COPER", "VERTB", "BLIT", "AUD0",
                                           "AUD1", "AUD2", "AUD3", "RBF", "DSKSYNC", "EXTER", "INTEN", "NMI" };
@@ -78,6 +78,7 @@ static void take(void)
 {
     int v, i;
     nrows = 0;
+    if (!rows || !order) return;
     Disable();
     for (v = 0; v < 16 && nrows < MAXI; v++) {
         struct IntVector *iv = &SysBase->IntVects[v];
@@ -243,8 +244,19 @@ static void shown(int on)
 
 const struct om_view om_ints_view = { "Interrupts", layout, gadgets, draw, tick, event, shown, status };
 
+void om_ints_free(void)
+{
+    om_table_free(&T);
+    if (rows) FreeVec(rows);
+    if (order) FreeVec(order);
+    rows = NULL; order = NULL;
+    nrows = 0;
+}
+
 void om_ints_init(void)
 {
+    rows = AllocVec(MAXI * sizeof *rows, MEMF_ANY | MEMF_CLEAR);
+    order = AllocVec(MAXI * sizeof *order, MEMF_ANY | MEMF_CLEAR);
     T.sort = -1;                        /* exec's order: by vector, so by level */
     om_table_init(&T, cols, C_N, cell, GID_INTS + 50, "Interrupts");
 }
