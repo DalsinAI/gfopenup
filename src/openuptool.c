@@ -16,9 +16,6 @@
  *                                     one nearest the screen's shape, scaled to fit
  *   OpenUpTool FONT <font> <size>     the desktop's text: the screens' font and the icons'
  *                                     text (Font prefs, "Screen text" and "Workbench icon text")
- *   OpenUpTool SHELLFONT [<font> <size>]  the Shell's text (Font prefs' "System default text"): DejaVu Sans
- *                                     Mono at a size for the Workbench's height, only while there are no
- *                                     Font prefs (see SHELLFONT, 24 October 2026)
  *   OpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
  *                                     prefs, Appearance Settings, Title Bar Extra Height)
  *   OpenUpTool WBBACKDROP             Workbench as a backdrop: no frame, scroll bars or size gadget on
@@ -1870,85 +1867,6 @@ static int set_titlebars(LONG screen, LONG window)
     return RETURN_OK;
 }
 
-/* ---- SHELLFONT: the Shell's text (Font prefs' system default text), 24 October 2026 -------------------------
- *
- * The Shell draws in the system default text, topaz 8 while no Font prefs name another: tiny on a 1920 x 1200
- * Workbench. The ShellFont part puts DejaVu Sans Mono in FONTS: as Amiga bitmap fonts, fixed width, 12 to 20
- * pixels high (openamigafont's fonts/amiga, made by its tools/amigafont.py). SHELLFONT makes that the system
- * default text, at the size for the Workbench screen's height (shell_font_size), when there are no Font prefs:
- *   ENVARC:Sys/Font.prefs: FORM PREF, PRHD, and one FONT chunk, fp_Type 1 (FP_SYSFONT).
- * The system default text only: no screen text chunk, so the screens keep the font they have (the OpenKick ROM's
- * own, CGTriumvirate sized to the screen, or topaz 8 on Kickstart 3.2.3), and no icon text chunk. Font prefs
- * already there (ENVARC: or ENV:) are the user's and stay as they are (OLDLOOK, 0.8.7). Under 600 lines (a PAL
- * or NTSC Workbench) topaz 8 stays. The manifest lists the file as OpenUp's, so UNINSTALL takes it away with
- * the fonts. ENVARC: only, as FONT: the next boot copies it to ENV:, where the ROM's prefs task (or OS 3.2.3's
- * IPrefs) opens the font and makes it graphics' DefaultFont; console.device takes its cell from the window's
- * font, which is that, so the Shell's columns and rows follow. */
-#define SHELL_FONT "DejaVuSansMono.font"
-
-static LONG shell_font_size(LONG lines)
-{
-    if (lines >= 1600) return 20;
-    if (lines >= 1350) return 18;
-    if (lines >= 1050) return 16;          /* 1920 x 1080 and 1920 x 1200: 8 x 16 cells */
-    if (lines >= 900) return 14;
-    if (lines >= 600) return 12;
-    return 0;
-}
-
-static int set_shell_font(const char *font, LONG size)
-{
-    char sizefile[ENTRY_PATH], digits[8];
-    UBYTE *buf, *o;
-    LONG len, n;
-    int ok, k = 0;
-    if (exists("ENVARC:Sys/Font.prefs") || exists("ENV:Sys/Font.prefs")) {
-        say("OpenUp: kept the Font prefs there are", ": the Shell's text stays as they say", NULL);
-        return RETURN_OK;
-    }
-    if (!font) font = SHELL_FONT;
-    n = strlen(font);
-    if (n < 6 || n > 31 || !same_word(font + n - 5, ".font") || strchr(font, ':') || strchr(font, '/')) {
-        say("OpenUp: SHELLFONT wants a font's name in FONTS: (name.font, at most 31 characters)", NULL, NULL);
-        return RETURN_FAIL;
-    }
-    if (size <= 0) {
-        struct Screen *scr = LockPubScreen((STRPTR)"Workbench");
-        LONG lines = scr ? scr->Height : 0;
-        if (scr) UnlockPubScreen(NULL, scr);
-        if (!(size = shell_font_size(lines))) {
-            Printf((STRPTR)"OpenUp: the Workbench is %ld lines high: the Shell keeps topaz 8\n", lines);
-            return RETURN_OK;
-        }
-    } else if (size < 6 || size > 64) {
-        say("OpenUp: SHELLFONT wants a size from 6 to 64", NULL, NULL);
-        return RETURN_FAIL;
-    }
-    /* the size must be on the disk: FONTS:<name>/<size> */
-    strlcpy(sizefile, "FONTS:", sizeof sizefile);
-    str_cat(sizefile, font, sizeof sizefile);
-    sizefile[strlen(sizefile) - 5] = '/';
-    sizefile[strlen(sizefile) - 4] = 0;
-    for (n = size; n; n /= 10) digits[k++] = '0' + n % 10;
-    while (k) { char d[2] = { digits[--k], 0 }; str_cat(sizefile, d, sizeof sizefile); }
-    if (!exists(sizefile)) {
-        say("OpenUp: ", sizefile, " isn't there, so the Shell keeps its font");
-        return RETURN_WARN;
-    }
-    if (!(buf = AllocVec(12 + 14 + 8 + FONT_CHUNK, MEMF_CLEAR))) return RETURN_FAIL;
-    memcpy(buf, "FORM\0\0\0\0PREF", 12);
-    memcpy(buf + 12, "PRHD\0\0\0\6\0\0\0\0\0\0", 14);
-    o = font_chunk(buf + 26, 1, 1, 0, 1 /* JAM2 */, 0, font, size);
-    len = o - buf;
-    put32(buf + 4, len - 8);
-    ok = install_prefs("Font.prefs", buf, len);
-    FreeVec(buf);
-    if (!ok) return RETURN_ERROR;
-    Printf((STRPTR)"OpenUp: the Shell's text is %s %ld (Font prefs' system default text, from the next reboot)\n",
-           (LONG)font, size);
-    return RETURN_OK;
-}
-
 /* ---- OLDLOOK: the look's files earlier OpenUps wrote, taken out (0.8.2) ------------------------------------------
  *
  * The OpenKick ROM draws Workbench's look itself (a 24-pixel screen bar in CGTriumvirate on a 1080-line screen,
@@ -3579,7 +3497,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | SHELLFONT [<font> <size>] | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
+        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -3597,7 +3515,6 @@ static int real_main(void)
     else if (same_word(cmd, "BACKDROP") && args[1]) rc = backdrop((const char *)args[1]);
     else if (same_word(cmd, "FONT") && args[1] && args[2]) rc = set_font((const char *)args[1], atol((const char *)args[2]));
     else if (same_word(cmd, "TITLEBARS") && args[1] && args[2]) rc = set_titlebars(atol((const char *)args[1]), atol((const char *)args[2]));
-    else if (same_word(cmd, "SHELLFONT")) rc = set_shell_font((const char *)args[1], args[2] ? atol((const char *)args[2]) : 0);
     else if (same_word(cmd, "WBBACKDROP")) rc = set_wb_backdrop();
     else if (same_word(cmd, "WBGAUGE")) rc = set_wb_gauge();
     else if (same_word(cmd, "OLDLOOK")) rc = old_look();
@@ -3641,7 +3558,7 @@ static int real_main(void)
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | SHELLFONT [<font> <size>] | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
