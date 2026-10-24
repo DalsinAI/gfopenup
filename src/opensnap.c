@@ -81,7 +81,7 @@ unsigned long __stack = 32768;      /* libnix swaps to this when Run gives the S
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 struct Library *CxBase, *IconBase, *CyberGfxBase;
-struct UtilityBase *UtilityBase;
+struct Library *UtilityBase;
 
 #define EV_SCREEN 1
 #define EV_WINDOW 2
@@ -97,9 +97,10 @@ static struct {
 /* ---- the message on the title bar ------------------------------------------------------------- */
 
 static char msgtext[200];
-static struct Window *msgwin;
+static struct Window *msgwin;         /* a screen title changed: the window it belongs to */
 static UBYTE *msgold;
-static int msgup, tpending;           /* the message is up; the timer request is out */
+static struct Window *toast;          /* or a small window of ours over a public screen's title bar */
+static int msgup, tpending;           /* the title is ours; the timer request is out */
 
 static int window_there(struct Window *w)
 {
@@ -113,6 +114,7 @@ static int window_there(struct Window *w)
 
 static void unsay(void)
 {
+    if (toast) { CloseWindow(toast); toast = NULL; }
     if (!msgup) return;
     msgup = 0;
     Forbid();   /* the window can't close between the look and the call: Intuition takes the calls in turn */
@@ -121,21 +123,64 @@ static void unsay(void)
     Permit();
 }
 
-static void say(struct Window *w, const char *text, struct timerequest *tr)
+/* On a public screen (Workbench's, whatever window is active or none): a small borderless window over the
+ * middle of its title bar that doesn't take the activation, as a visitor, so the screen's owner can't
+ * close the screen under it. */
+static struct Window *toast_open(const char *pubname, const char *text)
+{
+    struct Screen *scr = LockPubScreen((UBYTE *)pubname);
+    struct DrawInfo *dri;
+    struct Window *w = NULL;
+    struct RastPort rp;
+    LONG len, tw, th, n = strlen(text);
+    if (!scr) return NULL;
+    if ((dri = GetScreenDrawInfo(scr))) {
+        InitRastPort(&rp);
+        SetFont(&rp, dri->dri_Font);
+        while (n > 0 && (len = TextLength(&rp, (STRPTR)text, n)) + 24 > scr->Width) n--;
+        tw = TextLength(&rp, (STRPTR)text, n) + 24;
+        th = scr->BarHeight + 1;
+        if (th < dri->dri_Font->tf_YSize + 3) th = dri->dri_Font->tf_YSize + 3;
+        w = OpenWindowTags(NULL, WA_PubScreen, (ULONG)scr, WA_Left, (scr->Width - tw) / 2, WA_Top, 0,
+                           WA_Width, tw, WA_Height, th, WA_Borderless, TRUE, WA_Activate, FALSE, WA_RMBTrap, TRUE,
+                           WA_SmartRefresh, TRUE, WA_NoCareRefresh, TRUE, WA_IDCMP, 0, TAG_DONE);
+        if (w) {
+            struct RastPort *r = w->RPort;
+            SetFont(r, dri->dri_Font);
+            SetAPen(r, dri->dri_Pens[FILLPEN]);
+            RectFill(r, 0, 0, tw - 1, th - 1);
+            SetAPen(r, dri->dri_Pens[SHADOWPEN]);
+            Move(r, 0, th - 1); Draw(r, 0, 0); Draw(r, tw - 1, 0); Draw(r, tw - 1, th - 1); Draw(r, 0, th - 1);
+            SetAPen(r, dri->dri_Pens[FILLTEXTPEN]);
+            SetDrMd(r, JAM1);
+            Move(r, 12, (th - dri->dri_Font->tf_YSize) / 2 + dri->dri_Font->tf_Baseline);
+            Text(r, (STRPTR)text, n);
+        }
+        FreeScreenDrawInfo(scr, dri);
+    }
+    UnlockPubScreen(NULL, scr);
+    return w;
+}
+
+/* The message for three seconds: over a public screen's title bar, else as the active window's screen
+ * title when that window is on the screen taken. */
+static void say(const char *pubname, struct Window *w, const char *text, struct timerequest *tr)
 {
     unsay();
-    if (!w) return;
     strncpy(msgtext, text, sizeof msgtext - 1);
     msgtext[sizeof msgtext - 1] = 0;
-    Forbid();
-    if (window_there(w)) {
-        msgwin = w;
-        msgold = w->ScreenTitle;
-        SetWindowTitles(w, (UBYTE *)~0, (UBYTE *)msgtext);
-        msgup = 1;
+    if (pubname && pubname[0]) toast = toast_open(pubname, msgtext);
+    if (!toast && w) {
+        Forbid();
+        if (window_there(w)) {
+            msgwin = w;
+            msgold = w->ScreenTitle;
+            SetWindowTitles(w, (UBYTE *)~0, (UBYTE *)msgtext);
+            msgup = 1;
+        }
+        Permit();
     }
-    Permit();
-    if (msgup && tr) {
+    if ((toast || msgup) && tr) {
         if (tpending) { AbortIO((struct IORequest *)tr); WaitIO((struct IORequest *)tr); }
         tr->tr_node.io_Command = TR_ADDREQUEST;
         tr->tr_time.tv_secs = 3;
@@ -145,6 +190,23 @@ static void say(struct Window *w, const char *text, struct timerequest *tr)
     }
 }
 
+#ifdef OSDEBUG
+/* lab builds: how long each step took, in T:OpenSnap.log */
+static void lap(const char *what)
+{
+    struct DateStamp d;
+    BPTR fh = Open((STRPTR)"T:OpenSnap.log", MODE_READWRITE);
+    DateStamp(&d);
+    if (fh) {
+        Seek(fh, 0, OFFSET_END);
+        FPrintf(fh, (STRPTR)"%ld.%02ld %s\n", d.ds_Minute * 60 + d.ds_Tick / 50, (d.ds_Tick % 50) * 2, (ULONG)what);
+        Close(fh);
+    }
+}
+#else
+#define lap(what) ((void)0)
+#endif
+
 /* ---- the picture ------------------------------------------------------------------------------- */
 
 struct shot {
@@ -153,6 +215,7 @@ struct shot {
     uint32_t *argb;                 /* truecolour, or the indexed picture's colours for the PNG */
     char title[64];                 /* the window's, made safe for a file name */
     struct Window *active;          /* for the message: the active window, when it is on the screen taken */
+    char pubname[MAXPUBSCREENNAME + 1];   /* the screen's public name, or "" */
 };
 
 static void free_shot(struct shot *s)
@@ -275,6 +338,21 @@ static const char *read_pixels(struct Screen *scr, LONG x, LONG y, ULONG w, ULON
     return 0;
 }
 
+/* The public name of a screen, or "" (out: MAXPUBSCREENNAME + 1 bytes). */
+static void pub_name(struct Screen *scr, char *out)
+{
+    struct List *l = LockPubScreenList();
+    struct Node *n;
+    out[0] = 0;
+    for (n = l->lh_Head; n->ln_Succ; n = n->ln_Succ)
+        if (((struct PubScreenNode *)n)->psn_Screen == scr && n->ln_Name) {
+            strncpy(out, n->ln_Name, MAXPUBSCREENNAME);
+            out[MAXPUBSCREENNAME] = 0;
+            break;
+        }
+    UnlockPubScreenList();
+}
+
 /* Takes the front screen or the active window's box. 0, or a reason. */
 static const char *grab(int kind, struct shot *s)
 {
@@ -290,7 +368,12 @@ static const char *grab(int kind, struct shot *s)
     ib = LockIBase(0);
     win = IntuitionBase->ActiveWindow;
     if (kind == EV_WINDOW) {
-        if (!win) { UnlockIBase(ib); return "no window is active"; }
+        if (!win) {
+            scr = IntuitionBase->FirstScreen;
+            UnlockIBase(ib);
+            if (scr) pub_name(scr, s->pubname);      /* for the message */
+            return "no window is active";
+        }
         scr = win->WScreen;
         x = win->LeftEdge; y = win->TopEdge; x1 = x + win->Width; y1 = y + win->Height;
         osp_safe_title((const char *)win->Title, s->title, sizeof s->title);
@@ -303,20 +386,12 @@ static const char *grab(int kind, struct shot *s)
     UnlockIBase(ib);
 
     /* a public screen: locked, so it can't close while it's read */
-    {
-        struct List *l = LockPubScreenList();
-        struct Node *n;
-        for (n = l->lh_Head; n->ln_Succ; n = n->ln_Succ)
-            if (((struct PubScreenNode *)n)->psn_Screen == scr && n->ln_Name) {
-                strncpy(pubname, n->ln_Name, MAXPUBSCREENNAME); pubname[MAXPUBSCREENNAME] = 0;
-                pub = 1;
-                break;
-            }
-        UnlockPubScreenList();
-    }
+    pub_name(scr, pubname);
+    pub = pubname[0] != 0;
     if (pub) {
         locked = LockPubScreen((UBYTE *)pubname);
         if (locked != scr) { if (locked) UnlockPubScreen(NULL, locked); locked = NULL; }
+        else strcpy(s->pubname, pubname);
     }
     if (!locked) {
         /* any other screen: read with Intuition's lock held, after making sure it is still open */
@@ -471,14 +546,17 @@ static void snap(int kind, struct timerequest *tr)
     int clip = 0, saved = 0, asiff = 0;
     BPTR l;
 
+    unsay();                                /* not in the picture */
     DateStamp(&ds);                         /* the moment of the key, not of the save */
+    lap(kind == EV_WINDOW ? "window key" : "screen key");
     why = grab(kind, &s);
+    lap("read");
     SetTaskPri(FindTask(NULL), PRI_SAVE);
     if (why) {
         char t[120];
         strcpy(t, "OpenSnap: ");
         strncat(t, why, sizeof t - 12);
-        say(IntuitionBase->ActiveWindow, t, tr);
+        say(s.pubname, IntuitionBase->ActiveWindow, t, tr);
         SetTaskPri(FindTask(NULL), PRI_WAIT);
         return;
     }
@@ -487,7 +565,9 @@ static void snap(int kind, struct timerequest *tr)
     /* the ILBM: for the clipboard, and the file when there is no PNG */
     if ((ilbm = AllocVec(osp_ilbm_max(&s.pic), MEMF_ANY)) && (row = AllocVec(osp_rowbytes(s.pic.w) + 4, MEMF_ANY)))
         ilbmsize = osp_ilbm(&s.pic, ilbm, row);
+    lap("ILBM");
     png = encode_png(&s, &pngsize);
+    lap(png ? "PNG" : "no PNG");
     asiff = !png;
 
     if (!make_drawer(set.drawer)) {
@@ -505,7 +585,9 @@ static void snap(int kind, struct timerequest *tr)
         else if (asiff && !ilbmsize) { SetIoErr(ERROR_NO_FREE_STORE); cant_save(name); }
         else cant_save(name);
     }
+    lap("file");
     if (set.clipboard && ilbmsize) clip = to_clipboard(ilbm, ilbmsize);
+    lap("clipboard");
 
     if (saved || clip) {
         char t[200];
@@ -519,7 +601,7 @@ static void snap(int kind, struct timerequest *tr)
             if (saved) strcat(t, clip ? ", and on the clipboard" : "; the clipboard didn't take it");
             else strcpy(t, clip ? "OpenSnap: on the clipboard" : "OpenSnap: not saved");
         }
-        say(s.active ? s.active : IntuitionBase->ActiveWindow, t, tr);
+        say(s.pubname, s.active, t, tr);
     }
     if (png) FreeVec(png);
     if (row) FreeVec(row);
