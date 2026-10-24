@@ -27,6 +27,6 @@ G="$OGT/lib"
     -I"$GUEST/devices/accontrol.device/include" \
     -o "$OUT" \
     "$HERE/main.c" "$HERE/ui.c" "$HERE/graphs.c" "$HERE/tasks.c" "$HERE/memory.c" "$HERE/libs.c" "$HERE/ports.c" "$HERE/ints.c" \
-    "$HERE/hw.c" "$HERE/speed.c" "$SP/sysprobe.c" \
+    "$HERE/hw.c" "$HERE/speed.c" "$HERE/calls.c" "$SP/sysprobe.c" \
     "$G/ogt_look.c" "$G/ogt_theme.c" "$G/ogt_font.c" "$G/ogt_draw.c" "$G/ogt_list.c" "$G/ogt_tabs.c" "$G/ogt_status.c"
 echo "$OUT ($(wc -c < "$OUT") bytes)"
