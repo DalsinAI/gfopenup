@@ -46,10 +46,10 @@ a Part file that C/OpenUpTool reads:
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through OpenService (opendatatypes)
   OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
-  ShellFont/            DejaVu Sans Mono as Amiga bitmap fonts, 12 to 20 pixels high, in FONTS:, with its
-                        licence; always installed. The Installer's OpenUpTool SHELLFONT makes it the
-                        Shell's text when there are no Font prefs yet (openamigafont's fonts/amiga;
-                        left out without --openamigafont)
+  ShellFont/            DejaVu Sans Mono as Amiga bitmap fonts, 8 to 24 pixels high, in FONTS:, with its
+                        licence, for Font prefs' System Default Text; always installed. The OpenKick ROM
+                        has the 11 and makes it the Shell's font itself; no Font prefs are written
+                        (openamigafont's fonts/amiga; left out without --openamigafont)
   OpenPrefs/            OpenPrefs, every editor of ours as a section of one program
                         (SYS:Prefs/OpenPrefs), its small body C:OpenPrefs (the boot's one
                         OpenPrefs APPLY line), and a stub with its own icon for each section
@@ -1327,14 +1327,13 @@ def main() -> int:
     bl.write()
 
     # The Shell's font (24 October 2026), on every install: DejaVu Sans Mono as Amiga bitmap fonts, fixed width,
-    # 12 to 20 pixels high, made from the TrueType font by openamigafont's tools/amigafont.py and kept in its
-    # fonts/amiga, with the Bitstream Vera licence they come under (its LICENSE-DejaVu.txt). "add": a
-    # DejaVuSansMono.font of another program's stays. The Installer's OpenUpTool SHELLFONT then makes it the
-    # system default text, which the Shell draws in, at a size for the Workbench's height, where there are no
-    # Font prefs yet.
+    # 8 to 24 pixels high, made from the TrueType font by openamigafont's tools/amigafont.py and kept in its
+    # fonts/amiga, with the Bitstream Vera licence they come under (its LICENSE-DejaVu.txt), for Font prefs'
+    # System Default Text. "add": a DejaVuSansMono.font of another program's stays. The OpenKick ROM has the 11
+    # and makes it the system default text where no Font prefs name one; OpenUp writes no Font prefs.
     if a.openamigafont and (a.openamigafont / "fonts/amiga/DejaVuSansMono.font").is_file():
         fa = a.openamigafont / "fonts/amiga"
-        sf = Part(top, "ShellFont", "1.0", "DejaVu Sans Mono 2.37, 12 to 20 pixels, for the Shell (the system default text)")
+        sf = Part(top, "ShellFont", "1.0", "DejaVu Sans Mono 2.37, 8 to 24 pixels, for the Shell (Font prefs' System Default Text)")
         sf.add("Fonts/DejaVuSansMono.font", (fa / "DejaVuSansMono.font").read_bytes(), "FONTS:DejaVuSansMono.font", own=True)
         for f in sorted((fa / "DejaVuSansMono").iterdir(), key=lambda p: int(p.name)):
             sf.add(f"Fonts/DejaVuSansMono/{f.name}", f.read_bytes(), f"FONTS:DejaVuSansMono/{f.name}", own=True)
