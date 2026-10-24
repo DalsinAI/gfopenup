@@ -1,4 +1,4 @@
-/* OpenMonitor 0.8: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
+/* OpenMonitor 1.0: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
  * What the parts share: the window, the fonts and pens, the table every view draws, the views.
  *
  * Built resident (libnix -resident): each run its own variables, reached through a4. Code that another task
@@ -20,7 +20,7 @@
 #include "ogt_tabs.h"
 #include "ogt_status.h"
 
-#define OM_VERSION "0.8"
+#define OM_VERSION "1.0"
 #define OM_DATE "24.10.2026"
 
 #define REG(r, decl) register decl __asm(#r)
