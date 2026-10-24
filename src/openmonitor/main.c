@@ -1,4 +1,4 @@
-/* OpenMonitor 0.7: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
+/* OpenMonitor 0.8: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
  * into the Amiga's task manager (the user, 24 October 2026: "a true task manager, a blend of what it is today,
  * SysInfo, ShowConfig and SnoopDos"; the design of that day, agreed at 15:05).
  *
