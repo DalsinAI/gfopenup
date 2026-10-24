@@ -20,8 +20,12 @@
         ; MultiView itself comes back with the files OpenUp replaced. OpenUpTool
         ; UNINSTALL then puts back any default tool still on OpenView (FIXTOOLS ALL),
         ; for an Amiga where the record of OpenTypes' changes is gone.
-        (if (exists "SYS:Prefs/OpenTypes")
-            (run "SYS:Prefs/OpenTypes UNDO >T:OpenUp-uninstall.log"))
+        ; OpenTypes is OpenPrefs's File Types page: SYS:Preferences/OpenPrefs since the no-ROM-volume design
+        ; (24 October 2026), its old name's stub in SYS:Prefs before
+        (if (exists "SYS:Preferences/OpenPrefs")
+            (run "SYS:Preferences/OpenPrefs TYPES UNDO >T:OpenUp-uninstall.log")
+            (if (exists "SYS:Prefs/OpenTypes")
+                (run "SYS:Prefs/OpenTypes UNDO >T:OpenUp-uninstall.log")))
         (if (exists "ENVARC:OpenAmiga/OpenView-switched")
             (delete "ENVARC:OpenAmiga/OpenView-switched"))
         (if (exists "ENVARC:OpenAmiga/OpenFiles-place-reset")

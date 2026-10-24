@@ -85,6 +85,9 @@
  *                                        the rest of the icon stays; REMOVE puts <from> back)
  *   startup <the rest of the line>
  *   when AmigaChrome <copy|default|add|face|retire line>  (0.6.3: the line only on an AmigaChrome instance)
+ *   unless AmigaChrome <line>, when OpenKick <line>, unless OpenKick <line>  (0.8.9, any line, startup lines
+ *                                        too: OpenKick is the open ROM whose intuition applies the boot's
+ *                                        settings, prefs.resource 47.101 or later; src/openup_lines.h)
  * Words with spaces are quoted.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
@@ -117,7 +120,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.8 (21.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+#include "openup_lines.h"
+
+static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.9 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -490,6 +495,22 @@ static int openkick_rom(void)
     if (*mark == 0x4F4B5231UL) return 1;                           /* 'OKR1' */
     r = FindResident((STRPTR)"system-startup");
     return r && r->rt_IdString && strstr((const char *)r->rt_IdString, "OpenKick") != NULL;
+}
+
+/* 0.8.9: the open ROM whose intuition applies the boot's settings (the no-ROM-volume design of 24 October 2026,
+ * sections 9 and 10): its prefs task applies Sound's levels, Gamepads' patch and the stack caps from ENV:, which
+ * OpenPrefs APPLY did from S:User-Startup, and prefs.resource says so by its version, 47.101 or later. This is
+ * "OpenKick" to a Part file's when and unless lines. OS 3.2.3's ROM has no prefs.resource. */
+static int prefs_task_rom(void)
+{
+    struct Library *pr = (struct Library *)OpenResource((STRPTR)"prefs.resource");
+    return oul_prefs_task(openkick_rom(), pr ? pr->lib_Version : 0, pr ? pr->lib_Revision : 0);
+}
+
+/* The OUL_ bits a Part file's conditions ask about (src/openup_lines.h) */
+static unsigned machine_bits(void)
+{
+    return (is_amigachrome() ? OUL_AMIGACHROME : 0) | (prefs_task_rom() ? OUL_OPENKICK : 0);
 }
 
 static void set_env(const char *name, const char *value)
@@ -895,6 +916,7 @@ static int install(const char *drawer)
 {
     char path[220], from[260], *text, *p, *line, partname[64] = "", partver[32] = "";
     int pass, refused = 0, files = 0, errors = 0;
+    unsigned have = machine_bits();
 
     strncpy(path, drawer, 200);
     path[200] = 0;
@@ -915,6 +937,9 @@ static int install(const char *drawer)
             line = p;
             while (*p && *p != '\n') p++;
             if (*p) *p++ = 0;
+            /* a when or unless in front: the line only where it holds (0.8.9: any line, a startup line too) */
+            if (!(line = (char *)oul_strip(line, have, 0)))
+                continue;
             if (!strncmp(line, "startup ", 8)) {
                 if (pass == 1) {
                     entry *old = find_entry("ostartup", line + 8);
@@ -926,11 +951,6 @@ static int install(const char *drawer)
             }
             n = words(line, w, 12);
             if (!n) continue;
-            if (!strcmp(w[0], "when") && n >= 4 && !strcmp(w[1], "AmigaChrome")) {
-                if (!is_amigachrome()) continue;        /* the line is for AmigaChrome only */
-                n -= 2;
-                memmove(w, w + 2, n * sizeof w[0]);
-            }
             if (!strcmp(w[0], "part") && n >= 3) {
                 strncpy(partname, w[1], sizeof partname - 1);
                 strncpy(partver, w[2], sizeof partver - 1);
@@ -1031,10 +1051,10 @@ static int remove_part(const char *drawer)
         line = p;
         while (*p && *p != '\n') p++;
         if (*p) *p++ = 0;
+        line = (char *)oul_strip(line, 0, 1);       /* whatever its condition: only what the manifest lists goes */
         if (!strncmp(line, "startup ", 8)) continue;
         n = words(line, w, 12);
         if (!n) continue;
-        if (!strcmp(w[0], "when") && n >= 4) { n -= 2; memmove(w, w + 2, n * sizeof w[0]); }
         if (!strcmp(w[0], "part") && n >= 3) strncpy(partname, w[1], sizeof partname - 1);
         else if (!strcmp(w[0], "tooltype") && n >= 4) {
             /* the tool type back as it was; the icon stays (its copy in SYS:Storage too, for UNINSTALL) */
@@ -2741,9 +2761,9 @@ static const rmap reconcile_map[] = {
     { "SYS:Prefs/Printer",      "classic", NULL, "OpenPrint's printer settings (to build)" },
     { "SYS:Prefs/PrinterGfx",   "classic", NULL, "OpenPrint's printer settings (to build)" },
     { "SYS:Prefs/PrinterPS",    "classic", NULL, "OpenPrint's printer settings (to build)" },
-    { "SYS:Prefs/DefaultIcons", "classic", "SYS:Prefs/OpenTypes", "OpenTypes, which takes over default icons" },
-    { "SYS:Prefs/Serial",       "classic", "SYS:Prefs/OpenSerial", "OpenSerial" },
-    { "SYS:Prefs/Sound",        "classic", "SYS:Prefs/OpenSound", "OpenSound (the Sound part; a Sound in Prefs is the OS's once OpenSound is there)" },
+    { "SYS:Prefs/DefaultIcons", "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's File Types, which takes over default icons" },
+    { "SYS:Prefs/Serial",       "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's Serial" },
+    { "SYS:Prefs/Sound",        "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's Sound (a Sound in Prefs is the OS's)" },
     { "SYS:Tools/Commodities/Blanker", "retire", "SYS:Tools/Commodities/OpenBlanker", "OpenBlanker" },
     { "SYS:Tools/Calculator",   "wait",    NULL, "OpenCalc (source in OpenUp, to build)" },
     { "SYS:Tools/TextEdit",     "replace", "C:OpenEdit", "OpenEdit, under TextEdit's name, so every icon that opens TextEdit opens OpenEdit" },
@@ -3099,13 +3119,21 @@ static int reconcile(const char *how, const char *once)
         }
     }
     if (reconcile_icon_text(apply) < 0) failed++;
-    /* the Open apps on the dock (the user, 10 October 2026): Dock ADD adds only those installed and not there */
-    if (exists("SYS:Prefs/OpenDock")) {                 /* 0.7.1: the editor is OpenDock (every editor of ours is Open...) */
+    /* the Open apps on the dock (the user, 10 October 2026): Dock ADD adds only those installed and not there. The
+     * editor is OpenPrefs's Dock page: SYS:Preferences/OpenPrefs DOCK since OpenUpTool 0.8.9 (the no-ROM-volume
+     * design, section 8), SYS:Prefs/OpenDock, its name's stub, before */
+    const char *dock_ed = exists("SYS:Preferences/OpenPrefs") ? "SYS:Preferences/OpenPrefs DOCK"
+                          : exists("SYS:Prefs/OpenDock") ? "SYS:Prefs/OpenDock" : NULL;
+    if (dock_ed) {
         if (!apply) PutStr((STRPTR)"  dock: OpenWrite, OpenPlay, OpenCompress, OpenFTP and OpenPuTTY added if installed and missing\n");
         else {
-            LONG r = run_sync("SYS:Prefs/OpenDock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView "
-                              "SYS:Utilities/OpenWrite/OpenWrite SYS:Utilities/OpenPlay SYS:Utilities/OpenCompress "
-                              "SYS:Utilities/OpenFTP/OpenFTP SYS:Utilities/OpenPuTTY/OpenPuTTY SAVE", 1);
+            char cmd[400];
+            LONG r;
+            strlcpy(cmd, dock_ed, sizeof cmd);
+            str_cat(cmd, " ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView "
+                         "SYS:Utilities/OpenWrite/OpenWrite SYS:Utilities/OpenPlay SYS:Utilities/OpenCompress "
+                         "SYS:Utilities/OpenFTP/OpenFTP SYS:Utilities/OpenPuTTY/OpenPuTTY SAVE", sizeof cmd);
+            r = run_sync(cmd, 1);
             PutStr((STRPTR)(r == 0 ? "  dock: the Open apps are on it\n" : "  dock: Dock ADD didn't run; the dock is as it was\n"));
         }
     }
