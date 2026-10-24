@@ -470,6 +470,23 @@ static LONG rgb_pen(ULONG rgb)
     return ogt_pen_rgb(&U.ctx, c);
 }
 
+/* 0.8.1: a pen of exactly this colour for the graphs' lines. On a full palette, or a graphics card's screen
+ * (where lines still need a palette pen), the theme's PRECISION_GUI match gave an orange for the GPU's red. */
+static LONG exact_pens[3];
+static int nexact;
+static LONG exact_pen(ULONG rgb)
+{
+    LONG p = ObtainBestPen(U.scr->ViewPort.ColorMap, ((rgb >> 16) & 255) * 0x01010101UL, ((rgb >> 8) & 255) * 0x01010101UL,
+                           (rgb & 255) * 0x01010101UL, OBP_Precision, PRECISION_EXACT, TAG_DONE);
+    if (p >= 0 && nexact < 3) exact_pens[nexact++] = p;
+    return p >= 0 ? p : rgb_pen(rgb);
+}
+
+static void exact_pens_free(void)
+{
+    while (nexact > 0) ReleasePen(U.scr->ViewPort.ColorMap, exact_pens[--nexact]);
+}
+
 static void pens(void)
 {
     UWORD *p = U.dri->dri_Pens;
@@ -503,9 +520,10 @@ static void pens(void)
         U.gauge_bg = rgb_pen(0x161616);
         U.gauge_grid = rgb_pen(0x3a3a3a);
         U.gauge_text = rgb_pen(0xe6e6e6);
-        U.gauge_line[0] = rgb_pen(0xf4f4f4);
-        U.gauge_line[1] = rgb_pen(0x3d8bff);
-        U.gauge_line[2] = rgb_pen(0xe5383b);
+        exact_pens_free();
+        U.gauge_line[0] = exact_pen(0xf4f4f4);
+        U.gauge_line[1] = exact_pen(0x3d8bff);
+        U.gauge_line[2] = exact_pen(0xe5383b);
     }
 }
 
@@ -688,6 +706,7 @@ out:
         U.win = NULL;
     }
     if (U.glist) FreeGadgets(U.glist);
+    if (U.scr) exact_pens_free();
     if (U.ctx_ok) ogt_ctx_free(&U.ctx);
     if (U.dri) FreeScreenDrawInfo(scr, U.dri);
     if (U.vi) FreeVisualInfo(U.vi);

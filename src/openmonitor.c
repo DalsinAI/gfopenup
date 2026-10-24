@@ -1319,10 +1319,10 @@ static int gui(void)
     col_owner = list_w * 84 / 100;
     lvh = list_h = H - (list_y - tb) - 2 * (lh + 8) - 4;
     danger_pen = ObtainBestPen(scr->ViewPort.ColorMap, 0xb0b0b0b0UL, 0x28282828UL, 0x28282828UL, OBP_Precision, PRECISION_GUI, TAG_DONE);
-    for (i = 0; i < GR_N; i++)
+    for (i = 0; i < GR_N; i++)                  /* 0.3.4: exact, so the GPU's red isn't matched to an orange */
         graph_pen[i] = ObtainBestPen(scr->ViewPort.ColorMap, (graph_rgb[i] >> 16) * 0x01010101UL,
                                      ((graph_rgb[i] >> 8) & 255) * 0x01010101UL, (graph_rgb[i] & 255) * 0x01010101UL,
-                                     OBP_Precision, PRECISION_GUI, TAG_DONE);
+                                     OBP_Precision, PRECISION_EXACT, TAG_DONE);
     for (i = 0; i < GG_N; i++)
         gauge_pen[i] = ObtainBestPen(scr->ViewPort.ColorMap, (gauge_rgb[i] >> 16) * 0x01010101UL,
                                      ((gauge_rgb[i] >> 8) & 255) * 0x01010101UL, (gauge_rgb[i] & 255) * 0x01010101UL,
