@@ -135,7 +135,11 @@ static void tc_take(void)
     tc_total += idle - tc_prev[TASKCLOCK_TASKS];
     cpu_tenths = tc_total ? (ULONG)((tc_total - (idle - tc_prev[TASKCLOCK_TASKS])) * 1000 / tc_total) : 0;
     tc_prev[TASKCLOCK_TASKS] = idle;
-    for (i = 0; i < 16; i++) { ULONG v = tcl->ints[i]; irq_rate[i] = v - tc_ints[i]; tc_ints[i] = v; }
+    for (i = 0; i < 16; i++) {          /* a second's, by exec's clock (the look may come later than a second) */
+        ULONG v = tcl->ints[i], d = v - tc_ints[i];
+        irq_rate[i] = tc_total ? (int)(((unsigned long long)d * 1000000 + tc_total / 2) / tc_total) : (int)d;
+        tc_ints[i] = v;
+    }
 }
 
 int om_irq_per_second(int bit) { return bit >= 0 && bit < 16 ? irq_rate[bit] : -1; }
@@ -510,11 +514,15 @@ static void take(int full)
     disp = SysBase->DispCount;
     Enable();
     if (full) {
-        switches = disp - disp_before;
-        disp_before = disp;
+        unsigned long long us;
         cpu_tenths = got.total ? (got.total - got.idle) * 1000 / got.total : 0;
         for (i = 0; i < naccs; i++) accs[i].seen = 0;
         if (tcl) tc_take();
+        /* a second's switches: the time since the last look is exec's clock's, else the VBlanks'; the second's
+         * timer only starts again after the drawing, so on a busy machine the look comes later than a second */
+        us = tcl ? tc_total : (unsigned long long)got.total * 1000000 / hz;
+        switches = us ? (ULONG)(((unsigned long long)(disp - disp_before) * 1000000 + us / 2) / us) : disp - disp_before;
+        disp_before = disp;
     }
     for (i = 0; i < nrows; i++) {
         struct trow *r = &rows[i];
