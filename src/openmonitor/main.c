@@ -1,4 +1,4 @@
-/* OpenMonitor 0.4: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
+/* OpenMonitor 0.5: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
  * into the Amiga's task manager (the user, 24 October 2026: "a true task manager, a blend of what it is today,
  * SysInfo, ShowConfig and SnoopDos"; the design of that day, agreed at 15:05).
  *
@@ -48,17 +48,18 @@ unsigned long __stack = 32768;
 
 struct om_ui U;
 char om_first_task[40];
-const struct om_view *om_views[V_N] = { &om_tasks_view };
+static char pubscreen[40];             /* PUBSCREEN/K: a public screen by its name, else the default one */
+const struct om_view *om_views[V_N] = { &om_tasks_view, &om_memory_view, &om_libs_view, &om_ports_view, &om_ints_view };
 
 /* ---- settings: ENV:OpenMonitor/Settings, "key value" lines, kept in ENVARC: too ------------------------- */
 
-#define MAXPREFS 24
+#define MAXPREFS 40
 static char pref_key[MAXPREFS][24], pref_val[MAXPREFS][96];
 static int npref;
 
 static void prefs_load(void)
 {
-    char buf[1600], *p, *line;
+    char buf[3200], *p, *line;
     LONG n = GetVar((STRPTR)"OpenMonitor/Settings", (STRPTR)buf, sizeof buf, GVF_GLOBAL_ONLY | GVF_BINARY_VAR);
     npref = 0;
     if (n <= 0) return;
@@ -86,7 +87,7 @@ const char *om_pref(const char *key)
 
 static void prefs_save(void)
 {
-    char buf[1600];
+    char buf[3200];
     int i, len = snprintf(buf, sizeof buf, "; OpenMonitor %s's settings\n", OM_VERSION);
     for (i = 0; i < npref && len < (int)sizeof buf - 130; i++)
         len += snprintf(buf + len, sizeof buf - len, "%s %s\n", pref_key[i], pref_val[i]);
@@ -129,6 +130,54 @@ void om_sunk(int x, int y, int w, int h)
     struct RastPort *rp = U.win->RPort;
     ogt_box(rp, U.pen_back, x + 1, y + 1, w - 2, h - 2);
     ogt_bevel(rp, U.pen_shadow, U.pen_shine, x, y, w, h);
+}
+
+void om_heading(int x, int y, const char *s)
+{
+    struct RastPort *rp = U.win->RPort;
+    SetFont(rp, U.font);
+    ogt_bold(rp, 1);
+    ogt_text(rp, U.pen_text, x, y, s, U.pw);
+    ogt_bold(rp, 0);
+}
+
+const char *om_commas(ULONG v, char *buf)
+{
+    char t[16];
+    int n = snprintf(t, sizeof t, "%lu", (unsigned long)v), i, o = 0;
+    for (i = 0; i < n; i++) {
+        if (i && (n - i) % 3 == 0) buf[o++] = ',';
+        buf[o++] = t[i];
+    }
+    buf[o] = 0;
+    return buf;
+}
+
+/* Where code is: the ROM (Kickstart's places, or the open ROM's image unpacked into RAM at boot, which the
+ * romunpack resource names: common/openunpack/okrz_format.h), a group of the ROM's unpacked on demand, or a
+ * program's (RAM). */
+const char *om_where(APTR code)
+{
+    static ULONG *table;
+    static int looked;
+    ULONG a = (ULONG)code;
+    if (!a) return "-";
+    if ((a >= 0x00f80000UL && a < 0x01000000UL) || (a >= 0x00e00000UL && a < 0x00e80000UL) ||
+        (a >= 0x00f00000UL && a < 0x00f80000UL)) return "ROM";
+    if (!looked) {
+        UBYTE *res = OpenResource((STRPTR)"romunpack");
+        looked = 1;
+        if (res && *(ULONG *)(res + 16) == 0x4f4b5254UL) table = (ULONG *)(res + 16);     /* 'OKRT' */
+    }
+    if (table) {
+        UWORD ver = *(UWORD *)((UBYTE *)table + 4), count = *(UWORD *)((UBYTE *)table + 20), i;
+        ULONG base = table[3], size = table[4];
+        ULONG *e = (ULONG *)((UBYTE *)table + (ver >= 3 ? 32 : 24));      /* 3 added find and load */
+        if (a >= base && a < base + size) return "ROM";
+        for (i = 0; i < count && i < 1024; i++, e += 3)
+            if (e[1] && (e[1] < base || e[1] >= base + size) && a >= e[1] && a < e[1] + e[2]) return "ROM group";
+    }
+    return "RAM";
 }
 
 void om_status(int field, const char *fmt, ...)
@@ -218,6 +267,7 @@ void om_tick(void)
     const struct om_view *v = om_views[U.view];
     om_tasks_take();                    /* every second: the CPU graph needs it whichever view is open */
     om_graphs_take();
+    om_memory_take();                   /* and the Memory view's last minute */
     if (v->tick) v->tick();
     SetFont(U.win->RPort, U.font);
     if (v->status) v->status();
@@ -323,7 +373,7 @@ void om_rebuild_gadgets(void)
     draw_all();
 }
 
-static void open_view(int v)
+void om_open_view(int v)
 {
     int was = U.view;
     if (v < 0 || v >= V_N || v == was || was < 0 || was >= V_N) return;
@@ -459,7 +509,7 @@ static int same_word(const char *a, const char *b)
 
 static int gui(STRPTR first_view)
 {
-    struct Screen *scr = LockPubScreen(NULL);
+    struct Screen *scr = LockPubScreen(pubscreen[0] ? (STRPTR)pubscreen : NULL);
     int quit = 0, rc = RETURN_OK, i, W, H, X, Y, minw, minh;
     const char *v;
     if (!scr) return RETURN_FAIL;
@@ -500,6 +550,10 @@ static int gui(STRPTR first_view)
         for (i = 0; i < V_N; i++) if (same_word(v, om_views[i]->name)) U.view = i;
     om_graphs_init();
     if (!om_tasks_init()) { rc = RETURN_FAIL; goto out; }
+    om_memory_init();
+    om_libs_init();
+    om_ports_init();
+    om_ints_init();
 
     /* the size: kept from the last run, else 1000 x 780 (outer) on a big screen, the whole screen on a small one */
     minw = U.compact ? 400 : 720;
@@ -572,12 +626,12 @@ static int gui(STRPTR first_view)
             if (cls == IDCMP_GADGETUP && ia) {
                 struct Gadget *g = (struct Gadget *)ia;
                 int tab = U.compact ? (g == cycle_gad ? (int)code : -1) : ogt_tabs_index(&U.tabs, g->GadgetID);
-                if (tab >= 0) { open_view(tab); continue; }
+                if (tab >= 0) { om_open_view(tab); continue; }
             }
             if (cls == IDCMP_VANILLAKEY) {
                 if (code == 27 || code == 'q' || code == 'Q') { quit = 1; break; }
-                if (code >= '1' && code < '1' + V_N) { open_view(code - '1'); continue; }
-                if (code == 9) { open_view((U.view + (qual & (IEQUALIFIER_LSHIFT | IEQUALIFIER_RSHIFT) ? V_N - 1 : 1)) % V_N); continue; }
+                if (code >= '1' && code < '1' + V_N) { om_open_view(code - '1'); continue; }
+                if (code == 9) { om_open_view((U.view + (qual & (IEQUALIFIER_LSHIFT | IEQUALIFIER_RSHIFT) ? V_N - 1 : 1)) % V_N); continue; }
             }
             if (om_views[U.view]->event) om_views[U.view]->event(cls, code, qual, ia, mx, my, secs, micros);
         }
@@ -599,6 +653,8 @@ out:
     tr = NULL; tport = NULL;
     for (i = 0; i < V_N; i++) if (i == U.view && U.win && om_views[i]->shown) om_views[i]->shown(0);
     om_tasks_free();                    /* every frozen task resumed, the sampler out */
+    om_libs_free();
+    om_ports_free();
     om_graphs_free();
     if (U.win) {
         if (U.glist) RemoveGList(U.win, U.glist, -1);
@@ -668,7 +724,7 @@ static int detach(const char *view, const char *task)
 {
     struct CommandLineInterface *cli = Cli();
     struct Segment *seg;
-    char name[108], cmd[360], extra[96];
+    char name[108], cmd[400], extra[160];
     const char *base;
     BPTR in, out, dir;
     LONG rc;
@@ -678,6 +734,7 @@ static int detach(const char *view, const char *task)
     extra[0] = 0;
     if (view && strlen(view) < 32) snprintf(extra, sizeof extra, " VIEW \"%s\"", view);
     if (task && strlen(task) < 40) snprintf(extra + strlen(extra), sizeof extra - strlen(extra), " TASK \"%s\"", task);
+    if (pubscreen[0]) snprintf(extra + strlen(extra), sizeof extra - strlen(extra), " PUBSCREEN \"%s\"", pubscreen);
     Forbid();
     seg = FindSegment((STRPTR)base, NULL, FALSE);
     if (!seg || seg->seg_Seg != cli->cli_Module) seg = FindSegment((STRPTR)base, NULL, TRUE);
@@ -709,12 +766,13 @@ int main(void)
     om_first_task[0] = 0;
     if (Cli()) {
         /* WAIT/S: stay in this Shell until the window closes; VIEW/K: the view to open on (Tasks, Memory...);
-         * TASK/K: the task to choose in the Tasks view, by its name */
-        LONG arg[3] = { 0, 0, 0 };
-        struct RDArgs *ra = ReadArgs((STRPTR)"WAIT/S,VIEW/K,TASK/K", arg, NULL);
+         * TASK/K: the task to choose in the Tasks view, by its name; PUBSCREEN/K: the public screen to open on */
+        LONG arg[4] = { 0, 0, 0, 0 };
+        struct RDArgs *ra = ReadArgs((STRPTR)"WAIT/S,VIEW/K,TASK/K,PUBSCREEN/K", arg, NULL);
         if (!ra) { PrintFault(IoErr(), (STRPTR)"OpenMonitor"); return RETURN_ERROR; }
         if (arg[1]) { strncpy(view, (const char *)arg[1], sizeof view - 1); view[sizeof view - 1] = 0; }
         if (arg[2]) { strncpy(om_first_task, (const char *)arg[2], sizeof om_first_task - 1); om_first_task[sizeof om_first_task - 1] = 0; }
+        if (arg[3]) { strncpy(pubscreen, (const char *)arg[3], sizeof pubscreen - 1); pubscreen[sizeof pubscreen - 1] = 0; }
         FreeArgs(ra);
         if (!arg[0]) {
             if (send_to_front()) return RETURN_OK;
