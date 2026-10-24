@@ -63,6 +63,92 @@ def lines_on(part_file: Path, machine: str, filt: Path) -> list[str]:
     return out.splitlines()
 
 
+# What Instance-32 had of OS 3.2.3's printing on 24 October 2026 (read from its disk: 61 files, 388,377 bytes),
+# each of which the OpenPrinter part archives
+INSTANCE32_PRINTING = (
+    [f"SYS:Devs/Printers/{d}{i}" for d in bp.LEGACY_PRINTER_DRIVERS for i in ("", ".info")]
+    + ["SYS:Devs/postscript_init.ps"]
+    + [f"SYS:Prefs/Classic/{e}{i}" for e in ("Printer", "PrinterGfx", "PrinterPS") for i in ("", ".info")]
+    + [f"SYS:Tools/{t}{i}" for t in ("CMD", "GraphicDump", "InitPrinter", "PrintFiles") for i in ("", ".info")]
+    + [f"SYS:Locale/Help/{lang}/Sys/{h}" for lang in ("english", "english_british")
+       for h in ("Prefs/printer.help", "Prefs/printergfx.help", "Prefs/printerps.help", "Tools/printfiles.help",
+                 "Tools/graphicdump.help", "Tools/cmd.help", "Tools/initprinter.help")]
+    + ["SYS:Locale/Catalogs/english_british/Sys/hp_printer.catalog", "SYS:Storage/Printers.info"])
+
+
+def iff(data: bytes) -> dict:
+    """A FORM PREF's chunks, read as printer.device reads them (FORM, its size, PREF, then id, size, body, pad)."""
+    out = {}
+    if data[:4] != b"FORM" or data[8:12] != b"PREF" or int.from_bytes(data[4:8], "big") != len(data) - 8:
+        return out
+    i = 12
+    while i + 8 <= len(data):
+        n = int.from_bytes(data[i + 4:i + 8], "big")
+        out[data[i:i + 4].decode()] = data[i + 8:i + 8 + n]
+        i += 8 + n + (n & 1)
+    return out
+
+
+def openprinter_checks() -> None:
+    """The OpenPrinter part (retiring the legacy printing, 24 October 2026)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        dev = b"\0" * 64 + b"printer.device 47.100 (13.10.2026) OpenPrinter, AmigaChrome Team\r\n\0" \
+            + b"\0$VER: printer.device 47.100 (13.10.2026) OpenPrinter, AmigaChrome Team\0"
+        op = bp.openprinter_part(Path(tmp), dev)
+        op.write()
+        lines = (op.dir / "Part").read_text(encoding="latin-1").splitlines()
+        check("OpenPrinter: the part's version is its printer.device's", lines[0] == "part OpenPrinter 47.100", lines[0])
+        check("OpenPrinter: AmigaChrome instances only (the user's decision)", "needs AmigaChrome" in lines)
+        keep = [l for l in lines if l.startswith("keep ")]
+        check("OpenPrinter: refused where DEVS:printer.device is neither OS 3.2's nor ours",
+              keep == ['keep "SYS:Devs/printer.device" "printer.device 47." "OpenPrinter, AmigaChrome Team"'], str(keep))
+        check("OpenPrinter: the OS 3.2.3 printer.device's id and ours each carry a marker",
+              any(m in "printer.device 47.3 (23.5.2020)" for m in bp.OPENPRINTER_MARKERS)
+              and any(m.encode() in dev for m in bp.OPENPRINTER_MARKERS))
+        check("OpenPrinter: our printer.device in OS 3.2.3's place (the original kept by copy's rule)",
+              'copy "Devs/printer.device" "SYS:Devs/printer.device"' in lines
+              and (op.dir / "Devs/printer.device").read_bytes() == dev)
+        for name in ("printer.prefs", "printergfx.prefs"):
+            check(f"OpenPrinter: {name} only where there is none, in ENVARC:Sys and ENV:Sys",
+                  f'default "Prefs/{name}" "ENVARC:Sys/{name}"' in lines and f'default "Prefs/{name}" "ENV:Sys/{name}"' in lines)
+        txt = iff((op.dir / "Prefs/printer.prefs").read_bytes())
+        gfx = iff((op.dir / "Prefs/printergfx.prefs").read_bytes())
+        check("printer.prefs: PRHD, PTXT, PUNT and PDEV at the NDK 3.2 sizes",
+              {k: len(v) for k, v in txt.items()} == {"PRHD": 6, "PTXT": 64, "PUNT": 56, "PDEV": 52}, str(txt.keys()))
+        check("printergfx.prefs: PRHD and PGFX at the NDK 3.2 sizes",
+              {k: len(v) for k, v in gfx.items()} == {"PRHD": 6, "PGFX": 38}, str(gfx.keys()))
+        if "PTXT" in txt and "PUNT" in txt and "PGFX" in gfx:
+            t, u, g = txt["PTXT"], txt["PUNT"], gfx["PGFX"]
+            fields = [int.from_bytes(t[48 + 2 * i:50 + 2 * i], "big") for i in range(8)]
+            check("PTXT: driver OpenPrint, port 0, single sheets, A4 (9), 66 lines, pica, 6 lpi, margins 5-75",
+                  t[16:46].rstrip(b"\0") == b"OpenPrint" and t[46] == 0 and fields == [1, 9, 66, 0, 0, 5, 75, 1],
+                  str((t[16:46], fields)))
+            check("PUNT: oapspool (oapspool.device, as the editor writes it), unit 0",
+                  int.from_bytes(u[16:20], "big") == 0 and u[24:56].rstrip(b"\0") == b"oapspool")
+            check("PGFX: horizontal, colour, threshold 7, density 2",
+                  [int.from_bytes(g[16 + 2 * i:18 + 2 * i], "big") for i in range(4)] == [0, 2, 0, 7] and g[30] == 2)
+        retired = [l[8:-1] for l in lines if l.startswith('retire "')]
+        check("OpenPrinter: every printing file Instance-32 has is archived (61)",
+              not [p for p in INSTANCE32_PRINTING if p not in retired] and len(INSTANCE32_PRINTING) == 61,
+              str([p for p in INSTANCE32_PRINTING if p not in retired]))
+        check("OpenPrinter: the drivers where the real Installer keeps them, the editors at SYS:Prefs, 17 languages",
+              "SYS:Storage/Printers/EpsonQ" in retired and "SYS:Prefs/Printer" in retired
+              and "SYS:Locale/Help/deutsch/Sys/Prefs/printer.help" in retired
+              and "SYS:Locale/Catalogs/fran\xe7ais/Sys/hp_printer.catalog" in retired and len(retired) == 218, str(len(retired)))
+        stays = ("SYS:Devs/parallel.device", "SYS:Devs/serial.device", "SYS:Devs/Printers/OpenPrint", "SYS:Devs/Printers",
+                 "SYS:Devs/Printers.info", "SYS:L/Port-Handler", "SYS:Devs/oapspool.device")
+        check("OpenPrinter: the ports, PRT:'s handler, the Printers drawer and OpenPrint's own pieces stay",
+              not [p for p in stays if p in retired], str([p for p in stays if p in retired]))
+        check("OpenPrinter: nothing deleted, only archived (no delete line)", not [l for l in lines if l.startswith("delete")])
+    check("OpenPrinter's version is read from its printer.device",
+          bp.PART_MAIN.get("OpenPrinter") == ("Devs/printer.device", "printer.device"))
+    inst = (ROOT / "pack/Install-OpenUp").read_text(encoding="latin-1")
+    a, b = inst.find("INSTALL Parts/OpenPrint >>"), inst.find("INSTALL Parts/OpenPrinter >>")
+    check("Install-OpenUp: OpenPrinter right after OpenPrint, under the same choice", 0 < a < b
+          and inst.rfind("(if (bitand #parts 2)", 0, a) > inst.rfind("(if (bitand #parts", 0, a) - 1
+          and inst.find("(if (bitand #parts", a) > b)
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -228,6 +314,8 @@ def main() -> int:
     pagewords = {p: w for p, w, _ in bp.PREFERENCES_PAGES}
     check("OpenUpMenu's page entries: each a page icon by its plain name, with its page's SECTION word",
           entries and all(label == page and pagewords.get(page) == word for label, page, word in entries), str(entries))
+
+    openprinter_checks()
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
     return 1 if fails else 0

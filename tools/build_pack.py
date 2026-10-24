@@ -35,6 +35,9 @@ a Part file that C/OpenUpTool reads:
                         vendored payload (vendor/opensocket-os32); without the checkout,
                         that vendored payload as it is
   OpenPrint/            OpenPrint and OpenView (openamigaprint's package)
+  OpenPrinter/          our printer.device in front of OpenPrint, with printer.prefs naming OpenPrint's driver;
+                        OS 3.2.3's printer drivers, editors, tools and their help archived (amigachrome-guest
+                        devices/openprinter.device; AmigaChrome instances only)
   AmigaChromeSharing/   accontrol.device, ACClip and ACDrop (amigachrome-guest)
   Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
   OpenIcons/            OpenIcons look B, the Team's own icon set (MIT), as new pictures for
@@ -194,6 +197,95 @@ NULL_OK = "-fno-delete-null-pointer-checks"
 
 # OpenSocket's files that must be ours, or absent: never another stack's (DESIGN.md section 3).
 OPENSOCKET_MARKERS = ["OpenSocket (AmigaChrome)", "ACNet (AmigaChrome)", "AmigaChrome ACNet"]
+
+# OpenPrinter (24 October 2026, the plan "Retiring the legacy printing, in favour of OpenPrint"): on AmigaChrome
+# instances what programs print the old way (printer.device, PRT:) goes to OpenPrint. Our printer.device
+# (amigachrome-guest devices/openprinter.device) takes OS 3.2.3's place; printer.prefs names OpenPrint's driver on
+# oapspool.device unit 0. OS 3.2.3's own printer drivers, the Printer, PrinterGfx and PrinterPS editors, CMD,
+# GraphicDump, InitPrinter and PrintFiles, and their help and catalogs are archived (retire: SYS:Storage/
+# OpenUp-Superseded; REMOVE and UNINSTALL put them back). The part leaves a printer.device that is neither OS 3.2's
+# nor ours (TurboPrint's, say) and changes nothing then.
+OPENPRINTER_MARKERS = ["printer.device 47.", "OpenPrinter, AmigaChrome Team"]
+LEGACY_PRINTER_DRIVERS = ("EpsonQ", "EpsonX", "EpsonXOld", "Generic", "HP_DeskJet", "HP_DeskJet_340", "HP_DeskJet_400",
+                          "HP_DeskJet_600", "HP_DeskJet_895C", "HP_LaserJet", "HP_LaserJet_2100", "HP_LaserJet_4",
+                          "HP_LaserJet_III", "NEC_Pinwriter", "PostScript")
+LEGACY_PRINTER_EDITORS = ("Printer", "PrinterGfx", "PrinterPS")
+LEGACY_PRINTER_TOOLS = ("CMD", "GraphicDump", "InitPrinter", "PrintFiles")
+LEGACY_PRINTER_HELP = ("Sys/Prefs/printer.help", "Sys/Prefs/printergfx.help", "Sys/Prefs/printerps.help",
+                       "Sys/Tools/graphicdump.help", "Sys/Tools/initprinter.help", "Sys/Tools/printfiles.help",
+                       "Sys/Tools/cmd.help")
+# OS 3.2.3's languages (amigachrome scripts/os32_host_install.py LANGUAGE_IDS); their help and catalog files are
+# taken to have english's names. A retire line for a file that isn't there does nothing.
+OS32_LANGUAGES = ("czech", "dansk", "deutsch", "english", "english_british", "español", "français", "greek",
+                  "italiano", "nederlands", "norsk", "polski", "português", "russian", "srpski", "svenska", "türkçe")
+
+
+def legacy_printing_paths() -> list[str]:
+    """What the OpenPrinter part archives, where each may be: the drivers in DEVS:Printers (and SYS:Storage/Printers,
+    where a disk the real Installer made keeps them), the editors in SYS:Prefs/Classic (RECONCILE's) and SYS:Prefs,
+    the tools, the help and catalogs in each language, and SYS:Storage/Printers.info (an icon with no drawer)."""
+    out = []
+    for where in ("SYS:Devs/Printers", "SYS:Storage/Printers"):
+        for d in LEGACY_PRINTER_DRIVERS:
+            out += [f"{where}/{d}", f"{where}/{d}.info"]
+    out.append("SYS:Devs/postscript_init.ps")
+    for where in ("SYS:Prefs/Classic", "SYS:Prefs"):
+        for e in LEGACY_PRINTER_EDITORS:
+            out += [f"{where}/{e}", f"{where}/{e}.info"]
+    for t in LEGACY_PRINTER_TOOLS:
+        out += [f"SYS:Tools/{t}", f"SYS:Tools/{t}.info"]
+    for lang in OS32_LANGUAGES:
+        out += [f"SYS:Locale/Help/{lang}/{h}" for h in LEGACY_PRINTER_HELP]
+        out.append(f"SYS:Locale/Catalogs/{lang}/Sys/hp_printer.catalog")
+    out.append("SYS:Storage/Printers.info")
+    return out
+
+
+def iff_chunk(cid: bytes, body: bytes) -> bytes:
+    return cid + struct.pack(">I", len(body)) + body + (b"\0" if len(body) & 1 else b"")
+
+
+def printer_prefs(driver: str = "OpenPrint", device: str = "oapspool", unit: int = 0, paper_size: int = 9,
+                  paper_length: int = 66, pitch: int = 0, spacing: int = 0, left: int = 5, right: int = 75) -> bytes:
+    """ENVARC:Sys/printer.prefs as OS 3.2's Printer editor writes it: FORM PREF with PRHD, PTXT, PUNT and PDEV in
+    the NDK 3.2 layouts (prefs/printertxt.h). The editor's numbers: paper size 9 is A4 (0 US Letter, 1 US Legal),
+    pitch 0 pica (1 elite, 2 fine), spacing 0 six lines to the inch (1 eight). PUNT names the port device without
+    ".device", as the editor does: "oapspool" is oapspool.device, OpenPrint's."""
+    ptxt = (b"\0" * 16 + driver.encode("latin-1").ljust(30, b"\0")[:30] + b"\0\0"     # reserved, pt_Driver, pt_Port 0, pad
+            + struct.pack(">8H", 1, paper_size, paper_length, pitch, spacing, left, right, 1))   # single sheets, ... letter quality
+    punt = b"\0" * 16 + struct.pack(">iI", unit, 0) + device.encode("latin-1").ljust(32, b"\0")[:32]
+    pdev = b"\0" * 16 + struct.pack(">i", unit) + driver.encode("latin-1").ljust(32, b"\0")[:32]
+    body = b"PREF" + iff_chunk(b"PRHD", b"\0" * 6) + iff_chunk(b"PTXT", ptxt) + iff_chunk(b"PUNT", punt) + iff_chunk(b"PDEV", pdev)
+    return b"FORM" + struct.pack(">I", len(body)) + body
+
+
+def printergfx_prefs(aspect: int = 0, shade: int = 2, threshold: int = 7, density: int = 2) -> bytes:
+    """ENVARC:Sys/printergfx.prefs as OS 3.2's PrinterGfx editor writes it: FORM PREF with PRHD and PGFX
+    (prefs/printergfx.h). Aspect 0 horizontal, shade 2 colour, density 2 (OpenPrint's driver: 100 dots to the inch,
+    as the lab's proof of printer.device against OS 3.2.3's was run)."""
+    pgfx = (b"\0" * 16 + struct.pack(">HHHh", aspect, shade, 0, threshold)
+            + bytes([0, 0, 0, 0]) + struct.pack(">H", 0) + bytes([density, 0]) + struct.pack(">HH", 0, 0) + b"\0\0")
+    body = b"PREF" + iff_chunk(b"PRHD", b"\0" * 6) + iff_chunk(b"PGFX", pgfx)
+    return b"FORM" + struct.pack(">I", len(body)) + body
+
+
+def openprinter_part(top: Path, printer_device: bytes) -> "Part":
+    """The OpenPrinter part (the comment at OPENPRINTER_MARKERS). Its version is the printer.device's."""
+    version = binary_version(printer_device, "printer.device")
+    if not version:
+        raise SystemExit("OpenPrinter: the printer.device has no version string")
+    op = Part(top, "OpenPrinter", version, "an open printer.device that sends what older programs print to OpenPrint; "
+              "the OS's printer drivers, editors and tools archived")
+    op.line("needs AmigaChrome")
+    op.line('keep "SYS:Devs/printer.device" ' + " ".join(f'"{x}"' for x in OPENPRINTER_MARKERS))
+    op.add("Devs/printer.device", printer_device, "SYS:Devs/printer.device")
+    # the settings only where there are none: OpenPrefs's Printing page changes them after, and an update keeps them
+    for name, data in (("printer.prefs", printer_prefs()), ("printergfx.prefs", printergfx_prefs())):
+        op.add(f"Prefs/{name}", data, f"ENVARC:Sys/{name}", default=True)
+        op.add(f"Prefs/{name}", data, f"ENV:Sys/{name}", default=True)     # in use before the next start
+    for path in legacy_printing_paths():
+        op.line(f'retire "{path}"')
+    return op
 
 
 def run(cmd, cwd=None, env=None):
@@ -531,6 +623,8 @@ def build_parts(a):
     run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
     # softfpu.library (amigachrome-guest libraries/opensoftfpu, its default os32-gcc16 stove): the OpenUp part's
     run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
+    # printer.device (amigachrome-guest devices/openprinter.device, its default os32-gcc16 stove): the OpenPrinter part's
+    run(["sh", a.guest / "devices/openprinter.device/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openprinter")))
     if a.openamigainput:
         run(["sh", a.openamigainput / "device/build.sh", ol / "input"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
@@ -724,6 +818,7 @@ PART_MAIN = {
     "OpenBlanker": ("Tools/Commodities/OpenBlanker", "OpenBlanker"),
     "OpenSnap": ("Tools/Commodities/OpenSnap", "OpenSnap"),
     "OpenSocket": ("Libs/bsdsocket.library", "bsdsocket.library"),
+    "OpenPrinter": ("Devs/printer.device", "printer.device"),
     "OpenPrefs": ("Preferences/OpenPrefs", "OpenPrefs"),
     "OpenCompress": ("Utilities/OpenCompress", "OpenCompress"),
     "OpenService": ("Devs/openservice.device", "openservice.device"),
@@ -1363,6 +1458,12 @@ def main() -> int:
     # untouched, and needs no second program.
     pr.add("Drawer/MultiView", (pkg / "Drawer/OpenView").read_bytes(), "SYS:Utilities/MultiView")
     pr.write()
+
+    # OpenPrinter: our printer.device in front of OpenPrint, and the OS's printing archived (OPENPRINTER_MARKERS)
+    opd = ROOT / "build/openprinter/devs/printer.device"
+    if not opd.is_file():
+        raise SystemExit(f"{opd} wasn't built (amigachrome-guest devices/openprinter.device/build-amiga.sh)")
+    openprinter_part(top, opd.read_bytes()).write()
 
     # AmigaChrome sharing: the control device, the clipboard and the files tools
     gout = a.guest / "build/guest/os32"
