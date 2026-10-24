@@ -197,6 +197,14 @@ static void task_name(struct Task *t, char *out, int size, char *cmd, int csize)
     out[size - 1] = 0;
 }
 
+/* A task's name as the Tasks view shows it (a Shell's command by its file name); under Forbid. */
+void om_task_name(struct Task *t, char *out, int size)
+{
+    char cmd[8];
+    task_name(t, out, size, cmd, sizeof cmd);
+    if (!out[0]) { strncpy(out, "(no name)", size - 1); out[size - 1] = 0; }
+}
+
 /* Under Disable. */
 static void add_task(struct Task *t)
 {
@@ -377,6 +385,9 @@ static void choose_row(int shown)
     chosen = r->task; chosen_lnname = r->lnname; chosen_spl = r->splower;
     strcpy(chosen_name, r->name);
 }
+
+/* "Show the owner" (the Ports view): that task chosen, every task shown, the list scrolled to it */
+static int scroll_to_chosen;
 
 /* ---- the second's look -------------------------------------------------------------------------------- */
 
@@ -581,6 +592,7 @@ static void redraw_rows(void)
     for (i = 0; i < norder; i++)
         if (rows[order[i]].task == chosen && rows[order[i]].lnname == chosen_lnname && rows[order[i]].splower == chosen_spl) { sel = i; break; }
     T.list->selected = sel;
+    if (sel >= 0 && scroll_to_chosen) { ogt_list_show(T.list, sel); scroll_to_chosen = 0; }
     if (sel < 0 && chosen && !chosen_row()) chosen = NULL;
     om_table_draw_rows(&T);
     draw_details();
@@ -1315,6 +1327,15 @@ static int event(ULONG cls, UWORD code, UWORD qual, APTR ia, int mx, int my, ULO
 static void shown(int on)
 {
     if (!on) om_table_free(&T);
+}
+
+void om_tasks_choose(struct Task *t)
+{
+    int i;
+    show_mode = 0;
+    find[0] = 0;
+    take(0);
+    for (i = 0; i < norder; i++) if (rows[order[i]].task == t) { choose_row(i); scroll_to_chosen = 1; break; }
 }
 
 const struct om_view om_tasks_view = { "Tasks", layout, gadgets, draw, tick, event, shown, status };

@@ -1,5 +1,5 @@
 #!/bin/sh
-# OpenMonitor 0.4 for the disk (OpenUp's SYS:Utilities/OpenMonitor), with the os32-gcc16 stove:
+# OpenMonitor (0.4 on) for the disk (OpenUp's SYS:Utilities/OpenMonitor), with the os32-gcc16 stove:
 #   OGT=<opengadtools checkout> sh src/openmonitor/build.sh [OUT]          (default build/os3/OpenMonitor)
 # The compiler: the os32-gcc16 stove at OS32_GCC16 (default ~/AmigaChrome/stoves/os32-gcc16), GCC 16 or
 # later. Built resident (libnix -resident: each run its own variables), 68040 code, soft float as
@@ -20,6 +20,6 @@ G="$OGT/lib"
 "$CC" -noixemul -m68040 -specs="$OGT/specs/m68k-soft-m68040.specs" -resident -std=gnu99 -Wall -Werror -Wno-format-truncation -Os \
     -fno-tree-loop-distribute-patterns -fno-delete-null-pointer-checks -fno-common -I"$G" -I"$HERE" \
     -o "$OUT" \
-    "$HERE/main.c" "$HERE/ui.c" "$HERE/graphs.c" "$HERE/tasks.c" \
+    "$HERE/main.c" "$HERE/ui.c" "$HERE/graphs.c" "$HERE/tasks.c" "$HERE/memory.c" "$HERE/libs.c" "$HERE/ports.c" "$HERE/ints.c" \
     "$G/ogt_look.c" "$G/ogt_theme.c" "$G/ogt_font.c" "$G/ogt_draw.c" "$G/ogt_list.c" "$G/ogt_tabs.c" "$G/ogt_status.c"
 echo "$OUT ($(wc -c < "$OUT") bytes)"
