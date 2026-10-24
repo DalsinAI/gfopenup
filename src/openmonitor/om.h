@@ -20,7 +20,7 @@
 #include "ogt_tabs.h"
 #include "ogt_status.h"
 
-#define OM_VERSION "0.8"
+#define OM_VERSION "0.8.1"
 #define OM_DATE "24.10.2026"
 
 #define REG(r, decl) register decl __asm(#r)
@@ -63,6 +63,7 @@ struct om_ui {
     LONG pen_text, pen_muted, pen_accent, pen_danger, pen_amber, pen_list, pen_alt, pen_head, pen_fill,
          pen_filltext, pen_shine, pen_shadow, pen_back;
     LONG graph_pen[4];
+    LONG gauge_bg, gauge_grid, gauge_text, gauge_line[3];   /* 0.8.1: the graphs dark, their lines white, blue, red */
     struct Gadget *glist;           /* the window's gadgets: GadTools', then the tabs' */
     ogt_tabs tabs;
     ogt_status status;
