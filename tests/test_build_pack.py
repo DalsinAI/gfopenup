@@ -27,9 +27,9 @@ sys.path.insert(0, str(ROOT / "tools"))
 import build_pack as bp  # noqa: E402
 
 # The pages by the user's plain names (the design's section 8, Q9), in OpenPrefs's order
-PAGES = ["Theme", "Screen Mode", "Pointer", "Fonts", "Colours", "Backdrops", "Workbench", "File Requesters", "Windows",
-         "Title Bar", "Menus", "IControl", "Dock", "Sound", "Input", "Gamepads", "Date & Time", "Serial", "File Types",
-         "System", "Blanker"]
+PAGES = ["Theme", "Screen Mode", "Pointer", "Fonts", "Colours", "Backdrops", "Workbench", "Icons", "File Requesters",
+         "Windows", "Title Bar", "Menus", "IControl", "Dock", "Sound", "Input", "Gamepads", "Date & Time", "Serial",
+         "Printing", "File Types", "System", "Blanker"]   # OpenPrefs 2.4's list order (openamigaprefs opframe.c lt_order)
 # The stubs archived: the 13 old ones and the 9 OpenUp added on 21 October (section 10)
 OLD13 = ["Look", "OpenLook", "Windows", "TitleBar", "Menus", "OpenDock", "OpenSound", "OpenInput", "OpenGamepads",
          "OpenDateTime", "OpenSerial", "OpenTypes", "OpenSystem"]
