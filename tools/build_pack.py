@@ -734,11 +734,13 @@ OPENPREFS_HOME = "SYS:Preferences/OpenPrefs"
 PREFERENCES_PAGES = (("Theme", "THEME", "Look"), ("Screen Mode", "SCREENMODE", "ScreenMode"),
                      ("Pointer", "POINTER", "Pointer"), ("Fonts", "FONTS", "Fonts"), ("Colours", "COLOURS", "Colours"),
                      ("Backdrops", "BACKDROPS", "Backdrops"), ("Workbench", "WORKBENCH", "Workbench"),
+                     ("Icons", "ICONS", "Icons"),        # OpenPrefs 2.3's page (openamigaprefs #137)
                      ("File Requesters", "FILEREQUESTERS", "FileRequesters"), ("Windows", "WINDOWS", "Windows"),
                      ("Title Bar", "TITLEBAR", "TitleBar"), ("Menus", "MENUS", "Menus"),
                      ("IControl", "ICONTROL", "IControl"), ("Dock", "DOCK", "Dock"), ("Sound", "SOUND", "Sound"),
                      ("Input", "INPUT", "MouseKeys"), ("Gamepads", "GAMEPADS", "Gamepads"),
                      ("Date & Time", "DATETIME", "DateTime"), ("Serial", "SERIAL", "Serial"),
+                     ("Printing", "PRINTING", "Printing"),   # OpenPrefs 2.4's page (openamigaprefs #144)
                      ("File Types", "TYPES", "OpenTypes"), ("System", "SYSTEM", "System"),
                      ("Blanker", "BLANKER", "Blanker"))
 
