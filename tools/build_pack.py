@@ -9,7 +9,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigaedit DIR] [--openamigawrite DIR] [--openamigalayout DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
-        [--openamigasocket DIR] [--openamigabench DIR] [--openamigapython FILE]
+        [--openamigasocket DIR] [--openamigabench DIR] [--openamigafont DIR] [--openamigapython FILE]
         [--openbrowserlite FILE] [--no-build] [--lha]
 
 GL.module's build (openamigartg library/modules/gl) needs meson on PATH and
@@ -46,6 +46,10 @@ a Part file that C/OpenUpTool reads:
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through OpenService (opendatatypes)
   OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
+  ShellFont/            DejaVu Sans Mono as Amiga bitmap fonts, 8 to 24 pixels high, in FONTS:, with its
+                        licence, for Font prefs' System Default Text; always installed. The OpenKick ROM
+                        has the 11 and makes it the Shell's font itself; no Font prefs are written
+                        (openamigafont's fonts/amiga; left out without --openamigafont)
   OpenPrefs/            OpenPrefs, every editor of ours as a section of one program
                         (SYS:Prefs/OpenPrefs), its small body C:OpenPrefs (the boot's one
                         OpenPrefs APPLY line), and a stub with its own icon for each section
@@ -658,12 +662,13 @@ PART_MAIN = {
 # zunemaster.library (0.1, with the datatypes cache's Stricmp fix of 12 October 2026) with the
 # muimaster.library face (19.1). Sound 0.2.2 is OpenSpeaker (0.1.4; the editor is OpenPrefs's since W48) with OpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmigaChrome machines only). OpenImage 0.4 adds
-# opentga.datatype (47.1). A part's own version goes up when what it ships changes, so OpenUpTool UPDATE
+# opentga.datatype (47.1). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (openamigafont
+# fonts/amiga). A part's own version goes up when what it ships changes, so OpenUpTool UPDATE
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
 # binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
 PART_OWN_VERSION = {"OpenLibs", "AmigaChromeSharing", "OpenImage", "Backdrops", "OpenIcons", "OpenDemos", "OpenGPUDev",
-                    "OpenPrint", "OpenMUI", "Sound", "OpenAmigaPython"}
+                    "OpenPrint", "OpenMUI", "Sound", "OpenAmigaPython", "ShellFont"}
 
 
 # OpenAmigaPython (SacredTrees/openamigapython, the ac3-classic line): the pack takes the Part
@@ -1053,6 +1058,9 @@ def main() -> int:
                          "vendored payload, which can be older than openamigasocket's main)")
     ap.add_argument("--openamigabench", type=Path, default=first(DEV / "openamigabench", DEV.parent / "openamigabench"),
                     help="openamigabench checkout: OpenBench, the Team's own Workbench (desktop/build.sh)")
+    ap.add_argument("--openamigafont", type=Path, default=first(DEV / "openamigafont", DEV.parent / "openamigafont"),
+                    help="openamigafont checkout: the ShellFont part, DejaVu Sans Mono as Amiga bitmap fonts "
+                         "(its fonts/amiga; left out without it)")
     py_asset = ROOT / "build" / OPENAMIGAPYTHON["asset"]
     ap.add_argument("--openamigapython", type=Path, default=py_asset if py_asset.is_file() else None,
                     help=f"OpenAmigaPython's release archive {OPENAMIGAPYTHON['asset']} (from "
@@ -1317,6 +1325,27 @@ def main() -> int:
     bl.add("Settings/Blanker.env", b"300\n", "ENV:OpenPrefs/Blanker", default=True)
     bl.line("startup Run >NIL: SYS:Tools/Commodities/OpenBlanker")
     bl.write()
+
+    # The Shell's font (24 October 2026), on every install: DejaVu Sans Mono as Amiga bitmap fonts, fixed width,
+    # 8 to 24 pixels high, made from the TrueType font by openamigafont's tools/amigafont.py and kept in its
+    # fonts/amiga, with the Bitstream Vera licence they come under (its LICENSE-DejaVu.txt), for Font prefs'
+    # System Default Text. "add": a DejaVuSansMono.font of another program's stays. The OpenKick ROM has the 11
+    # and makes it the system default text where no Font prefs name one; OpenUp writes no Font prefs.
+    if a.openamigafont and (a.openamigafont / "fonts/amiga/DejaVuSansMono.font").is_file():
+        fa = a.openamigafont / "fonts/amiga"
+        sf = Part(top, "ShellFont", "1.0", "DejaVu Sans Mono 2.37, 8 to 24 pixels, for the Shell (Font prefs' System Default Text)")
+        sf.add("Fonts/DejaVuSansMono.font", (fa / "DejaVuSansMono.font").read_bytes(), "FONTS:DejaVuSansMono.font", own=True)
+        for f in sorted((fa / "DejaVuSansMono").iterdir(), key=lambda p: int(p.name)):
+            sf.add(f"Fonts/DejaVuSansMono/{f.name}", f.read_bytes(), f"FONTS:DejaVuSansMono/{f.name}", own=True)
+        # with one line first for the ROM's fonts drawn from DejaVu Sans Mono too: the system's copy of the notice
+        # (the ROM has no room for one; amigachrome-guest and openamigagfx keep theirs beside the sources)
+        rom = (b"This licence also covers the OpenKick ROM's DejaVuSansMono.font 11 and its topaz.font 8 and 9, "
+               b"which are drawn from DejaVu Sans Mono.\n\n")
+        sf.add("Utilities/OpenUp/Licences/DejaVuSansMono.txt", rom + (fa / "LICENSE-DejaVu.txt").read_bytes(),
+               "SYS:Utilities/OpenUp/Licences/DejaVuSansMono.txt")
+        sf.write()
+    else:
+        print("  ShellFont: left out (no --openamigafont checkout with fonts/amiga)")
 
     # OpenDock: the dock and its editor (openamigaprefs). The Installer runs
     # "SYS:Prefs/OpenDock SAVE" once, on a first install, so the dock has the

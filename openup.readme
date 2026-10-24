@@ -75,6 +75,10 @@ choose:
   without a key or the mouse it plays Gods and Angels, AmigaChrome's homage
   to the people who made the Amiga and kept it alive
   (SYS:Tools/Commodities/OpenBlanker; ENV:OpenPrefs/Blanker sets the seconds);
+- The Shell's font (new, always installed): DejaVu Sans Mono in FONTS:, 8
+  to 24 pixels high, fixed width, for Font in SYS:Prefs ("System default
+  text"); the OpenKick ROM's own Shell font is its 11, and OpenUp changes no
+  Font prefs;
 - OpenWrite (new): a word processor for DOCX, ODT and Amiga documents,
   with PDF export, printing, spelling and an ARexx port
   (SYS:Utilities/OpenWrite), and C:OWConvert for scripts;
