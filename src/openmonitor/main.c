@@ -1,4 +1,4 @@
-/* OpenMonitor 0.6: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
+/* OpenMonitor 0.7: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
  * into the Amiga's task manager (the user, 24 October 2026: "a true task manager, a blend of what it is today,
  * SysInfo, ShowConfig and SnoopDos"; the design of that day, agreed at 15:05).
  *
@@ -50,12 +50,15 @@ struct om_ui U;
 char om_first_task[40];
 static char pubscreen[40];             /* PUBSCREEN/K: a public screen by its name, else the default one */
 const struct om_view *om_views[V_N] = { &om_tasks_view, &om_memory_view, &om_libs_view, &om_ports_view, &om_ints_view,
-                                        &om_hw_view, &om_speed_view };
+                                        &om_hw_view, &om_speed_view, &om_calls_view };
 
 /* ---- settings: ENV:OpenMonitor/Settings, "key value" lines, kept in ENVARC: too ------------------------- */
 
 #define MAXPREFS 40
-static char pref_key[MAXPREFS][24], pref_val[MAXPREFS][96];
+/* allocated: the view's variables (a4's 64 KB, built resident) are kept for what must be there */
+static struct prefs { char key[MAXPREFS][24], val[MAXPREFS][96]; } *P;
+#define pref_key (P->key)
+#define pref_val (P->val)
 static int npref;
 
 static void prefs_load(void)
@@ -63,6 +66,7 @@ static void prefs_load(void)
     char buf[3200], *p, *line;
     LONG n = GetVar((STRPTR)"OpenMonitor/Settings", (STRPTR)buf, sizeof buf, GVF_GLOBAL_ONLY | GVF_BINARY_VAR);
     npref = 0;
+    if (!P && !(P = AllocVec(sizeof *P, MEMF_ANY | MEMF_CLEAR))) return;
     if (n <= 0) return;
     buf[n < (LONG)sizeof buf ? n : (LONG)sizeof buf - 1] = 0;
     for (p = buf; p && *p && npref < MAXPREFS; ) {
@@ -82,6 +86,7 @@ static void prefs_load(void)
 const char *om_pref(const char *key)
 {
     int i;
+    if (!P) return NULL;
     for (i = 0; i < npref; i++) if (!strcmp(pref_key[i], key)) return pref_val[i];
     return NULL;
 }
@@ -98,6 +103,7 @@ static void prefs_save(void)
 void om_set_pref(const char *key, const char *value)
 {
     int i;
+    if (!P) return;
     for (i = 0; i < npref; i++) if (!strcmp(pref_key[i], key)) break;
     if (i == npref) {
         if (npref >= MAXPREFS) return;
@@ -440,7 +446,7 @@ static void smaller_label_font(void)
 {
     static char name[40];
     static const char *const families[] = { "CGTriumvirate.font", "helvetica.font", NULL };
-    int i, size = U.theme.font_size > 0 ? U.theme.font_size : 13;
+    int i, size = U.theme->font_size > 0 ? U.theme->font_size : 13;
     if (U.compact || !U.font || U.font->tf_YSize <= 16) return;
     for (i = 0; families[i]; i++) {
         struct TextAttr ta;
@@ -519,17 +525,18 @@ static int gui(STRPTR first_view)
     prefs_load();
     U.vi = GetVisualInfoA(scr, NULL);
     U.dri = GetScreenDrawInfo(scr);
-    if (!U.vi || !U.dri) { rc = RETURN_FAIL; goto out; }
-    ogt_look_load(&U.theme, &U.mode);
-    if (!ogt_theme_get(&U.theme, U.mode, "panel")) {
+    U.theme = AllocVec(sizeof *U.theme, MEMF_ANY | MEMF_CLEAR);
+    if (!U.vi || !U.dri || !U.theme) { rc = RETURN_FAIL; goto out; }
+    ogt_look_load(U.theme, &U.mode);
+    if (!ogt_theme_get(U.theme, U.mode, "panel")) {
         /* the status bar's key: a theme without it is drawn in the window's colour, not pen 1 */
         ULONG rgb[3];
         char hex[12];
         GetRGB32(scr->ViewPort.ColorMap, U.dri->dri_Pens[BACKGROUNDPEN], 1, rgb);
         snprintf(hex, sizeof hex, "#%02lx%02lx%02lx", (unsigned long)(rgb[0] >> 24), (unsigned long)(rgb[1] >> 24), (unsigned long)(rgb[2] >> 24));
-        ogt_theme_override(&U.theme, "panel", hex);
+        ogt_theme_override(U.theme, "panel", hex);
     }
-    if (!(U.ctx_ok = ogt_ctx_init(&U.ctx, scr, &U.theme, U.mode))) { rc = RETURN_FAIL; goto out; }
+    if (!(U.ctx_ok = ogt_ctx_init(&U.ctx, scr, U.theme, U.mode))) { rc = RETURN_FAIL; goto out; }
     U.compact = scr->Height < 400;
     if (U.compact) {
         /* everything in the screen's font: topaz 8 on a PAL HighRes Workbench (the design, section 8) */
@@ -538,7 +545,7 @@ static int gui(STRPTR first_view)
         U.tta = *scr->Font;
         U.tfont = OpenFont(&U.tta);
     } else {
-        U.font = ogt_open_font(&U.theme, scr, &U.ta);
+        U.font = ogt_open_font(U.theme, scr, &U.ta);
         smaller_label_font();
         U.tfont = open_table_font();
     }
@@ -557,6 +564,7 @@ static int gui(STRPTR first_view)
     om_ints_init();
     om_hw_init();
     om_speed_init();
+    om_calls_init();
 
     /* the size: kept from the last run, else 1000 x 780 (outer) on a big screen, the whole screen on a small one */
     minw = U.compact ? 400 : 720;
@@ -655,10 +663,12 @@ out:
     if (tport) DeleteMsgPort(tport);
     tr = NULL; tport = NULL;
     for (i = 0; i < V_N; i++) if (i == U.view && U.win && om_views[i]->shown) om_views[i]->shown(0);
+    om_calls_free();                    /* the wedges out, every call through them back */
     om_tasks_free();                    /* every frozen task resumed, the sampler out */
     om_libs_free();
     om_ports_free();
     om_hw_free();
+    om_ints_free();
     om_graphs_free();
     if (U.win) {
         if (U.glist) RemoveGList(U.win, U.glist, -1);
@@ -671,8 +681,12 @@ out:
     if (U.vi) FreeVisualInfo(U.vi);
     if (U.font) CloseFont(U.font);
     if (U.tfont) CloseFont(U.tfont);
-    if (U.theme.text) ogt_theme_free(&U.theme);
+    if (U.theme && U.theme->text) ogt_theme_free(U.theme);
+    if (U.theme) FreeVec(U.theme);
+    U.theme = NULL;
     UnlockPubScreen(NULL, scr);
+    if (P) FreeVec(P);
+    P = NULL;
     return rc;
 }
 
