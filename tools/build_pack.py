@@ -25,8 +25,9 @@ a Part file that C/OpenUpTool reads:
 
   OpenUp/               OpenUpTool and the uninstaller, OpenUpMenu: the
                         Tools menu's OpenUp and Preferences sub-menus, and
-                        OpenMonitor's icon in SYS:Utilities (tasks, CPU, cores, memory, GPU), with
-                        the program itself except on the open ROM, which has it ("unless OpenKick");
+                        OpenMonitor, the task manager, and its icon in SYS:Utilities, on every ROM:
+                        the disk's 0.4 and on is newer than the open ROM's 0.3.3, and the newer
+                        version wins, until 1.0 goes into the ROM (the task-manager design's P6);
                         LIBS:softfpu.library, the FPU in software for a 68LC040 or
                         68EC040 under the open ROM (amigachrome-guest libraries/opensoftfpu)
   OpenSocket/           bsdsocket.library 4.3 and its tools, built from openamigasocket
@@ -395,15 +396,12 @@ def build_parts(a):
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
     run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
-    ogt = a.opengadtools / "lib"                              # OpenMonitor draws in the theme's font, as the Open apps
-    # OpenMonitor 0.3.3 is built resident (libnix -resident: each run its own variables), so one seglist
-    # serves every run: Resident ... PURE, or the ROM's copy. One 68040 build (builds are 68040 only); the ROM
-    # takes the same file from build/os3-040.
-    (ROOT / "build/os3-040").mkdir(parents=True, exist_ok=True)
-    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-resident", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common", f"-I{ogt}",
-         "-o", ROOT / "build/os3/OpenMonitor", ROOT / "src/openmonitor.c",
-         ogt / "ogt_look.c", ogt / "ogt_theme.c", ogt / "ogt_font.c"], env=env)
-    shutil.copy2(ROOT / "build/os3/OpenMonitor", ROOT / "build/os3-040/OpenMonitor")
+    # OpenMonitor, the task manager (0.4 on: src/openmonitor/, its own build.sh, GCC 16 as opengadtools wants),
+    # built resident (libnix -resident: each run its own variables), so one seglist serves every run. The ROM
+    # keeps 0.3.3, src/openmonitor.c, which amigachrome-guest's romprefs.sh builds, until 1.0 goes into it.
+    gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmigaChrome/stoves/os32-gcc16"))
+    run(["sh", ROOT / "src/openmonitor/build.sh", ROOT / "build/os3/OpenMonitor"],
+        env=dict(os.environ, OS32_GCC16=gcc16_root, OGT=str(a.opengadtools), GUEST=str(a.guest)))
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
     run(["sh", a.opengadtools / "workbench/build.sh"], env=env)   # OpenDrawer
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
@@ -416,7 +414,6 @@ def build_parts(a):
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
     run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=env)        # OpenGPU's driver for the ACRTG board
     # opengfx.library 1.2: the stub that sends opengfx.library's calls to opengpu.library 0.6 (GCC 16)
-    gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmigaChrome/stoves/os32-gcc16"))
     run(["sh", g / "libraries/opengfx/build-amiga.sh"], env=dict(os.environ, STOVE=gcc16_root))
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
     # OpenPrefs: every editor of ours as a page of one program (W48). Its build also makes the small body and the old
@@ -681,16 +678,14 @@ def openprefs_part(top: Path, opapp: bytes, icons, version: str) -> "Part":
 def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
     """What the OpenUp part does by the ROM (the no-ROM-volume design of 24 October 2026, sections 5.5, 7 and 10).
 
-    OpenMonitor: on the open ROM it is the ROM's, a resident command whose first run loads it, and its icon alone
-    in SYS:Utilities starts it (OpenBench runs the resident of a tool icon's name when there is no file,
-    openamigabench P7); an old SYS:Utilities/OpenMonitor is archived there, so the ROM's runs. Elsewhere (OS
-    3.2.3's ROM, an older open ROM) the program comes with its icon, as before: without it the icon would start
-    nothing.
+    OpenMonitor: the program comes with its icon on every ROM. The open ROM has OpenMonitor 0.3.3; the task
+    manager (0.4 on, the OpenMonitor task-manager design of 24 October 2026) is newer, and the newer version
+    wins, so the disk's runs there too. When 1.0 goes into the ROM (that design's P6), this goes back to the
+    icon alone on the open ROM ("unless OpenKick" for the file, and an old one archived).
 
     CommandSwap leaves the ROM with ROM: (Q20): on the open ROM its pins, ENVARC:Sys/CommandSwap.prefs, are
     archived."""
-    core.add("Utilities/OpenMonitor", openmonitor, "SYS:Utilities/OpenMonitor", cond="unless OpenKick")
-    core.line('when OpenKick retire "SYS:Utilities/OpenMonitor"')
+    core.add("Utilities/OpenMonitor", openmonitor, "SYS:Utilities/OpenMonitor")
     core.add("Utilities/OpenMonitor.info", icon, "SYS:Utilities/OpenMonitor.info")
     core.line('when OpenKick retire "ENVARC:Sys/CommandSwap.prefs"')
 
@@ -1285,8 +1280,8 @@ def main() -> int:
     core.add("Utilities/OpenUp/Uninstall-OpenUp.info", (top / "Uninstall-OpenUp.info").read_bytes(),
              "SYS:Utilities/OpenUp/Uninstall-OpenUp.info")
     core.add("Utilities/OpenUp.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/OpenUp.info", own=True)
-    # OpenMonitor: tasks, CPU and the cores, memory and the GPU, as Task Manager or Resources show them; the ROM's on
-    # the open ROM, where CommandSwap's pins go too (openup_rom_lines)
+    # OpenMonitor, the task manager: tasks, CPU and the cores, memory and the GPU, and their actions; on every ROM
+    # until 1.0 goes into it; CommandSwap's pins go on the open ROM (openup_rom_lines)
     openup_rom_lines(core, (ROOT / "build/os3/OpenMonitor").read_bytes(), icons.icon(icons.WBTOOL, "install", stack=32768))
     # softfpu.library (amigachrome-guest libraries/opensoftfpu): the FPU in software, out of the 1M open ROM since
     # W61 (no room). On a 68LC040 or 68EC040 the open ROM's dos opens it from LIBS: before the Startup-Sequence
