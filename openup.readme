@@ -226,6 +226,26 @@ programs that are installed (and OpenUp Update...), and Preferences, with
 their settings editors (Theme, Dock, Sound, Date & Time, Input, Gamepads,
 Serial, Printers, Network, File Types, Tata, OpenUp Setup). SYS:C/OpenUpMenu keeps them there; "OpenUpMenu
 QUIT" takes them out.
+OpenSnap (new, always installed; SYS:Tools/Commodities/OpenSnap, started at
+boot) takes pictures of the screen. Shift + Right Amiga + S takes the whole
+front screen, Shift + Right Amiga + W the active window (its frame too).
+Each goes to SYS:Snapshots as a dated PNG (Snapshot-2026-10-24-15.42.07.png,
+a window's with its title after the time) and onto the clipboard as an IFF
+picture, so Right Amiga + V pastes it into a paint program. A short message
+on the title bar says where it went. RTG screens of any depth and the
+Amiga's own screens (AGA, HAM and Extra Half-Brite too) all work. The PNG
+needs OpenImage (openpng.datatype 47.4 and z.library); without it the
+picture is saved as IFF. The keys, the drawer and the clipboard are its
+icon's tool types (SCREENKEY, WINDOWKEY, DRAWER, CLIPBOARD), and Exchange
+lists it.
+From a PC, in an AmigaChrome instance's window: the right Windows key and
+the Menu key are both Right Amiga. On Windows, Win + Shift + S is the
+Snipping Tool's, and on Ubuntu (GNOME), Super + Shift + S is the screenshot
+tool's, so Windows or GNOME takes that one before the browser sees it: use
+the Menu key there (Shift + Menu + S, Shift + Menu + W). On a PC without a
+Menu key, give a key the Right Amiga in Cradle's keyboard mapper, or give
+OpenSnap other keys in its icon's tool types. On a Mac, Cmd + Shift + W
+closes the browser window, so set WINDOWKEY to another key there.
 OpenMonitor (new, SYS:Utilities) shows the tasks, the CPU and the cores,
 memory and the GPU in the theme's font, and ends a program from its
 right-click menu. On the open ROM it is the ROM's and OpenUp puts only its
