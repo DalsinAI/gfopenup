@@ -40,6 +40,12 @@ PiStorm (Emu68), in an AmigaChrome instance, and on the appliance.
   it the system default text where no Font prefs name one; OpenUp writes no
   Font prefs. [docs/shell-font.png](docs/shell-font.png): the Shell in topaz 8,
   in the 12 from Font prefs, and in the ROM's 11 on its dark background.
+- The Shell icon: `SYS:System/Shell.info`'s tool type
+  `WINDOW=CON:0///130/AmigaShell/CLOSE/ICONIFY` loses its 130 (24 October
+  2026), so a Shell from the icon opens 80 x 24 of the system font, as
+  NewShell's own window does. Only that tool type changes; the icon as it was
+  is kept in `SYS:Storage/OpenUp-Superseded`, and `OpenUpTool REMOVE
+  Parts/ShellIcon` puts the 130 back ([docs/shell-icon.png](docs/shell-icon.png)).
 - OpenFont: openfont.library (openamigafont) in `LIBS:`, and DejaVu Sans as an
   outline font it draws (`FONTS:DejaVuSans.font`, `.otag` and
   `_ttf/DejaVuSans.ttf`), on a 68040 or 68060 with its FPU (24 October
