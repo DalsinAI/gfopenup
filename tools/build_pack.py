@@ -1337,7 +1337,11 @@ def main() -> int:
         sf.add("Fonts/DejaVuSansMono.font", (fa / "DejaVuSansMono.font").read_bytes(), "FONTS:DejaVuSansMono.font", own=True)
         for f in sorted((fa / "DejaVuSansMono").iterdir(), key=lambda p: int(p.name)):
             sf.add(f"Fonts/DejaVuSansMono/{f.name}", f.read_bytes(), f"FONTS:DejaVuSansMono/{f.name}", own=True)
-        sf.add("Utilities/OpenUp/Licences/DejaVuSansMono.txt", (fa / "LICENSE-DejaVu.txt").read_bytes(),
+        # with one line first for the ROM's fonts drawn from DejaVu Sans Mono too: the system's copy of the notice
+        # (the ROM has no room for one; amigachrome-guest and openamigagfx keep theirs beside the sources)
+        rom = (b"This licence also covers the OpenKick ROM's DejaVuSansMono.font 11 and its topaz.font 8 and 9, "
+               b"which are drawn from DejaVu Sans Mono.\n\n")
+        sf.add("Utilities/OpenUp/Licences/DejaVuSansMono.txt", rom + (fa / "LICENSE-DejaVu.txt").read_bytes(),
                "SYS:Utilities/OpenUp/Licences/DejaVuSansMono.txt")
         sf.write()
     else:
