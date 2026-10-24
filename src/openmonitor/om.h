@@ -181,6 +181,10 @@ void om_tasks_take(void);                         /* the second's look, every se
 void om_tasks_choose(struct Task *t);             /* "Show the owner": that task chosen in the Tasks view */
 void om_task_name(struct Task *t, char *out, int size);   /* as the Tasks view names it; under Forbid */
 int om_irq_per_second(int bit);                   /* from OpenExec's task clock; -1 when not known */
+/* Exec's task clock (OpenExec's taskclock.resource) read while a view wants it, else the sampler: the Tasks
+ * view and the Interrupts view each say when they are shown */
+enum { OM_EXACT_TASKS = 1, OM_EXACT_INTS = 2 };
+void om_tasks_exact(int who, int on);
 
 /* the other views (memory.c, libs.c, ports.c, ints.c) */
 extern const struct om_view om_memory_view, om_libs_view, om_ports_view, om_ints_view;
