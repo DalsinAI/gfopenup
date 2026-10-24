@@ -16,6 +16,7 @@
 #include <proto/graphics.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "om.h"
 
@@ -254,8 +255,9 @@ int om_table_copy(struct om_table *t)
     int i, r, total = 0, ok;
     char *buf, cell[160];
     ULONG size;
-    for (i = 0; i < t->ncols; i++) if (!t->cols[i].hidden) total += t->cols[i].chars + 2;
-    size = (ULONG)(t->count + 2) * (total + 162) + 64;
+    /* a row's room: each shown column at its width or a whole cell (159), whichever is more, and its gap */
+    for (i = 0; i < t->ncols; i++) if (!t->cols[i].hidden) total += (t->cols[i].chars > 159 ? t->cols[i].chars : 159) + 2;
+    size = (ULONG)(t->count + 2) * (total + 2) + 64;
     if (!(buf = AllocVec(size, MEMF_ANY))) return 0;
     buf[0] = 0;
     {
@@ -279,6 +281,85 @@ int om_table_copy(struct om_table *t)
     ok = om_clip_text(buf);
     FreeVec(buf);
     return ok;
+}
+
+/* ---- sorting and finding --------------------------------------------------------------------------- */
+
+static struct om_table *sort_t;
+static om_cell_fn sort_raw;
+
+/* a cell's number: "$" then hex, else digits with commas and a fraction, then KB or MB; none: 0, and *num 0 */
+static unsigned long long cell_number(const char *s, int *num)
+{
+    unsigned long long v = 0, frac = 0, div = 1;
+    int any = 0, neg = 0;
+    while (*s == ' ') s++;
+    if (*s == '-') { neg = 1; s++; }
+    if (*s == '$') {
+        for (s++; *s; s++) {
+            int d = *s >= '0' && *s <= '9' ? *s - '0' : *s >= 'a' && *s <= 'f' ? *s - 'a' + 10 : *s >= 'A' && *s <= 'F' ? *s - 'A' + 10 : -1;
+            if (d < 0) break;
+            v = v * 16 + d; any = 1;
+        }
+    } else {
+        for (; *s; s++) {
+            if (*s >= '0' && *s <= '9') { v = v * 10 + (*s - '0'); any = 1; }
+            else if (*s != ',') break;
+        }
+        if (*s == '.') for (s++; *s >= '0' && *s <= '9'; s++) if (div < 1000) { frac = frac * 10 + (*s - '0'); div *= 10; }
+        while (*s == ' ') s++;
+        if (s[0] == 'K' && s[1] == 'B') { v = v * 1024 + frac * 1024 / div; }
+        else if (s[0] == 'M' && s[1] == 'B') { v = v * 1048576 + frac * 1048576 / div; }
+        else if (s[0] == 'G' && s[1] == 'B') { v = v * 1073741824ULL + frac * 1073741824ULL / div; }
+    }
+    *num = any && !neg;
+    return any && !neg ? v : 0;
+}
+
+static int lower(int c) { return c >= 'A' && c <= 'Z' ? c + 32 : c; }
+
+static int text_cmp(const char *a, const char *b)
+{
+    for (; *a && lower(*a) == lower(*b); a++, b++) {}
+    return lower(*a) - lower(*b);
+}
+
+static int sort_cmp(const void *pa, const void *pb)
+{
+    int a = *(const int *)pa, b = *(const int *)pb, c, col = sort_t->sort;
+    char ta[160], tb[160];
+    LONG pen = 0;
+    if (a == b) return 0;
+    ta[0] = tb[0] = 0;
+    sort_raw(a, col, ta, sizeof ta, &pen);
+    sort_raw(b, col, tb, sizeof tb, &pen);
+    if (sort_t->cols[col].align == OM_RIGHT) {
+        int na, nb;
+        unsigned long long va = cell_number(ta, &na), vb = cell_number(tb, &nb);
+        c = na != nb ? na - nb : va < vb ? -1 : va > vb ? 1 : 0;
+    } else
+        c = text_cmp(ta, tb);
+    if (sort_t->desc) c = -c;
+    return c ? c : a - b;
+}
+
+void om_table_sort(struct om_table *t, om_cell_fn raw, int *order, int n)
+{
+    if (t->sort < 0 || t->sort >= t->ncols || n < 2) return;
+    sort_t = t;
+    sort_raw = raw;
+    qsort(order, n, sizeof *order, sort_cmp);
+}
+
+int om_contains(const char *s, const char *find)
+{
+    int n = strlen(find), i;
+    if (!n) return 1;
+    for (; *s; s++) {
+        for (i = 0; i < n && s[i] && lower(s[i]) == lower(find[i]); i++) {}
+        if (i == n) return 1;
+    }
+    return 0;
 }
 
 /* ---- the pop-up menu: borderless windows at the pointer (Intuition's menus open only in the screen's title
