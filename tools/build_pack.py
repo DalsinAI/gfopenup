@@ -1210,11 +1210,13 @@ def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_
     make_backdrops.py also exports the AmigaChrome Background Pack's art (opengadtools #73). That pack is not
     OpenUp's: it is an optional install, from Cradle's Media Library or its own InstallBackgrounds, and OpenUp keeps
     its small default set (the user, 24 October 2026). Its pictures are left out: by make_art_backdrops.py's own
-    names, or, when those can't be read, by their AmigaChrome-<design>-<W>x<H>.png pattern."""
-    art = art_backdrop_names(opengadtools)
+    names, and by their AmigaChrome-<design>-<W>x<H>.png pattern. Both, because make_backdrops.py doesn't empty its
+    folder: an export from before pack 1.1 leaves its 2560x1440 and 3840x2160 art there, and 1.1's names no longer
+    list them. None of OpenUp's own pictures is named so."""
+    art = art_backdrop_names(opengadtools) or set()
     bd = Part(top, "Backdrops", "0.2", "The themes' desktops as Workbench backdrops, with their tones")
     for png in sorted(Path(backdrops).glob("*.png")):
-        if (png.name in art) if art is not None else bool(ART_NAME_RE.match(png.name)):
+        if png.name in art or ART_NAME_RE.match(png.name):
             continue
         bd.add(f"Backdrops/{png.name}", png.read_bytes(), f"{BACKDROPS_DEST}/{png.name}")
         bd.add(f"Backdrops/{png.name}.tone", (tone(png) + "\n").encode("ascii"), f"{BACKDROPS_DEST}/{png.name}.tone")

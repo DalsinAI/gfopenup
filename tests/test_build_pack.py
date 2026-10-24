@@ -191,6 +191,12 @@ def main() -> int:
         check("none of the Background Pack's art is in the part",
               not [p for p in (bd.dir / "Backdrops").iterdir() if p.name.startswith("AmigaChrome-")]
               and not [l for l in lines if "AmigaChrome-" in l])
+        stale = ["AmigaChrome-Prismatic-light-2560x1440.png", "AmigaChrome-Nebula-dark-3840x2160.png"]
+        for n in stale:                                  # an export from before pack 1.1: sizes its names no longer list
+            (bdir / n).write_bytes(n.encode())
+        bd = bp.backdrops_part(top, bdir, ogt, tone=fake_tone)
+        check("art an earlier export left behind, in sizes make_art_backdrops.py no longer makes, is left out too",
+              sorted(p.name for p in (bd.dir / "Backdrops").iterdir() if p.suffix == ".png") == own)
         (ogt / "tools/make_art_backdrops.py").rename(ogt / "tools/gone.py")
         bd = bp.backdrops_part(top, bdir, ogt, tone=fake_tone)
         check("without make_art_backdrops.py, the art is still left out by its AmigaChrome-<design>-<W>x<H>.png names",
