@@ -458,6 +458,12 @@
 (working "Installing OpenBlanker")
 (if (> (run (cat #tool " INSTALL Parts/OpenBlanker >>T:OpenUp.log")) 5)
     (message "OpenBlanker didn't install completely. T:OpenUp.log says why; nothing else changed."))
+; OpenSnap (24 Oct 2026) comes with every install: Shift+Right Amiga+S takes the front screen, Shift+Right Amiga+W the
+; active window, each a dated PNG in SYS:Snapshots and an IFF picture on the clipboard. Its keys are its icon's tool
+; types, kept on an upgrade.
+(working "Installing OpenSnap")
+(if (> (run (cat #tool " INSTALL Parts/OpenSnap >>T:OpenUp.log")) 5)
+    (message "OpenSnap didn't install completely. T:OpenUp.log says why; nothing else changed."))
 ; OpenPrefs (W48, 17 Oct 2026), every editor of ours in one window, comes with every install, before the parts
 ; below (SYS:Preferences/OpenPrefs DOCK SAVE below runs it). Since the no-ROM-volume design (24 Oct 2026) it is in
 ; SYS:Preferences, with an icon per page by its plain name; the old names' stubs in SYS:Prefs, SYS:Prefs/OpenPrefs
