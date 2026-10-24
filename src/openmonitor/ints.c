@@ -241,6 +241,7 @@ static int event(ULONG cls, UWORD code, UWORD qual, APTR ia, int mx, int my, ULO
 
 static void shown(int on)
 {
+    om_tasks_exact(OM_EXACT_INTS, on);  /* exec's counts a second come with its task clock */
     if (!on) om_table_free(&T);
     else { ticks = 0; take(); }
 }
