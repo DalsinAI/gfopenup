@@ -101,7 +101,8 @@
               "Backgrounds: a theme's desktop as Workbench's backdrop, drawn for "
               "your screen's shape. Your old backdrop setting is kept. Everything else of "
               "Workbench's look is the OS's own (on the OpenKick ROM, the ROM's).\n\n"
-              "OpenTypes: choose the program that opens each kind of file, in Prefs.\n\n"
+              "OpenTypes: choose the program that opens each kind of file, in OpenPrefs's File Types page "
+              "(SYS:Preferences).\n\n"
               "OpenCompress: open, test and extract archives and disk images (ADF, ADZ, DMS, "
               "LhA, zip, tar, gzip) from its window in SYS:Utilities, or from the Shell.\n\n"
               "OpenService: services from AmigaChrome's boards and from a Cradle you pair "
@@ -172,7 +173,7 @@
         (prompt "Which parts should OpenUp install? (3 of 6)")
         (help "Sound: one place for the volume, Amiga sound (Paula) and AHI sound, with Test "
               "buttons, and a speaker on the menu bar: click for the levels, the wheel turns it "
-              "up and down (new), in SYS:Prefs/OpenSound. The OS's own Sound editor stays where it is.\n\n"
+              "up and down (new), in SYS:Preferences/Sound. The OS's own Sound editor stays where it is.\n\n"
               "OpenEdit: a text editor with tabs, find and replace, and colours for scripts, "
               "C and guides (new). OpenEdit in a Shell, or OpenEdit file WAIT for programs "
               "that wait for their editor.\n\n"
@@ -277,7 +278,7 @@
               "Amiga runs it where its Startup-Sequence starts SYS:System/OpenBench in place of "
               "LoadWB, as AmigaChrome's own instances do; OpenUp doesn't change the "
               "Startup-Sequence. On AmigaChrome its Resize to Window fits Workbench to the window.\n\n"
-              "OpenDateTime: the date, the time and the region in one editor in SYS:Prefs (new). "
+              "OpenDateTime: the date, the time and the region in one page of OpenPrefs, SYS:Preferences/Date & Time. "
               "You pick a place, not an offset, and summer time follows by itself.\n\n"
               "OpenAmigaPython: Python 2.7.18 for AmigaOS 3, OpenAmigaPython 2.7.18-ac3 (new, off "
               "unless picked), in SYS:Tools/OpenAmigaPython, about 17 MB. Python: is assigned and "
@@ -457,9 +458,11 @@
 (working "Installing OpenBlanker")
 (if (> (run (cat #tool " INSTALL Parts/OpenBlanker >>T:OpenUp.log")) 5)
     (message "OpenBlanker didn't install completely. T:OpenUp.log says why; nothing else changed."))
-; OpenPrefs (W48, 17 Oct 2026), every editor of ours in one window with one icon, comes with every install, before the
-; parts below: the old editors' names in SYS:Prefs are its stubs (SYS:Prefs/OpenDock SAVE below runs it), and
-; its OpenPrefs APPLY line takes the place of OpenSound USE and OpenGamepads USE in User-Startup.
+; OpenPrefs (W48, 17 Oct 2026), every editor of ours in one window, comes with every install, before the parts
+; below (SYS:Preferences/OpenPrefs DOCK SAVE below runs it). Since the no-ROM-volume design (24 Oct 2026) it is in
+; SYS:Preferences, with an icon per page by its plain name; the old names' stubs in SYS:Prefs, SYS:Prefs/OpenPrefs
+; and C:OpenPrefs go to SYS:Storage/OpenUp-Superseded. Its OpenPrefs APPLY line (Sound's levels, Gamepads' patch,
+; the stack caps at boot) stays where the ROM doesn't apply them itself: not on the open ROM whose prefs task does.
 (working "Installing OpenPrefs")
 (if (> (run (cat #tool " INSTALL Parts/OpenPrefs >>T:OpenUp.log")) 5)
     (message "OpenPrefs didn't install completely. T:OpenUp.log says why; nothing else changed."))
@@ -641,8 +644,9 @@
         (set #first (not (exists "ENVARC:OpenDock/Dock")))
         (if (> (run (cat #tool " INSTALL Parts/OpenDock >>T:OpenUp.log")) 5)
             (message "OpenDock didn't install completely. T:OpenUp.log says why; nothing else changed.")
-            ; the editor is SYS:Prefs/OpenDock since 0.7.4 (every editor of ours is Open...)
-            (if #first (run "SYS:Prefs/OpenDock SAVE >>T:OpenUp.log")))))
+            ; the editor is OpenPrefs's Dock page (SYS:Prefs/OpenDock, its name's stub, from 0.7.4 to the
+            ; no-ROM-volume design)
+            (if #first (run "SYS:Preferences/OpenPrefs DOCK SAVE >>T:OpenUp.log")))))
 
 (if (bitand #parts 4096)
     (
@@ -656,7 +660,7 @@
         (if (> (run (cat #tool " INSTALL Parts/OpenMenus >>T:OpenUp.log")) 5)
             (message "OpenMenus didn't install completely. T:OpenUp.log says why; nothing else changed.")
             (if (and (exists "ENVARC:MagicMenu.prefs") (not (exists "ENVARC:OpenMenus/Menus")))
-                (run "SYS:Prefs/Menus MAGICMENU ENVARC:MagicMenu.prefs SAVE >>T:OpenUp.log")))))
+                (run "SYS:Preferences/OpenPrefs MENUS MAGICMENU ENVARC:MagicMenu.prefs SAVE >>T:OpenUp.log")))))
 
 (if (bitand #parts 16384)
     (
@@ -697,7 +701,8 @@
 (if (bitand #parts 262144)
     (
         (working "Installing Sound")
-        ; Since 0.7.4 the Sound part is SYS:Prefs/OpenSound and leaves the OS's SYS:Prefs/Sound alone, so
+        ; Since 0.7.4 the Sound part's editor is OpenPrefs's (SYS:Preferences/Sound since the no-ROM-volume
+        ; design) and leaves the OS's SYS:Prefs/Sound alone, so
         ; nothing is copied to SYS:Prefs/Classic any more: that copy was in no list, and Uninstall-OpenUp
         ; left it behind. (OpenUpTool RECONCILE moves the OS's editor there, listed, when it is asked to.)
         (if (> (run (cat #tool " INSTALL Parts/Sound >>T:OpenUp.log")) 5)
@@ -908,8 +913,9 @@
 
 ; OpenFiles and OpenView on the dock, also a dock someone already has; the
 ; rest of it is left alone, and a button already there isn't added twice.
-(if (exists "SYS:Prefs/OpenDock")
-    (run "SYS:Prefs/OpenDock ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView SAVE >>T:OpenUp.log"))
+; (OpenPrefs's Dock page, SYS:Preferences/OpenPrefs DOCK, since the no-ROM-volume design)
+(if (exists "SYS:Preferences/OpenPrefs")
+    (run "SYS:Preferences/OpenPrefs DOCK ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView SAVE >>T:OpenUp.log"))
 
 (set #rc (run (cat #tool " STARTUP >>T:OpenUp.log")))
 (if (> #rc 5)

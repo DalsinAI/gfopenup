@@ -13,6 +13,9 @@
  * Each menu shows only what is installed: an entry whose program isn't
  * there isn't shown. Choosing one starts the program as a double-click
  * does (OpenWorkbenchObjectA, so its icon's stack and tool types count);
+ * an OpenPrefs page opens its icon in SYS:Preferences, else
+ * SYS:Preferences/OpenPrefs at that page (0.1.5, the no-ROM-volume design,
+ * section 10);
  * icons selected on Workbench at the time go with it as files to open
  * (OpenUp menu only, not OpenEdit's script). "OpenUp Update..." runs OpenUpTool UPDATE in a
  * window, where it shows what changes and asks first.
@@ -39,18 +42,22 @@
 
 #include <string.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.4 (10.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.5 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct Library *WorkbenchBase, *IconBase;
 
 #define PORT_NAME "OpenUpMenu"
+#define OPENPREFS "SYS:Preferences/OpenPrefs"
 
 enum { M_OPENUP, M_PREFS, NMENUS };
-enum { HOW_WB, HOW_CON, HOW_SEP };
+enum { HOW_WB, HOW_CON, HOW_SEP, HOW_PAGE };
 
 /* path: what Workbench opens; cli: the Shell command for a window, or for a
  * Workbench too old for OpenWorkbenchObjectA; needs: what must be there for
- * the entry to show (path when NULL); marker: a string that file must hold. */
+ * the entry to show (path when NULL); marker: a string that file must hold.
+ * HOW_PAGE, an OpenPrefs page (0.1.5): path is its project icon in
+ * SYS:Preferences (the icon alone, no file), cli its OpenPrefs SECTION word;
+ * it shows when the icon or SYS:Preferences/OpenPrefs is there. */
 struct entry {
     UBYTE menu, how;
     const char *label, *path, *cli, *needs, *marker;
@@ -73,17 +80,20 @@ static const struct entry entries[] = {
     { M_OPENUP, HOW_SEP, "---",          NULL, NULL, NULL, NULL },
     /* only with an OpenUpTool that has UPDATE (OpenUp Update, DESIGN.md section 5) */
     { M_OPENUP, HOW_CON, "OpenUp Update...", NULL, "SYS:C/OpenUpTool UPDATE", "SYS:C/OpenUpTool", "UPDATE [CHECK" },
-    { M_PREFS,  HOW_WB,  "Look",         "SYS:Prefs/OpenLook",                   NULL, NULL, NULL },   /* 0.1.3: Windows, Title bar, Menus are its pages */
-    /* 0.1.4: every editor of ours in Prefs is Open... (the user, 10 October 2026); the OS's own are in Classic */
-    { M_PREFS,  HOW_WB,  "Dock",         "SYS:Prefs/OpenDock",                   NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Sound",        "SYS:Prefs/OpenSound",                  NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Date and time", "SYS:Prefs/OpenDateTime",              NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Input",        "SYS:Prefs/OpenInput",                  NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Serial",       "SYS:Prefs/OpenSerial",                 NULL, NULL, NULL },
+    /* 0.1.5: OpenPrefs's pages by their plain names, in SYS:Preferences (the no-ROM-volume design, section 8): the
+     * old editors' names in SYS:Prefs (OpenLook, OpenDock, OpenSound...) were stubs of OpenPrefs, and OpenUp
+     * archives them */
+    { M_PREFS,  HOW_PAGE, "Theme",       "SYS:Preferences/Theme",                "THEME", NULL, NULL },
+    { M_PREFS,  HOW_PAGE, "Dock",        "SYS:Preferences/Dock",                 "DOCK", NULL, NULL },
+    { M_PREFS,  HOW_PAGE, "Sound",       "SYS:Preferences/Sound",                "SOUND", NULL, NULL },
+    { M_PREFS,  HOW_PAGE, "Date & Time", "SYS:Preferences/Date & Time",          "DATETIME", NULL, NULL },
+    { M_PREFS,  HOW_PAGE, "Input",       "SYS:Preferences/Input",                "INPUT", NULL, NULL },
+    { M_PREFS,  HOW_PAGE, "Gamepads",    "SYS:Preferences/Gamepads",             "GAMEPADS", NULL, NULL },
+    { M_PREFS,  HOW_PAGE, "Serial",      "SYS:Preferences/Serial",               "SERIAL", NULL, NULL },
     { M_PREFS,  HOW_WB,  "Printers",     "SYS:Utilities/OpenPrint/Printers and Queue", NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "Network",      "SYS:Tools/Commodities/OpenSocketControl", NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "OpenTypes",    "SYS:Prefs/OpenTypes",                  NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Tata",         "SYS:Prefs/OpenTata",                   NULL, NULL, NULL },   /* Gamepads: under Input (OpenInput) since 0.1.3 */
+    { M_PREFS,  HOW_PAGE, "File Types",  "SYS:Preferences/File Types",           "TYPES", NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Tata",         "SYS:Prefs/OpenTata",                   NULL, NULL, NULL },
     { M_PREFS,  HOW_WB,  "OpenUp Setup", "SYS:Prefs/OpenUp-Setup",               NULL, NULL, NULL },
 };
 #define NENTRIES (sizeof entries / sizeof entries[0])
@@ -128,13 +138,23 @@ static int holds(const char *path, const char *marker)
     return found;
 }
 
+/* An OpenPrefs page's project icon is there (path.info). */
+static int page_icon(const struct entry *e)
+{
+    char info[80];
+    strcpy(info, e->path);
+    strcat(info, ".info");
+    return exists(info);
+}
+
 /* Which entries show: the installed ones, and a line only between two. */
 static int find_shown(void)
 {
-    int i, j, any = 0;
+    int i, j, any = 0, openprefs = exists(OPENPREFS);
     for (i = 0; i < (int)NENTRIES; i++) {
         const struct entry *e = &entries[i];
         const char *needs = e->needs ? e->needs : e->path;
+        if (e->how == HOW_PAGE) { shown[i] = openprefs || page_icon(e); continue; }
         shown[i] = e->how != HOW_SEP && (!e->path || exists(e->path)) && exists(needs)
                    && (!e->marker || holds(needs, e->marker));
     }
@@ -233,7 +253,12 @@ static void start_cli(const struct entry *e)
         out = Open((STRPTR)"NIL:", MODE_NEWFILE);
     }
     if (!in) { if (out) Close(out); return; }
-    if (e->cli) {
+    if (e->how == HOW_PAGE) {               /* OpenPrefs at its page: OpenPrefs SOUND */
+        path = OPENPREFS;
+        stack = icon_stack(path);
+        strcpy(cmd, OPENPREFS " ");
+        strcat(cmd, e->cli);
+    } else if (e->cli) {
         strncpy(cmd, e->cli, sizeof cmd - 1);
         cmd[sizeof cmd - 1] = 0;
     } else {
@@ -269,6 +294,11 @@ static void start(int i, BPTR *locks, char **names, int nargs)
         if (OpenWorkbenchObjectA((STRPTR)e->path, tags))
             return;
     }
+    /* an OpenPrefs page: its project icon, as a double-click on it; else (no icon, or a Workbench that didn't
+     * open it) OpenPrefs at that page */
+    if (e->how == HOW_PAGE && WorkbenchBase->lib_Version >= 44 && page_icon(e)
+        && OpenWorkbenchObjectA((STRPTR)e->path, NULL))
+        return;
     if (e->how != HOW_SEP)
         start_cli(e);
 }

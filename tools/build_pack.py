@@ -25,7 +25,8 @@ a Part file that C/OpenUpTool reads:
 
   OpenUp/               OpenUpTool and the uninstaller, OpenUpMenu: the
                         Tools menu's OpenUp and Preferences sub-menus, and
-                        OpenMonitor in SYS:Utilities (tasks, CPU, cores, memory, GPU);
+                        OpenMonitor's icon in SYS:Utilities (tasks, CPU, cores, memory, GPU), with
+                        the program itself except on the open ROM, which has it ("unless OpenKick");
                         LIBS:softfpu.library, the FPU in software for a 68LC040 or
                         68EC040 under the open ROM (amigachrome-guest libraries/opensoftfpu)
   OpenSocket/           bsdsocket.library 4.3 and its tools, built from openamigasocket
@@ -38,7 +39,8 @@ a Part file that C/OpenUpTool reads:
   OpenIcons/            OpenIcons look B, the Team's own icon set (MIT), as new pictures for
                         the system's icons, made at build time by its generator from the
                         amigachrome-guest checkout (--guest; tools/openicons_part.py)
-  OpenTypes/            which program opens each kind of file (openamigaprefs)
+  OpenTypes/            OpenPrefs's File Types page: no files of its own since the no-ROM-volume
+                        design (24 October 2026); it archives its old name's stub in SYS:Prefs
   OpenCompress/         OpenCompress, its window and command (openamigacompress)
   OpenService/          openservice.device and Nursery: services from boards and
                         paired Cradles (openamigaservice)
@@ -57,11 +59,14 @@ a Part file that C/OpenUpTool reads:
                         .otag and _ttf/DejaVuSans.ttf), with their licences: the font OpenBench's theme and
                         the Open programs' look name. Installed on a 68040 or 68060 with its FPU (the
                         --openamigafont checkout's build-amiga.sh; DejaVu Sans from --dejavu-sans)
-  OpenPrefs/            OpenPrefs, every editor of ours as a section of one program
-                        (SYS:Prefs/OpenPrefs), its small body C:OpenPrefs (the boot's one
-                        OpenPrefs APPLY line), and a stub with its own icon for each section
-                        in SYS:Prefs (the old editors' names and OpenScreenMode, OpenFonts...).
-                        Always installed (openamigaprefs)
+  OpenPrefs/            OpenPrefs, every editor of ours as a page of one program, in its own
+                        drawer, SYS:Preferences/OpenPrefs, with a project icon per page by its
+                        plain name (Theme, Sound, Date & Time...) and SYS:Preferences on the
+                        Shell's path. The old stubs in SYS:Prefs, SYS:Prefs/OpenPrefs and
+                        C:OpenPrefs are archived. The boot's OpenPrefs APPLY line stays only
+                        where the ROM doesn't apply the settings itself ("unless OpenKick").
+                        Always installed (openamigaprefs; the no-ROM-volume design of 24 October
+                        2026, sections 8 and 10)
   OpenWindows/          snapping, Amiga+Tab, double-click to front, the wheel under the
                         pointer and window places; its editor is OpenPrefs's Windows (openamigaprefs)
   OpenDock/             a dock, which takes over ToolManager's, AmiDock's or AmiStart's
@@ -112,9 +117,9 @@ a Part file that C/OpenUpTool reads:
   OpenFiles/            OpenFiles, the two-pane file manager (openamigafilemanager)
   OpenPlay/             OpenPlay, the media player for every datatype (openamigamediaplayer)
   OpenTitle/            OpenTitle: logo, free memory, clock and the settings cog on the title bar (openamigaprefs)
-  OpenDateTime/         OpenDateTime in SYS:Prefs (OpenPrefs's Date and time section since W48): the date,
-                        the time and the region, a place rather than an offset, with summer time
-                        by itself (openamigaprefs)
+  OpenDateTime/         OpenPrefs's Date & Time page (since W48): no files of its own since the
+                        no-ROM-volume design (24 October 2026); it archives its old name's stub in
+                        SYS:Prefs
   OpenBench/            OpenBench, the Team's own Workbench, in SYS:System, off unless picked
                         (--openamigabench). It runs where the Startup-Sequence starts
                         SYS:System/OpenBench in LoadWB's place; OpenUp doesn't change the
@@ -218,14 +223,15 @@ class Part:
         self.dir.mkdir(parents=True)
         self.lines = [f"part {name} {version}", f'; {title}']
 
-    def add(self, rel: str, data: bytes, dest: str, default: bool = False, own: bool = False):
+    def add(self, rel: str, data: bytes, dest: str, default: bool = False, own: bool = False, cond: str = ""):
         """default: only where nothing is (the user's settings); own: where
         nothing is or OpenUp put it, so an upgrade reaches it but another
-        program's file stays."""
+        program's file stays. cond: a condition in front of the line
+        ("unless OpenKick", OpenUpTool 0.8.9)."""
         p = self.dir / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(data)
-        self.lines.append(f'{"add" if own else "default" if default else "copy"} "{rel}" "{dest}"')
+        self.lines.append(f'{cond + " " if cond else ""}{"add" if own else "default" if default else "copy"} "{rel}" "{dest}"')
 
     def line(self, text: str):
         self.lines.append(text)
@@ -413,8 +419,8 @@ def build_parts(a):
     gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmigaChrome/stoves/os32-gcc16"))
     run(["sh", g / "libraries/opengfx/build-amiga.sh"], env=dict(os.environ, STOVE=gcc16_root))
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
-    # OpenPrefs: every editor of ours as a section of one program (W48), its small body (C:OpenPrefs) and the
-    # old names' stubs
+    # OpenPrefs: every editor of ours as a page of one program (W48). Its build also makes the small body and the old
+    # names' stubs, which OpenUp no longer installs (the no-ROM-volume design, section 8)
     run(["sh", a.openamigaprefs / "OpenPrefs/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Look/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Windows/build.sh"], env=env)
@@ -609,21 +615,84 @@ def binary_version(data: bytes, name: str) -> str | None:
     return m.group(1).decode() if m else None
 
 
-# The old editors' names: each a stub in SYS:Prefs that opens its section of OpenPrefs (W48)
+# The old editors' names: each was a stub in SYS:Prefs that opened its section of OpenPrefs (W48), with an icon
+# from 21 Oct 2026. Since the no-ROM-volume design (24 Oct 2026, section 10) OpenUp archives them all, with their
+# icons: the 13 old ones, then the 9 OpenUp added on 21 October.
 OPENPREFS_NAMES = ("Look", "OpenLook", "Windows", "TitleBar", "Menus", "OpenDock", "OpenSound", "OpenInput",
                    "OpenGamepads", "OpenDateTime", "OpenSerial", "OpenTypes", "OpenSystem",
                    # a name for each section no editor had (openamigaprefs, 21 Oct 2026)
                    "OpenScreenMode", "OpenPointer", "OpenFonts", "OpenColours", "OpenBackdrops", "OpenWorkbench",
                    "OpenFileRequesters", "OpenBlanker", "OpenIControl")
 
-# An icon per section (Dale, 21 Oct 2026): each section's name and its picture in icons/open. OpenLook has
-# none, as Look is the same section.
-OPENPREFS_ICONS = {"Look": "Look", "Windows": "Windows", "TitleBar": "TitleBar", "Menus": "Menus", "OpenDock": "Dock",
-                   "OpenSound": "Sound", "OpenInput": "MouseKeys", "OpenGamepads": "Gamepads", "OpenDateTime": "DateTime",
-                   "OpenSerial": "Serial", "OpenTypes": "OpenTypes", "OpenSystem": "System", "OpenScreenMode": "ScreenMode",
-                   "OpenPointer": "Pointer", "OpenFonts": "Fonts", "OpenColours": "Colours", "OpenBackdrops": "Backdrops",
-                   "OpenWorkbench": "Workbench", "OpenFileRequesters": "FileRequesters", "OpenBlanker": "Blanker",
-                   "OpenIControl": "IControl"}
+# OpenPrefs's home since the no-ROM-volume design (24 Oct 2026, section 8): a drawer of its own
+OPENPREFS_HOME = "SYS:Preferences/OpenPrefs"
+
+# OpenPrefs's pages by their plain names (the user's, design section 8, Q9), each a project icon in
+# SYS:Preferences with no file behind it (Q8): OpenPrefs opens the page its icon names, or its SECTION= tool type
+# (openamigaprefs, P6). Each with OpenPrefs's SECTION word and its picture in icons/open.
+PREFERENCES_PAGES = (("Theme", "THEME", "Look"), ("Screen Mode", "SCREENMODE", "ScreenMode"),
+                     ("Pointer", "POINTER", "Pointer"), ("Fonts", "FONTS", "Fonts"), ("Colours", "COLOURS", "Colours"),
+                     ("Backdrops", "BACKDROPS", "Backdrops"), ("Workbench", "WORKBENCH", "Workbench"),
+                     ("File Requesters", "FILEREQUESTERS", "FileRequesters"), ("Windows", "WINDOWS", "Windows"),
+                     ("Title Bar", "TITLEBAR", "TitleBar"), ("Menus", "MENUS", "Menus"),
+                     ("IControl", "ICONTROL", "IControl"), ("Dock", "DOCK", "Dock"), ("Sound", "SOUND", "Sound"),
+                     ("Input", "INPUT", "MouseKeys"), ("Gamepads", "GAMEPADS", "Gamepads"),
+                     ("Date & Time", "DATETIME", "DateTime"), ("Serial", "SERIAL", "Serial"),
+                     ("File Types", "TYPES", "OpenTypes"), ("System", "SYSTEM", "System"),
+                     ("Blanker", "BLANKER", "Blanker"))
+
+
+def openprefs_part(top: Path, opapp: bytes, icons, version: str) -> "Part":
+    """The OpenPrefs part (the no-ROM-volume design of 24 October 2026, sections 8 and 10).
+
+    OpenPrefs (W48, Dale, 17 Oct 2026: "We should just combine them into a single app, prefs editors that is")
+    has every editor of ours as a page of one program. Its home is a drawer of its own, SYS:Preferences: the
+    program, its icon, and a project icon per page by its plain name (Q8, Q9), whose SECTION= tool type opens
+    that page; SYS:Preferences goes on the Shell's path. SYS:Prefs keeps Env-Archive, Presets, Classic, OpenTata
+    and OpenUp-Setup (Q13).
+
+    Archived ("retire": SYS:Storage/OpenUp-Superseded, and UNINSTALL puts them back): the old editors' names'
+    stubs in SYS:Prefs and their icons, SYS:Prefs/OpenPrefs and its icon, and C:OpenPrefs, the small body, which
+    is no longer built (it looked for the program in SYS:Prefs and ROM:Prefs only, so it can't stay first on
+    the path).
+
+    The boot's OpenPrefs APPLY (Sound's levels, Gamepads' patch, the stack caps) stays only where the ROM doesn't
+    apply them itself: on the open ROM whose prefs task does (prefs.resource 47.101, "OpenKick" to OpenUpTool
+    0.8.9) the line goes; elsewhere (OS 3.2.3's ROM, Q12, and an older open ROM) it runs the program by its
+    full path."""
+    opp = Part(top, "OpenPrefs", version, "OpenPrefs: every Open editor in one window, in SYS:Preferences with an icon per page")
+    opp.add("Preferences.info", icons.icon(icons.WBDRAWER, "drawer", window=(520, 300)), "SYS:Preferences.info", own=True)
+    opp.add("Preferences/OpenPrefs", opapp, OPENPREFS_HOME)
+    opp.add("Preferences/OpenPrefs.info", icons.icon(icons.WBTOOL, "page", stack=32768), OPENPREFS_HOME + ".info")
+    for page, word, _ in PREFERENCES_PAGES:
+        opp.add(f"Preferences/{page}.info", icons.icon(icons.WBPROJECT, "page", OPENPREFS_HOME, [f"SECTION={word}"], stack=32768),
+                f"SYS:Preferences/{page}.info")
+    for n in OPENPREFS_NAMES:
+        opp.line(f'retire "SYS:Prefs/{n}"')
+        opp.line(f'retire "SYS:Prefs/{n}.info"')
+    opp.line('retire "SYS:Prefs/OpenPrefs"')
+    opp.line('retire "SYS:Prefs/OpenPrefs.info"')
+    opp.line('retire "SYS:C/OpenPrefs"')
+    opp.line("startup Path >NIL: SYS:Preferences ADD")
+    opp.line(f"unless OpenKick startup {OPENPREFS_HOME} APPLY")
+    return opp
+
+
+def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
+    """What the OpenUp part does by the ROM (the no-ROM-volume design of 24 October 2026, sections 5.5, 7 and 10).
+
+    OpenMonitor: on the open ROM it is the ROM's, a resident command whose first run loads it, and its icon alone
+    in SYS:Utilities starts it (OpenBench runs the resident of a tool icon's name when there is no file,
+    openamigabench P7); an old SYS:Utilities/OpenMonitor is archived there, so the ROM's runs. Elsewhere (OS
+    3.2.3's ROM, an older open ROM) the program comes with its icon, as before: without it the icon would start
+    nothing.
+
+    CommandSwap leaves the ROM with ROM: (Q20): on the open ROM its pins, ENVARC:Sys/CommandSwap.prefs, are
+    archived."""
+    core.add("Utilities/OpenMonitor", openmonitor, "SYS:Utilities/OpenMonitor", cond="unless OpenKick")
+    core.line('when OpenKick retire "SYS:Utilities/OpenMonitor"')
+    core.add("Utilities/OpenMonitor.info", icon, "SYS:Utilities/OpenMonitor.info")
+    core.line('when OpenKick retire "ENVARC:Sys/CommandSwap.prefs"')
 
 
 # Each part's main binary: the part's declared version (its Part file, the
@@ -632,8 +701,7 @@ PART_MAIN = {
     "OpenUp": ("Utilities/OpenUp/Uninstall-OpenUp", "Uninstall-OpenUp"),
     "OpenBlanker": ("Tools/Commodities/OpenBlanker", "OpenBlanker"),
     "OpenSocket": ("Libs/bsdsocket.library", "bsdsocket.library"),
-    "OpenTypes": ("Prefs/OpenTypes", "OpenTypes"),
-    "OpenPrefs": ("Prefs/OpenPrefs", "OpenPrefs"),
+    "OpenPrefs": ("Preferences/OpenPrefs", "OpenPrefs"),
     "OpenCompress": ("Utilities/OpenCompress", "OpenCompress"),
     "OpenService": ("Devs/openservice.device", "openservice.device"),
     "OpenMulticore": ("Libs/openmulticore.library", "openmulticore.library"),
@@ -655,7 +723,6 @@ PART_MAIN = {
     "OpenFiles": ("Utilities/OpenFiles", "OpenFiles"),
     "OpenPlay": ("Utilities/OpenPlay", "OpenPlay"),
     "OpenTitle": ("C/OpenTitle", "OpenTitle"),
-    "OpenDateTime": ("Prefs/OpenDateTime", "OpenDateTime"),
     "OpenBench": ("System/OpenBench", "OpenBench"),
     "OpenEdit": ("C/OpenEdit", "OpenEdit"),
     "OpenDrawer": ("Utilities/OpenDrawer", "OpenDrawer"),
@@ -676,7 +743,9 @@ PART_MAIN = {
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
 # binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
 PART_OWN_VERSION = {"OpenLibs", "AmigaChromeSharing", "OpenImage", "Backdrops", "OpenIcons", "OpenDemos", "OpenGPUDev",
-                    "OpenPrint", "OpenMUI", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon"}
+                    "OpenPrint", "OpenMUI", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon",
+                    # pages of OpenPrefs with no files of their own since the no-ROM-volume design: OpenPrefs's version
+                    "OpenTypes", "OpenDateTime"}
 
 
 # OpenAmigaPython (SacredTrees/openamigapython, the ac3-classic line): the pack takes the Part
@@ -1216,9 +1285,9 @@ def main() -> int:
     core.add("Utilities/OpenUp/Uninstall-OpenUp.info", (top / "Uninstall-OpenUp.info").read_bytes(),
              "SYS:Utilities/OpenUp/Uninstall-OpenUp.info")
     core.add("Utilities/OpenUp.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/OpenUp.info", own=True)
-    # OpenMonitor: tasks, CPU and the cores, memory and the GPU, as Task Manager or Resources show them
-    core.add("Utilities/OpenMonitor", (ROOT / "build/os3/OpenMonitor").read_bytes(), "SYS:Utilities/OpenMonitor")
-    core.add("Utilities/OpenMonitor.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/OpenMonitor.info")
+    # OpenMonitor: tasks, CPU and the cores, memory and the GPU, as Task Manager or Resources show them; the ROM's on
+    # the open ROM, where CommandSwap's pins go too (openup_rom_lines)
+    openup_rom_lines(core, (ROOT / "build/os3/OpenMonitor").read_bytes(), icons.icon(icons.WBTOOL, "install", stack=32768))
     # softfpu.library (amigachrome-guest libraries/opensoftfpu): the FPU in software, out of the 1M open ROM since
     # W61 (no room). On a 68LC040 or 68EC040 the open ROM's dos opens it from LIBS: before the Startup-Sequence
     # (the F-line emulator) and the open maths libraries open it by name; with an FPU, or under OS 3.2's own ROM,
@@ -1307,37 +1376,18 @@ def main() -> int:
             oi.line(text)
         oi.write()
 
-    # OpenPrefs (W48, Dale, 17 Oct 2026: "We should just combine them into a single app, prefs editors that is"):
-    # every editor of ours as a section of one program with one icon, SYS:Prefs/OpenPrefs; C:OpenPrefs, its
-    # small body, serves the boot's one OpenPrefs APPLY (in place of SYS:Prefs/OpenSound USE and
-    # SYS:Prefs/OpenGamepads USE) without loading the app; and each old editor's name in SYS:Prefs is a stub
-    # with no icon that runs OpenPrefs at that editor's section, with its arguments (OpenSound USE,
-    # OpenDock SAVE). The old editors' icons are retired, so the Prefs drawer shows one OpenPrefs icon. Since
-    # 21 Oct 2026 (Dale: an icon per section) every section has a name's stub with its own icon
-    # (OPENPREFS_ICONS, pictures from icons/open), as a 3.2.3 Prefs drawer has an icon per editor. With
-    # every install, before the parts whose names it serves.
+    # OpenPrefs in SYS:Preferences (openprefs_part): with every install, before the parts whose pages it has
     opb = a.openamigaprefs / "OpenPrefs/build/os3"
     opapp = (opb / "OpenPrefs").read_bytes()
-    opp = Part(top, "OpenPrefs", binary_version(opapp, "OpenPrefs") or "2.0",
-               "OpenPrefs: every Open editor in one window, and an icon per section")
-    opp.add("Prefs/OpenPrefs", opapp, "SYS:Prefs/OpenPrefs")
-    opp.add("Prefs/OpenPrefs.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Prefs/OpenPrefs.info")
-    opp.add("C/OpenPrefs", (opb / "OpenPrefs.small").read_bytes(), "SYS:C/OpenPrefs")
-    for n in OPENPREFS_NAMES:
-        opp.add(f"Prefs/{n}", (opb / "stubs" / n).read_bytes(), f"SYS:Prefs/{n}")
-    for n, art in OPENPREFS_ICONS.items():
-        opp.add(f"Prefs/{n}.info", icons.icon(icons.WBTOOL, "page", stack=16384), f"SYS:Prefs/{n}.info")
-    for n in OPENPREFS_NAMES:
-        if n not in OPENPREFS_ICONS:
-            opp.line(f'retire "SYS:Prefs/{n}.info"')
-    opp.line("startup OpenPrefs APPLY")
+    opver = binary_version(opapp, "OpenPrefs") or "2.0"
+    opp = openprefs_part(top, opapp, icons, opver)
     opp.write()
 
-    # OpenTypes: which program opens each kind of file (openamigaprefs); since W48 a section of OpenPrefs, and
-    # this part its name's stub
-    tys = (opb / "stubs/OpenTypes").read_bytes()
-    ty = Part(top, "OpenTypes", binary_version(tys, "OpenTypes") or "2.0", "OpenTypes: which program opens each kind of file (in OpenPrefs)")
-    ty.add("Prefs/OpenTypes", tys, "SYS:Prefs/OpenTypes")
+    # OpenTypes: which program opens each kind of file (openamigaprefs); since W48 a page of OpenPrefs, and since the
+    # no-ROM-volume design (24 Oct 2026) its icon is SYS:Preferences/File Types (the OpenPrefs part). The part
+    # stays, with no files, so the Installer's choice keeps its meaning; it archives its old name's stub.
+    ty = Part(top, "OpenTypes", opver, "OpenTypes: which program opens each kind of file (OpenPrefs's File Types page)")
+    ty.line('retire "SYS:Prefs/OpenTypes"')
     ty.write()
 
     # OpenCompress: one program, the window from Workbench and the command in
@@ -1454,7 +1504,7 @@ def main() -> int:
     openfont_part(top, a.openamigafont, a.dejavu_sans)
 
     # OpenDock: the dock and its editor (openamigaprefs). The Installer runs
-    # "SYS:Prefs/OpenDock SAVE" once, on a first install, so the dock has the
+    # "SYS:Preferences/OpenPrefs DOCK SAVE" once, on a first install, so the dock has the
     # buttons of a dock already there; that save starts it (its editor 0.5.3).
     # No User-Startup line (Dale, 17 Oct 2026): OpenBench 0.1.23 starts the dock
     # (the ROM's or this C:OpenDock, the newer by $VER) when ENV:OpenDock/Dock
@@ -1462,7 +1512,8 @@ def main() -> int:
     # old "Run >NIL: C:OpenDock" line left by an earlier OpenUp does no harm.
     dock = Part(top, "OpenDock", "0.6.6", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
-    # its editor is OpenPrefs's Dock section (W48), SYS:Prefs/OpenDock its name's stub (the OpenPrefs part)
+    # its editor is OpenPrefs's Dock page (W48), SYS:Preferences/Dock (the OpenPrefs part). C:OpenDock stays on the
+    # open ROM too: the dock left the ROM (the no-ROM-volume design, section 7.4)
     # Workbench as a backdrop: OpenDock sits just above it, so Workbench's own
     # window would cover the dock. A stock 3.2.3 opens Workbench as a window;
     # the backdrop flag is the word at offset 16 of WBConfig.prefs' WBCF chunk
@@ -1797,12 +1848,11 @@ def main() -> int:
 
     # OpenDateTime: the date, the time and the region (openamigaprefs DateTime). The time zone is a place, and
     # summer time follows it by itself (0.2); the clock is set through C:Date and C:SetClock with NIL: handles
-    # (0.2.1). A copy already there (put in SYS:Prefs by hand) is kept in SYS:Storage; its icon stays.
-    # Since W48 a section of OpenPrefs: this part is its name's stub (SYS:Prefs/OpenDateTime)
-    dtb = (a.openamigaprefs / "OpenPrefs/build/os3/stubs/OpenDateTime").read_bytes()
-    dtp = Part(top, "OpenDateTime", binary_version(dtb, "OpenDateTime") or "2.0",
-               "OpenDateTime: the date, the time and the region, with summer time by itself (in OpenPrefs)")
-    dtp.add("Prefs/OpenDateTime", dtb, "SYS:Prefs/OpenDateTime")
+    # (0.2.1). Since W48 a page of OpenPrefs, and since the no-ROM-volume design (24 Oct 2026) its icon is
+    # SYS:Preferences/Date & Time (the OpenPrefs part): this part has no files and archives its old name's stub.
+    dtp = Part(top, "OpenDateTime", opver,
+               "OpenDateTime: the date, the time and the region, with summer time by itself (OpenPrefs's Date & Time page)")
+    dtp.line('retire "SYS:Prefs/OpenDateTime"')
     dtp.write()
 
     # OpenBench: the Team's own Workbench (openamigabench desktop/), with the dock and the Open editors built in.
@@ -1819,7 +1869,7 @@ def main() -> int:
         bench.write()
 
     # Sound: OpenPrefs Sound (the volume, Paula's and AHI's levels, the beep)
-    # in SYS:Prefs/OpenSound (the OS's Sound goes to SYS:Prefs/Classic:
+    # in SYS:Preferences/Sound (the OS's Sound goes to SYS:Prefs/Classic:
     # OpenUpTool RECONCILE), and OpenSpeaker on the menu bar (openamigaprefs).
     so = a.openamigaprefs / "Sound/build/os3"
     snd = Part(top, "Sound", "0.2.2", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and OpenAHI on AmigaChrome")
@@ -1851,7 +1901,8 @@ def main() -> int:
             "use AHI work unchanged. MIT licence, as follows.\n\n" + lic)
     snd.add("Utilities/OpenUp/Licences/OpenAHI.txt", note.encode("latin-1", "replace"), "SYS:Utilities/OpenUp/Licences/OpenAHI.txt")
     snd.lines[n_before:] = ["when AmigaChrome " + l for l in snd.lines[n_before:]]
-    # the boot's Sound USE is in OpenPrefs APPLY (the OpenPrefs part) since W48
+    # the boot's Sound USE is in OpenPrefs APPLY (the OpenPrefs part) since W48, and the ROM's own on the open ROM
+    # (prefs.resource 47.101)
     snd.write()
 
     # OpenEdit: the text editor (openamigaedit), with its kinds of file in ENVARC:
@@ -2007,7 +2058,8 @@ def main() -> int:
     try:
         os32_icons(a.openamigaprint, icons, [(top / "Install-OpenUp.info", "install"), (top / "Uninstall-OpenUp.info", "install"),
                                              (core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info", "install"),
-                                             (opp.dir / "Prefs/OpenPrefs.info", "page"),
+                                             (opp.dir / "Preferences/OpenPrefs.info", "page"),
+                                             (opp.dir / "Preferences.info", None),
                                              (setup.dir / "Prefs/OpenUp-Setup.info", "page"),
                                              (oc.dir / "Utilities/OpenCompress.info", archive_art),
                                              (of.dir / "Utilities/OpenFiles.info", files_art),
@@ -2034,8 +2086,8 @@ def main() -> int:
             (core.dir / "Utilities/OpenMonitor.info", "OpenMonitor"),
             (pr.dir / "Icons/OpenPrint.info", "drawer-OpenPrint"), (pr.dir / "Drawer/OpenView.info", "OpenView"),
             (pr.dir / "Drawer/Printers and Queue.info", "Printers and Queue"),
-            (opp.dir / "Prefs/OpenPrefs.info", "OpenPrefs")]
-            + [(opp.dir / f"Prefs/{n}.info", art) for n, art in OPENPREFS_ICONS.items()]
+            (opp.dir / "Preferences/OpenPrefs.info", "OpenPrefs")]
+            + [(opp.dir / f"Preferences/{page}.info", art) for page, _, art in PREFERENCES_PAGES]
             + [(setup.dir / "Prefs/OpenUp-Setup.info", "OpenUp-Setup"),
             (setup.dir / "WBStartup/OpenUp-Setup.info", "OpenUp-Setup"), (oc.dir / "Utilities/OpenCompress.info", "OpenCompress"),
             (of.dir / "Utilities/OpenFiles.info", "OpenFiles"), (op.dir / "Utilities/OpenPlay.info", "OpenPlay"),
@@ -2047,6 +2099,8 @@ def main() -> int:
             + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else []),
             drawers={a.out / "OpenUp.info": [top / "Install-OpenUp.info", top / "Uninstall-OpenUp.info"],
                      core.dir / "Utilities/OpenUp.info": [core.dir / "Utilities/OpenUp/Uninstall-OpenUp.info"],
+                     opp.dir / "Preferences.info": [opp.dir / "Preferences/OpenPrefs.info"]
+                     + [opp.dir / f"Preferences/{page}.info" for page, _, _ in PREFERENCES_PAGES],
                      pr.dir / "Icons/OpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info")),
                      wr.dir / "Utilities/OpenWrite.info": [wr.dir / "Utilities/OpenWrite/OpenWrite.info"]},
             )
@@ -2057,7 +2111,7 @@ def main() -> int:
     # above; each keeps its window and place. The apps' own animated icons stay as ICONS.md section 1 has them.
     if not a.no_openicons:
         import openicons_part
-        n = openicons_part.own_drawers(a.guest, [a.out / "OpenUp.info", core.dir / "Utilities/OpenUp.info",
+        n = openicons_part.own_drawers(a.guest, [a.out / "OpenUp.info", core.dir / "Utilities/OpenUp.info", opp.dir / "Preferences.info",
                                                  pr.dir / "Icons/OpenPrint.info", wr.dir / "Utilities/OpenWrite.info"]
                                        + ([dm.dir / "Utilities/OpenDemos.info"] if dm else [])
                                        + ([dev.dir / "Developer/OpenGPU-SDK.info", dev.dir / "Developer.info"] if dev else [])
