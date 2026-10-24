@@ -87,6 +87,17 @@ static void size_text(ULONG bytes, char *buf, int size)
     else snprintf(buf, size, "%lu KB", (unsigned long)(bytes >> 10));
 }
 
+/* expansion.library's FindConfigDev (-72) on a base of our own: no ExpansionBase global (the Hardware view's too) */
+struct ConfigDev *om_find_board(struct Library *eb, struct ConfigDev *after, LONG maker, LONG product)
+{
+    register LONG d0 __asm("d0") = maker;
+    register LONG d1 __asm("d1") = product;
+    register APTR a0 __asm("a0") = after;
+    register struct Library *a6 __asm("a6") = eb;
+    __asm volatile ("jsr -72(%%a6)" : "+r" (d0), "+r" (d1), "+r" (a0) : "r" (a6) : "a1", "cc", "memory");
+    return (struct ConfigDev *)d0;
+}
+
 /* the graphics card's video memory: ACRTG's boards (16, 64 or 256 MiB), less the ROM and register pages */
 static void take_vram(void)
 {
@@ -95,18 +106,16 @@ static void take_vram(void)
     vram_total = 0;
     vram_known = 1;
     if (!eb) return;
-    for (;;) {
-        register struct ConfigDev *d0 __asm("d0");
-        register struct Library *a6 __asm("a6") = eb;
-        register APTR a0 __asm("a0") = cd;
-        register LONG d0in __asm("d0") = 0xDA15;
-        register LONG d1 __asm("d1") = -1;
-        __asm volatile ("jsr -72(%%a6)" : "=r" (d0) : "r" (a6), "r" (a0), "0" (d0in), "r" (d1) : "a1", "cc", "memory");
-        if (!(cd = d0)) break;
+    while ((cd = om_find_board(eb, cd, 0xDA15, -1)))
         if ((cd->cd_Rom.er_Product == 9 || cd->cd_Rom.er_Product == 15 || cd->cd_Rom.er_Product == 16) && cd->cd_BoardSize > 0x20000UL)
             vram_total += cd->cd_BoardSize - 0x20000UL;
-    }
     CloseLibrary(eb);
+}
+
+ULONG om_video_bytes(void)
+{
+    if (!vram_known) take_vram();
+    return vram_total;
 }
 
 /* every second, shown or not: the graph's two lines */

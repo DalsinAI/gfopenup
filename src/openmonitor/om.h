@@ -1,4 +1,4 @@
-/* OpenMonitor 0.5: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
+/* OpenMonitor 0.6: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
  * What the parts share: the window, the fonts and pens, the table every view draws, the views.
  *
  * Built resident (libnix -resident): each run its own variables, reached through a4. Code that another task
@@ -20,14 +20,14 @@
 #include "ogt_tabs.h"
 #include "ogt_status.h"
 
-#define OM_VERSION "0.5"
+#define OM_VERSION "0.6"
 #define OM_DATE "24.10.2026"
 
 #define REG(r, decl) register decl __asm(#r)
 
-/* ---- the views: one tab each (P1: Tasks; P2: Memory, Libraries, Ports, Interrupts; P3 and P5 the rest) - */
+/* ---- the views: one tab each (P1: Tasks; P2: Memory, Libraries, Ports, Interrupts; P3: Hardware, Speed) - */
 
-enum { V_TASKS, V_MEMORY, V_LIBS, V_PORTS, V_INTS, V_N };
+enum { V_TASKS, V_MEMORY, V_LIBS, V_PORTS, V_INTS, V_HW, V_SPEED, V_N };
 
 struct om_view {
     const char *name;
@@ -184,11 +184,20 @@ void om_task_name(struct Task *t, char *out, int size);   /* as the Tasks view n
 extern const struct om_view om_memory_view, om_libs_view, om_ports_view, om_ints_view;
 void om_memory_init(void);
 void om_memory_take(void);                        /* every second, shown or not: the last minute's graph */
+ULONG om_video_bytes(void);                       /* the graphics card's video memory (its AutoConfig boards) */
+struct ConfigDev;
+struct ConfigDev *om_find_board(struct Library *eb, struct ConfigDev *after, LONG maker, LONG product);
 void om_libs_init(void);
 void om_libs_free(void);
 void om_ports_init(void);
 void om_ports_free(void);
 void om_ints_init(void);
+extern const struct om_view om_hw_view, om_speed_view;
+void om_hw_init(void);
+void om_hw_free(void);
+void om_speed_init(void);
+/* the last Speed run: 1 when there was one; its MIPS and its time ("14:43:31") */
+int om_speed_last(ULONG *mips, char *when);
 
 /* gadget ids: each view's from its own hundred */
 #define GID_TABS 10
@@ -197,5 +206,7 @@ void om_ints_init(void);
 #define GID_LIBS 300
 #define GID_PORTS 400
 #define GID_INTS 500
+#define GID_HW 600
+#define GID_SPEED 700
 
 #endif
