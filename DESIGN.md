@@ -188,7 +188,7 @@ to `SYS:C/OpenUpMenu`) puts two sub-menus in Workbench's Tools menu:
 | Tools > | Holds |
 | --- | --- |
 | OpenUp | OpenFiles, OpenEdit, OpenWrite, OpenPlay, OpenView, OpenCompress, OpenMail, OpenBrowser; then "OpenUp Update..." |
-| Preferences | Look, Windows, Dock, Menus, Title bar, Sound, OpenTypes, Tata, OpenUp Setup |
+| Preferences | Theme, Dock, Sound, Date & Time, Input, Gamepads, Serial, Printers, Network, File Types, Tata, OpenUp Setup |
 
 - **Only what is installed shows.** Each entry is shown when its program is
   where the pack puts it (`tools/build_pack.py`), so a part left out leaves
@@ -197,7 +197,10 @@ to `SYS:C/OpenUpMenu`) puts two sub-menus in Workbench's Tools menu:
   OpenTypes, OpenTata, OpenUp-Setup; the user: "either all are Open x or none
   are"), and the OS's own editors we replace are in SYS:Prefs/Classic. "OpenUp
   Update..." needs an OpenUpTool with `UPDATE`. OpenBlanker has no editor
-  yet, so it has no entry.
+  yet, so it has no entry. Since 24 October 2026 (the no-ROM-volume design,
+  section 10) OpenPrefs's pages are icons in `SYS:Preferences` by their plain
+  names: an entry for a page opens its icon, else
+  `SYS:Preferences/OpenPrefs <SECTION>`, and shows when either is there.
 - **Choosing one is a double-click:** `OpenWorkbenchObjectA`, so the icon's
   stack and tool types count. Icons selected on Workbench go with an OpenUp
   program as files to open (not OpenEdit's, which is an IconX script).

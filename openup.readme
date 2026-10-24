@@ -28,7 +28,7 @@ choose:
   and an upgrade takes out the look files an earlier OpenUp wrote (OpenLook
   and its theme) where you haven't changed them. Your Font and IControl prefs
   stay as they are (0.8.7);
-- OpenTypes: which program opens each kind of file (SYS:Prefs/OpenTypes);
+- OpenTypes: which program opens each kind of file (SYS:Preferences/File Types);
 - OpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
   gzip, from its window in SYS:Utilities or from the Shell;
 - OpenService: services from AmigaChrome's boards and from a Cradle you pair
@@ -45,9 +45,9 @@ choose:
   between them, a double-click in a title bar brings the window to the
   front, the wheel scrolls the window under the pointer, and programs'
   windows open where they were last left, Workbench drawers too if you like
-  (Windows in SYS:Prefs);
+  (Windows in SYS:Preferences);
 - OpenDock: a dock for your programs, starting with ToolManager's, AmiDock's
-  or AmiStart's buttons when you have one (Dock in SYS:Prefs);
+  or AmiStart's buttons when you have one (Dock in SYS:Preferences);
 - OpenUp Setup: a few questions at the next start, and the startup switches;
 - OpenMenus: menus in the theme's look, from the screen bar or at the
   pointer, and a menu for each icon and for the desktop on the right button,
@@ -60,10 +60,10 @@ choose:
   playlist and a slideshow (SYS:Utilities);
 - OpenTitle (new): AmigaChrome's logo, the free chip and fast memory, a
   clock, and a cog at the right end that opens any settings editor, on the
-  title bar, set in SYS:Prefs/TitleBar; beside the cog, the taskspace holds
+  title bar, set in SYS:Preferences/Title Bar; beside the cog, the taskspace holds
   other programs' icons (Tata's first);
 - Sound (new): the volume, Amiga sound (Paula) and AHI sound in one editor,
-  and a speaker on the menu bar (SYS:Prefs/OpenSound; the OS's own Sound
+  and a speaker on the menu bar (SYS:Preferences/Sound; the OS's own Sound
   editor stays where it is); it also carries OpenAHI, the Team's own AHI for AmigaChrome's
   ACAHI sound board: ahi.device, the board's driver acaudio.audio and its modes
   in DEVS:, and AHI's settings on the Host mix mode (kept if you have your own).
@@ -192,7 +192,7 @@ choose:
   Startup-Sequence); on AmigaChrome it follows the window, and Resize to
   Window fits Workbench to it;
 - OpenDateTime (new): the date, the time and the region in one editor
-  (SYS:Prefs/OpenDateTime); you pick a place, not an offset, and summer time
+  (SYS:Preferences/Date & Time); you pick a place, not an offset, and summer time
   follows by itself;
 - OpenAmigaPython (new, off unless picked): Python 2.7.18 for AmigaOS 3,
   OpenAmigaPython 2.7.18-ac3, in SYS:Tools/OpenAmigaPython, with Python:
@@ -212,14 +212,24 @@ choose:
   unticking one puts OS 3.2's own back. On the OpenKick ROM, which has its
   own, those two are left out (0.8.7), and an S:Pre-LoadModule-Startup an
   earlier OpenUp wrote there is taken out.
+OpenPrefs, every settings editor of ours in one window, has a drawer of its
+own, SYS:Preferences: the program, and an icon for each page by its plain
+name (Theme, Screen Mode, Fonts, Sound, Date & Time, File Types...). The
+drawer is on the Shell's path, so "OpenPrefs SOUND" works there. The old
+editors' names in SYS:Prefs, SYS:Prefs/OpenPrefs and C:OpenPrefs go to
+SYS:Storage/OpenUp-Superseded. SYS:Prefs keeps the OS's own (Env-Archive,
+Presets, Classic), OpenTata and OpenUp-Setup. On the open ROM, which applies
+Sound's levels, the gamepads and the stack caps itself at boot, User-Startup
+no longer runs OpenPrefs APPLY; under OS 3.2.3's own ROM it does.
 Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
 programs that are installed (and OpenUp Update...), and Preferences, with
-their settings editors (Look, Windows, Dock, Menus, Title bar, Sound,
-OpenTypes, Tata, Gamepads, OpenUp Setup). SYS:C/OpenUpMenu keeps them there; "OpenUpMenu
+their settings editors (Theme, Dock, Sound, Date & Time, Input, Gamepads,
+Serial, Printers, Network, File Types, Tata, OpenUp Setup). SYS:C/OpenUpMenu keeps them there; "OpenUpMenu
 QUIT" takes them out.
 OpenMonitor (new, SYS:Utilities) shows the tasks, the CPU and the cores,
 memory and the GPU in the theme's font, and ends a program from its
-right-click menu.
+right-click menu. On the open ROM it is the ROM's and OpenUp puts only its
+icon there.
 LIBS:softfpu.library (new, with OpenUp itself): the FPU in software for a
 68LC040 or 68EC040 under the OpenKick ROM, which opens it at boot; with an
 FPU, or under OS 3.2's own ROM, nothing opens it.

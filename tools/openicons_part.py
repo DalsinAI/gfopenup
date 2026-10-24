@@ -100,6 +100,7 @@ OWN_DRAWERS = {
     "OpenUp": "install", "OpenPrint": "printer", "OpenWrite": "pages", "OpenBrowser": "globe",
     "OpenDemos": "film", "OpenGPU-SDK": "cube", "Developer": "code", "Docs": "page", "OpenFTP": "swap",
     "OpenPuTTY": "terminal", "Licences": "scroll", "Samples": "pages",
+    "Preferences": "sliders",               # OpenPrefs's drawer, with the Prefs drawer's motif (no-ROM-volume design)
 }
 
 
