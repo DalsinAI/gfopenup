@@ -874,6 +874,15 @@
                 (message "Some icons kept their old pictures. T:OpenUp.log says why; nothing else changed.")))
         (message "This pack was made without OpenIcons, so the system's icons keep their pictures.")))
 
+; The Shell icon (24 Oct 2026), with every install: its WINDOW tool type without the 130, so a Shell from
+; SYS:System/Shell opens 80 x 24 of the system font, as NewShell's own window. After OpenIcons, which gives the
+; icon its picture first. Only that tool type changes; OpenUpTool REMOVE Parts/ShellIcon puts the 130 back.
+(if (exists "Parts/ShellIcon/Part")
+    (
+        (working "Opening the Shell icon's window 80 x 24")
+        (if (> (run (cat #tool " INSTALL Parts/ShellIcon >>T:OpenUp.log")) 5)
+            (message "The Shell icon's window kept its size. T:OpenUp.log says why; nothing else changed."))))
+
 ; OpenUp 0.6.14 to 0.7.0 changed the default tool of about 40 of AmigaOS 3.2.3's own
 ; icons (datatype descriptors, pointer presets, DOSDrivers, the Picasso96 guides...) to
 ; OpenView by mistake. Once, put each one back: from the original OpenTypes kept, else
