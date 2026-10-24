@@ -1,4 +1,4 @@
-/* OpenMonitor 0.5: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
+/* OpenMonitor 0.6: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
  * into the Amiga's task manager (the user, 24 October 2026: "a true task manager, a blend of what it is today,
  * SysInfo, ShowConfig and SnoopDos"; the design of that day, agreed at 15:05).
  *
@@ -49,7 +49,8 @@ unsigned long __stack = 32768;
 struct om_ui U;
 char om_first_task[40];
 static char pubscreen[40];             /* PUBSCREEN/K: a public screen by its name, else the default one */
-const struct om_view *om_views[V_N] = { &om_tasks_view, &om_memory_view, &om_libs_view, &om_ports_view, &om_ints_view };
+const struct om_view *om_views[V_N] = { &om_tasks_view, &om_memory_view, &om_libs_view, &om_ports_view, &om_ints_view,
+                                        &om_hw_view, &om_speed_view };
 
 /* ---- settings: ENV:OpenMonitor/Settings, "key value" lines, kept in ENVARC: too ------------------------- */
 
@@ -554,6 +555,8 @@ static int gui(STRPTR first_view)
     om_libs_init();
     om_ports_init();
     om_ints_init();
+    om_hw_init();
+    om_speed_init();
 
     /* the size: kept from the last run, else 1000 x 780 (outer) on a big screen, the whole screen on a small one */
     minw = U.compact ? 400 : 720;
@@ -655,6 +658,7 @@ out:
     om_tasks_free();                    /* every frozen task resumed, the sampler out */
     om_libs_free();
     om_ports_free();
+    om_hw_free();
     om_graphs_free();
     if (U.win) {
         if (U.glist) RemoveGList(U.win, U.glist, -1);
