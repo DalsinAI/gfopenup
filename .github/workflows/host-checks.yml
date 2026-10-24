@@ -19,5 +19,7 @@ jobs:
         with:
           repository: DalsinAI/openamigaprefs
           path: openamigaprefs
+      - name: PIL, for the backdrops' tones (picture_tone)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends python3-pil
       - name: build_pack.py's parts and OpenUpTool's conditions
         run: OPENAMIGAPREFS=openamigaprefs python3 tests/test_build_pack.py

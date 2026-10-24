@@ -36,7 +36,9 @@ a Part file that C/OpenUpTool reads:
                         that vendored payload as it is
   OpenPrint/            OpenPrint and OpenView (openamigaprint's package)
   AmigaChromeSharing/   accontrol.device, ACClip and ACDrop (amigachrome-guest)
-  Backdrops/            the themes' desktops as Workbench backdrops (opengadtools)
+  Backdrops/            the themes' desktops as Workbench backdrops, each with its .tone
+                        (opengadtools); not the AmigaChrome Background Pack's art, an
+                        optional install from Cradle's Media Library
   OpenIcons/            OpenIcons look B, the Team's own icon set (MIT), as new pictures for
                         the system's icons, made at build time by its generator from the
                         amigachrome-guest checkout (--guest; tools/openicons_part.py)
@@ -166,6 +168,7 @@ amiga-icon.js). MIT, Copyright (c) 2026 AmigaChrome Team.
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import importlib.util
 import json
@@ -1126,6 +1129,70 @@ def openlibs_parts(top: Path, a) -> list:
     return made
 
 
+BACKDROPS_DEST = "SYS:Prefs/Presets/Backdrops/OpenUp"
+ART_NAME_RE = re.compile(r"^AmigaChrome-.+-\d+x\d+\.png$")
+
+
+def art_backdrop_names(opengadtools: Path) -> set[str] | None:
+    """The AmigaChrome Background Pack's pictures, as opengadtools' tools/make_art_backdrops.py names them
+    (AmigaChrome-<design>-<W>x<H>.png from its ART and SIZES, read from the source, not imported: it needs PIL).
+    None when that file is not there or its lists are not plain literals."""
+    src = Path(opengadtools) / "tools/make_art_backdrops.py"
+    try:
+        tree = ast.parse(src.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return None
+    found = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name) \
+                and node.targets[0].id in ("ART", "SIZES"):
+            try:
+                found[node.targets[0].id] = ast.literal_eval(node.value)
+            except ValueError:
+                return None
+    if set(found) != {"ART", "SIZES"}:
+        return None
+    return {f"AmigaChrome-{name}-{w}x{h}.png" for name, _ in found["ART"] for w, h in found["SIZES"]}
+
+
+def picture_tone(path: Path) -> str:
+    """A picture's tone, "dark" or "light", by OpenUpTool's own rule (src/openuptool.c, picture_tone): twelve
+    rows from top to bottom, every eighth pixel, Rec. 709 luma; a mean under 115 (45 per cent of 255) is dark.
+    It goes beside the picture as <picture>.tone, which OpenUpTool reads first, so the Amiga never decodes a
+    big picture at boot to set the icons' labels."""
+    from PIL import Image
+    with Image.open(path) as im:
+        im = im.convert("RGB")
+        w, h = im.size
+        px = im.load()
+        total = count = 0
+        for i in range(12):
+            y = (h - 1) * i // 11
+            for x in range(0, w, 8):
+                r, g, b = px[x, y]
+                total += (2126 * r + 7152 * g + 722 * b) // 10000
+                count += 1
+    return "dark" if count and total // count < 115 else "light"
+
+
+def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_tone) -> "Part":
+    """The Backdrops part: OpenUp's own desktops (opengadtools' make_backdrops.py, the themes' pictures, strips and
+    logo versions), each with its .tone, into SYS:Prefs/Presets/Backdrops/OpenUp.
+
+    make_backdrops.py also exports the AmigaChrome Background Pack's art (opengadtools #73). That pack is not
+    OpenUp's: it is an optional install, from Cradle's Media Library or its own InstallBackgrounds, and OpenUp keeps
+    its small default set (the user, 24 October 2026). Its pictures are left out: by make_art_backdrops.py's own
+    names, or, when those can't be read, by their AmigaChrome-<design>-<W>x<H>.png pattern."""
+    art = art_backdrop_names(opengadtools)
+    bd = Part(top, "Backdrops", "0.2", "The themes' desktops as Workbench backdrops, with their tones")
+    for png in sorted(Path(backdrops).glob("*.png")):
+        if (png.name in art) if art is not None else bool(ART_NAME_RE.match(png.name)):
+            continue
+        bd.add(f"Backdrops/{png.name}", png.read_bytes(), f"{BACKDROPS_DEST}/{png.name}")
+        bd.add(f"Backdrops/{png.name}.tone", (tone(png) + "\n").encode("ascii"), f"{BACKDROPS_DEST}/{png.name}.tone")
+    return bd
+
+
 def check_part_versions(parts: Path) -> None:
     """Stops the build when a part's declared version is not its main
     binary's $VER, or when a part says neither which binary that is nor
@@ -1353,11 +1420,8 @@ def main() -> int:
     # Installer's OLDLOOK takes out what an earlier OpenUp wrote for it.
     o = a.opengadtools
 
-    # The background pack: each theme's desktop at four screen shapes (opengadtools)
-    bd = Part(top, "Backdrops", "0.1", "The themes' desktops as Workbench backdrops")
-    for png in sorted((o / "build/backdrops").glob("*.png")):
-        bd.add(f"Backdrops/{png.name}", png.read_bytes(), f"SYS:Prefs/Presets/Backdrops/OpenUp/{png.name}")
-    bd.write()
+    # The background pack: each theme's desktop at four screen shapes (opengadtools), with their tones
+    backdrops_part(top, o / "build/backdrops", o).write()
 
     # OpenIcons: the Team's own icon set (look B, MIT) as new pictures for the system's own icons
     # (ICONS.md section 8). Its .info files are the generator's build output, never committed: they are made

@@ -161,6 +161,58 @@ def main() -> int:
         check("OpenMonitor.info: a tool icon with 32 KB of stack (OpenBench runs the ROM's resident from it)",
               mon[0] == FakeIcons.WBTOOL and mon[4] == 32768)
 
+        # Backdrops: OpenUp's own desktops, each with its .tone; the AmigaChrome Background Pack's art (which
+        # opengadtools' make_backdrops.py also exports) is an optional install, not OpenUp's (24 October 2026)
+        bdir = tmp / "backdrops"
+        bdir.mkdir()
+        ogt = tmp / "opengadtools"
+        (ogt / "tools").mkdir(parents=True)
+        (ogt / "tools/make_art_backdrops.py").write_text(
+            "from PIL import Image\nSIZES = [(640, 480), (1920, 1200)]\n"
+            "ART = [('Prismatic-light', 'light'), ('Nebula-dark', 'dark')]\n", encoding="utf-8")
+        own = ["Clear-light-chrome-logo-1920x1080.png", "Open-dark-1920x1200.png", "Open-light-strip-1080.png"]
+        art = [f"AmigaChrome-{d}-{size}.png" for d in ("Prismatic-light", "Nebula-dark") for size in ("640x480", "1920x1200")]
+        for n in own + art:
+            (bdir / n).write_bytes(n.encode())
+        check("make_art_backdrops.py's names read from its source, without PIL", bp.art_backdrop_names(ogt) == set(art),
+              str(bp.art_backdrop_names(ogt)))
+        fake_tone = lambda png: "dark" if "-dark-" in png.name else "light"
+        bd = bp.backdrops_part(top, bdir, ogt, tone=fake_tone)
+        bd.write()
+        lines = (bd.dir / "Part").read_text(encoding="latin-1").splitlines()
+        check("the Backdrops part is 0.2 (its tones are new)", lines[0] == "part Backdrops 0.2", lines[0])
+        want = []
+        for n in own:
+            want += [f'copy "Backdrops/{n}" "SYS:Prefs/Presets/Backdrops/OpenUp/{n}"',
+                     f'copy "Backdrops/{n}.tone" "SYS:Prefs/Presets/Backdrops/OpenUp/{n}.tone"']
+        check("each of OpenUp's own pictures goes in with its .tone, in name order", lines[2:] == want, str(lines[2:]))
+        check("each .tone says the picture's tone",
+              all((bd.dir / f"Backdrops/{n}.tone").read_bytes() == (fake_tone(Path(n)) + "\n").encode() for n in own))
+        check("none of the Background Pack's art is in the part",
+              not [p for p in (bd.dir / "Backdrops").iterdir() if p.name.startswith("AmigaChrome-")]
+              and not [l for l in lines if "AmigaChrome-" in l])
+        (ogt / "tools/make_art_backdrops.py").rename(ogt / "tools/gone.py")
+        bd = bp.backdrops_part(top, bdir, ogt, tone=fake_tone)
+        check("without make_art_backdrops.py, the art is still left out by its AmigaChrome-<design>-<W>x<H>.png names",
+              sorted(p.name for p in (bd.dir / "Backdrops").iterdir() if p.suffix == ".png") == own)
+        try:
+            from PIL import Image
+        except ImportError:
+            Image = None
+        if Image is None:
+            print("skipped picture_tone on real pictures: no PIL")
+        else:
+            # OpenUpTool's rule: the mean Rec. 709 luma of twelve rows, every eighth pixel; under 115 is dark
+            for grey, tone in ((114, "dark"), (115, "light"), (30, "dark"), (220, "light")):
+                f = tmp / f"grey{grey}.png"
+                Image.new("RGB", (1920, 1200), (grey, grey, grey)).save(f)
+                check(f"picture_tone: a grey of {grey} is {tone}", bp.picture_tone(f) == tone, bp.picture_tone(f))
+            f = tmp / "halves.png"
+            im = Image.new("RGB", (64, 48), (0, 0, 0))
+            im.paste((255, 255, 255), (0, 0, 64, 20))     # 5 of the 12 rows sampled are white: a mean of 106, dark
+            im.save(f)
+            check("picture_tone samples twelve rows, top to bottom", bp.picture_tone(f) == "dark", bp.picture_tone(f))
+
     # OpenTypes and OpenDateTime: pages of OpenPrefs, parts with no files that archive their stubs
     src = (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")
     for name, stub in (("OpenTypes", "OpenTypes"), ("OpenDateTime", "OpenDateTime")):
