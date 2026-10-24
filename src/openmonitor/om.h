@@ -1,4 +1,4 @@
-/* OpenMonitor 0.6: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
+/* OpenMonitor 0.7: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
  * What the parts share: the window, the fonts and pens, the table every view draws, the views.
  *
  * Built resident (libnix -resident): each run its own variables, reached through a4. Code that another task
@@ -20,14 +20,14 @@
 #include "ogt_tabs.h"
 #include "ogt_status.h"
 
-#define OM_VERSION "0.6"
+#define OM_VERSION "0.7"
 #define OM_DATE "24.10.2026"
 
 #define REG(r, decl) register decl __asm(#r)
 
-/* ---- the views: one tab each (P1: Tasks; P2: Memory, Libraries, Ports, Interrupts; P3: Hardware, Speed) - */
+/* ---- the views: one tab each (P1 Tasks; P2 Memory, Libraries, Ports, Interrupts; P3 Hardware, Speed; P5 Calls) */
 
-enum { V_TASKS, V_MEMORY, V_LIBS, V_PORTS, V_INTS, V_HW, V_SPEED, V_N };
+enum { V_TASKS, V_MEMORY, V_LIBS, V_PORTS, V_INTS, V_HW, V_SPEED, V_CALLS, V_N };
 
 struct om_view {
     const char *name;
@@ -50,7 +50,7 @@ struct om_ui {
     struct Window *win;
     struct DrawInfo *dri;
     APTR vi;
-    ogt_theme theme;
+    ogt_theme *theme;               /* allocated: 4.5 KB the a4 data (64 KB, built resident) needn't hold */
     int mode;
     ogt_ctx ctx;
     int ctx_ok;
@@ -120,6 +120,7 @@ int om_table_choose_columns(struct om_table *t);
 void om_table_columns(struct om_table *t, int *cx, int *cw);
 /* The table as text, onto the clipboard ("Copy as text"). */
 int om_table_copy(struct om_table *t);
+int om_table_save(struct om_table *t, const char *path);   /* the same, into a file */
 /* The rows in the order of t's sort column, read from the text each cell shows (raw: by the row's own
  * number): a right-aligned column as a number (commas, "$" hex, KB and MB understood), a left one as text,
  * case ignored. order[] holds the rows' numbers; ties keep their order. */
@@ -192,12 +193,16 @@ void om_libs_free(void);
 void om_ports_init(void);
 void om_ports_free(void);
 void om_ints_init(void);
+void om_ints_free(void);
 extern const struct om_view om_hw_view, om_speed_view;
 void om_hw_init(void);
 void om_hw_free(void);
 void om_speed_init(void);
 /* the last Speed run: 1 when there was one; its MIPS and its time ("14:43:31") */
 int om_speed_last(ULONG *mips, char *when);
+extern const struct om_view om_calls_view;
+void om_calls_init(void);
+void om_calls_free(void);                         /* the wedges out first, every call through them back */
 
 /* gadget ids: each view's from its own hundred */
 #define GID_TABS 10
@@ -208,5 +213,6 @@ int om_speed_last(ULONG *mips, char *when);
 #define GID_INTS 500
 #define GID_HW 600
 #define GID_SPEED 700
+#define GID_CALLS 800
 
 #endif

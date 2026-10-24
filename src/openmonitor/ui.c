@@ -12,6 +12,7 @@
 #include <intuition/screens.h>
 #include <devices/inputevent.h>
 #include <proto/exec.h>
+#include <proto/dos.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 #include <string.h>
@@ -249,37 +250,60 @@ int om_table_choose_columns(struct om_table *t)
     return 1;
 }
 
-/* The table as text: each column padded to its width, the header first. */
+/* The table as text: each column padded to its width, the header first (r -1). A row's room: each shown
+ * column at its width or a whole cell (159), whichever is more, and its gap. */
+static ULONG row_room(struct om_table *t)
+{
+    int i;
+    ULONG total = 2;
+    for (i = 0; i < t->ncols; i++) if (!t->cols[i].hidden) total += (t->cols[i].chars > 159 ? t->cols[i].chars : 159) + 2;
+    return total;
+}
+
+static int table_line(struct om_table *t, int r, char *buf)
+{
+    char *p = buf, cell[160];
+    int i;
+    for (i = 0; i < t->ncols; i++) {
+        LONG pen = 0;
+        int w = t->cols[i].chars;
+        if (t->cols[i].hidden) continue;
+        cell[0] = 0;
+        if (r < 0) snprintf(cell, sizeof cell, "%s", t->cols[i].title);
+        else t->cell(r, i, cell, sizeof cell, &pen);
+        if ((int)strlen(cell) > w) w = strlen(cell);
+        p += sprintf(p, t->cols[i].align == OM_LEFT ? "%-*s  " : "%*s  ", w, cell);
+    }
+    while (p > buf && p[-1] == ' ') p--;
+    *p++ = '\n';
+    *p = 0;
+    return p - buf;
+}
+
 int om_table_copy(struct om_table *t)
 {
-    int i, r, total = 0, ok;
-    char *buf, cell[160];
-    ULONG size;
-    /* a row's room: each shown column at its width or a whole cell (159), whichever is more, and its gap */
-    for (i = 0; i < t->ncols; i++) if (!t->cols[i].hidden) total += (t->cols[i].chars > 159 ? t->cols[i].chars : 159) + 2;
-    size = (ULONG)(t->count + 2) * (total + 2) + 64;
-    if (!(buf = AllocVec(size, MEMF_ANY))) return 0;
-    buf[0] = 0;
-    {
-        char *p = buf;
-        for (r = -1; r < t->count; r++) {
-            for (i = 0; i < t->ncols; i++) {
-                LONG pen = 0;
-                int w = t->cols[i].chars;
-                if (t->cols[i].hidden) continue;
-                cell[0] = 0;
-                if (r < 0) snprintf(cell, sizeof cell, "%s", t->cols[i].title);
-                else t->cell(r, i, cell, sizeof cell, &pen);
-                if ((int)strlen(cell) > w) w = strlen(cell);
-                p += sprintf(p, t->cols[i].align == OM_LEFT ? "%-*s  " : "%*s  ", w, cell);
-            }
-            while (p > buf && p[-1] == ' ') p--;
-            *p++ = '\n';
-            *p = 0;
-        }
-    }
+    int r, ok;
+    char *buf, *p;
+    if (!(buf = p = AllocVec((ULONG)(t->count + 2) * row_room(t) + 64, MEMF_ANY))) return 0;
+    for (r = -1; r < t->count; r++) p += table_line(t, r, p);
     ok = om_clip_text(buf);
     FreeVec(buf);
+    return ok;
+}
+
+int om_table_save(struct om_table *t, const char *path)
+{
+    BPTR fh;
+    char *line = AllocVec(row_room(t) + 8, MEMF_ANY);
+    int r, ok = 1;
+    if (!line) return 0;
+    if (!(fh = Open((STRPTR)path, MODE_NEWFILE))) { FreeVec(line); return 0; }
+    for (r = -1; r < t->count && ok; r++) {
+        LONG n = table_line(t, r, line);
+        ok = Write(fh, line, n) == n;
+    }
+    Close(fh);
+    FreeVec(line);
     return ok;
 }
 
