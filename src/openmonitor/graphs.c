@@ -126,16 +126,17 @@ static void draw_graph(int g, int x, int y, int w, int h, const char *title)
 {
     struct RastPort *rp = U.win->RPort;
     int i, ix = x + 6, iy = y + 4 + U.fh + 4, iw = w - 12, ih = h - (iy - y) - 6;
-    om_sunk(x, y, w, h);
+    ogt_box(rp, U.gauge_bg, x + 1, y + 1, w - 2, h - 2);   /* 0.8.1: dark inside, the window's bevel round it */
+    ogt_bevel(rp, U.pen_shadow, U.pen_shine, x, y, w, h);
     SetFont(rp, U.font);
-    ogt_text(rp, U.pen_text, x + 8, y + 4, title, w - 16);
+    ogt_text(rp, U.gauge_text, x + 8, y + 4, title, w - 16);
     if (ih < 8 || iw < HIST) return;
-    ogt_set_apen(rp, U.pen_shadow);
+    ogt_set_apen(rp, U.gauge_grid);
     for (i = 1; i < 4; i++) {
         int ly = iy + ih * i / 4, lx;
         for (lx = ix; lx < ix + iw; lx += 4) WritePixel(rp, lx, ly);
     }
-    ogt_set_apen(rp, U.graph_pen[g]);
+    ogt_set_apen(rp, U.gauge_line[g]);
     for (i = 0; i < HIST; i++) {
         int px = ix + i * (iw - 1) / (HIST - 1), py = iy + ih - 1 - (int)((ULONG)hist[g][i] * (ULONG)(ih - 1) / 1000);
         if (!i) Move(rp, px, py); else Draw(rp, px, py);
@@ -178,7 +179,7 @@ static int meter(struct RastPort *rp, int x, int y, int h, const char *label, UL
     int lw = om_text_width(U.font, label), bw = 60;
     ogt_text(rp, U.pen_text, x, y + (h - U.fh) / 2, label, 0);
     x += lw + 4;
-    ogt_box(rp, U.pen_list, x + 1, y + 2, bw - 2, h - 4);
+    ogt_box(rp, U.gauge_bg, x + 1, y + 2, bw - 2, h - 4);   /* 0.8.1: dark, as the graphs are */
     ogt_bevel(rp, U.pen_shadow, U.pen_shine, x, y + 1, bw, h - 2);
     ogt_box(rp, pen, x + 1, y + 2, (int)((bw - 2) * (tenths > 1000 ? 1000 : tenths) / 1000) + 1, h - 4);
     return lw + 4 + bw + 6;
@@ -191,10 +192,10 @@ void om_graphs_meter(int x, int y, int w, int h)
     int at = x;
     SetFont(rp, U.font);
     EraseRect(rp, x, y, x + w - 1, y + h - 1);
-    at += meter(rp, at, y, h, "CPU", cpu_tenths, U.graph_pen[0]);
+    at += meter(rp, at, y, h, "CPU", cpu_tenths, U.gauge_line[0]);
     snprintf(t, sizeof t, "%lu%%", (unsigned long)(cpu_tenths + 5) / 10);
     at += ogt_text(rp, U.pen_text, at, y + (h - U.fh) / 2, t, 0) + 12;
-    at += meter(rp, at, y, h, "Mem", mem_used_tenths, U.graph_pen[0]);
+    at += meter(rp, at, y, h, "Mem", mem_used_tenths, U.gauge_line[1]);
     snprintf(t, sizeof t, "%lu%%  chip %luK  fast %luM free", (unsigned long)(mem_used_tenths + 5) / 10,
              (unsigned long)chip_free_k, (unsigned long)(fast_free_k >> 10));
     ogt_text(rp, U.pen_text, at, y + (h - U.fh) / 2, t, x + w - at);

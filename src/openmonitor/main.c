@@ -487,6 +487,9 @@ static void pens(void)
     if (U.ctx.four) {
         U.pen_danger = U.pen_amber = p[TEXTPEN];
         U.graph_pen[0] = U.graph_pen[1] = U.graph_pen[2] = U.graph_pen[3] = p[FILLPEN];
+        /* 0.8.1: the graphs as dark as four colours go: black, the grid grey, the lines white and blue */
+        U.gauge_bg = p[SHADOWPEN]; U.gauge_grid = p[BACKGROUNDPEN]; U.gauge_text = p[SHINEPEN];
+        U.gauge_line[0] = p[SHINEPEN]; U.gauge_line[1] = p[FILLPEN]; U.gauge_line[2] = p[SHINEPEN];
     } else {
         U.pen_danger = rgb_pen(0xb02828);
         U.pen_amber = rgb_pen(0xa86400);
@@ -494,6 +497,15 @@ static void pens(void)
         U.graph_pen[1] = rgb_pen(0x4caf50);
         U.graph_pen[2] = rgb_pen(0xf08c28);
         U.graph_pen[3] = rgb_pen(0x965ac8);
+        /* 0.8.1 (the user, 24 October 2026, 22:03: "the gauges to be very very dark grey backgrounds and little
+         * whites, reds, blues"): the graphs' insides very dark grey, the grid a little lighter, the title light,
+         * and the lines CPU white, memory blue, GPU red */
+        U.gauge_bg = rgb_pen(0x161616);
+        U.gauge_grid = rgb_pen(0x3a3a3a);
+        U.gauge_text = rgb_pen(0xe6e6e6);
+        U.gauge_line[0] = rgb_pen(0xf4f4f4);
+        U.gauge_line[1] = rgb_pen(0x3d8bff);
+        U.gauge_line[2] = rgb_pen(0xe5383b);
     }
 }
 
