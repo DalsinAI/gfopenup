@@ -509,7 +509,13 @@
     (
         (working "Installing OpenPrint")
         (if (> (run (cat #tool " INSTALL Parts/OpenPrint >>T:OpenUp.log")) 5)
-            (message "OpenPrint didn't install completely. T:OpenUp.log says why; nothing else changed."))))
+            (message "OpenPrint didn't install completely. T:OpenUp.log says why; nothing else changed."))
+        ; OpenPrinter: our printer.device in front of OpenPrint, the OS's printer drivers, editors and tools archived.
+        ; AmigaChrome instances only: elsewhere, or where printer.device is another program's, it says so and
+        ; changes nothing (OpenUpTool answers 5, which isn't a failure)
+        (working "Installing OpenPrinter")
+        (if (> (run (cat #tool " INSTALL Parts/OpenPrinter >>T:OpenUp.log")) 5)
+            (message "OpenPrinter didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 (if (bitand #parts 4)
     (
         (working "Installing AmigaChromeSharing")
