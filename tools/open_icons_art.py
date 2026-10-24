@@ -966,6 +966,38 @@ def icontrol(sel):
     return ic
 
 
+
+def icons_page(sel):
+    """Icons laid on a grid, each with its label under it; chosen, the labels go beside them (OpenPrefs' Icons page)."""
+    ic = Icon()
+    cols = [(BLUE, BLUE_LO), (GREEN, GREEN_LO), (ORANGE, ORANGE_LO), (GOLD, GOLD_LO)]
+    for i, (c, lo) in enumerate(cols):
+        x = 22 + (i % 2) * 20
+        y = 6 + (i // 2) * 24
+        ic.add(rrect(x, y, x + 13, y + 13, 2.4), linear((x, y), (x + 13, y + 13), lighter(c, 0.3), lo), outline=1.3, gloss=0.4)
+        if sel:
+            ic.detail(rect(x + 15, y + 5, x + 21, y + 7.4), INK)
+        else:
+            ic.detail(rect(x - 1, y + 16, x + 14, y + 18.4), INK)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
+
+def printing_page(sel):
+    """A sheet of paper with its margins and lines; chosen, it turns on its side (OpenPrefs' Printing page)."""
+    ic = Icon()
+    x0, y0, x1, y1 = (14, 4, 54, 56) if not sel else (6, 12, 60, 48)
+    ic.add(rect(x0 + 2.5, y0 + 2.5, x1 + 2.5, y1 + 2.5), rgb('#8E96A2'))
+    ic.add(rect(x0, y0, x1, y1), linear((x0, y0), (x1, y1), (255, 255, 255), rgb('#D4D6DA')), outline=1.4)
+    m = 5
+    ic.detail(rect(x0 + m, y0 + 2, x0 + m + 0.9, y1 - 2), rgb('#E05A5A'))
+    ic.detail(rect(x1 - m - 0.9, y0 + 2, x1 - m, y1 - 2), rgb('#E05A5A'))
+    for k in range(int((y1 - y0 - 12) / 5)):
+        y = y0 + 7 + k * 5
+        ic.detail(rect(x0 + m + 3, y, x1 - m - 3 - (8 if k % 3 == 2 else 0), y + 1.3), CONTENT)
+    prefs_badge(ic, 2, 44, 1.35)
+    return ic
+
 ICONS = {
     "OpenFiles": openfiles, "OpenView": openview, "OpenEdit": openedit, "OpenWrite": openwrite,
     "OpenPlay": openplay, "OpenBrowser": openbrowser, "OpenCompress": opencompress,
@@ -976,6 +1008,7 @@ ICONS = {
     "OpenPrefs": openprefs, "ScreenMode": screenmode, "Pointer": pointer, "Fonts": fonts, "Colours": colours,
     "Backdrops": backdrops, "Workbench": workbench, "FileRequesters": filerequesters, "MouseKeys": mousekeys,
     "DateTime": datetime_, "Serial": serial, "System": system, "Blanker": blanker, "IControl": icontrol,
+    "Icons": icons_page, "Printing": printing_page,
 }
 BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write,
           "Expansion": badge_expansion}
