@@ -470,6 +470,23 @@ static LONG rgb_pen(ULONG rgb)
     return ogt_pen_rgb(&U.ctx, c);
 }
 
+/* 0.8.1: a pen of exactly this colour for the graphs' lines. On a full palette, or a graphics card's screen
+ * (where lines still need a palette pen), the theme's PRECISION_GUI match gave an orange for the GPU's red. */
+static LONG exact_pens[3];
+static int nexact;
+static LONG exact_pen(ULONG rgb)
+{
+    LONG p = ObtainBestPen(U.scr->ViewPort.ColorMap, ((rgb >> 16) & 255) * 0x01010101UL, ((rgb >> 8) & 255) * 0x01010101UL,
+                           (rgb & 255) * 0x01010101UL, OBP_Precision, PRECISION_EXACT, TAG_DONE);
+    if (p >= 0 && nexact < 3) exact_pens[nexact++] = p;
+    return p >= 0 ? p : rgb_pen(rgb);
+}
+
+static void exact_pens_free(void)
+{
+    while (nexact > 0) ReleasePen(U.scr->ViewPort.ColorMap, exact_pens[--nexact]);
+}
+
 static void pens(void)
 {
     UWORD *p = U.dri->dri_Pens;
@@ -487,6 +504,9 @@ static void pens(void)
     if (U.ctx.four) {
         U.pen_danger = U.pen_amber = p[TEXTPEN];
         U.graph_pen[0] = U.graph_pen[1] = U.graph_pen[2] = U.graph_pen[3] = p[FILLPEN];
+        /* 0.8.1: the graphs as dark as four colours go: black, the grid grey, the lines white and blue */
+        U.gauge_bg = p[SHADOWPEN]; U.gauge_grid = p[BACKGROUNDPEN]; U.gauge_text = p[SHINEPEN];
+        U.gauge_line[0] = p[SHINEPEN]; U.gauge_line[1] = p[FILLPEN]; U.gauge_line[2] = p[SHINEPEN];
     } else {
         U.pen_danger = rgb_pen(0xb02828);
         U.pen_amber = rgb_pen(0xa86400);
@@ -494,6 +514,16 @@ static void pens(void)
         U.graph_pen[1] = rgb_pen(0x4caf50);
         U.graph_pen[2] = rgb_pen(0xf08c28);
         U.graph_pen[3] = rgb_pen(0x965ac8);
+        /* 0.8.1 (the user, 24 October 2026, 22:03: "the gauges to be very very dark grey backgrounds and little
+         * whites, reds, blues"): the graphs' insides very dark grey, the grid a little lighter, the title light,
+         * and the lines CPU white, memory blue, GPU red */
+        U.gauge_bg = rgb_pen(0x161616);
+        U.gauge_grid = rgb_pen(0x3a3a3a);
+        U.gauge_text = rgb_pen(0xe6e6e6);
+        exact_pens_free();
+        U.gauge_line[0] = exact_pen(0xf4f4f4);
+        U.gauge_line[1] = exact_pen(0x3d8bff);
+        U.gauge_line[2] = exact_pen(0xe5383b);
     }
 }
 
@@ -676,6 +706,7 @@ out:
         U.win = NULL;
     }
     if (U.glist) FreeGadgets(U.glist);
+    if (U.scr) exact_pens_free();
     if (U.ctx_ok) ogt_ctx_free(&U.ctx);
     if (U.dri) FreeScreenDrawInfo(scr, U.dri);
     if (U.vi) FreeVisualInfo(U.vi);
