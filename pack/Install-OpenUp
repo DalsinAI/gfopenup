@@ -444,6 +444,15 @@
 (working "Installing OpenUp")
 (if (> (run (cat #tool " INSTALL Parts/OpenUp >>T:OpenUp.log")) 5)
     (abort "OpenUp's own files didn't install. T:OpenUp.log says why; nothing else changed."))
+; OpenFont (24 Oct 2026), with every install on a 68040 or 68060 with its FPU (what openfont.library is built for):
+; openfont.library and DejaVu Sans, the font OpenBench's theme and the Open programs' look name. Without them their
+; text falls back to the screen's font.
+(if (and (exists "Parts/OpenFont/Part") (<> (database "fpu") "NOFPU")
+         (or (= (database "cpu") "68040") (= (database "cpu") "68060")))
+    (
+        (working "Installing OpenFont")
+        (if (> (run (cat #tool " INSTALL Parts/OpenFont >>T:OpenUp.log")) 5)
+            (message "OpenFont didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 ; OpenBlanker, with its show Gods and Angels, comes with every install.
 (working "Installing OpenBlanker")
 (if (> (run (cat #tool " INSTALL Parts/OpenBlanker >>T:OpenUp.log")) 5)
