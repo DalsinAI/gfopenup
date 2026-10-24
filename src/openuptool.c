@@ -80,6 +80,9 @@
  *   face <icon in the drawer> <dest .info>  (0.6: the icon's picture only; dest keeps
  *                                        its type, tools, tool types and window;
  *                                        left alone when the machine hasn't got it)
+ *   tooltype <dest .info> <from> <to>   (24 Oct 2026: one tool type of an icon that stays the
+ *                                        system's: where it is <from> exactly it becomes <to>, and
+ *                                        the rest of the icon stays; REMOVE puts <from> back)
  *   startup <the rest of the line>
  *   when AmigaChrome <copy|default|add|face|retire line>  (0.6.3: the line only on an AmigaChrome instance)
  * Words with spaces are quoted.
@@ -763,7 +766,9 @@ static int face_icon(const char *from, const char *dest)
         FreeDiskObject(old);
         CloseLibrary(IconBase);
         IconBase = NULL;
-        if (!e->b || !exists(e->b) || !still_face(dest, e->b, e->b)) {
+        /* (still its original picture, over its original fields or over its own now: a tooltype line, the
+         * Shell icon's, changes a field and not the picture, 24 October 2026) */
+        if (!e->b || !exists(e->b) || (!still_face(dest, e->b, e->b) && !still_face(dest, e->b, dest))) {
             say("OpenUp: kept ", dest, ": it has been changed since OpenUp last gave it a picture");
             return 0;
         }
@@ -798,6 +803,72 @@ static int face_icon(const char *from, const char *dest)
         strcpy(e->kind, "replaced");
     }
     return 1;
+}
+
+/* One tool type of an icon that stays the system's ("tooltype" lines, 24 October 2026: the Shell icon's
+ * WINDOW=CON:0///130/... without its 130, so a Shell from the icon opens 80 x 24 of the system font, as
+ * NewShell's own window does). Where the icon has the tool type from, exactly, it becomes to; its picture, its
+ * other tool types and everything else stay as they are. With keep (INSTALL), the icon as it was goes to
+ * SYS:Storage/OpenUp-Superseded the first time, as for a face, and the manifest lists it as replaced, so
+ * UNINSTALL puts it back; REMOVE calls this the other way round (to back to from), without keep, so the icon
+ * keeps whatever picture it has then. An icon the machine hasn't got, or one without that tool type (it has
+ * the other one already, or the user changed it), is left alone. 1 changed, 0 nothing to do, -1 failed. */
+static void no_info(char *dst, const char *src, int size);
+static int tooltype_icon(const char *dest, const char *from, const char *to, int keep)
+{
+    char backup[260], dir[260], dname[260];
+    struct DiskObject *o;
+    STRPTR *was, *tts;
+    entry *e = find_entry(NULL, dest);
+    int i, n, at = -1, ok;
+    if (!exists(dest))
+        return 0;
+    no_info(dname, dest, sizeof dname);
+    if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) {
+        say("OpenUp: icon.library 44 or later is needed to change ", dest, "'s tool types.");
+        return -1;
+    }
+    if (!(o = GetIconTags((STRPTR)dname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE))) {
+        CloseLibrary(IconBase);
+        IconBase = NULL;
+        say("OpenUp: can't read the icon ", dest, NULL);
+        return -1;
+    }
+    for (n = 0; o->do_ToolTypes && o->do_ToolTypes[n]; n++)
+        if (at < 0 && !strcmp((const char *)o->do_ToolTypes[n], from)) at = n;
+    ok = at < 0 ? 0 : 1;
+    if (ok && keep && (!e || !strcmp(e->kind, "same"))) {     /* the first time: keep the icon as it was */
+        backup_path(dest, backup, sizeof backup);
+        parent_of(backup, dir, sizeof dir);
+        if (!exists(backup) && (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0))) {
+            say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; its tool types weren't changed. Is SYS: full or write-protected?");
+            ok = -1;
+        }
+    }
+    if (ok == 1) {
+        if (!(tts = AllocVec((n + 1) * sizeof *tts, MEMF_ANY | MEMF_CLEAR))) {
+            ok = -1;
+        } else {
+            for (i = 0; i < n; i++) tts[i] = i == at ? (STRPTR)to : o->do_ToolTypes[i];
+            was = o->do_ToolTypes;
+            o->do_ToolTypes = tts;                          /* lent for the write, then given back */
+            if (!PutIconTags((STRPTR)dname, o, ICONPUTA_NotifyWorkbench, TRUE, TAG_DONE)) ok = -1;
+            o->do_ToolTypes = was;
+            FreeVec(tts);
+        }
+        if (ok < 0) say("OpenUp: can't write ", dest, "'s tool types. Is the disk write-protected?");
+    }
+    FreeDiskObject(o);
+    CloseLibrary(IconBase);
+    IconBase = NULL;
+    if (ok == 1 && keep) {
+        if (!e) { if (!add_entry("replaced", dest, backup)) { say("OpenUp: out of memory noting ", dest, "'s new tool type."); return -1; } }
+        else if (!strcmp(e->kind, "same")) {
+            if (!set_text(&e->b, backup)) { say("OpenUp: out of memory noting ", dest, "'s new tool type."); return -1; }
+            strcpy(e->kind, "replaced");
+        }
+    }
+    return ok;
 }
 
 /* A part's startup lines are the ones its Part file has now. Installing it marks the lines it had before
@@ -890,6 +961,11 @@ static int install(const char *drawer)
                 case 1: files++; break;
                 case -1: errors++; break;
                 }
+            } else if (pass == 1 && !strcmp(w[0], "tooltype") && n >= 4) {
+                switch (tooltype_icon(w[1], w[2], w[3], 1)) {
+                case 1: files++; break;
+                case -1: errors++; break;
+                }
             } else if (pass == 1 && !strcmp(w[0], "retire") && n >= 2) {
                 switch (retire_file(w[1])) {
                 case 1: files++; break;
@@ -960,6 +1036,14 @@ static int remove_part(const char *drawer)
         if (!n) continue;
         if (!strcmp(w[0], "when") && n >= 4) { n -= 2; memmove(w, w + 2, n * sizeof w[0]); }
         if (!strcmp(w[0], "part") && n >= 3) strncpy(partname, w[1], sizeof partname - 1);
+        else if (!strcmp(w[0], "tooltype") && n >= 4) {
+            /* the tool type back as it was; the icon stays (its copy in SYS:Storage too, for UNINSTALL) */
+            switch (tooltype_icon(w[1], w[3], w[2], 0)) {
+            case 1: restored++; break;
+            case -1: problems++; break;
+            }
+            continue;
+        }
         else if (!strcmp(w[0], "retire") && n >= 2) dest = w[1];
         else if ((!strcmp(w[0], "copy") || !strcmp(w[0], "default") || !strcmp(w[0], "add") || !strcmp(w[0], "face"))
                  && n >= 3) dest = w[2];

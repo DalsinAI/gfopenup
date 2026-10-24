@@ -50,6 +50,9 @@ a Part file that C/OpenUpTool reads:
                         licence, for Font prefs' System Default Text; always installed. The OpenKick ROM
                         has the 11 and makes it the Shell's font itself; no Font prefs are written
                         (openamigafont's fonts/amiga; left out without --openamigafont)
+  ShellIcon/            the Shell icon's WINDOW tool type without its 130, so a Shell from SYS:System/Shell
+                        opens 80 x 24 as NewShell's own window does; always installed, after OpenIcons
+                        (OpenUpTool REMOVE Parts/ShellIcon puts the 130 back)
   OpenFont/             openfont.library, and DejaVu Sans as an outline font it draws (FONTS:DejaVuSans.font,
                         .otag and _ttf/DejaVuSans.ttf), with their licences: the font OpenBench's theme and
                         the Open programs' look name. Installed on a 68040 or 68060 with its FPU (the
@@ -668,12 +671,12 @@ PART_MAIN = {
 # muimaster.library face (19.1). Sound 0.2.2 is OpenSpeaker (0.1.4; the editor is OpenPrefs's since W48) with OpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmigaChrome machines only). OpenImage 0.4 adds
 # opentga.datatype (47.1). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (openamigafont
-# fonts/amiga). A part's own version goes up when what it ships changes, so OpenUpTool UPDATE
+# fonts/amiga). ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so OpenUpTool UPDATE
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
 # binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
 PART_OWN_VERSION = {"OpenLibs", "AmigaChromeSharing", "OpenImage", "Backdrops", "OpenIcons", "OpenDemos", "OpenGPUDev",
-                    "OpenPrint", "OpenMUI", "Sound", "OpenAmigaPython", "ShellFont"}
+                    "OpenPrint", "OpenMUI", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon"}
 
 
 # OpenAmigaPython (SacredTrees/openamigapython, the ac3-classic line): the pack takes the Part
@@ -1432,6 +1435,17 @@ def main() -> int:
         sf.write()
     else:
         print("  ShellFont: left out (no --openamigafont checkout with fonts/amiga)")
+
+    # The Shell icon (24 October 2026, the Team's decision): OS 3.2.3's SYS:System/Shell.info opens its window
+    # CON:0///130, 130 pixels high: about 7 rows of the OpenKick ROM's DejaVu Sans Mono 11. Its WINDOW tool type
+    # loses the 130, so a Shell from the icon opens 80 x 24 of the system font, as NewShell's own window does
+    # (amigachrome-guest #472). Only that tool type changes: the picture and the other tool types stay; the icon
+    # as it was goes to SYS:Storage/OpenUp-Superseded the first time, so UNINSTALL puts it back; and
+    # OpenUpTool REMOVE Parts/ShellIcon puts the 130 back. A place OpenWindows keeps for the window still wins.
+    si = Part(top, "ShellIcon", "1.0", "The Shell icon opens its window 80 x 24, as NewShell's")
+    si.line('tooltype "SYS:System/Shell.info" "WINDOW=CON:0///130/AmigaShell/CLOSE/ICONIFY" '
+            '"WINDOW=CON:0////AmigaShell/CLOSE/ICONIFY"')
+    si.write()
 
     # OpenFont (24 October 2026): openfont.library, and DejaVu Sans as an outline font it draws. OpenBench's
     # theme names "DejaVu Sans" 13 and the Open programs' look "DejaVu Sans" 12; opengadtools' ogt_font opens it
