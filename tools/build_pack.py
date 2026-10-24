@@ -25,9 +25,9 @@ a Part file that C/OpenUpTool reads:
 
   OpenUp/               OpenUpTool and the uninstaller, OpenUpMenu: the
                         Tools menu's OpenUp and Preferences sub-menus, and
-                        OpenMonitor, the task manager, and its icon in SYS:Utilities, on every ROM:
-                        the disk's 0.4 and on is newer than the open ROM's 0.3.3, and the newer
-                        version wins, until 1.0 goes into the ROM (the task-manager design's P6);
+                        OpenMonitor 1.0, the task manager, and its icon in SYS:Utilities, on every
+                        ROM (the open ROM has the same 1.0 from P6 on; an open ROM from before has
+                        0.3.3, and the newer version wins);
                         LIBS:softfpu.library, the FPU in software for a 68LC040 or
                         68EC040 under the open ROM (amigachrome-guest libraries/opensoftfpu)
   OpenSocket/           bsdsocket.library 4.3 and its tools, built from openamigasocket
@@ -400,9 +400,9 @@ def build_parts(a):
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
     run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
-    # OpenMonitor, the task manager (0.4 on: src/openmonitor/, its own build.sh, GCC 16 as opengadtools wants),
-    # built resident (libnix -resident: each run its own variables), so one seglist serves every run. The ROM
-    # keeps 0.3.3, src/openmonitor.c, which amigachrome-guest's romprefs.sh builds, until 1.0 goes into it.
+    # OpenMonitor 1.0, the task manager (src/openmonitor/, its own build.sh, GCC 16 as opengadtools wants),
+    # built resident (libnix -resident: each run its own variables), so one seglist serves every run. The open
+    # ROM builds the same file through amigachrome-guest's romprefs.sh.
     gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmigaChrome/stoves/os32-gcc16"))
     run(["sh", ROOT / "src/openmonitor/build.sh", ROOT / "build/os3/OpenMonitor"],
         env=dict(os.environ, OS32_GCC16=gcc16_root, OGT=str(a.opengadtools), GUEST=str(a.guest)))
@@ -705,10 +705,10 @@ def opensnap_part(top: Path, program: bytes, icons) -> "Part":
 def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
     """What the OpenUp part does by the ROM (the no-ROM-volume design of 24 October 2026, sections 5.5, 7 and 10).
 
-    OpenMonitor: the program comes with its icon on every ROM. The open ROM has OpenMonitor 0.3.3; the task
-    manager (0.4 on, the OpenMonitor task-manager design of 24 October 2026) is newer, and the newer version
-    wins, so the disk's runs there too. When 1.0 goes into the ROM (that design's P6), this goes back to the
-    icon alone on the open ROM ("unless OpenKick" for the file, and an old one archived).
+    OpenMonitor: the program comes with its icon on every ROM. The open ROM has OpenMonitor 1.0 from the
+    OpenMonitor task-manager design's P6 on, the same as the disk's; an open ROM built before has 0.3.3, which
+    "when OpenKick" can't tell apart (it asks for prefs.resource 47.101), and there the disk's, newer, wins.
+    So the file stays on every ROM; the newer version wins, and on a ROM with 1.0 neither is newer.
 
     CommandSwap leaves the ROM with ROM: (Q20): on the open ROM its pins, ENVARC:Sys/CommandSwap.prefs, are
     archived."""

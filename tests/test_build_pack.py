@@ -152,8 +152,8 @@ def main() -> int:
                   and 'copy "Utilities/OpenMonitor.info" "SYS:Utilities/OpenMonitor.info"' in eff
                   and not any(l.startswith("retire") for l in eff), str(eff))
         eff = lines_on(cf, "openkick101-ac", filt)
-        check("openkick101: OpenMonitor with its icon (the disk's task manager is newer than the ROM's 0.3.3 until "
-              "1.0 goes into the ROM), CommandSwap's pins archived",
+        check("openkick101: OpenMonitor with its icon (an open ROM from before OpenMonitor 1.0 has 0.3.3, which the "
+              "condition can't tell apart), CommandSwap's pins archived",
               eff[2:] == ['copy "Utilities/OpenMonitor" "SYS:Utilities/OpenMonitor"',
                           'copy "Utilities/OpenMonitor.info" "SYS:Utilities/OpenMonitor.info"',
                           'retire "ENVARC:Sys/CommandSwap.prefs"'], str(eff))
