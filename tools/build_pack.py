@@ -50,6 +50,10 @@ a Part file that C/OpenUpTool reads:
                         licence, for Font prefs' System Default Text; always installed. The OpenKick ROM
                         has the 11 and makes it the Shell's font itself; no Font prefs are written
                         (openamigafont's fonts/amiga; left out without --openamigafont)
+  OpenFont/             openfont.library, and DejaVu Sans as an outline font it draws (FONTS:DejaVuSans.font,
+                        .otag and _ttf/DejaVuSans.ttf), with their licences: the font OpenBench's theme and
+                        the Open programs' look name. Installed on a 68040 or 68060 with its FPU (the
+                        --openamigafont checkout's build-amiga.sh; DejaVu Sans from --dejavu-sans)
   OpenPrefs/            OpenPrefs, every editor of ours as a section of one program
                         (SYS:Prefs/OpenPrefs), its small body C:OpenPrefs (the boot's one
                         OpenPrefs APPLY line), and a stub with its own icon for each section
@@ -635,6 +639,7 @@ PART_MAIN = {
     "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
     "OpenCrypto": ("Libs/opencrypto.library", "opencrypto.library"),
     "OpenTLS": ("Libs/opentls.library", "opentls.library"),
+    "OpenFont": ("Libs/openfont.library", "openfont.library"),
     "OpenPuTTY": ("Utilities/OpenPuTTY/OpenPuTTY", "OpenPuTTY"),
     "Tata": ("C/Tata", "Tata"),
     "OpenFTP": ("Utilities/OpenFTP/OpenFTP", "OpenFTP"),
@@ -853,6 +858,83 @@ def check_openbrowser_pin(archive: Path) -> None:
         print(f"  OpenBrowser: {archive} is a folder, so its sha256 isn't checked; its version must be {pin['version']}")
 
 
+# DejaVu Sans for the OpenFont part: DejaVu fonts 2.37's DejaVuSans.ttf (Ubuntu's fonts-dejavu-core 2.37-8build1;
+# OpenBrowser's LIBS:WebBrowser/Fonts copy is the same file). A new DejaVu is a new pin here.
+DEJAVU_SANS_SHA256 = "b4c632e3cdf9acc7f28758fb5a323c8524d7fc6660d46904d9b6cbe2809c419c"
+
+
+def ttf_name(data: bytes, nid: int) -> str | None:
+    """A TrueType font's name table entry nid (its Windows Unicode one), or None."""
+    for i in range(struct.unpack(">H", data[4:6])[0]):
+        tag, _, off, _ = struct.unpack(">4sIII", data[12 + 16 * i:28 + 16 * i])
+        if tag == b"name":
+            _, count, strings = struct.unpack(">HHH", data[off:off + 6])
+            for j in range(count):
+                pid, eid, _, k, length, o = struct.unpack(">HHHHHH", data[off + 6 + 12 * j:off + 18 + 12 * j])
+                if pid == 3 and eid in (1, 10) and k == nid:
+                    return data[off + strings + o:off + strings + o + length].decode("utf-16-be")
+    return None
+
+
+def outline_otag(ttf: str) -> bytes:
+    """An .otag for a TrueType font that OpenFont draws (amigachrome-guest libraries/openbullet's README): OT_FileIdent
+    (the file's length), OT_Engine "bullet" and OT_Spec1 | OT_Indirect, the font file's name (one without a device
+    is taken in the .otag's own drawer); the two strings follow the list, as offsets from its start."""
+    ot_fileident, ot_engine, ot_spec1 = 0x80001001, 0x80009002, 0x80009101   # TAG_USER, OT_Level1, OT_Indirect
+    head, data, offs = 8 * 4, b"", []
+    for s in (b"bullet\0", ttf.encode("latin-1") + b"\0"):
+        offs.append(head + len(data))
+        data += s + b"\0" * (len(s) % 2)
+    total = head + len(data)
+    total += -total % 4
+    b = struct.pack(">8I", ot_fileident, total, ot_engine, offs[0], ot_spec1, offs[1], 0, 0) + data
+    return b + bytes(total - len(b))
+
+
+def openfont_part(top: Path, font_src: Path | None, ttf: Path):
+    """The OpenFont part: openfont.library from an openamigafont checkout built by its build-amiga.sh, and DejaVu Sans
+    as an outline font: FONTS:DejaVuSans.font (an outline .font, OFCH_ID $0F03, no bitmap sizes), FONTS:DejaVuSans.otag
+    and FONTS:_ttf/DejaVuSans.ttf; the licences in SYS:Utilities/OpenUp/Licences (OpenFont's MIT with the Unicode
+    licence of the character data in it, and DejaVu Sans's as the font file gives it, its name table's licence
+    description). None when the library isn't built or the font isn't there."""
+    import hashlib
+    lib = font_src / "build/amiga/openfont.library" if font_src else None
+    if not lib or not lib.is_file():
+        print("  OpenFont: left out (no build/amiga/openfont.library in the --openamigafont checkout: its build-amiga.sh)")
+        return None
+    if not ttf.is_file():
+        print(f"  OpenFont: left out ({ttf} isn't there: --dejavu-sans names DejaVu fonts 2.37's DejaVuSans.ttf)")
+        return None
+    sans = ttf.read_bytes()
+    got = hashlib.sha256(sans).hexdigest()
+    if got != DEJAVU_SANS_SHA256:
+        raise SystemExit(f"OpenFont: {ttf} has sha256 {got}; the pack takes DejaVu fonts 2.37's DejaVuSans.ttf, "
+                         f"sha256 {DEJAVU_SANS_SHA256}")
+    licence = ttf_name(sans, 13)
+    if not licence:
+        raise SystemExit(f"OpenFont: {ttf} has no licence description in its name table")
+    ofl = lib.read_bytes()
+    p = Part(top, "OpenFont", binary_version(ofl, "openfont.library") or "1.4",
+             "OpenFont: openfont.library, and DejaVu Sans for the Open programs' text")
+    p.add("Libs/openfont.library", ofl, "LIBS:openfont.library")
+    # "add": a DejaVu Sans of another program's stays
+    p.add("Fonts/DejaVuSans.font", struct.pack(">HH", 0x0F03, 0), "FONTS:DejaVuSans.font", own=True)
+    p.add("Fonts/DejaVuSans.otag", outline_otag("_ttf/DejaVuSans.ttf"), "FONTS:DejaVuSans.otag", own=True)
+    p.add("Fonts/_ttf/DejaVuSans.ttf", sans, "FONTS:_ttf/DejaVuSans.ttf", own=True)
+    p.add("Utilities/OpenUp/Licences/OpenFont.txt",
+          (font_src / "LICENSE").read_bytes() + b"\n\nThe Unicode character data in openfont.library:\n\n" +
+          (font_src / "LICENSES/Unicode-License-v3.txt").read_bytes(),
+          "SYS:Utilities/OpenUp/Licences/OpenFont.txt")
+    p.add("Utilities/OpenUp/Licences/DejaVuSans.txt",
+          ("DejaVu Sans, DejaVu fonts 2.37 (FONTS:_ttf/DejaVuSans.ttf, unmodified, with FONTS:DejaVuSans.font and\n"
+           "DejaVuSans.otag), under the licence the font file gives:\n\n" + licence.replace("\r\n", "\n") + "\n")
+          .encode("latin-1", "replace"),
+          "SYS:Utilities/OpenUp/Licences/DejaVuSans.txt")
+    p.write()
+    print(f"  OpenFont {p.lines[0].split()[-1]}: openfont.library, DejaVu Sans (sha256 checked)")
+    return p
+
+
 def opentls_part(top: Path, tls_src: Path):
     """The OpenTLS part from an openamigatls checkout built by
     build-amiga-tls.sh and tools/make_ca_bundle.py (build-ca-bundle/), or
@@ -1060,7 +1142,11 @@ def main() -> int:
                     help="openamigabench checkout: OpenBench, the Team's own Workbench (desktop/build.sh)")
     ap.add_argument("--openamigafont", type=Path, default=first(DEV / "openamigafont", DEV.parent / "openamigafont"),
                     help="openamigafont checkout: the ShellFont part, DejaVu Sans Mono as Amiga bitmap fonts "
-                         "(its fonts/amiga; left out without it)")
+                         "(its fonts/amiga; left out without it), and the OpenFont part's openfont.library "
+                         "(its build-amiga.sh's build/amiga/openfont.library; left out without it)")
+    ap.add_argument("--dejavu-sans", type=Path, default=Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+                    help="DejaVu fonts 2.37's DejaVuSans.ttf, for the OpenFont part (default: the build PC's "
+                         "fonts-dejavu-core); taken only with its sha256")
     py_asset = ROOT / "build" / OPENAMIGAPYTHON["asset"]
     ap.add_argument("--openamigapython", type=Path, default=py_asset if py_asset.is_file() else None,
                     help=f"OpenAmigaPython's release archive {OPENAMIGAPYTHON['asset']} (from "
@@ -1346,6 +1432,12 @@ def main() -> int:
         sf.write()
     else:
         print("  ShellFont: left out (no --openamigafont checkout with fonts/amiga)")
+
+    # OpenFont (24 October 2026): openfont.library, and DejaVu Sans as an outline font it draws. OpenBench's
+    # theme names "DejaVu Sans" 13 and the Open programs' look "DejaVu Sans" 12; opengadtools' ogt_font opens it
+    # with openfont.library's OF_OpenTextFont and, without the library, falls back to CGTriumvirate, helvetica or
+    # the screen's font. The Installer puts it on a 68040 or 68060 with its FPU, which the library is built for.
+    openfont_part(top, a.openamigafont, a.dejavu_sans)
 
     # OpenDock: the dock and its editor (openamigaprefs). The Installer runs
     # "SYS:Prefs/OpenDock SAVE" once, on a first install, so the dock has the

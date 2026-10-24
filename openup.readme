@@ -79,6 +79,9 @@ choose:
   to 24 pixels high, fixed width, for Font in SYS:Prefs ("System default
   text"); the OpenKick ROM's own Shell font is its 11, and OpenUp changes no
   Font prefs;
+- OpenFont (new, always installed on a 68040 or 68060 with its FPU):
+  openfont.library and DejaVu Sans, the font OpenBench's labels and the Open
+  programs draw their text in (without them, the screen's font);
 - OpenWrite (new): a word processor for DOCX, ODT and Amiga documents,
   with PDF export, printing, spelling and an ARexx port
   (SYS:Utilities/OpenWrite), and C:OWConvert for scripts;

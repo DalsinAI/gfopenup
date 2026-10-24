@@ -40,6 +40,12 @@ PiStorm (Emu68), in an AmigaChrome instance, and on the appliance.
   it the system default text where no Font prefs name one; OpenUp writes no
   Font prefs. [docs/shell-font.png](docs/shell-font.png): the Shell in topaz 8,
   in the 12 from Font prefs, and in the ROM's 11 on its dark background.
+- OpenFont: openfont.library (openamigafont) in `LIBS:`, and DejaVu Sans as an
+  outline font it draws (`FONTS:DejaVuSans.font`, `.otag` and
+  `_ttf/DejaVuSans.ttf`), on a 68040 or 68060 with its FPU (24 October
+  2026). OpenBench's theme names DejaVu Sans 13 and the Open programs' look
+  DejaVu Sans 12; without the library their text falls back to the screen's
+  font ([docs/openbench-labels.png](docs/openbench-labels.png)).
 
 TLS is OpenTLS's (opentls.library, with OpenCrypto): OpenMail, OpenFTP's
 FTPS, OpenPrint's IPPS and httpget use it, and the pack doesn't look for
