@@ -1,4 +1,4 @@
-/* OpenMonitor 0.4: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
+/* OpenMonitor 0.5: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
  * What the parts share: the window, the fonts and pens, the table every view draws, the views.
  *
  * Built resident (libnix -resident): each run its own variables, reached through a4. Code that another task
@@ -20,14 +20,14 @@
 #include "ogt_tabs.h"
 #include "ogt_status.h"
 
-#define OM_VERSION "0.4"
+#define OM_VERSION "0.5"
 #define OM_DATE "24.10.2026"
 
 #define REG(r, decl) register decl __asm(#r)
 
-/* ---- the views: one tab each (P1 has Tasks; P2, P3 and P5 add the rest) ---------------------------- */
+/* ---- the views: one tab each (P1: Tasks; P2: Memory, Libraries, Ports, Interrupts; P3 and P5 the rest) - */
 
-enum { V_TASKS, V_N };
+enum { V_TASKS, V_MEMORY, V_LIBS, V_PORTS, V_INTS, V_N };
 
 struct om_view {
     const char *name;
@@ -41,6 +41,7 @@ struct om_view {
 };
 
 extern const struct om_view *om_views[V_N];
+void om_open_view(int v);                         /* another view, as its tab would */
 
 /* ---- the window and its look ------------------------------------------------------------------------- */
 
@@ -119,6 +120,12 @@ int om_table_choose_columns(struct om_table *t);
 void om_table_columns(struct om_table *t, int *cx, int *cw);
 /* The table as text, onto the clipboard ("Copy as text"). */
 int om_table_copy(struct om_table *t);
+/* The rows in the order of t's sort column, read from the text each cell shows (raw: by the row's own
+ * number): a right-aligned column as a number (commas, "$" hex, KB and MB understood), a left one as text,
+ * case ignored. order[] holds the rows' numbers; ties keep their order. */
+void om_table_sort(struct om_table *t, om_cell_fn raw, int *order, int n);
+/* 1 when s holds find, case ignored (an empty find holds everything). */
+int om_contains(const char *s, const char *find);
 
 /* ---- the pop-up menu (0.3's right-click menu, made general) ------------------------------------------ */
 
@@ -145,6 +152,9 @@ LONG om_ask(const char *title, const char *buttons, const char *fmt, ...);
 void om_text(struct RastPort *rp, struct TextFont *f, LONG pen, int x, int y, const char *s, int maxw);
 int om_text_width(struct TextFont *f, const char *s);
 void om_sunk(int x, int y, int w, int h);         /* a sunk box in the window's colour */
+void om_heading(int x, int y, const char *s);     /* a section's title, bold, in the labels' font */
+const char *om_commas(ULONG v, char *buf);        /* 1,234,567 (buf: 16 bytes) */
+const char *om_where(APTR code);                  /* "ROM" or "RAM": the ROM image or its unpacked copy */
 void om_redraw_page(void);                        /* the open view again, whole */
 void om_rebuild_gadgets(void);                    /* after a view changes its gadgets */
 int om_clip_text(const char *s);                  /* text onto the clipboard (unit 0, FTXT) */
@@ -167,9 +177,25 @@ extern const struct om_view om_tasks_view;
 int om_tasks_init(void);                          /* 0: no memory */
 void om_tasks_free(void);                         /* resumes every frozen task */
 void om_tasks_take(void);                         /* the second's look, every second, shown or not (the graph) */
+void om_tasks_choose(struct Task *t);             /* "Show the owner": that task chosen in the Tasks view */
+void om_task_name(struct Task *t, char *out, int size);   /* as the Tasks view names it; under Forbid */
+
+/* the other views (memory.c, libs.c, ports.c, ints.c) */
+extern const struct om_view om_memory_view, om_libs_view, om_ports_view, om_ints_view;
+void om_memory_init(void);
+void om_memory_take(void);                        /* every second, shown or not: the last minute's graph */
+void om_libs_init(void);
+void om_libs_free(void);
+void om_ports_init(void);
+void om_ports_free(void);
+void om_ints_init(void);
 
 /* gadget ids: each view's from its own hundred */
 #define GID_TABS 10
 #define GID_TASKS 100
+#define GID_MEMORY 200
+#define GID_LIBS 300
+#define GID_PORTS 400
+#define GID_INTS 500
 
 #endif
