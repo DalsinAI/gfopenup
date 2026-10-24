@@ -1,4 +1,4 @@
-/* OpenMonitor 0.7: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
+/* OpenMonitor 0.8: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
  * What the parts share: the window, the fonts and pens, the table every view draws, the views.
  *
  * Built resident (libnix -resident): each run its own variables, reached through a4. Code that another task
@@ -20,7 +20,7 @@
 #include "ogt_tabs.h"
 #include "ogt_status.h"
 
-#define OM_VERSION "0.7"
+#define OM_VERSION "0.8"
 #define OM_DATE "24.10.2026"
 
 #define REG(r, decl) register decl __asm(#r)
@@ -180,6 +180,7 @@ void om_tasks_free(void);                         /* resumes every frozen task *
 void om_tasks_take(void);                         /* the second's look, every second, shown or not (the graph) */
 void om_tasks_choose(struct Task *t);             /* "Show the owner": that task chosen in the Tasks view */
 void om_task_name(struct Task *t, char *out, int size);   /* as the Tasks view names it; under Forbid */
+int om_irq_per_second(int bit);                   /* from OpenExec's task clock; -1 when not known */
 
 /* the other views (memory.c, libs.c, ports.c, ints.c) */
 extern const struct om_view om_memory_view, om_libs_view, om_ports_view, om_ints_view;
