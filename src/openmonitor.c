@@ -1,4 +1,4 @@
-/* OpenMonitor 0.3.3: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
+/* OpenMonitor 0.3.4: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it
  * (the user, 10 October 2026: "a cpu / task / process app similar to task manager in windows or resources
  * in ubuntu ... have it show gpu too").
  *
@@ -66,7 +66,7 @@
 #include "ogt_look.h"
 #include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3.3 (17.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenMonitor 0.3.4 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 /* The window runs on 32 KB, however OpenMonitor is started (0.3.1). From a Shell (Run, a script) it got
  * the Shell's 4 KB, and closing the window rebooted the machine every time; with 32 KB it closes cleanly
  * (OpenUp 0.7.5's labs, 12 October 2026; OpenTypes 0.2.3 had the same). libnix's start code swaps to a
@@ -343,7 +343,12 @@ static ULONG omc_cores(void)
 enum { GR_CPU, GR_MEM, GR_GPU, GR_N };
 static UWORD hist[GR_N][HIST];                  /* tenths of a per cent, the newest last */
 static LONG graph_pen[GR_N] = { -1, -1, -1 };
-static const ULONG graph_rgb[GR_N] = { 0x3d7fd6, 0x4caf50, 0xf08c28 };
+/* 0.3.4 (the user, 24 October 2026, 22:03: "the gauges to be very very dark grey backgrounds and little whites,
+ * reds, blues"): the graphs very dark grey inside, the lines CPU white, memory blue, GPU red, as 0.8.1's */
+static const ULONG graph_rgb[GR_N] = { 0xf4f4f4, 0x3d8bff, 0xe5383b };
+enum { GG_BG, GG_GRID, GG_TEXT, GG_N };
+static LONG gauge_pen[GG_N] = { -1, -1, -1 };
+static const ULONG gauge_rgb[GG_N] = { 0x161616, 0x3a3a3a, 0xe6e6e6 };
 
 static void push(int g, ULONG v)
 {
@@ -365,16 +370,16 @@ static void draw_graph(int g, int x, int y, int w, int h, const char *title)
 {
     struct RastPort *rp = win->RPort;
     int i, ix = x + 6, iy = y + 4 + rp->TxHeight + 4, iw = w - 12, ih = h - (iy - y) - 6;
-    UWORD bg = dri->dri_Pens[BACKGROUNDPEN];
+    UWORD bg = gauge_pen[GG_BG] >= 0 ? (UWORD)gauge_pen[GG_BG] : dri->dri_Pens[SHADOWPEN];
     SetAPen(rp, bg);
     RectFill(rp, x + 2, y + 1, x + w - 3, y + h - 2);
     DrawBevelBox(rp, x, y, w, h, GT_VisualInfo, vi, GTBB_Recessed, TRUE, TAG_DONE);
-    SetAPen(rp, dri->dri_Pens[TEXTPEN]);
+    SetAPen(rp, gauge_pen[GG_TEXT] >= 0 ? (UWORD)gauge_pen[GG_TEXT] : dri->dri_Pens[SHINEPEN]);
     SetDrMd(rp, JAM1);
     Move(rp, x + 8, y + 4 + rp->TxBaseline);
     Text(rp, (STRPTR)title, strlen(title));
     if (ih < 8 || iw < HIST) return;
-    SetAPen(rp, dri->dri_Pens[SHADOWPEN]);                      /* quarter lines */
+    SetAPen(rp, gauge_pen[GG_GRID] >= 0 ? (UWORD)gauge_pen[GG_GRID] : dri->dri_Pens[BACKGROUNDPEN]);   /* quarter lines */
     for (i = 1; i < 4; i++) {
         int ly = iy + ih * i / 4, lx;
         for (lx = ix; lx < ix + iw; lx += 4) WritePixel(rp, lx, ly);
@@ -1318,6 +1323,10 @@ static int gui(void)
         graph_pen[i] = ObtainBestPen(scr->ViewPort.ColorMap, (graph_rgb[i] >> 16) * 0x01010101UL,
                                      ((graph_rgb[i] >> 8) & 255) * 0x01010101UL, (graph_rgb[i] & 255) * 0x01010101UL,
                                      OBP_Precision, PRECISION_GUI, TAG_DONE);
+    for (i = 0; i < GG_N; i++)
+        gauge_pen[i] = ObtainBestPen(scr->ViewPort.ColorMap, (gauge_rgb[i] >> 16) * 0x01010101UL,
+                                     ((gauge_rgb[i] >> 8) & 255) * 0x01010101UL, (gauge_rgb[i] & 255) * 0x01010101UL,
+                                     OBP_Precision, PRECISION_GUI, TAG_DONE);
     {
         APTR a4v;
         __asm volatile ("move.l %%a4,%0" : "=r" (a4v));
@@ -1351,7 +1360,7 @@ static int gui(void)
     g = gad[G_STATUS] = CreateGadget(TEXT_KIND, g, &ng, GTTX_Text, (ULONG)status_text, GTTX_Border, TRUE, TAG_DONE);
     if (!g) { rc = RETURN_FAIL; goto out; }
 
-    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.3.3", WA_PubScreen, (ULONG)scr,
+    win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)"OpenMonitor 0.3.4", WA_PubScreen, (ULONG)scr,
                          WA_Left, (scr->Width - W - scr->WBorLeft - scr->WBorRight) / 2,
                          WA_Top, scr->BarHeight + 1 + (scr->Height - scr->BarHeight - 1 - H - tb - scr->WBorBottom) / 2,
                          WA_InnerWidth, W, WA_InnerHeight, H, WA_Gadgets, (ULONG)glist,
@@ -1453,6 +1462,7 @@ out:
     if (win) { CloseWindow(win); win = NULL; }
     FreeGadgets(glist);
     for (i = 0; i < GR_N; i++) if (graph_pen[i] >= 0) ReleasePen(scr->ViewPort.ColorMap, graph_pen[i]);
+    for (i = 0; i < GG_N; i++) if (gauge_pen[i] >= 0) ReleasePen(scr->ViewPort.ColorMap, gauge_pen[i]);
     if (danger_pen >= 0) { ReleasePen(scr->ViewPort.ColorMap, danger_pen); danger_pen = -1; }
     if (dri) FreeScreenDrawInfo(scr, dri);
     if (vi) FreeVisualInfo(vi);
