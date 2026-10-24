@@ -8,7 +8,10 @@
  *                       (after an install, say), and the new one ends
  *   OpenUpMenu QUIT     the running one takes its menus out and ends;
  *                       Ctrl-C (Break in the Shell) does the same
- *   OpenUpMenu LIST     what the menus hold on this Amiga, in the Shell
+ *   OpenUpMenu LIST     what the menus hold on this Amiga, in the Shell, and
+ *                       (0.1.6) whether the running one has them in
+ *                       Workbench's Tools menu or waits for a Workbench
+ *                       that takes them
  *
  * Each menu shows only what is installed: an entry whose program isn't
  * there isn't shown. Choosing one starts the program as a double-click
@@ -22,9 +25,20 @@
  *
  * Workbench's sub-menus need workbench.library 44.1511 (OS 3.5 and later;
  * OS 3.2 has them). Older ones get flat entries, "OpenUp: OpenFiles".
- * S:User-Startup runs before LoadWB, so OpenUpMenu tries every two seconds
- * until Workbench takes its entries; after that it only waits on its
- * ports, with no polling.
+ *
+ * What is installed is looked for once (0.1.6): at the start, and again
+ * only when OpenUp's list of installed files changes (a notification on
+ * ENVARC:OpenAmiga/OpenUp.manifest, which every install and uninstall
+ * writes, where the disk's file system sends one: AmigaChrome's host
+ * drives don't) or when OpenUpMenu is run again, as the Installer does
+ * at its end. S:User-Startup runs before
+ * LoadWB, so until Workbench takes the entries OpenUpMenu offers them
+ * again, every two seconds for the first minute, then every minute; that
+ * touches no file. Up to 0.1.5
+ * every try looked for every entry's file again: on the open ROM, whose
+ * desktop (OpenBench) takes no menu entries yet, that was 36 Locks and a
+ * read of OpenUpTool every two seconds for as long as the Amiga ran. Once
+ * Workbench has the entries, OpenUpMenu only waits on its ports.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
 #include <exec/types.h>
@@ -32,6 +46,8 @@
 #include <exec/ports.h>
 #include <dos/dos.h>
 #include <dos/dostags.h>
+#include <dos/notify.h>
+#include <devices/timer.h>
 #include <workbench/workbench.h>
 #include <workbench/startup.h>
 #include <utility/tagitem.h>
@@ -42,12 +58,13 @@
 
 #include <string.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.5 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.6 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct Library *WorkbenchBase, *IconBase;
 
 #define PORT_NAME "OpenUpMenu"
 #define OPENPREFS "SYS:Preferences/OpenPrefs"
+#define MANIFEST "ENVARC:OpenAmiga/OpenUp.manifest"   /* OpenUpTool writes it at every install and uninstall */
 
 enum { M_OPENUP, M_PREFS, NMENUS };
 enum { HOW_WB, HOW_CON, HOW_SEP, HOW_PAGE };
@@ -106,7 +123,9 @@ static UBYTE shown[NENTRIES];
 
 struct command {
     struct Message msg;
-    LONG what;                          /* 1 build anew, 2 quit */
+    LONG what;                          /* 1 build anew, 2 quit, 3 (0.1.6) say where the entries are */
+    LONG answer;                        /* to 3: 1 in Workbench's menu, 2 waiting for a Workbench; 0 from 0.1.5;
+                                         * | 4 when the list's notification is on */
 };
 
 /* ---- what is installed ------------------------------------------------------ */
@@ -147,7 +166,8 @@ static int page_icon(const struct entry *e)
     return exists(info);
 }
 
-/* Which entries show: the installed ones, and a line only between two. */
+/* Which entries show: the installed ones, and a line only between two. It looks at the disk (each entry's file,
+ * OpenUpTool's UPDATE): build() calls it once, and again only when the list of installed files changes. */
 static int find_shown(void)
 {
     int i, j, any = 0, openprefs = exists(OPENPREFS);
@@ -181,13 +201,24 @@ static void take_out(void)
         if (parents[i]) { RemoveAppMenuItem(parents[i]); parents[i] = NULL; }
 }
 
-/* Adds the entries that show. 1 done (or nothing to add), 0 Workbench
- * didn't take them (not open yet): none are left in. */
+static int built, any_shown;            /* shown[] holds what is installed; any shows */
+
+/* What is installed, looked for on the disk (0.1.6: once, and again when built is cleared) */
+static void build(void)
+{
+    any_shown = find_shown();
+    built = 1;
+}
+
+/* Adds the entries that show, as build() found them: no file is looked at here. 1 done (or nothing to add),
+ * 0 Workbench didn't take them (not open yet, or a desktop that takes no menu entries): none are left in. */
 static int put_in(void)
 {
     int m, i, flat = WorkbenchBase->lib_Version < 44;
     take_out();
-    if (!find_shown())
+    if (!built)
+        build();
+    if (!any_shown)
         return 1;
     for (m = 0; m < NMENUS; m++) {
         ULONG key = 0;                      /* must start at 0 (wb.doc) */
@@ -330,6 +361,8 @@ static void chosen(struct AppMessage *am)
 /* ---- one OpenUpMenu at a time ---------------------------------------------------------- */
 
 /* Tells a running OpenUpMenu what to do. 1 told, 0 none is running. */
+static LONG told_answer;                /* the running one's answer to tell() */
+
 static int tell(LONG what)
 {
     struct MsgPort *reply = CreateMsgPort(), *port;
@@ -347,6 +380,7 @@ static int tell(LONG what)
     if (port)
         WaitPort(reply), GetMsg(reply);
     DeleteMsgPort(reply);
+    told_answer = c.answer;
     return port != NULL;
 }
 
@@ -361,15 +395,41 @@ static void list(void)
         for (i = 0; i < (int)NENTRIES; i++)
             if (entries[i].menu == m && shown[i])
                 Printf((STRPTR)"Tools > %s > %s\n", (LONG)titles[m], (LONG)entries[i].label);
+    if (!tell(3))
+        PutStr((STRPTR)"OpenUpMenu isn't running.\n");
+    else if (told_answer) {
+        PutStr((STRPTR)((told_answer & 3) == 1 ? "The running OpenUpMenu has them in Workbench's Tools menu.\n"
+                        : "The running OpenUpMenu waits for a Workbench that takes menu entries (OpenBench doesn't yet).\n"));
+        PutStr((STRPTR)(told_answer & 4 ? "It looks again when OpenUp's list of installed files changes, or when OpenUpMenu runs again.\n"
+                        : "It looks again when OpenUpMenu runs again (this disk sends no notification when OpenUp's list changes).\n"));
+    }
 }
 
 /* The running one: menus in, then wait. */
+/* Starts the timer for ticks fiftieths of a second (none running before) */
+static void timer_start(struct timerequest *tr, ULONG ticks)
+{
+    tr->tr_node.io_Command = TR_ADDREQUEST;
+    tr->tr_time.tv_secs = ticks / 50;
+    tr->tr_time.tv_micro = (ticks % 50) * 20000;
+    SendIO((struct IORequest *)tr);
+}
+
+/* The running one: menus in, then wait. 0.1.6: no polling of the disk. What is installed is looked for once
+ * (build), and again only when OpenUp's list changes (a notification on MANIFEST) or OpenUpMenu is run again.
+ * Until Workbench takes the entries they are offered again on a timer that touches no file: every two seconds
+ * for the first minute (the boot: S:User-Startup runs before LoadWB), then every minute. On the open ROM,
+ * OpenBench is the desktop and takes no menu entries yet (amigachrome-guest libraries/openworkbench): there a
+ * minute's timer is all that runs. */
 static int serve(int from_shell)
 {
-    struct MsgPort *port;
+    struct MsgPort *port, *tport = NULL;
+    struct timerequest *tr = NULL;
+    struct NotifyRequest nr;
     struct Message *msg;
-    ULONG appsig, cmdsig;
-    int in = 0, quit = 0;
+    ULONG appsig, cmdsig, tsig = 0, nsig = 0;
+    LONG nbit = -1;
+    int in = 0, quit = 0, ticking = 0, notifying = 0, tries = 0;
     BPTR sys;
     if (!(appport = CreateMsgPort()) || !(port = CreateMsgPort())) {
         if (appport) DeleteMsgPort(appport);
@@ -391,27 +451,63 @@ static int serve(int from_shell)
         UnLock(CurrentDir(sys));
     appsig = 1UL << appport->mp_SigBit;
     cmdsig = 1UL << port->mp_SigBit;
+    if ((tport = CreateMsgPort()) && (tr = (struct timerequest *)CreateIORequest(tport, sizeof *tr))
+        && !OpenDevice((STRPTR)TIMERNAME, UNIT_VBLANK, (struct IORequest *)tr, 0))
+        tsig = 1UL << tport->mp_SigBit;
+    else {
+        if (tr) DeleteIORequest((struct IORequest *)tr);
+        tr = NULL;
+    }
+    /* OpenUp's list of installed files: written at every install and uninstall, so a change means the menus may */
+    memset(&nr, 0, sizeof nr);
+    if ((nbit = AllocSignal(-1)) >= 0) {
+        nr.nr_Name = (STRPTR)MANIFEST;
+        nr.nr_Flags = NRF_SEND_SIGNAL;
+        nr.nr_stuff.nr_Signal.nr_Task = FindTask(NULL);
+        nr.nr_stuff.nr_Signal.nr_SignalNum = (UBYTE)nbit;
+        if (StartNotify(&nr)) { notifying = 1; nsig = 1UL << nbit; }
+    }
     while (!quit) {
         ULONG got;
-        if (!in && !(in = put_in())) {
-            /* Workbench isn't open yet: try again in two seconds */
-            Delay(100);
-            got = SetSignal(0, cmdsig | SIGBREAKF_CTRL_C);
-        } else {
-            got = Wait(appsig | cmdsig | SIGBREAKF_CTRL_C);
+        if (!in && !(in = put_in()) && !ticking) {
+            /* Workbench hasn't taken them: offered again later, with what is installed known already */
+            if (tr) { timer_start(tr, tries < 30 ? 100 : 3000); ticking = 1; }
+            tries++;
         }
+        if (in && ticking) {                /* in: no more tries */
+            AbortIO((struct IORequest *)tr);
+            WaitIO((struct IORequest *)tr);
+            ticking = 0;
+        }
+        if (!in && !tr) {                   /* no timer.device: as before 0.1.6, two seconds at a time */
+            Delay(100);
+            got = SetSignal(0, cmdsig | nsig | SIGBREAKF_CTRL_C);
+        } else
+            got = Wait(appsig | cmdsig | tsig | nsig | SIGBREAKF_CTRL_C);
         if (got & SIGBREAKF_CTRL_C)
             quit = 1;
+        if ((got & tsig) && ticking && GetMsg(tport))
+            ticking = 0;                    /* the time to offer them again (at the top of the loop) */
+        if (got & nsig) { built = 0; in = 0; tries = 0; }   /* installed or uninstalled: looked for again */
         while ((msg = GetMsg(appport)))
             chosen((struct AppMessage *)msg);
         while ((msg = GetMsg(port))) {
             LONG what = ((struct command *)msg)->what;
+            if (what == 3) ((struct command *)msg)->answer = (in ? 1 : 2) | (notifying ? 4 : 0);
             ReplyMsg(msg);
             if (what == 2) quit = 1;
-            else if (what == 1) in = 0;     /* build anew: what is installed may have changed */
+            else if (what == 1) { built = 0; in = 0; tries = 0; }   /* build anew: what is installed may have changed */
         }
     }
     take_out();
+    if (notifying) EndNotify(&nr);
+    if (nbit >= 0) FreeSignal(nbit);
+    if (tr) {
+        if (ticking) { AbortIO((struct IORequest *)tr); WaitIO((struct IORequest *)tr); }
+        CloseDevice((struct IORequest *)tr);
+        DeleteIORequest((struct IORequest *)tr);
+    }
+    if (tport) DeleteMsgPort(tport);
     Forbid();
     RemPort(port);
     Permit();
