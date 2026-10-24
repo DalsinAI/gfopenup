@@ -645,7 +645,7 @@ PREFERENCES_PAGES = (("Theme", "THEME", "Look"), ("Screen Mode", "SCREENMODE", "
 def openprefs_part(top: Path, opapp: bytes, icons, version: str) -> "Part":
     """The OpenPrefs part (the no-ROM-volume design of 24 October 2026, sections 8 and 10).
 
-    OpenPrefs (W48, Dale, 17 Oct 2026: "We should just combine them into a single app, prefs editors that is")
+    OpenPrefs (W48, the user, 17 Oct 2026: "We should just combine them into a single app, prefs editors that is")
     has every editor of ours as a page of one program. Its home is a drawer of its own, SYS:Preferences: the
     program, its icon, and a project icon per page by its plain name (Q8, Q9), whose SECTION= tool type opens
     that page; SYS:Preferences goes on the Shell's path. SYS:Prefs keeps Env-Archive, Presets, Classic, OpenTata
