@@ -7,7 +7,7 @@
 # -Wno-format-truncation. The ROM keeps OpenMonitor 0.3.3 (src/openmonitor.c, built by amigachrome-guest's
 # romprefs.sh) until this goes into it (the design's P6).
 # GUEST: an amigachrome-guest checkout, for sysprobe (common/sysprobe: the Hardware and Speed views read the
-# machine as ShowConfig and ACInfo do) and accontrol.device's header.
+# machine as ShowConfig and ACInfo do), accontrol.device's header and taskclock.h (OpenExec's task clock).
 # MIT, Copyright (c) 2026 AmigaChrome Team.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -15,6 +15,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 : "${GUEST:?set GUEST to an amigachrome-guest checkout (common/sysprobe)}"
 SP="$GUEST/common/sysprobe"
 [ -f "$SP/sysprobe.c" ] || { echo "$GUEST has no common/sysprobe: amigachrome-guest main from the P3 merge on"; exit 2; }
+[ -f "$GUEST/common/include/taskclock.h" ] || { echo "$GUEST has no common/include/taskclock.h: amigachrome-guest main from the P4 merge on"; exit 2; }
 STOVE=${OS32_GCC16:-$HOME/AmigaChrome/stoves/os32-gcc16}
 CC="$STOVE/prefix/bin/m68k-amigaos-gcc"
 GCCV=$("$CC" -dumpversion 2>/dev/null || echo 0)
@@ -24,7 +25,7 @@ mkdir -p "$(dirname "$OUT")"
 G="$OGT/lib"
 "$CC" -noixemul -m68040 -specs="$OGT/specs/m68k-soft-m68040.specs" -resident -std=gnu99 -Wall -Werror -Wno-format-truncation -Os \
     -fno-tree-loop-distribute-patterns -fno-delete-null-pointer-checks -fno-common -I"$G" -I"$HERE" -I"$SP" \
-    -I"$GUEST/devices/accontrol.device/include" \
+    -I"$GUEST/devices/accontrol.device/include" -I"$GUEST/common/include" \
     -o "$OUT" \
     "$HERE/main.c" "$HERE/ui.c" "$HERE/graphs.c" "$HERE/tasks.c" "$HERE/memory.c" "$HERE/libs.c" "$HERE/ports.c" "$HERE/ints.c" \
     "$HERE/hw.c" "$HERE/speed.c" "$HERE/calls.c" "$SP/sysprobe.c" \
