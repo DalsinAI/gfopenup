@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Host checks of tools/build_pack.py's parts for the no-ROM-volume design (24 October 2026, sections 8 and 10):
 OpenPrefs in SYS:Preferences, the old homes archived, the boot's APPLY line and OpenMonitor by the ROM, and
-the Installer and OpenUpMenu with no old names left.
+the Installer and OpenUpMenu with no old names left. And OpenSnap's part and pictures (tests/test_opensnap_pic.c).
 
     python3 tests/test_build_pack.py
 
@@ -212,6 +212,38 @@ def main() -> int:
             im.paste((255, 255, 255), (0, 0, 64, 20))     # 5 of the 12 rows sampled are white: a mean of 106, dark
             im.save(f)
             check("picture_tone samples twelve rows, top to bottom", bp.picture_tone(f) == "dark", bp.picture_tone(f))
+
+        # OpenSnap: the commodity, its icon's tool types and its line in S:User-Startup, on every ROM
+        sn = bp.opensnap_part(top, b"\0$VER: OpenSnap 1.0 (24.10.2026) MIT\0", icons)
+        sn.write()
+        sl = (sn.dir / "Part").read_text(encoding="latin-1").splitlines()
+        check("OpenSnap: the part at its program's version", sl[0] == "part OpenSnap 1.0", sl[0])
+        check("OpenSnap: in SYS:Tools/Commodities, its program replaced on an upgrade",
+              'copy "Tools/Commodities/OpenSnap" "SYS:Tools/Commodities/OpenSnap"' in sl)
+        check("OpenSnap: its icon only where none is, so a user's keys stay",
+              'default "Tools/Commodities/OpenSnap.info" "SYS:Tools/Commodities/OpenSnap.info"' in sl)
+        snap_icon = icon_of((sn.dir / "Tools/Commodities/OpenSnap.info").read_bytes())
+        check("OpenSnap.info: a tool icon, 32 KB of stack, the keys Shift+Right Amiga+S and +W as tool types",
+              snap_icon[0] == FakeIcons.WBTOOL and snap_icon[4] == 32768
+              and "SCREENKEY=shift rcommand s" in snap_icon[3] and "WINDOWKEY=shift rcommand w" in snap_icon[3]
+              and "DONOTWAIT" in snap_icon[3], str(snap_icon))
+        for machine in ("os323", "openkick101-ac"):
+            check(f"{machine}: OpenSnap started at boot",
+                  "startup Run >NIL: SYS:Tools/Commodities/OpenSnap" in lines_on(sn.dir / "Part", machine, filt))
+        check("OpenSnap's part version is read from its program", bp.PART_MAIN.get("OpenSnap") ==
+              ("Tools/Commodities/OpenSnap", "OpenSnap"))
+
+        # OpenSnap's pictures: the ILBM writer, HAM, Extra Half-Brite and the names (tests/test_opensnap_pic.c)
+        pic = tmp / "test_opensnap_pic"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src/opensnap'}", str(ROOT / "tests/test_opensnap_pic.c"),
+                        "-o", str(pic)], check=True)
+        r = subprocess.run([str(pic)], capture_output=True, text=True)
+        check("OpenSnap's ILBM, colours and names (tests/test_opensnap_pic.c)", r.returncode == 0, r.stdout[-600:])
+        snap_src = (ROOT / "src/opensnap/opensnap.c").read_text(encoding="latin-1")
+        keys = [t.split("=")[0] for t in bp.OPENSNAP_TOOLTYPES if "=" in t]
+        check("every tool type the icon has is one OpenSnap reads", all(f'"{k}"' in snap_src for k in keys), str(keys))
+        check("Install-OpenUp installs OpenSnap on every install",
+              "INSTALL Parts/OpenSnap" in (ROOT / "pack/Install-OpenUp").read_text(encoding="latin-1"))
 
     # OpenTypes and OpenDateTime: pages of OpenPrefs, parts with no files that archive their stubs
     src = (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")

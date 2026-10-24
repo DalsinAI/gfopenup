@@ -51,6 +51,10 @@ a Part file that C/OpenUpTool reads:
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through OpenService (opendatatypes)
   OpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (openamigaprefs)
+  OpenSnap/             OpenSnap, the snapshot commodity: Shift+Right Amiga+S takes the front screen and
+                        Shift+Right Amiga+W the active window, as dated PNGs in SYS:Snapshots (through OpenImage's
+                        openpng.datatype; IFF without it) and as an IFF ILBM on the clipboard; its keys are its
+                        icon's tool types. Always installed (src/opensnap/)
   ShellFont/            DejaVu Sans Mono as Amiga bitmap fonts, 8 to 24 pixels high, in FONTS:, with its
                         licence, for Font prefs' System Default Text; always installed. The OpenKick ROM
                         has the 11 and makes it the Shell's font itself; no Font prefs are written
@@ -405,6 +409,9 @@ def build_parts(a):
     gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmigaChrome/stoves/os32-gcc16"))
     run(["sh", ROOT / "src/openmonitor/build.sh", ROOT / "build/os3/OpenMonitor"],
         env=dict(os.environ, OS32_GCC16=gcc16_root, OGT=str(a.opengadtools), GUEST=str(a.guest)))
+    # OpenSnap: its PNGs through openpng.datatype's OIM_ENCODEPNG, whose header is opendatatypes'
+    run(["sh", ROOT / "src/opensnap/build.sh", ROOT / "build/os3/OpenSnap"],
+        env=dict(env, STOVE=str(STOVE), ODT=str(a.opendatatypes)))
     run(["sh", a.opengadtools / "look/build.sh"], env=env)
     run(["sh", a.opengadtools / "workbench/build.sh"], env=env)   # OpenDrawer
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
@@ -678,6 +685,26 @@ def openprefs_part(top: Path, opapp: bytes, icons, version: str) -> "Part":
     return opp
 
 
+# OpenSnap's settings, its icon's tool types (src/opensnap/opensnap.c says what each does)
+OPENSNAP_TOOLTYPES = ["DONOTWAIT", "CX_PRIORITY=0", "SCREENKEY=shift rcommand s", "WINDOWKEY=shift rcommand w",
+                      "DRAWER=SYS:Snapshots", "CLIPBOARD=YES"]
+
+
+def opensnap_part(top: Path, program: bytes, icons) -> "Part":
+    """OpenSnap (24 October 2026), on every install: the commodity in SYS:Tools/Commodities, started at boot,
+    with its keys as its icon's tool types. The icon goes only where none is ("default"), so keys a user set
+    stay through an upgrade; the program is replaced. SYS:Snapshots is made by OpenSnap, with its drawer icon,
+    the first time it saves."""
+    sn = Part(top, "OpenSnap", binary_version(program, "OpenSnap") or "?",
+              "OpenSnap: Shift+Right Amiga+S takes the screen, +W the active window, as PNGs in SYS:Snapshots and on "
+              "the clipboard")
+    sn.add("Tools/Commodities/OpenSnap", program, "SYS:Tools/Commodities/OpenSnap")
+    sn.add("Tools/Commodities/OpenSnap.info", icons.icon(icons.WBTOOL, "picture", None, OPENSNAP_TOOLTYPES, stack=32768),
+           "SYS:Tools/Commodities/OpenSnap.info", default=True)
+    sn.line("startup Run >NIL: SYS:Tools/Commodities/OpenSnap")
+    return sn
+
+
 def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
     """What the OpenUp part does by the ROM (the no-ROM-volume design of 24 October 2026, sections 5.5, 7 and 10).
 
@@ -698,6 +725,7 @@ def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
 PART_MAIN = {
     "OpenUp": ("Utilities/OpenUp/Uninstall-OpenUp", "Uninstall-OpenUp"),
     "OpenBlanker": ("Tools/Commodities/OpenBlanker", "OpenBlanker"),
+    "OpenSnap": ("Tools/Commodities/OpenSnap", "OpenSnap"),
     "OpenSocket": ("Libs/bsdsocket.library", "bsdsocket.library"),
     "OpenPrefs": ("Preferences/OpenPrefs", "OpenPrefs"),
     "OpenCompress": ("Utilities/OpenCompress", "OpenCompress"),
@@ -1524,6 +1552,10 @@ def main() -> int:
     bl.line("startup Run >NIL: SYS:Tools/Commodities/OpenBlanker")
     bl.write()
 
+    # OpenSnap: pictures of the screen by hotkey (the user, 24 October 2026), on every install
+    sn = opensnap_part(top, (ROOT / "build/os3/OpenSnap").read_bytes(), icons)
+    sn.write()
+
     # The Shell's font (24 October 2026), on every install: DejaVu Sans Mono as Amiga bitmap fonts, fixed width,
     # 8 to 24 pixels high, made from the TrueType font by openamigafont's tools/amigafont.py and kept in its
     # fonts/amiga, with the Bitstream Vera licence they come under (its LICENSE-DejaVu.txt), for Font prefs'
@@ -2124,6 +2156,7 @@ def main() -> int:
                                              (of.dir / "Utilities/OpenFiles.info", files_art),
                                              (op.dir / "Utilities/OpenPlay.info", play_art),
                                              (od.dir / "Utilities/OpenDrawer.info", "page"),
+                                             (sn.dir / "Tools/Commodities/OpenSnap.info", "picture"),
                                              (w3.dir / "Tools/W3DTest.info", "install"),
                                              (a.out / "OpenUp.info", None)]
                     + ([(w3.dir / "Tools/MGLTest.info", "install")] if (w3.dir / "Tools/MGLTest.info").is_file() else [])
