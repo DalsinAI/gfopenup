@@ -454,6 +454,16 @@
 (working "Installing OpenPrefs")
 (if (> (run (cat #tool " INSTALL Parts/OpenPrefs >>T:OpenUp.log")) 5)
     (message "OpenPrefs didn't install completely. T:OpenUp.log says why; nothing else changed."))
+; The Shell's font (24 Oct 2026), with every install: DejaVu Sans Mono in FONTS:, 12 to 20 pixels high. With no Font
+; prefs yet, SHELLFONT makes it the system default text, which the Shell draws in, at a size for the Workbench's
+; height (16 on 1920x1200, 12 or 14 on smaller screens, topaz 8 under 600 lines), from the next boot. Font prefs
+; already there stay as they are, and the screens' and icons' text are left as they are.
+(if (exists "Parts/ShellFont/Part")
+    (
+        (working "Installing the Shell's font")
+        (if (> (run (cat #tool " INSTALL Parts/ShellFont >>T:OpenUp.log")) 5)
+            (message "The Shell's font didn't install completely. T:OpenUp.log says why; nothing else changed.")
+            (run (cat #tool " SHELLFONT >>T:OpenUp.log")))))
 ; A real AGA Amiga with Picasso96's library left behind and no Picasso96 board
 ; running: SDL games hang at their video start. Ask to set it aside (6 Oct 2026).
 (if (= (run (cat #tool " P96LEFTOVER")) 5)
