@@ -180,7 +180,8 @@
               "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF "
               "export, printing and spelling (new, version 2.0.1), in SYS:Utilities/OpenWrite; "
               "OWConvert converts documents from a Shell. Needs a 68020. It comes with the GFOffice "
-              "Suite's shared files: owf.library, z.library and the dictionary, in SYS:Dictionaries.\n\n"
+              "Suite's shared files: its libraries (owfwrite, owfcalc, owfpub and owfpresent.library), "
+              "z.library and the dictionary, in SYS:Dictionaries.\n\n"
               "OpenMail: a mail reader for IMAP mail over TLS, with Gmail, Outlook and others "
               "set up from the address (new, a preview: reading only; off unless you pick it). "
               "It reaches mail servers through OpenTLS, which comes with it.\n\n"
@@ -727,8 +728,9 @@
         (if (> (run (cat #tool " INSTALL Parts/OpenEdit >>T:OpenUp.log")) 5)
             (message "OpenEdit didn't install completely. T:OpenUp.log says why; nothing else changed."))))
 
-; OpenWrite needs the GFOffice part, the GFOffice Suite's shared files (owf.library, z.library, the dictionary in
-; SYS:Dictionaries, C:OWConvert): OpenUpTool leaves OpenWrite out without it ("needs part GFOffice"), so it goes first
+; OpenWrite needs the GFOffice part, the GFOffice Suite's shared files (owfwrite, owfcalc, owfpub and owfpresent.library,
+; z.library, the dictionary in SYS:Dictionaries, C:OWConvert): OpenUpTool leaves OpenWrite out without it ("needs part
+; GFOffice"), so it goes first
 (if (bitand #parts 1048576)
     (
         (working "Installing GFOffice's shared files")
