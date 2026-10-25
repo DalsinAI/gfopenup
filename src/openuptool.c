@@ -182,6 +182,26 @@ static int exists(const char *path)
     return l != 0;
 }
 
+/* 1 when path is there and is a file, not a drawer (no requester either, as exists). */
+static int is_file(const char *path)
+{
+    struct Process *me = (struct Process *)FindTask(NULL);
+    APTR win = me->pr_WindowPtr;
+    struct FileInfoBlock *fib;
+    BPTR l;
+    int file = 0;
+    me->pr_WindowPtr = (APTR)-1;
+    l = Lock((STRPTR)path, ACCESS_READ);
+    me->pr_WindowPtr = win;
+    if (!l) return 0;
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (Examine(l, fib)) file = fib->fib_DirEntryType < 0;
+        FreeDosObject(DOS_FIB, fib);
+    }
+    UnLock(l);
+    return file;
+}
+
 /* 0.7.8: a synchronous SystemTags never gets a NULL input or output (12 Oct 2026), as OpenDock 0.6.4 and
  * OpenMenus 0.4.4 give their programs (openamigaprefs #94). quiet: both are NIL:. Otherwise the command gets
  * OpenUpTool's own input and output when it has them (a Shell, or OpenUp Update's window, where the messages
@@ -597,6 +617,66 @@ static int words(char *line, char **w, int max)
     return oul_words(line, w, max);
 }
 
+/* One file out of a drawer's way (clear_way): one OpenUp put there ("new") goes; one OpenUp replaced goes, its
+ * original staying listed in SYS:Storage; any other is kept in SYS:Storage now, listed as replaced. 0, or -1
+ * (said why). */
+static int out_of_way(const char *path)
+{
+    char backup[ENTRY_PATH], bdir[ENTRY_PATH];
+    entry *e = find_entry(NULL, path);
+    int made = 0;
+    if (e && (!strcmp(e->kind, "new") || !strcmp(e->kind, "replaced"))) {
+        if (!DeleteFile((STRPTR)path)) {
+            say("OpenUp: can't move ", path, " out of the way of the drawer that goes there. Is it in use, or the disk write-protected?");
+            return -1;
+        }
+        if (!strcmp(e->kind, "new")) e->kind[0] = 0;        /* OpenUp's own: gone */
+        return 0;
+    }
+    backup_path(path, backup, sizeof backup);
+    parent_of(backup, bdir, sizeof bdir);
+    if (!exists(backup)) {
+        if (!ensure_dir(bdir, 0) || !copy_file(path, backup, 0)) {
+            say("OpenUp: can't keep a copy of ", path, " in SYS:Storage, so the drawer that goes there wasn't made. Is SYS: full or write-protected?");
+            return -1;
+        }
+        made = 1;
+    }
+    if (!DeleteFile((STRPTR)path)) {
+        if (made) DeleteFile((STRPTR)backup);
+        say("OpenUp: can't move ", path, " out of the way of the drawer that goes there. Is it in use, or the disk write-protected?");
+        return -1;
+    }
+    if (e ? !set_text(&e->b, backup) : !add_entry("replaced", path, backup)) {
+        say("OpenUp: out of memory noting ", path, "; it is in SYS:Storage/OpenUp-Superseded.");
+        return -1;
+    }
+    if (e) strcpy(e->kind, "replaced");
+    return 0;
+}
+
+/* A file where a drawer of dest's path goes is taken out of the way (25 Oct 2026; src/openup_lines.h, oul_way),
+ * with its icon: Instance-32's own calculator at SYS:Utilities/OpenCalc, where the GFOffice Suite's OpenCalc drawer
+ * goes. Each is kept as a replaced file is (out_of_way). The drawer comes after it in the manifest; UNINSTALL takes
+ * the drawer out once its files are out, then puts the file back, and REMOVE does when the drawer it made is gone.
+ * Before, the part's files couldn't be written there and INSTALL listed them anyway. 0, or -1 (said why). */
+static int clear_way(const char *dest)
+{
+    char dir[ENTRY_PATH], icon[ENTRY_PATH];
+    int i;
+    for (i = 0; oul_way(dest, i, dir, sizeof dir); i++) {
+        if (!is_file(dir))
+            continue;
+        if (out_of_way(dir) < 0)
+            return -1;
+        if (strlcpy(icon, dir, sizeof icon) < sizeof icon && str_cat(icon, ".info", sizeof icon) < sizeof icon
+            && is_file(icon) && out_of_way(icon) < 0)
+            return -1;                              /* its icon: the drawer's goes there */
+        say("OpenUp: ", dir, " was a file where a drawer goes; it is kept in SYS:Storage/OpenUp-Superseded.");
+    }
+    return 0;
+}
+
 /* Puts one file in place, keeping the original the first time OpenUp
  * replaces it, and notes it in the manifest (loaded by the caller).
  * only_if_missing: 1 leaves any file already there (the user's own setting);
@@ -605,11 +685,13 @@ static int words(char *line, char **w, int max)
 static int install_file(const char *from, const char *dest, int only_if_missing)
 {
     char backup[260];
-    entry *e = find_entry(NULL, dest);
+    entry *e = find_entry(NULL, dest), *added = NULL;
     if (only_if_missing == 1 && exists(dest))
         return 0;                                   /* the user's own setting stays */
     if (only_if_missing == 2 && exists(dest) && (!e || strcmp(e->kind, "new")))
         return 0;                                   /* another program's file stays */
+    if (!exists(dest) && clear_way(dest) < 0)       /* (a file there means its drawers are drawers) */
+        return -1;                                  /* a file where its drawer goes, which couldn't be kept */
     if (exists(dest) && same_file(from, dest)) {
         if (!e) add_entry("same", dest, NULL);
         return 0;
@@ -629,9 +711,10 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
         }
         if (e) strcpy(e->kind, "replaced");
     } else if (!e) {
-        add_entry("new", dest, NULL);
+        added = add_entry("new", dest, NULL);
     }
     if (!copy_file(from, dest, 1)) {
+        if (added) added->kind[0] = 0;              /* never there, so not listed (25 Oct 2026) */
         say("OpenUp: can't write ", dest, ". Is the disk full or write-protected?");
         return -1;
     }
@@ -885,7 +968,8 @@ static int tooltype_icon(const char *dest, const char *from, const char *to, int
 /* A part's startup lines are the ones its Part file has now. Installing it marks the lines it had before
  * ("ostartup"); each line it still has goes back in its place, and the rest are taken out. Before 0.7.5 a
  * line a newer part changed stayed too: "SYS:Prefs/Sound USE" beside 0.7.4's "SYS:Prefs/OpenSound USE",
- * and a boot that stopped where the old editor was no longer there (a lab copy of Instance-32). */
+ * and a boot that stopped where the old editor was no longer there (a lab copy of Instance-32).
+ * oul_settle (src/openup_lines.h) ends it: the marked lines go, or, when the install failed, come back. */
 static void mark_startup(const char *part)
 {
     int i;
@@ -894,18 +978,10 @@ static void mark_startup(const char *part)
             strcpy(ents[i].kind, "ostartup");
 }
 
-static void drop_marked_startup(void)
-{
-    int i;
-    for (i = 0; i < nents; i++)
-        if (!strcmp(ents[i].kind, "ostartup"))
-            ents[i].kind[0] = 0;                    /* taken out: manifest_save leaves it out */
-}
-
 static int install(const char *drawer)
 {
     char path[220], from[260], *text, *p, *line, partname[64] = "", partver[32] = "";
-    int pass, refused = 0, files = 0, errors = 0;
+    int pass, refused = 0, files = 0, errors = 0, first = 0;
     unsigned have = machine_bits();
 
     strncpy(path, drawer, 200);
@@ -921,6 +997,8 @@ static int install(const char *drawer)
         char *copy = AllocVec(strlen(text) + 1, MEMF_ANY);
         if (!copy) { FreeVec(text); return RETURN_FAIL; }
         strcpy(copy, text);
+        if (pass == 1)
+            first = nents;                          /* the lines this install adds come from here (oul_settle) */
         for (p = copy; *p; ) {
             char *w[12];
             const char *need;
@@ -947,7 +1025,7 @@ static int install(const char *drawer)
                 strncpy(partver, w[2], sizeof partver - 1);
                 if (pass == 1) {
                     mark_startup(partname);
-                    oul_drop_needs(ents, nents, partname);   /* its needs are the ones its Part file has now */
+                    oul_mark_needs(ents, nents, partname);   /* its needs are the ones its Part file has now */
                 }
             } else if (pass == 0 && (need = oul_needs_part(w, n))) {
                 /* another part first: the GFOffice Suite's programs need the GFOffice part, their shared files */
@@ -1009,10 +1087,13 @@ static int install(const char *drawer)
         FreeVec(copy);
     }
     FreeVec(text);
-    drop_marked_startup();
     if (refused)
         return RETURN_WARN;
-    {
+    /* 25 Oct 2026: a part with an error isn't listed as installed (src/openup_lines.h, oul_settle). Its startup and
+     * needpart lines stay as they were, an older version's part line too, so an upgrade is tried again; what its
+     * files did stays listed for REMOVE and UNINSTALL. Before, the part was listed whatever happened. */
+    oul_settle(ents, nents, first, partname, !errors);
+    if (!errors) {
         entry *pe = find_entry("part", partname);
         if (pe ? !set_text(&pe->b, partver) : !add_entry("part", partname, partver)) {
             say("OpenUp: out of memory noting ", partname, "; run the install again.");
@@ -1023,8 +1104,16 @@ static int install(const char *drawer)
         say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
         return RETURN_ERROR;
     }
+    if (errors) {
+        entry *pe = find_entry("part", partname);
+        Printf((STRPTR)"OpenUp: %s %s didn't install completely (%ld file%s changed, %ld problem%s above), so ",
+               (LONG)partname, (LONG)partver, files, (LONG)(files == 1 ? "" : "s"), errors, (LONG)(errors == 1 ? "" : "s"));
+        if (pe) Printf((STRPTR)"the list still has %s %s.\n", (LONG)partname, (LONG)pe->b);
+        else Printf((STRPTR)"it isn't listed as installed.\n");
+        return RETURN_ERROR;
+    }
     Printf((STRPTR)"OpenUp: %s %s installed (%ld file%s changed)\n", (LONG)partname, (LONG)partver, files, (LONG)(files == 1 ? "" : "s"));
-    return errors ? RETURN_ERROR : RETURN_OK;
+    return RETURN_OK;
 }
 
 /* ---- REMOVE: one part taken out (0.8.0) ------------------------------------------------------ */
@@ -1098,9 +1187,14 @@ static int remove_part(const char *drawer)
         parent_of(dest, dir, sizeof dir);
         while (dir[0] && dir[strlen(dir) - 1] != ':') {
             char up[ENTRY_PATH];
-            entry *d = find_entry("dir", dir);
+            entry *d = find_entry("dir", dir), *f;
             if (!d || !DeleteFile((STRPTR)dir)) break;
             d->kind[0] = 0;
+            /* a file that was where the drawer went (INSTALL's clear_way, 25 Oct 2026) comes back now it's gone */
+            if ((f = find_entry("replaced", dir))) {
+                if (copy_file(f->b, f->a, 0)) { DeleteFile((STRPTR)f->b); restored++; f->kind[0] = 0; }
+                else { say("OpenUp: can't put back ", f->a, "; it is in SYS:Storage/OpenUp-Superseded."); problems++; }
+            }
             parent_of(dir, up, sizeof up);
             strcpy(dir, up);
         }
@@ -1650,7 +1744,7 @@ static int uninstall(void)
             LONG ok = exists(e->a) ? 0 : Rename((STRPTR)e->b, (STRPTR)e->a);
             if (ok) { restored++; e->kind[0] = 0; }
             else { say("OpenUp: can't put back ", e->a, "; it is in SYS:Prefs/Classic or SYS:Storage/OpenUp-Superseded"); problems++; }
-        } else if (!strcmp(e->kind, "replaced")) {
+        } else if (!strcmp(e->kind, "replaced") && !find_entry("dir", e->a)) {
             if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; e->kind[0] = 0; }
             else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); problems++; }
         }
@@ -1658,6 +1752,14 @@ static int uninstall(void)
     for (i = nents - 1; i >= 0; i--)
         if (!strcmp(ents[i].kind, "dir"))
             DeleteFile((STRPTR)ents[i].a);            /* only an empty one goes */
+    /* A file that was where a drawer of OpenUp's went (INSTALL's clear_way, 25 Oct 2026; listed as replaced, with a
+     * dir line of the same name): back now the drawer is gone. */
+    for (i = nents - 1; i >= 0; i--)
+        if (!strcmp(ents[i].kind, "replaced") && find_entry("dir", ents[i].a)) {
+            entry *e = &ents[i];
+            if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; e->kind[0] = 0; }
+            else { say("OpenUp: can't put back ", e->a, "; it is in SYS:Storage/OpenUp-Superseded, and its drawer isn't empty."); problems++; }
+        }
     /* The originals' drawers, deepest first: they go once empty. */
     for (i = nents - 1; i >= 0; i--)
         if (!strcmp(ents[i].kind, "replaced")) {
@@ -2781,7 +2883,7 @@ static const rmap reconcile_map[] = {
     { "SYS:Prefs/Serial",       "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's Serial" },
     { "SYS:Prefs/Sound",        "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's Sound (a Sound in Prefs is the OS's)" },
     { "SYS:Tools/Commodities/Blanker", "retire", "SYS:Tools/Commodities/OpenBlanker", "OpenBlanker" },
-    { "SYS:Tools/Calculator",   "wait",    NULL, "OpenCalc (source in OpenUp, to build)" },
+    { "SYS:Tools/Calculator",   "wait",    NULL, "OpenCalculator (source in OpenUp, to build)" },
     { "SYS:Tools/TextEdit",     "replace", "C:OpenEdit", "OpenEdit, under TextEdit's name, so every icon that opens TextEdit opens OpenEdit" },
     { "SYS:WBStartup/AsyncWB",  "keep",    NULL, "OS 3.2.3's: Workbench copies and deletes in processes of their own" },
     { "SYS:WBStartup/RAWBInfo", "keep",    NULL, "OS 3.2.3's Information window" },
