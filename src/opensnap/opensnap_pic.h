@@ -235,7 +235,7 @@ static inline void osp_name(char *out, unsigned max, int year, int month, int da
         b[o++] = '.';
         for (s = ext; *s && o < 94; s++) b[o++] = *s;
         b[o] = 0;
-        if (max) { strncpy(out, b, max - 1); out[max - 1] = 0; }
+        if (max) { unsigned c = o < max - 1 ? o : max - 1; memcpy(out, b, c); out[c] = 0; }   /* GCC 16: no strncpy */
     }
 }
 
