@@ -714,7 +714,11 @@ int main(int argc, char **argv)
     settings(argc, argv);
 
     if (!(port = CreateMsgPort())) goto out;
-    strncpy(descr, set.screenkey, sizeof descr - 1);
+    {   /* GCC 16's -Wstringop-truncation stops a strncpy here */
+        size_t c = strlen(set.screenkey);
+        if (c > sizeof descr - 1) c = sizeof descr - 1;
+        memcpy(descr, set.screenkey, c); descr[c] = 0;
+    }
     if (strlen(descr) + strlen(set.windowkey) + 3 < sizeof descr) { strcat(descr, ", "); strcat(descr, set.windowkey); }
     nb.nb_Port = port;
     nb.nb_Pri = (BYTE)set.cxpri;
