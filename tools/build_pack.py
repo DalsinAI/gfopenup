@@ -23,7 +23,8 @@ Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
 a Part file that C/OpenUpTool reads:
 
-  OpenUp/               OpenUpTool and the uninstaller, OpenUpMenu: the
+  OpenUp/               OpenUpTool and the uninstaller; C:ACROMFix, SetPatch for the open ROM
+                        (amigachrome-guest tools/acromfix), in the boot's OpenUp lines (first on a new install); OpenUpMenu: the
                         Tools menu's OpenUp and Preferences sub-menus, and
                         OpenMonitor, the task manager, and its icon in SYS:Utilities, on every ROM:
                         the disk's 0.4 and on is newer than the open ROM's 0.3.3, and the newer
@@ -653,6 +654,8 @@ def build_parts(a):
     run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
     # softfpu.library (amigachrome-guest libraries/opensoftfpu, its default os32-gcc16 stove): the OpenUp part's
     run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
+    # ACROMFix (amigachrome-guest tools/acromfix, the os32 stove as its build.sh): the OpenUp part's
+    run(["sh", a.guest / "tools/acromfix/build-amiga.sh"], env=dict(genv, STOVE=str(STOVE), OUT=str(ROOT / "build/acromfix")))
     # printer.device (amigachrome-guest devices/openprinter.device, its default os32-gcc16 stove): the OpenPrinter part's
     run(["sh", a.guest / "devices/openprinter.device/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openprinter")))
     if a.openamigainput:
@@ -826,6 +829,17 @@ def opensnap_part(top: Path, program: bytes, icons) -> "Part":
            "SYS:Tools/Commodities/OpenSnap.info", default=True)
     sn.line("startup Run >NIL: SYS:Tools/Commodities/OpenSnap")
     return sn
+
+
+def acromfix_lines(core: "Part", acromfix: bytes) -> None:
+    """ACROMFix (amigachrome-guest tools/acromfix): SetPatch for the open ROM. It brings an OpenKick ROM it knows up
+    to the fixes merged after that ROM was built, until Team 4's next ROM build has them (on 25 October 2026:
+    #516, a boot's Workbench in its ScreenMode prefs, and #518, system requesters measured in their font, for
+    Instance-32's full14b; #518 for the standard full15). On OS 3.2.3's Kickstart, an open ROM it doesn't know and
+    one with every fix it changes nothing, so the file and its line go in on every ROM: an install can move to
+    another ROM. QUIET: no boot window; its STATUS says what it did."""
+    core.add("C/ACROMFix", acromfix, "SYS:C/ACROMFix")
+    core.line("startup C:ACROMFix QUIET")
 
 
 def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
@@ -1577,8 +1591,12 @@ def main() -> int:
     # programs) and a Preferences one (the settings editors), each showing only
     # what is installed (DESIGN.md section 7). Started at boot; it waits for
     # Workbench, as S:User-Startup runs before LoadWB.
-    core = Part(top, "OpenUp", a.version, "OpenUpTool, the uninstaller, OpenUp's programs and settings in Workbench's Tools menu, and OpenMonitor")
+    core = Part(top, "OpenUp", a.version, "OpenUpTool, the uninstaller, ACROMFix, OpenUp's programs and settings in Workbench's Tools menu, and OpenMonitor")
     core.add("C/OpenUpTool", tool, "SYS:C/OpenUpTool")
+    acromfix = ROOT / "build/acromfix/C/ACROMFix"
+    if not acromfix.is_file():
+        raise SystemExit(f"{acromfix} wasn't built (amigachrome-guest tools/acromfix/build-amiga.sh)")
+    acromfix_lines(core, acromfix.read_bytes())
     core.add("C/OpenUpMenu", (ROOT / "build/os3/OpenUpMenu").read_bytes(), "SYS:C/OpenUpMenu")
     core.line("startup Run >NIL: C:OpenUpMenu")
     # AmigaOS 3.2.3's own icons and their default tools (names and tool strings): FIXTOOLS puts back the ones
