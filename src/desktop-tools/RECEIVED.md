@@ -3,6 +3,8 @@
 **Received:** 10 October 2026, from the user, as `OpenUp_Desktop_Tools_0.1_Source.zip` (9,999 bytes, sha256 `1cb96faded284394641c3ab38171ea932ae526aa0cac92a65ac6a0268015e4b5`).
 **State:** source only, kept as received. **Not** built into the OpenUp pack: `tools/build_pack.py` does not know it and no part installs it. Kept for analysis and a later build. The bundle's `component.json` suggests `OpenUp/apps/OpenCalc` and `OpenUp/apps/OpenShell`; this repository keeps its own code in `src/`, so they are here, under `src/desktop-tools/`, until the Team decides where they live.
 
+**Renamed (25 October 2026):** the calculator is **OpenCalculator**, in `src/desktop-tools/OpenCalculator/`, as Dale decided: OpenCalc is the GFOffice Suite's spreadsheet. The Team's own files there (`build.sh`, `src/calc_amiga.c`: OpenCalculator 0.4, its window and `$VER`) say so. The received files keep their own text, and the checksums below, which name them under `OpenCalc/` as they came.
+
 ## What is here
 
 | Component | What it is | State as received |
