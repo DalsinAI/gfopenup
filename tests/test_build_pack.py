@@ -162,24 +162,26 @@ def manifest_run(filt: Path, how: str, part_file: Path, manifest: str, tmp: Path
 
 def gfoffice_checks(tmp: Path, filt: Path) -> None:
     """The GFOffice Suite's parts (gfoffice docs/gfoffice/Design-Suite-Shared.md, section 12, 25 October 2026): the
-    GFOffice part's shared files, OpenWrite and OpenCalc needing it, and INSTALL and REMOVE in both orders through
-    OpenUpTool's own code (src/openup_lines.h)."""
+    GFOffice part's shared files (the suite's four libraries since gfoffice docs/suite/owf-libraries.md), OpenWrite
+    and OpenCalc needing it, and INSTALL and REMOVE in both orders through OpenUpTool's own code
+    (src/openup_lines.h)."""
     src = tmp / "gfoffice"
-    linked, onlib = src / bp.GFO_LINKED, src / bp.GFO_LIBRARY
+    onlib = src / bp.GFO_LIBRARY
     files = {
-        onlib / "library/owf.library": b"\0owf.library 1.1 (21.10.2026) libowf, AmigaChrome Team\r\n\0"
-                                       b"$VER: owf.library 1.1 (21.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team\0",
-        onlib / "OpenWrite": b"OpenWrite on owf.library\0$VER: OpenWrite 2.0.1 (10.10.2026)\0",
-        onlib / "OWConvert": b"OWConvert on owf.library, no workbooks\0",
-        linked / "OpenWrite": b"OpenWrite with libowf linked in\0$VER: OpenWrite 2.0.1 (10.10.2026)\0",
-        linked / "OWConvert": b"OWConvert with libowf linked in, workbooks too\0",
-        linked / "OpenCalc": b"\0$VER: OpenCalc 0.1 (25.10.2026) OpenCalc, the spreadsheet of the GFOffice Suite\0",
+        onlib / f"library/{name}.library": f"\0{name}.library 3.0 (25.10.2026) libowf 1.4.0, AmigaChrome Team\r\n\0"
+                                           f"$VER: {name}.library 3.0 (25.10.2026) MIT\0".encode() + name.encode()
+        for name in bp.GFO_LIBS
+    }
+    files.update({
+        onlib / "OpenWrite": b"OpenWrite on owfwrite.library\0$VER: OpenWrite 2.0.1 (10.10.2026)\0",
+        onlib / "OWConvert": b"OWConvert on the four libraries\0",
+        onlib / "OpenCalc": b"\0$VER: OpenCalc 0.1 (25.10.2026) OpenCalc, the spreadsheet of the GFOffice Suite\0",
         src / "Dictionaries/en_GB.words": b"aardvark\nabacus\n",
         src / "LICENSE": b"MIT License\n\nCopyright (c) 2026 AmigaChrome Team\n",
         src / "THIRD_PARTY.md": b"# Third-party parts\n",
         src / "RELEASE_NOTES_1.0.md": b"1.0\n", src / "RELEASE_NOTES_1.0.2.md": b"1.0.2\n",
         src / "licenses/SCOWL-ASPELL-English.txt": b"SCOWL notice\n",
-    }
+    })
     for f, data in files.items():
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_bytes(data)
@@ -194,20 +196,23 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     cl = (oc.dir / "Part").read_text(encoding="latin-1").splitlines()
 
     # GFOffice: the shared files, one owner each
-    check("GFOffice: the part at owf.library's version", gl[0] == "part GFOffice 1.1", gl[0])
+    check("GFOffice: the part at owfwrite.library's version", gl[0] == "part GFOffice 3.0", gl[0])
     lic = "Utilities/OpenUp/Licences/"
-    want = ['copy "Libs/owf.library" "LIBS:owf.library"', 'copy "Libs/z.library" "LIBS:z.library"',
+    want = [f'copy "Libs/{name}.library" "LIBS:{name}.library"' for name in bp.GFO_LIBS] + [
+            'copy "Libs/z.library" "LIBS:z.library"',
             'copy "Dictionaries/en_GB.words" "SYS:Dictionaries/en_GB.words"', 'copy "C/OWConvert" "SYS:C/OWConvert"',
             f'copy "{lic}GFOffice.txt" "SYS:{lic}GFOffice.txt"', f'copy "{lic}z.library.txt" "SYS:{lic}z.library.txt"',
-            f'copy "{lic}GFOffice-Dictionaries.txt" "SYS:{lic}GFOffice-Dictionaries.txt"']
-    check("GFOffice: owf.library, z.library, the dictionary in SYS:Dictionaries, OWConvert and their licences, "
-          "and nothing else (no needs, no startup line)", gl[2:] == want, str(gl[2:]))
-    check("GFOffice: owf.library from the OWF=library build, z.library ours, the dictionary gfoffice's",
-          (gf.dir / "Libs/owf.library").read_bytes() == files[onlib / "library/owf.library"]
+            f'copy "{lic}GFOffice-Dictionaries.txt" "SYS:{lic}GFOffice-Dictionaries.txt"',
+            'retire "LIBS:owf.library"']
+    check("GFOffice: the four libraries, z.library, the dictionary in SYS:Dictionaries, OWConvert and their licences, "
+          "owf.library retired, and nothing else (no needs, no startup line)", gl[2:] == want, str(gl[2:]))
+    check("GFOffice: the libraries from the OWF=library build, z.library ours, the dictionary gfoffice's",
+          all((gf.dir / f"Libs/{name}.library").read_bytes() == files[onlib / f"library/{name}.library"]
+              for name in bp.GFO_LIBS)
           and (gf.dir / "Libs/z.library").read_bytes() == zlib
           and (gf.dir / "Dictionaries/en_GB.words").read_bytes() == files[src / "Dictionaries/en_GB.words"])
-    check("GFOffice: OWConvert from the linked build (it keeps its workbooks; owf.library has no workbook calls yet)",
-          (gf.dir / "C/OWConvert").read_bytes() == files[linked / "OWConvert"])
+    check("GFOffice: OWConvert from the same build, on the four libraries",
+          (gf.dir / "C/OWConvert").read_bytes() == files[onlib / "OWConvert"])
     check("GFOffice: the licences say what each covers (gfoffice's MIT, OpenZlib's, SCOWL's for the dictionary)",
           (gf.dir / lic / "GFOffice.txt").read_bytes().endswith(files[src / "LICENSE"])
           and b"z.library 53.12 is OpenZlib" in (gf.dir / lic / "z.library.txt").read_bytes()
@@ -215,10 +220,10 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
           and b"(en_GB.words)" in (gf.dir / lic / "GFOffice-Dictionaries.txt").read_bytes()
           and (gf.dir / lic / "GFOffice-Dictionaries.txt").read_bytes().endswith(b"SCOWL notice\n"))
 
-    # OpenWrite: on owf.library, needing GFOffice, with none of the shared files
+    # OpenWrite: on owfwrite.library, needing GFOffice, with none of the shared files
     check("OpenWrite: 2.0.1, and it needs the GFOffice part", wl[0] == "part OpenWrite 2.0.1" and "needs part GFOffice" in wl,
           str(wl[:3]))
-    check("OpenWrite: the program built on owf.library (OWF=library)",
+    check("OpenWrite: the program built on its library (OWF=library)",
           (wr.dir / "Utilities/OpenWrite/OpenWrite").read_bytes() == files[onlib / "OpenWrite"])
     check("OpenWrite: no z.library, OWConvert or dictionary of its own (GFOffice's now)",
           not [l for l in wl if l.startswith(("copy", "default", "add"))
@@ -237,7 +242,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
           and 'copy "Utilities/OpenCalc/OpenCalc.info" "SYS:Utilities/OpenCalc/OpenCalc.info"' in cl
           and 'copy "Utilities/OpenCalc/LICENSE" "SYS:Utilities/OpenCalc/LICENSE"' in cl
           and 'add "Utilities/OpenCalc.info" "SYS:Utilities/OpenCalc.info"' in cl
-          and (oc.dir / "Utilities/OpenCalc/OpenCalc").read_bytes() == files[linked / "OpenCalc"], str(cl))
+          and (oc.dir / "Utilities/OpenCalc/OpenCalc").read_bytes() == files[onlib / "OpenCalc"], str(cl))
     tool = icon_of((oc.dir / "Utilities/OpenCalc/OpenCalc.info").read_bytes())
     check("OpenCalc.info: a tool icon with 32 KB of stack, as OpenWrite's", tool[0] == FakeIcons.WBTOOL and tool[4] == 32768)
     dests = {}
@@ -248,8 +253,8 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
                 dests.setdefault(m.group(1), []).append(name)
     check("no file is in two of the suite's parts (the shared ones have one owner)",
           not [d for d, ps in dests.items() if len(ps) > 1], str({d: ps for d, ps in dests.items() if len(ps) > 1}))
-    check("the parts' versions are read from owf.library and OpenCalc",
-          bp.PART_MAIN.get("GFOffice") == ("Libs/owf.library", "owf.library")
+    check("the parts' versions are read from owfwrite.library and OpenCalc",
+          bp.PART_MAIN.get("GFOffice") == ("Libs/owfwrite.library", "owfwrite.library")
           and bp.PART_MAIN.get("OpenCalc") == ("Utilities/OpenCalc/OpenCalc", "OpenCalc"))
     try:
         bp.check_part_versions(top / "Parts")
@@ -258,7 +263,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
         check("check_part_versions: GFOffice, OpenWrite and OpenCalc match their binaries", False, str(e))
 
     # OpenCalc's program not built: the part is left out, the others are made as before
-    (linked / "OpenCalc").unlink()
+    (onlib / "OpenCalc").unlink()
     top2 = tmp / "GF2/OpenUp"
     gf2, wr2, oc2 = bp.gfoffice_parts(top2, src, zlib, b"guest MIT licence\n", icons)
     check("without OpenCalc's program, no OpenCalc part, and GFOffice and OpenWrite as before",
@@ -273,7 +278,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     rc, out = manifest_run(filt, "install", cp, fresh, tmp)
     check("INSTALL OpenCalc alone: left out too", rc == 5 and out == "missing GFOffice\n", f"{rc} {out!r}")
     rc, m1 = manifest_run(filt, "install", gp, fresh, tmp)
-    check("INSTALL GFOffice: installed, needing nothing", rc == 0 and "part\tGFOffice\t1.1" in m1.splitlines()
+    check("INSTALL GFOffice: installed, needing nothing", rc == 0 and "part\tGFOffice\t3.0" in m1.splitlines()
           and OUL_NEEDPART not in m1, f"{rc} {m1!r}")
     rc, m2 = manifest_run(filt, "install", wp, m1, tmp)
     check("INSTALL OpenWrite after GFOffice: installed, its need noted in the manifest",

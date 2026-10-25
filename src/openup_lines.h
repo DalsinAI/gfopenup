@@ -16,8 +16,8 @@
  *   needs part <name>            INSTALL leaves the part out while the manifest doesn't list <name> as installed,
  *                                and notes the need in the manifest ("needpart <part> <name>"); REMOVE of <name>
  *                                refuses while a part that needs it is installed. The GFOffice Suite's programs
- *                                need the GFOffice part, which holds their shared files (owf.library, z.library,
- *                                the dictionary, OWConvert), so the shared files have one owner.
+ *                                need the GFOffice part, which holds their shared files (their four libraries,
+ *                                z.library, the dictionary, OWConvert), so the shared files have one owner.
  * An OpenUpTool before this ignores the line ("needs" with a word it doesn't know).
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
