@@ -6,7 +6,7 @@ archive (DESIGN.md sections 3 and 4).
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
         [--guest DIR] [--openamigaservice DIR] [--opendatatypes DIR] [--openamigartg DIR]
         [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
-        [--openamigaedit DIR] [--openamigawrite DIR] [--openamigalayout DIR]
+        [--openamigaedit DIR] [--gfoffice DIR] [--openamigalayout DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
         [--openamigasocket DIR] [--openamigabench DIR] [--openamigafont DIR] [--openamigapython FILE]
@@ -147,7 +147,7 @@ a Part file that C/OpenUpTool reads:
   OpenDrawer/           OpenDrawer, the drawer windows of the Team's own Workbench, beside the OS's
                         Workbench, in SYS:Utilities; off by default (opengadtools workbench/)
   OpenWrite/            OpenWrite, the word processor, C:OWConvert, and z.library, ours, for its DOCX
-                        and ODT (openamigawrite, openamigalayout; amigachrome-guest's openzlib)
+                        and ODT (gfoffice, openamigalayout; amigachrome-guest's openzlib)
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
   OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (openamigamulticore)
@@ -566,7 +566,7 @@ def build_parts(a):
     # OpenWrite carries its own OpenGadTools copy and needs GCC 16 (its build-os3.sh stops on the os32
     # stove's 6.5); its pages are OpenLayout's. DOCX and ODT go through z.library (openzlib, below), so
     # there is no zlib source in the build
-    run(["sh", a.openamigawrite / "build-os3.sh"],
+    run(["sh", a.gfoffice / "build-os3.sh"],
         env=dict(env, OS32_GCC16=gcc16_root, OPENLAYOUT_SRC=str(a.openamigalayout)))
     # OpenMail: GCC 16 (its build-os3.sh's own default), TLS through OpenTLS, whose headers it carries
     run(["sh", a.openamigamail / "build-os3.sh"], env=dict(env, STOVE=gcc16_root))
@@ -1371,7 +1371,9 @@ def main() -> int:
                     default=first(DEV / "openamigamediaplayer", DEV.parent / "openamigamediaplayer"))
     ap.add_argument("--openamigamui", type=Path, default=first(DEV / "openamigamui", DEV.parent / "openamigamui"))
     ap.add_argument("--openamigaedit", type=Path, default=first(DEV / "openamigaedit", DEV.parent / "openamigaedit"))
-    ap.add_argument("--openamigawrite", type=Path, default=first(DEV / "openamigawrite", DEV.parent / "openamigawrite"))
+    ap.add_argument("--gfoffice", "--openamigawrite", dest="gfoffice", type=Path,
+                    default=first(DEV / "gfoffice", DEV.parent / "gfoffice", DEV / "openamigawrite", DEV.parent / "openamigawrite"),
+                    help="gfoffice, the GFOffice Suite: OpenWrite and the suite's other apps (the repository was openamigawrite until 25 October 2026; --openamigawrite is the old name of this option, and a checkout still in a folder of that name is found)")
     ap.add_argument("--openamigamulticore", type=Path, default=first(DEV / "openamigamulticore", DEV.parent / "openamigamulticore"))
     ap.add_argument("--openamigamail", type=Path, default=first(DEV / "openamigamail", DEV.parent / "openamigamail"))
     ap.add_argument("--openbrowser", type=Path, help="a built OpenBrowser release (.lha or its unpacked folder): "
@@ -1421,7 +1423,7 @@ def main() -> int:
     a = ap.parse_args()
     for name in ("amigachrome", "openamigaprint", "opengadtools", "guest", "openamigaprefs", "openamigacompress", "openamigaservice",
                  "opendatatypes", "openamigartg", "openamigafilemanager", "openamigamediaplayer",
-                 "openamigamui", "openamigaedit", "openamigawrite", "openamigalayout"):
+                 "openamigamui", "openamigaedit", "gfoffice", "openamigalayout"):
         if not getattr(a, name) or not getattr(a, name).is_dir():
             ap.error(f"--{name}: give the checkout's folder")
     check_openbrowserlite_pin()            # before hours of building, not after
@@ -2123,11 +2125,11 @@ def main() -> int:
     od.add("Utilities/OpenDrawer.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Utilities/OpenDrawer.info")
     od.write()
 
-    # OpenWrite: the word processor (openamigawrite), as its 1.0 release lays it
+    # OpenWrite: the word processor (gfoffice), as its 1.0 release lays it
     # out: a drawer, with the dictionary beside the program, where it looks
     # (PROGDIR:Dictionaries), and OWConvert in C: for scripts. Both open
     # LIBS:z.library (openzlib) for DOCX and ODT, so it comes with them
-    ow_src = a.openamigawrite
+    ow_src = a.gfoffice
     ob = ow_src / "build/os3"
     wr = Part(top, "OpenWrite", "2.0.1", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.add("Utilities/OpenWrite/OpenWrite", (ob / "OpenWrite").read_bytes(), "SYS:Utilities/OpenWrite/OpenWrite")
