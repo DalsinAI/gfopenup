@@ -409,6 +409,17 @@ def main() -> int:
         check("OpenMonitor.info: a tool icon with 32 KB of stack (OpenBench runs the ROM's resident from it)",
               mon[0] == FakeIcons.WBTOOL and mon[4] == 32768)
 
+        # ACROMFix (amigachrome-guest tools/acromfix), SetPatch for the open ROM: the file and its QUIET startup line on
+        # every ROM, as it changes nothing where there is nothing to fix and an install can move to another ROM
+        core = bp.Part(top, "OpenUp", "0.9", "test")
+        bp.acromfix_lines(core, b"ACROMFix body")
+        core.write()
+        for machine in ("os323", "openkick100-ac", "openkick101-ac"):
+            eff = lines_on(core.dir / "Part", machine, filt)
+            check(f"{machine}: C:ACROMFix and its startup line, QUIET",
+                  eff[2:] == ['copy "C/ACROMFix" "SYS:C/ACROMFix"', "startup C:ACROMFix QUIET"], str(eff))
+        check("ACROMFix's file as built", (core.dir / "C/ACROMFix").read_bytes() == b"ACROMFix body")
+
         # Backdrops: OpenUp's own desktops, each with its .tone; the AmigaChrome Background Pack's art (which
         # opengadtools' make_backdrops.py also exports) is an optional install, not OpenUp's (24 October 2026)
         bdir = tmp / "backdrops"
