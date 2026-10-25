@@ -1637,7 +1637,7 @@ def main() -> int:
     img.write()
 
     # OpenWindows: the commodity, started at boot, and its editor (openamigaprefs)
-    ow = Part(top, "OpenWindows", "0.9.1", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
+    ow = Part(top, "OpenWindows", "0.9.2", "OpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places")
     ow.add("Tools/Commodities/OpenWindows", (a.openamigaprefs / "Windows/build/os3/OpenWindows").read_bytes(),
            "SYS:Tools/Commodities/OpenWindows")
     ow.line("startup Run >NIL: SYS:Tools/Commodities/OpenWindows")
@@ -1646,7 +1646,7 @@ def main() -> int:
     # OpenBlanker: the screen blanker, started at boot, on every install
     # (openamigaprefs): after five minutes with no key or mouse it plays Gods
     # and Angels, AmigaChrome's homage to the Amiga's makers and keepers
-    bl = Part(top, "OpenBlanker", "1.1.1", "OpenBlanker: the screen blanker, and its show, Gods and Angels")
+    bl = Part(top, "OpenBlanker", "1.2", "OpenBlanker: the screen blanker, and its show, Gods and Angels")
     bl.add("Tools/Commodities/OpenBlanker", (a.openamigaprefs / "Blanker/build/os3/OpenBlanker").read_bytes(),
            "SYS:Tools/Commodities/OpenBlanker")
     bl.add("Tools/Commodities/OpenBlanker.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Tools/Commodities/OpenBlanker.info")
@@ -1704,7 +1704,7 @@ def main() -> int:
     # (the ROM's or this C:OpenDock, the newer by $VER) when ENV:OpenDock/Dock
     # is there, and OpenDock 0.6.6 ends at once when one runs already, so an
     # old "Run >NIL: C:OpenDock" line left by an earlier OpenUp does no harm.
-    dock = Part(top, "OpenDock", "0.6.6", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "OpenDock", "0.6.10", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     # its editor is OpenPrefs's Dock page (W48), SYS:Preferences/Dock (the OpenPrefs part). C:OpenDock stays on the
     # open ROM too: the dock left the ROM (the no-ROM-volume design, section 7.4)
@@ -1725,7 +1725,7 @@ def main() -> int:
 
     # OpenUp Setup: the first-start wizard (openamigaprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:OpenAmiga/Setup.done.
-    setup = Part(top, "OpenUpSetup", "0.1.4", "OpenUp Setup: the first-start wizard, with the startup switches")
+    setup = Part(top, "OpenUpSetup", "0.1.6", "OpenUp Setup: the first-start wizard, with the startup switches")
     setup.add("Prefs/OpenUp-Setup", (a.openamigaprefs / "Setup/build/os3/OpenUp-Setup").read_bytes(), "SYS:Prefs/OpenUp-Setup")
     setup.add("Prefs/OpenUp-Setup.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/OpenUp-Setup.info")
     setup.add("WBStartup/OpenUp-Setup", b"", "SYS:WBStartup/OpenUp-Setup")
@@ -1785,7 +1785,7 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the OpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "OpenGPU", "0.16", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp = Part(top, "OpenGPU", "0.20", "OpenGPU: opengpu.library with OpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/opengpu.library", (rtg / "opengpu.library").read_bytes(), "LIBS:opengpu.library")
     gp.add("Libs/OpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:OpenGPU/ACRTG.gpu")
     gp.add("Libs/OpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:OpenGPU/SDL2.module")
