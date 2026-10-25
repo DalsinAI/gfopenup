@@ -70,6 +70,9 @@
  *   needs AmigaChrome                  (only on an AmigaChrome instance)
  *   needs ACRTG                        (only with an ACRTG graphics board)
  *   needs Kickstart                    (not on the OpenKick ROM: for OS 3.2's LoadModule, 0.8.7)
+ *   needs part <name>                  (25 Oct 2026: only once the part <name> is installed, and REMOVE of <name>
+ *                                       refuses while this part is installed; the GFOffice Suite's programs need
+ *                                       the GFOffice part, their shared files; src/openup_lines.h)
  *   keep <dest> <marker> [<marker>...]  (dest must be absent or contain a marker)
  *   copy <file in the drawer> <dest>
  *   default <file in the drawer> <dest> (copied only when dest is missing)
@@ -238,6 +241,7 @@ static int write_file(const char *path, const char *data, LONG len)
  *   part <name> <version>   new <dest>   replaced <dest> <backup>
  *   same <dest>   dir <path>   bdir <path>   startup <part> <line>
  *   newfile <path> (a file OpenUp made, such as S:User-Startup)
+ *   needpart <part> <the part it needs> (a "needs part" line of an installed part's Part file, 25 Oct 2026)
  * 1024 entries was too few (0.7.3 and earlier): every part ticked comes to about 1,150 lines in 0.7.5,
  * an upgrade keeps the lines of files earlier versions put in, and a lab copy of an instance upgraded
  * from 0.7.3 to 0.7.4 filled the table, so new files and a part's new startup line went unlisted. */
@@ -247,7 +251,7 @@ static int write_file(const char *path, const char *data, LONG len)
  * where a cut path would send UNINSTALL to the wrong file, and the table
  * stays small. Neither is ever NULL: "" is no_text. */
 #define ENTRY_PATH 260                       /* the install code's path buffers */
-typedef struct { char kind[10]; char *a; char *b; } entry;
+typedef oul_entry entry;                     /* kind, a, b (src/openup_lines.h, which the host test shares) */
 static entry ents[MAXE];
 static int nents;
 static char no_text[] = "";
@@ -587,24 +591,10 @@ static int detect(void)
 
 /* ---- INSTALL ------------------------------------------------------------------------- */
 
-/* Splits a line into words; quoted words keep their spaces. */
+/* Splits a line into words; quoted words keep their spaces (src/openup_lines.h, which the host test shares). */
 static int words(char *line, char **w, int max)
 {
-    int n = 0;
-    char *p = line;
-    while (*p && n < max) {
-        while (*p == ' ' || *p == '\t') p++;
-        if (!*p || *p == ';' || *p == '#') break;
-        if (*p == '"') {
-            w[n++] = ++p;
-            while (*p && *p != '"') p++;
-        } else {
-            w[n++] = p;
-            while (*p && *p != ' ' && *p != '\t') p++;
-        }
-        if (*p) *p++ = 0;
-    }
-    return n;
+    return oul_words(line, w, max);
 }
 
 /* Puts one file in place, keeping the original the first time OpenUp
@@ -933,6 +923,7 @@ static int install(const char *drawer)
         strcpy(copy, text);
         for (p = copy; *p; ) {
             char *w[12];
+            const char *need;
             int n;
             line = p;
             while (*p && *p != '\n') p++;
@@ -954,7 +945,21 @@ static int install(const char *drawer)
             if (!strcmp(w[0], "part") && n >= 3) {
                 strncpy(partname, w[1], sizeof partname - 1);
                 strncpy(partver, w[2], sizeof partver - 1);
-                if (pass == 1) mark_startup(partname);
+                if (pass == 1) {
+                    mark_startup(partname);
+                    oul_drop_needs(ents, nents, partname);   /* its needs are the ones its Part file has now */
+                }
+            } else if (pass == 0 && (need = oul_needs_part(w, n))) {
+                /* another part first: the GFOffice Suite's programs need the GFOffice part, their shared files */
+                if (!oul_installed(ents, nents, need)) {
+                    Printf((STRPTR)"OpenUp: %s needs the %s part, which isn't installed, so it was left out.\n"
+                           "        Install %s first (OpenUpTool INSTALL Parts/%s), then %s.\n",
+                           (LONG)partname, (LONG)need, (LONG)need, (LONG)need, (LONG)partname);
+                    refused = 1;
+                }
+            } else if (pass == 1 && (need = oul_needs_part(w, n))) {
+                /* noted, so REMOVE of that part asks for this one to go first */
+                if (!add_entry(OUL_NEEDPART, partname, need)) errors++;
             } else if (pass == 0 && !strcmp(w[0], "needs") && n >= 2) {
                 if (!strcmp(w[1], "AmigaChrome") && !is_amigachrome()) {
                     say("OpenUp: ", partname, " is for AmigaChrome instances; left out here.");
@@ -1029,10 +1034,13 @@ static int install(const char *drawer)
  * its startup lines and its "part" line leave the manifest (STARTUP writes S:User-Startup again after). The
  * directories it made go when empty. The OpenLibs switches use it: unticking a library puts OS 3.2's own
  * back. Only a file the manifest lists is touched, so a file the part names but OpenUp never put there (the
- * user's own) stays. 0 when the part isn't installed. */
+ * user's own) stays. 0 when the part isn't installed.
+ * A part another installed part needs (its "needs part" line, noted as needpart in the manifest) stays, and
+ * nothing changes: GFOffice stays while OpenWrite or OpenCalc is installed (25 Oct 2026). */
 static int remove_part(const char *drawer)
 {
     char path[220], *text, *p, *line, partname[64] = "";
+    const char *by;
     int removed = 0, restored = 0, problems = 0, i;
 
     strncpy(path, drawer, 200);
@@ -1043,6 +1051,13 @@ static int remove_part(const char *drawer)
         return RETURN_FAIL;
     }
     manifest_load();
+    if (oul_part_name(text, partname, sizeof partname) && oul_installed(ents, nents, partname) &&
+        (by = oul_needed_by(ents, nents, partname))) {
+        Printf((STRPTR)"OpenUp: %s stays: %s needs it. Take out %s first (OpenUpTool REMOVE Parts/%s), then %s.\n",
+               (LONG)partname, (LONG)by, (LONG)by, (LONG)by, (LONG)partname);
+        FreeVec(text);
+        return RETURN_WARN;
+    }
     for (p = text; *p; ) {
         char *w[12], dir[ENTRY_PATH];
         const char *dest = NULL;
@@ -1101,6 +1116,7 @@ static int remove_part(const char *drawer)
         if ((!strcmp(ents[i].kind, "startup") && !strcmp(ents[i].b, partname)) ||
             (!strcmp(ents[i].kind, "part") && !strcmp(ents[i].a, partname)))
             ents[i].kind[0] = 0;
+    oul_drop_needs(ents, nents, partname);          /* what it needed may go now */
     if (!manifest_save()) {
         say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
         return RETURN_ERROR;
