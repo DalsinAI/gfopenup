@@ -12,6 +12,9 @@ STOVE=${STOVE:-$HOME/AmigaChrome/stoves/os32}
 CC=${CC:-"$STOVE/prefix/bin/m68k-amigaos-gcc"}
 OUT=${1:-$HERE/build/os3}
 CFLAGS="-noixemul -m68040 -specs=$SPECS -std=gnu99 -Wall -Werror -O2 -fno-delete-null-pointer-checks -fno-common -I$HERE/include"
+# OpenAmigaGCC 16.2.0-open3's late-combine pass can store a copy one place late (GCC PR 123853; OpenUpTool's
+# manifest came out so): off until open4 (openamigagcc #29), on a compiler that knows the option (GCC 6.5 doesn't).
+if "$CC" -fno-late-combine-instructions -S -o /dev/null -x c /dev/null 2>/dev/null; then CFLAGS="$CFLAGS -fno-late-combine-instructions"; fi
 mkdir -p "$OUT"
 "$CC" $CFLAGS -o "$OUT/OpenCalc" "$HERE/src/calc_amiga.c" "$HERE/src/opencalc.c" -lm
 echo "$OUT/OpenCalc ($(wc -c < "$OUT/OpenCalc") bytes)"

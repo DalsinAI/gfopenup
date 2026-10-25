@@ -13,7 +13,11 @@ STOVE=${STOVE:-$HOME/AmigaChrome/stoves/os32}
 CC="$STOVE/prefix/bin/m68k-amigaos-gcc"
 OUT=${1:-$HERE/../../build/os3/OpenSnap}
 mkdir -p "$(dirname "$OUT")"
+# OpenAmigaGCC 16.2.0-open3's late-combine pass can store a copy one place late (GCC PR 123853; OpenUpTool's
+# manifest came out so): off until open4 (openamigagcc #29), on a compiler that knows the option (GCC 6.5 doesn't).
+LATE=""
+if "$CC" -fno-late-combine-instructions -S -o /dev/null -x c /dev/null 2>/dev/null; then LATE="-fno-late-combine-instructions"; fi
 "$CC" -noixemul -m68040 -specs="$HERE/../../specs/m68k-soft-m68040.specs" -std=gnu99 -Wall -Werror -O2 \
-    -fno-delete-null-pointer-checks -fno-common -I"$ODT/Datatypes/include" -I"$HERE" ${OSDEBUG:+-DOSDEBUG} \
+    -fno-delete-null-pointer-checks -fno-common $LATE -I"$ODT/Datatypes/include" -I"$HERE" ${OSDEBUG:+-DOSDEBUG} \
     -o "$OUT" "$HERE/opensnap.c"
 echo "$OUT ($(wc -c < "$OUT") bytes)"
