@@ -894,7 +894,7 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
                "SYS:" + lic + "GFOffice-Dictionaries.txt")
 
     # OpenWrite: the word processor, as its 1.0 release laid it out, on owf.library
-    wr = Part(top, "OpenWrite", "2.0.1", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr = Part(top, "OpenWrite", "2.0.13", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.needs_part("GFOffice")
     wr.add("Utilities/OpenWrite/OpenWrite", (onlib / "OpenWrite").read_bytes(), "SYS:Utilities/OpenWrite/OpenWrite")
     wr.add("Utilities/OpenWrite/OpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/OpenWrite/OpenWrite.info")

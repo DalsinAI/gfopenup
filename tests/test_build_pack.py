@@ -169,9 +169,9 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     files = {
         onlib / "library/owf.library": b"\0owf.library 1.1 (21.10.2026) libowf, AmigaChrome Team\r\n\0"
                                        b"$VER: owf.library 1.1 (21.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team\0",
-        onlib / "OpenWrite": b"OpenWrite on owf.library\0$VER: OpenWrite 2.0.1 (10.10.2026)\0",
+        onlib / "OpenWrite": b"OpenWrite on owf.library\0$VER: OpenWrite 2.0.13 (25.10.2026)\0",
         onlib / "OWConvert": b"OWConvert on owf.library, no workbooks\0",
-        linked / "OpenWrite": b"OpenWrite with libowf linked in\0$VER: OpenWrite 2.0.1 (10.10.2026)\0",
+        linked / "OpenWrite": b"OpenWrite with libowf linked in\0$VER: OpenWrite 2.0.13 (25.10.2026)\0",
         linked / "OWConvert": b"OWConvert with libowf linked in, workbooks too\0",
         linked / "OpenCalc": b"\0$VER: OpenCalc 0.1 (25.10.2026) OpenCalc, the spreadsheet of the GFOffice Suite\0",
         src / "Dictionaries/en_GB.words": b"aardvark\nabacus\n",
@@ -216,7 +216,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
           and (gf.dir / lic / "GFOffice-Dictionaries.txt").read_bytes().endswith(b"SCOWL notice\n"))
 
     # OpenWrite: on owf.library, needing GFOffice, with none of the shared files
-    check("OpenWrite: 2.0.1, and it needs the GFOffice part", wl[0] == "part OpenWrite 2.0.1" and "needs part GFOffice" in wl,
+    check("OpenWrite: 2.0.13, and it needs the GFOffice part", wl[0] == "part OpenWrite 2.0.13" and "needs part GFOffice" in wl,
           str(wl[:3]))
     check("OpenWrite: the program built on owf.library (OWF=library)",
           (wr.dir / "Utilities/OpenWrite/OpenWrite").read_bytes() == files[onlib / "OpenWrite"])
@@ -277,7 +277,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
           and OUL_NEEDPART not in m1, f"{rc} {m1!r}")
     rc, m2 = manifest_run(filt, "install", wp, m1, tmp)
     check("INSTALL OpenWrite after GFOffice: installed, its need noted in the manifest",
-          rc == 0 and "part\tOpenWrite\t2.0.1" in m2.splitlines() and f"{OUL_NEEDPART}\tOpenWrite\tGFOffice" in m2.splitlines(),
+          rc == 0 and "part\tOpenWrite\t2.0.13" in m2.splitlines() and f"{OUL_NEEDPART}\tOpenWrite\tGFOffice" in m2.splitlines(),
           f"{rc} {m2!r}")
     rc, again = manifest_run(filt, "install", wp, m2, tmp)
     check("INSTALL OpenWrite again (an update): its need noted once", rc == 0 and again.count(f"{OUL_NEEDPART}\tOpenWrite\t") == 1,
