@@ -2883,7 +2883,7 @@ static const rmap reconcile_map[] = {
     { "SYS:Prefs/Serial",       "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's Serial" },
     { "SYS:Prefs/Sound",        "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's Sound (a Sound in Prefs is the OS's)" },
     { "SYS:Tools/Commodities/Blanker", "retire", "SYS:Tools/Commodities/OpenBlanker", "OpenBlanker" },
-    { "SYS:Tools/Calculator",   "wait",    NULL, "OpenCalc (source in OpenUp, to build)" },
+    { "SYS:Tools/Calculator",   "wait",    NULL, "OpenCalculator (source in OpenUp, to build)" },
     { "SYS:Tools/TextEdit",     "replace", "C:OpenEdit", "OpenEdit, under TextEdit's name, so every icon that opens TextEdit opens OpenEdit" },
     { "SYS:WBStartup/AsyncWB",  "keep",    NULL, "OS 3.2.3's: Workbench copies and deletes in processes of their own" },
     { "SYS:WBStartup/RAWBInfo", "keep",    NULL, "OS 3.2.3's Information window" },
