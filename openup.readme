@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmigaChrome Team
 Type:         util/misc
-Version:      0.8.9
+Version:      0.8.10
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
