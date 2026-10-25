@@ -1821,7 +1821,7 @@ def main() -> int:
     # (the ROM's or this C:OpenDock, the newer by $VER) when ENV:OpenDock/Dock
     # is there, and OpenDock 0.6.6 ends at once when one runs already, so an
     # old "Run >NIL: C:OpenDock" line left by an earlier OpenUp does no harm.
-    dock = Part(top, "OpenDock", "0.6.10", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "OpenDock", "0.6.11", "OpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/OpenDock", (a.openamigaprefs / "Dock/build/os3/OpenDock").read_bytes(), "SYS:C/OpenDock")
     # its editor is OpenPrefs's Dock page (W48), SYS:Preferences/Dock (the OpenPrefs part). C:OpenDock stays on the
     # open ROM too: the dock left the ROM (the no-ROM-volume design, section 7.4)
