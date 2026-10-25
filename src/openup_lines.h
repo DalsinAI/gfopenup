@@ -160,4 +160,65 @@ static int oul_part_name(const char *text, char *name, int size)
     return 0;
 }
 
+/* ---- INSTALL's way and its end (25 October 2026) ----
+ * A file where a part's drawer goes is in its way: Instance-32 has a calculator of its own at SYS:Utilities/OpenCalc,
+ * where the GFOffice Suite's OpenCalc drawer goes. INSTALL keeps that file in SYS:Storage/OpenUp-Superseded, as it
+ * keeps any original it replaces, and makes the drawer; UNINSTALL, and REMOVE once the drawer is empty, put the file
+ * back. oul_way names the drawers a path goes through, for INSTALL to look at each.
+ *
+ * And a part whose install had an error isn't listed as installed: no "part" line (an older version's stays, so an
+ * upgrade is tried again), and its startup and needpart lines stay as they were. What its files did stays listed (a
+ * file put in, an original kept), so REMOVE and UNINSTALL can still undo it. While the part installs, its startup
+ * lines from before are marked "ostartup" (those its Part file still has go back to "startup") and its needpart lines
+ * OUL_OLDNEED; the lines it adds come at first and after (the manifest's count before), and oul_settle ends it. */
+#define OUL_OLDNEED "oneedpart"
+
+/* The drawers a path goes through, below its volume, from the top: for "SYS:Utilities/OpenCalc/OpenCalc", way 0 is
+ * "SYS:Utilities" and way 1 "SYS:Utilities/OpenCalc". 1 with the i-th in out (size bytes); 0 when there is none,
+ * when it doesn't fit, or at an empty name (AmigaDOS's "/" for the parent), where nothing is looked at. */
+static int oul_way(const char *path, int i, char *out, int size)
+{
+    const char *s = path, *p;
+    int n = -1, len, k;
+    for (p = path; *p; p++)
+        if (*p == ':') { s = p + 1; break; }
+    for (p = s; *p; p++)
+        if (*p == '/') {
+            if (p == s || p[-1] == '/' || p[-1] == ':') return 0;
+            if (++n == i) break;
+        }
+    if (!*p) return 0;
+    len = (int)(p - path);
+    if (len >= size) return 0;
+    for (k = 0; k < len; k++) out[k] = path[k];
+    out[len] = 0;
+    return 1;
+}
+
+/* INSTALL's pass 1: the part's needpart lines from before are marked, so a failed install can put them back. */
+static void oul_mark_needs(oul_entry *e, int n, const char *part)
+{
+    int i, k;
+    for (i = 0; i < n; i++)
+        if (oul_same(e[i].kind, OUL_NEEDPART) && oul_same(e[i].a, part))
+            for (k = 0; (e[i].kind[k] = OUL_OLDNEED[k]); k++) ;
+}
+
+/* INSTALL's end. ok: the marked lines go (the Part file's own are the ones now). Not ok: the marked lines come back
+ * as they were, and the startup and needpart lines this install added (at first and after) go. */
+static void oul_settle(oul_entry *e, int n, int first, const char *part, int ok)
+{
+    int i, k;
+    for (i = 0; i < n; i++) {
+        char *kind = e[i].kind;
+        if ((oul_same(kind, "ostartup") && oul_same(e[i].b, part)) || (oul_same(kind, OUL_OLDNEED) && oul_same(e[i].a, part))) {
+            if (ok) kind[0] = 0;
+            else for (k = 0; (kind[k] = kind[k + 1]); k++) ;      /* "ostartup" is "startup" again, "oneedpart" "needpart" */
+        } else if (!ok && i >= first && ((oul_same(kind, "startup") && oul_same(e[i].b, part))
+                                         || (oul_same(kind, OUL_NEEDPART) && oul_same(e[i].a, part)))) {
+            kind[0] = 0;
+        }
+    }
+}
+
 #endif

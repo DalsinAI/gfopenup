@@ -151,12 +151,13 @@ def openprinter_checks() -> None:
           and inst.find("(if (bitand #parts", a) > b)
 
 
-def manifest_run(filt: Path, how: str, part_file: Path, manifest: str, tmp: Path) -> tuple[int, str]:
+def manifest_run(filt: Path, how: str, part_file: Path, manifest: str, tmp: Path, *more: str) -> tuple[int, str]:
     """OpenUpTool's "needs part" check (tests/test_openup_lines.c install|remove) of a Part file against a manifest's
-    text: its return code (0 done, 5 refused) and what it printed (the manifest after, or why it refused)."""
+    text: its return code (0 done, 5 refused, 10 failed: with more "fail") and what it printed (the manifest after,
+    or why it refused)."""
     m = tmp / "OpenUp.manifest"
     m.write_text(manifest, encoding="latin-1")
-    r = subprocess.run([str(filt), how, str(part_file), str(m)], capture_output=True, text=True, encoding="latin-1")
+    r = subprocess.run([str(filt), how, str(part_file), str(m), *more], capture_output=True, text=True, encoding="latin-1")
     return r.returncode, r.stdout
 
 
@@ -282,6 +283,15 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     rc, again = manifest_run(filt, "install", wp, m2, tmp)
     check("INSTALL OpenWrite again (an update): its need noted once", rc == 0 and again.count(f"{OUL_NEEDPART}\tOpenWrite\t") == 1,
           again)
+    # 25 Oct 2026: an install with a file that couldn't be put in place isn't listed (Instance-32's calculator at
+    # SYS:Utilities/OpenCalc, where OpenCalc's drawer goes, made INSTALL fail and list OpenCalc anyway)
+    rc, mf = manifest_run(filt, "install", wp, m1, tmp, "fail")
+    check("INSTALL OpenWrite that fails (10): not listed, its need not noted, the rest as it was",
+          rc == 10 and mf.splitlines() == m1.splitlines(), f"{rc} {mf!r}")
+    older = re.sub(r"(?m)^part\tOpenWrite\t.*$", "part\tOpenWrite\t2.0.0", m2)
+    rc, mf = manifest_run(filt, "install", wp, older, tmp, "fail")
+    check("an upgrade of OpenWrite that fails: the older version stays listed with its need, so the next one tries again",
+          rc == 10 and mf.splitlines() == older.splitlines(), f"{rc} {mf!r}")
     rc, m3 = manifest_run(filt, "install", cp, m2, tmp)
     check("INSTALL OpenCalc after GFOffice: installed", rc == 0 and f"{OUL_NEEDPART}\tOpenCalc\tGFOffice" in m3.splitlines())
     rc, out = manifest_run(filt, "remove", gp, m3, tmp)
