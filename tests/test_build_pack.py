@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Host checks of tools/build_pack.py's parts for the no-ROM-volume design (24 October 2026, sections 8 and 10):
 OpenPrefs in SYS:Preferences, the old homes archived, the boot's APPLY line and OpenMonitor by the ROM, and
-the Installer and OpenUpMenu with no old names left. And OpenSnap's part and pictures (tests/test_opensnap_pic.c).
+the Installer and OpenUpMenu with no old names left. And OpenSnap's part and pictures (tests/test_opensnap_pic.c),
+and the GFOffice Suite's parts: GFOffice, the shared files, which OpenWrite and OpenCalc need ("needs part"), with
+INSTALL and REMOVE in both orders read through OpenUpTool's own code (gfoffice_checks).
 
     python3 tests/test_build_pack.py
 
@@ -147,6 +149,166 @@ def openprinter_checks() -> None:
     check("Install-OpenUp: OpenPrinter right after OpenPrint, under the same choice", 0 < a < b
           and inst.rfind("(if (bitand #parts 2)", 0, a) > inst.rfind("(if (bitand #parts", 0, a) - 1
           and inst.find("(if (bitand #parts", a) > b)
+
+
+def manifest_run(filt: Path, how: str, part_file: Path, manifest: str, tmp: Path) -> tuple[int, str]:
+    """OpenUpTool's "needs part" check (tests/test_openup_lines.c install|remove) of a Part file against a manifest's
+    text: its return code (0 done, 5 refused) and what it printed (the manifest after, or why it refused)."""
+    m = tmp / "OpenUp.manifest"
+    m.write_text(manifest, encoding="latin-1")
+    r = subprocess.run([str(filt), how, str(part_file), str(m)], capture_output=True, text=True, encoding="latin-1")
+    return r.returncode, r.stdout
+
+
+def gfoffice_checks(tmp: Path, filt: Path) -> None:
+    """The GFOffice Suite's parts (gfoffice docs/gfoffice/Design-Suite-Shared.md, section 12, 25 October 2026): the
+    GFOffice part's shared files, OpenWrite and OpenCalc needing it, and INSTALL and REMOVE in both orders through
+    OpenUpTool's own code (src/openup_lines.h)."""
+    src = tmp / "gfoffice"
+    linked, onlib = src / bp.GFO_LINKED, src / bp.GFO_LIBRARY
+    files = {
+        onlib / "library/owf.library": b"\0owf.library 1.1 (21.10.2026) libowf, AmigaChrome Team\r\n\0"
+                                       b"$VER: owf.library 1.1 (21.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team\0",
+        onlib / "OpenWrite": b"OpenWrite on owf.library\0$VER: OpenWrite 2.0.1 (10.10.2026)\0",
+        onlib / "OWConvert": b"OWConvert on owf.library, no workbooks\0",
+        linked / "OpenWrite": b"OpenWrite with libowf linked in\0$VER: OpenWrite 2.0.1 (10.10.2026)\0",
+        linked / "OWConvert": b"OWConvert with libowf linked in, workbooks too\0",
+        linked / "OpenCalc": b"\0$VER: OpenCalc 0.1 (25.10.2026) OpenCalc, the spreadsheet of the GFOffice Suite\0",
+        src / "Dictionaries/en_GB.words": b"aardvark\nabacus\n",
+        src / "LICENSE": b"MIT License\n\nCopyright (c) 2026 AmigaChrome Team\n",
+        src / "THIRD_PARTY.md": b"# Third-party parts\n",
+        src / "RELEASE_NOTES_1.0.md": b"1.0\n", src / "RELEASE_NOTES_1.0.2.md": b"1.0.2\n",
+        src / "licenses/SCOWL-ASPELL-English.txt": b"SCOWL notice\n",
+    }
+    for f, data in files.items():
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(data)
+    zlib = b"\0$VER: z.library 53.12 (13.10.2026) OpenZlib, AmigaChrome Team\0"
+    icons = FakeIcons()
+    top = tmp / "GF/OpenUp"
+    gf, wr, oc = bp.gfoffice_parts(top, src, zlib, b"guest MIT licence\n", icons)
+    for p in (gf, wr, oc):
+        p.write()
+    gl = (gf.dir / "Part").read_text(encoding="latin-1").splitlines()
+    wl = (wr.dir / "Part").read_text(encoding="latin-1").splitlines()
+    cl = (oc.dir / "Part").read_text(encoding="latin-1").splitlines()
+
+    # GFOffice: the shared files, one owner each
+    check("GFOffice: the part at owf.library's version", gl[0] == "part GFOffice 1.1", gl[0])
+    lic = "Utilities/OpenUp/Licences/"
+    want = ['copy "Libs/owf.library" "LIBS:owf.library"', 'copy "Libs/z.library" "LIBS:z.library"',
+            'copy "Dictionaries/en_GB.words" "SYS:Dictionaries/en_GB.words"', 'copy "C/OWConvert" "SYS:C/OWConvert"',
+            f'copy "{lic}GFOffice.txt" "SYS:{lic}GFOffice.txt"', f'copy "{lic}z.library.txt" "SYS:{lic}z.library.txt"',
+            f'copy "{lic}GFOffice-Dictionaries.txt" "SYS:{lic}GFOffice-Dictionaries.txt"']
+    check("GFOffice: owf.library, z.library, the dictionary in SYS:Dictionaries, OWConvert and their licences, "
+          "and nothing else (no needs, no startup line)", gl[2:] == want, str(gl[2:]))
+    check("GFOffice: owf.library from the OWF=library build, z.library ours, the dictionary gfoffice's",
+          (gf.dir / "Libs/owf.library").read_bytes() == files[onlib / "library/owf.library"]
+          and (gf.dir / "Libs/z.library").read_bytes() == zlib
+          and (gf.dir / "Dictionaries/en_GB.words").read_bytes() == files[src / "Dictionaries/en_GB.words"])
+    check("GFOffice: OWConvert from the linked build (it keeps its workbooks; owf.library has no workbook calls yet)",
+          (gf.dir / "C/OWConvert").read_bytes() == files[linked / "OWConvert"])
+    check("GFOffice: the licences say what each covers (gfoffice's MIT, OpenZlib's, SCOWL's for the dictionary)",
+          (gf.dir / lic / "GFOffice.txt").read_bytes().endswith(files[src / "LICENSE"])
+          and b"z.library 53.12 is OpenZlib" in (gf.dir / lic / "z.library.txt").read_bytes()
+          and (gf.dir / lic / "z.library.txt").read_bytes().endswith(b"guest MIT licence\n")
+          and b"(en_GB.words)" in (gf.dir / lic / "GFOffice-Dictionaries.txt").read_bytes()
+          and (gf.dir / lic / "GFOffice-Dictionaries.txt").read_bytes().endswith(b"SCOWL notice\n"))
+
+    # OpenWrite: on owf.library, needing GFOffice, with none of the shared files
+    check("OpenWrite: 2.0.1, and it needs the GFOffice part", wl[0] == "part OpenWrite 2.0.1" and "needs part GFOffice" in wl,
+          str(wl[:3]))
+    check("OpenWrite: the program built on owf.library (OWF=library)",
+          (wr.dir / "Utilities/OpenWrite/OpenWrite").read_bytes() == files[onlib / "OpenWrite"])
+    check("OpenWrite: no z.library, OWConvert or dictionary of its own (GFOffice's now)",
+          not [l for l in wl if l.startswith(("copy", "default", "add"))
+               and ("z.library" in l or "OWConvert" in l or "Dictionaries" in l)], str(wl))
+    check("OpenWrite: the dictionary an earlier part put beside it archived, and nothing else of its drawer",
+          [l for l in wl if l.startswith("retire")] == ['retire "SYS:Utilities/OpenWrite/Dictionaries/en_GB.words"'])
+    check("OpenWrite: its release notes are the newest", (wr.dir / "Utilities/OpenWrite/Release-Notes.txt").read_bytes() == b"1.0.2\n")
+    check("OpenWrite: its drawer icon only where none is or OpenUp's",
+          'add "Utilities/OpenWrite.info" "SYS:Utilities/OpenWrite.info"' in wl)
+
+    # OpenCalc: the same way
+    check("OpenCalc: its program's version, and it needs the GFOffice part",
+          cl[0] == "part OpenCalc 0.1" and "needs part GFOffice" in cl, str(cl[:3]))
+    check("OpenCalc: in SYS:Utilities/OpenCalc, with its icon, licence and drawer icon",
+          'copy "Utilities/OpenCalc/OpenCalc" "SYS:Utilities/OpenCalc/OpenCalc"' in cl
+          and 'copy "Utilities/OpenCalc/OpenCalc.info" "SYS:Utilities/OpenCalc/OpenCalc.info"' in cl
+          and 'copy "Utilities/OpenCalc/LICENSE" "SYS:Utilities/OpenCalc/LICENSE"' in cl
+          and 'add "Utilities/OpenCalc.info" "SYS:Utilities/OpenCalc.info"' in cl
+          and (oc.dir / "Utilities/OpenCalc/OpenCalc").read_bytes() == files[linked / "OpenCalc"], str(cl))
+    tool = icon_of((oc.dir / "Utilities/OpenCalc/OpenCalc.info").read_bytes())
+    check("OpenCalc.info: a tool icon with 32 KB of stack, as OpenWrite's", tool[0] == FakeIcons.WBTOOL and tool[4] == 32768)
+    dests = {}
+    for name, lines in (("GFOffice", gl), ("OpenWrite", wl), ("OpenCalc", cl)):
+        for l in lines:
+            m = re.match(r'(?:copy|default|add) "[^"]*" "([^"]*)"$', l)
+            if m:
+                dests.setdefault(m.group(1), []).append(name)
+    check("no file is in two of the suite's parts (the shared ones have one owner)",
+          not [d for d, ps in dests.items() if len(ps) > 1], str({d: ps for d, ps in dests.items() if len(ps) > 1}))
+    check("the parts' versions are read from owf.library and OpenCalc",
+          bp.PART_MAIN.get("GFOffice") == ("Libs/owf.library", "owf.library")
+          and bp.PART_MAIN.get("OpenCalc") == ("Utilities/OpenCalc/OpenCalc", "OpenCalc"))
+    try:
+        bp.check_part_versions(top / "Parts")
+        check("check_part_versions: GFOffice, OpenWrite and OpenCalc match their binaries", True)
+    except SystemExit as e:
+        check("check_part_versions: GFOffice, OpenWrite and OpenCalc match their binaries", False, str(e))
+
+    # OpenCalc's program not built: the part is left out, the others are made as before
+    (linked / "OpenCalc").unlink()
+    top2 = tmp / "GF2/OpenUp"
+    gf2, wr2, oc2 = bp.gfoffice_parts(top2, src, zlib, b"guest MIT licence\n", icons)
+    check("without OpenCalc's program, no OpenCalc part, and GFOffice and OpenWrite as before",
+          oc2 is None and not (top2 / "Parts/OpenCalc").exists() and gf2.lines == gf.lines and wr2.lines == wr.lines)
+
+    # INSTALL and REMOVE through OpenUpTool's own code, from a lab with OpenUp's own part only
+    fresh = "OpenUp\t0.1\npart\tOpenUp\t0.8.9\nnew\tSYS:C/OpenUpTool\n"
+    gp, wp, cp = gf.dir / "Part", wr.dir / "Part", oc.dir / "Part"
+    rc, out = manifest_run(filt, "install", wp, fresh, tmp)
+    check("INSTALL OpenWrite alone: left out (5), and it says GFOffice is missing", rc == 5 and out == "missing GFOffice\n",
+          f"{rc} {out!r}")
+    rc, out = manifest_run(filt, "install", cp, fresh, tmp)
+    check("INSTALL OpenCalc alone: left out too", rc == 5 and out == "missing GFOffice\n", f"{rc} {out!r}")
+    rc, m1 = manifest_run(filt, "install", gp, fresh, tmp)
+    check("INSTALL GFOffice: installed, needing nothing", rc == 0 and "part\tGFOffice\t1.1" in m1.splitlines()
+          and OUL_NEEDPART not in m1, f"{rc} {m1!r}")
+    rc, m2 = manifest_run(filt, "install", wp, m1, tmp)
+    check("INSTALL OpenWrite after GFOffice: installed, its need noted in the manifest",
+          rc == 0 and "part\tOpenWrite\t2.0.1" in m2.splitlines() and f"{OUL_NEEDPART}\tOpenWrite\tGFOffice" in m2.splitlines(),
+          f"{rc} {m2!r}")
+    rc, again = manifest_run(filt, "install", wp, m2, tmp)
+    check("INSTALL OpenWrite again (an update): its need noted once", rc == 0 and again.count(f"{OUL_NEEDPART}\tOpenWrite\t") == 1,
+          again)
+    rc, m3 = manifest_run(filt, "install", cp, m2, tmp)
+    check("INSTALL OpenCalc after GFOffice: installed", rc == 0 and f"{OUL_NEEDPART}\tOpenCalc\tGFOffice" in m3.splitlines())
+    rc, out = manifest_run(filt, "remove", gp, m3, tmp)
+    check("REMOVE GFOffice while OpenWrite is installed: refused (5), nothing changed",
+          rc == 5 and out == "needed by OpenWrite\n", f"{rc} {out!r}")
+    rc, m4 = manifest_run(filt, "remove", wp, m3, tmp)
+    check("REMOVE OpenWrite first: taken out, its need with it", rc == 0 and "OpenWrite" not in m4, m4)
+    rc, out = manifest_run(filt, "remove", gp, m4, tmp)
+    check("REMOVE GFOffice while OpenCalc is still installed: refused", rc == 5 and out == "needed by OpenCalc\n", f"{rc} {out!r}")
+    rc, m5 = manifest_run(filt, "remove", cp, m4, tmp)
+    rc2, m6 = manifest_run(filt, "remove", gp, m5, tmp)
+    check("REMOVE GFOffice once no program needs it: taken out", rc == 0 and rc2 == 0
+          and m6.splitlines() == fresh.splitlines(), m6)
+    # Instance-32: an OpenWrite from an earlier OpenUp, with libowf linked in and no need noted, and no GFOffice
+    old = fresh + "part\tOpenWrite\t2.0.1\nnew\tLIBS:z.library\nnew\tSYS:C/OWConvert\n"
+    rc, out = manifest_run(filt, "install", wp, old, tmp)
+    check("Instance-32 (an older OpenWrite, no GFOffice): the new OpenWrite waits for GFOffice", rc == 5 and out == "missing GFOffice\n")
+    rc, out = manifest_run(filt, "remove", gp, manifest_run(filt, "install", gp, old, tmp)[1], tmp)
+    check("Instance-32: REMOVE GFOffice under the older OpenWrite, which doesn't need it, is allowed", rc == 0, out)
+    inst = (ROOT / "pack/Install-OpenUp").read_text(encoding="latin-1")
+    a, b = inst.find("INSTALL Parts/GFOffice >>"), inst.find("INSTALL Parts/OpenWrite >>")
+    check("Install-OpenUp: GFOffice right before OpenWrite, under OpenWrite's choice",
+          0 < a < b and inst.rfind("(if (bitand #parts 1048576)", 0, a) > inst.rfind("(if (bitand #parts", 0, a) - 1
+          and inst.find("(if (bitand #parts", a) > b and inst.count("INSTALL Parts/GFOffice") == 1)
+
+
+OUL_NEEDPART = "needpart"     # src/openup_lines.h
 
 
 def main() -> int:
@@ -336,6 +498,8 @@ def main() -> int:
         check("every tool type the icon has is one OpenSnap reads", all(f'"{k}"' in snap_src for k in keys), str(keys))
         check("Install-OpenUp installs OpenSnap on every install",
               "INSTALL Parts/OpenSnap" in (ROOT / "pack/Install-OpenUp").read_text(encoding="latin-1"))
+
+        gfoffice_checks(tmp, filt)
 
     # OpenTypes and OpenDateTime: pages of OpenPrefs, parts with no files that archive their stubs
     src = (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")

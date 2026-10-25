@@ -146,8 +146,13 @@ a Part file that C/OpenUpTool reads:
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenDrawer/           OpenDrawer, the drawer windows of the Team's own Workbench, beside the OS's
                         Workbench, in SYS:Utilities; off by default (opengadtools workbench/)
-  OpenWrite/            OpenWrite, the word processor, C:OWConvert, and z.library, ours, for its DOCX
-                        and ODT (gfoffice, openamigalayout; amigachrome-guest's openzlib)
+  GFOffice/             what the GFOffice Suite's programs share: LIBS:owf.library, LIBS:z.library (ours,
+                        OpenZlib), the spelling dictionary in SYS:Dictionaries and C:OWConvert, with their
+                        licences; installed with OpenWrite (gfoffice; amigachrome-guest's openzlib)
+  OpenWrite/            OpenWrite, the word processor, on owf.library; it needs GFOffice ("needs part")
+                        (gfoffice, openamigalayout)
+  OpenCalc/             OpenCalc, the GFOffice Suite's spreadsheet; it needs GFOffice. Left out when gfoffice's
+                        build didn't make it; no Installer choice yet (OpenUpTool INSTALL Parts/OpenCalc)
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
   OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (openamigamulticore)
@@ -335,6 +340,11 @@ class Part:
 
     def line(self, text: str):
         self.lines.append(text)
+
+    def needs_part(self, name: str):
+        """Another part that must be installed first: OpenUpTool INSTALL leaves this one out without it, and
+        REMOVE of that part refuses while this one is installed (src/openup_lines.h, 25 October 2026)."""
+        self.lines.append(f"needs part {name}")
 
     def write(self):
         (self.dir / "Part").write_text("\n".join(self.lines) + "\n", encoding="latin-1")
@@ -563,11 +573,13 @@ def build_parts(a):
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamui / "os3/build.sh"], env=env)
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
-    # OpenWrite carries its own OpenGadTools copy and needs GCC 16 (its build-os3.sh stops on the os32
-    # stove's 6.5); its pages are OpenLayout's. DOCX and ODT go through z.library (openzlib, below), so
-    # there is no zlib source in the build
-    run(["sh", a.gfoffice / "build-os3.sh"],
-        env=dict(env, OS32_GCC16=gcc16_root, OPENLAYOUT_SRC=str(a.openamigalayout)))
+    # The GFOffice Suite (gfoffice) carries its own OpenGadTools copy and needs GCC 16 (its build-os3.sh stops on
+    # the os32 stove's 6.5); OpenWrite's pages are OpenLayout's. Built twice (GFO_LINKED, GFO_LIBRARY): with libowf
+    # linked in, for OWConvert and OpenCalc, and on owf.library, for the library and OpenWrite (gfoffice_parts).
+    # Deflate is z.library's (openzlib, below), so there is no zlib source in the build
+    gfo_env = dict(env, OS32_GCC16=gcc16_root, OPENLAYOUT_SRC=str(a.openamigalayout))
+    run(["sh", a.gfoffice / "build-os3.sh", a.gfoffice / GFO_LINKED], env=dict(gfo_env, OWF="linked"))
+    run(["sh", a.gfoffice / "build-os3.sh", a.gfoffice / GFO_LIBRARY], env=dict(gfo_env, OWF="library"))
     # OpenMail: GCC 16 (its build-os3.sh's own default), TLS through OpenTLS, whose headers it carries
     run(["sh", a.openamigamail / "build-os3.sh"], env=dict(env, STOVE=gcc16_root))
     # openmulticore.library with the os32 stove, as its build.sh says (built with
@@ -621,8 +633,9 @@ def build_parts(a):
     # OpenRexx (amigachrome-guest libraries/openrexx, its default os32-gcc16 stove): rexxsyslib.library,
     # rexxsupport.library and RexxMast
     run(["sh", g / "openrexx/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openrexx")))
-    # z.library 53.12 (amigachrome-guest libraries/openzlib, GCC 16): OpenWrite's, which opens it when a
-    # document first needs deflate or inflate
+    # z.library 53.12 (amigachrome-guest libraries/openzlib, GCC 16): the GFOffice part's (and OpenImage's).
+    # libowf opens it when a document first needs deflate (saving, PNG pictures in PDFs) or inflate (faster than
+    # libowf's own inflater, which reads zip packages without it)
     run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
     # softfpu.library (amigachrome-guest libraries/opensoftfpu, its default os32-gcc16 stove): the OpenUp part's
     run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
@@ -816,6 +829,90 @@ def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
     core.line('when OpenKick retire "ENVARC:Sys/CommandSwap.prefs"')
 
 
+# The GFOffice Suite's two builds (gfoffice build-os3.sh, OUT_DIR under the checkout): with libowf linked in
+# (OWF=linked) for OWConvert, which carries the workbooks owf.library has no calls for yet, and OpenCalc (linked
+# only, for the same reason); and on owf.library (OWF=library: build-library.sh's owf.library in OUT_DIR/library)
+# for the library and OpenWrite, so libowf is in memory once however many of the suite's programs run (the
+# GFOffice design's section 1.2)
+GFO_LINKED = "build/os3"
+GFO_LIBRARY = "build/os3-library"
+
+
+def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icons) -> tuple["Part", "Part", "Part | None"]:
+    """The GFOffice Suite's parts (gfoffice docs/gfoffice/Design-Suite-Shared.md, section 12, 25 October 2026).
+
+    GFOffice holds what the suite's programs share, so those files have one owner: LIBS:owf.library, LIBS:z.library
+    (ours, OpenZlib: deflate, for saving compressed and for PNG pictures in PDFs; libowf reads zip packages without
+    it since its own inflater), the spelling dictionaries in SYS:Dictionaries (where OpenWrite looks after its own
+    drawer), C:OWConvert, and their licences in SYS:Utilities/OpenUp/Licences. Its version is owf.library's.
+
+    Each program's part needs it ("needs part GFOffice", the design's recommended way): OpenUpTool INSTALL leaves
+    the program out until GFOffice is installed, and REMOVE of GFOffice refuses while a program that needs it is
+    installed. OpenWrite is built on owf.library, in SYS:Utilities/OpenWrite as before; the dictionary an earlier
+    part put beside it is archived (it finds SYS:Dictionaries' instead; the user's own words, user.words, stay).
+    OpenCalc, the spreadsheet, goes in SYS:Utilities/OpenCalc; it is None, and left out, when gfoffice's build
+    didn't make it. The parts are returned unwritten."""
+    linked, onlib = src / GFO_LINKED, src / GFO_LIBRARY
+    lic = "Utilities/OpenUp/Licences/"
+    lib = (onlib / "library/owf.library").read_bytes()
+    version = binary_version(lib, "owf.library")
+    if not version:
+        raise SystemExit(f"GFOffice: {onlib / 'library/owf.library'} has no version string")
+    gf = Part(top, "GFOffice", version, "GFOffice: what the GFOffice Suite's programs share: owf.library, z.library, "
+              "the dictionary in SYS:Dictionaries and C:OWConvert")
+    gf.add("Libs/owf.library", lib, "LIBS:owf.library")
+    gf.add("Libs/z.library", zlib, "LIBS:z.library")
+    words = sorted((src / "Dictionaries").glob("*.words"))
+    for d in words:
+        gf.add(f"Dictionaries/{d.name}", d.read_bytes(), f"SYS:Dictionaries/{d.name}")
+    gf.add("C/OWConvert", (linked / "OWConvert").read_bytes(), "SYS:C/OWConvert")
+    gf.add(lic + "GFOffice.txt", b"owf.library and C:OWConvert are the GFOffice Suite's (DalsinAI/gfoffice):\n\n"
+           + (src / "LICENSE").read_bytes(), "SYS:" + lic + "GFOffice.txt")
+    zver = binary_version(zlib, "z.library")
+    gf.add(lic + "z.library.txt", f"LIBS:z.library{' ' + zver if zver else ''} is OpenZlib, the AmigaChrome Team's own "
+           "(DalsinAI/amigachrome-guest libraries/openzlib):\n\n".encode() + guest_licence, "SYS:" + lic + "z.library.txt")
+    if words:
+        scowl = src / "licenses/SCOWL-ASPELL-English.txt"
+        if not scowl.is_file():
+            raise SystemExit(f"GFOffice: the dictionaries' licence, {scowl}, is missing")
+        gf.add(lic + "GFOffice-Dictionaries.txt", f"The spelling dictionaries in SYS:Dictionaries ({', '.join(d.name for d in words)}) "
+               "are from the SCOWL/Aspell English word list, under these terms:\n\n".encode() + scowl.read_bytes(),
+               "SYS:" + lic + "GFOffice-Dictionaries.txt")
+
+    # OpenWrite: the word processor, as its 1.0 release laid it out, on owf.library
+    wr = Part(top, "OpenWrite", "2.0.1", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr.needs_part("GFOffice")
+    wr.add("Utilities/OpenWrite/OpenWrite", (onlib / "OpenWrite").read_bytes(), "SYS:Utilities/OpenWrite/OpenWrite")
+    wr.add("Utilities/OpenWrite/OpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/OpenWrite/OpenWrite.info")
+    # the newest release's notes, as the release archive carries them
+    notes = sorted(src.glob("RELEASE_NOTES_*.md"), key=lambda f: [int(n) for n in f.stem.split("_")[-1].split(".")])
+    for name, s in (("LICENSE", "LICENSE"), ("THIRD_PARTY.txt", "THIRD_PARTY.md"), ("Release-Notes.txt", notes[-1].name if notes else "RELEASE_NOTES_1.0.md")):
+        if (src / s).is_file():
+            wr.add(f"Utilities/OpenWrite/{name}", (src / s).read_bytes(), f"SYS:Utilities/OpenWrite/{name}")
+    for f in sorted((src / "licenses").glob("*")):
+        wr.add(f"Utilities/OpenWrite/licenses/{f.name}", f.read_bytes(), f"SYS:Utilities/OpenWrite/licenses/{f.name}")
+    wr.add("Utilities/OpenWrite.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/OpenWrite.info", own=True)
+    for d in words:                             # GFOffice's now, in SYS:Dictionaries
+        wr.line(f'retire "SYS:Utilities/OpenWrite/Dictionaries/{d.name}"')
+
+    # OpenCalc: the spreadsheet (gfoffice app/opencalc.c), with libowf linked in
+    oc = None
+    prog = linked / "OpenCalc"
+    if prog.is_file():
+        data = prog.read_bytes()
+        oc = Part(top, "OpenCalc", binary_version(data, "OpenCalc") or "?",
+                  "OpenCalc: the GFOffice Suite's spreadsheet, with formulas, for XLSX, ODS, XLS and CSV")
+        oc.needs_part("GFOffice")
+        oc.add("Utilities/OpenCalc/OpenCalc", data, "SYS:Utilities/OpenCalc/OpenCalc")
+        oc.add("Utilities/OpenCalc/OpenCalc.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/OpenCalc/OpenCalc.info")
+        if (src / "LICENSE").is_file():
+            oc.add("Utilities/OpenCalc/LICENSE", (src / "LICENSE").read_bytes(), "SYS:Utilities/OpenCalc/LICENSE")
+        oc.add("Utilities/OpenCalc.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/OpenCalc.info", own=True)
+    else:
+        print(f"  OpenCalc: left out, {prog} wasn't built")
+    return gf, wr, oc
+
+
 # Each part's main binary: the part's declared version (its Part file, the
 # Installer's log, the manifest) must be that binary's $VER version.
 PART_MAIN = {
@@ -850,6 +947,8 @@ PART_MAIN = {
     "OpenEdit": ("C/OpenEdit", "OpenEdit"),
     "OpenDrawer": ("Utilities/OpenDrawer", "OpenDrawer"),
     "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
+    "GFOffice": ("Libs/owf.library", "owf.library"),          # the GFOffice Suite's shared files: owf.library's version
+    "OpenCalc": ("Utilities/OpenCalc/OpenCalc", "OpenCalc"),
     "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
     "OpenBrowserLite": ("Utilities/OpenBrowserLite/OpenBrowserLite", "OpenBrowserLite"),
@@ -1624,7 +1723,7 @@ def main() -> int:
                 name = f["dest"].rsplit("/", 1)[-1]
                 img.add(f["pack"], (pk / "OpenDatatypes" / f["pack"]).read_bytes(), f["dest"],
                         own=not f["pack"].startswith("Classes/") or name in ("webp.datatype", "webm.datatype"))
-        # z.library is the Team's OpenZlib (the user, 23 October 2026), the same file OpenWrite's part carries:
+        # z.library is the Team's OpenZlib (the user, 23 October 2026), the same file the GFOffice part carries:
         # gzip.datatype and openpng.datatype open it, so it comes with them too. The pack lists it under "zlib"
         # when it was built (opendatatypes builds it from the guest checkout).
         if man.get("zlib"):
@@ -2125,28 +2224,13 @@ def main() -> int:
     od.add("Utilities/OpenDrawer.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Utilities/OpenDrawer.info")
     od.write()
 
-    # OpenWrite: the word processor (gfoffice), as its 1.0 release lays it
-    # out: a drawer, with the dictionary beside the program, where it looks
-    # (PROGDIR:Dictionaries), and OWConvert in C: for scripts. Both open
-    # LIBS:z.library (openzlib) for DOCX and ODT, so it comes with them
-    ow_src = a.gfoffice
-    ob = ow_src / "build/os3"
-    wr = Part(top, "OpenWrite", "2.0.1", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
-    wr.add("Utilities/OpenWrite/OpenWrite", (ob / "OpenWrite").read_bytes(), "SYS:Utilities/OpenWrite/OpenWrite")
-    wr.add("Utilities/OpenWrite/OpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/OpenWrite/OpenWrite.info")
-    for d in sorted((ow_src / "Dictionaries").glob("*.words")):
-        wr.add(f"Utilities/OpenWrite/Dictionaries/{d.name}", d.read_bytes(), f"SYS:Utilities/OpenWrite/Dictionaries/{d.name}")
-    # the newest release's notes, as the release archive carries them
-    notes = sorted(ow_src.glob("RELEASE_NOTES_*.md"), key=lambda f: [int(n) for n in f.stem.split("_")[-1].split(".")])
-    for name, src in (("LICENSE", "LICENSE"), ("THIRD_PARTY.txt", "THIRD_PARTY.md"), ("Release-Notes.txt", notes[-1].name if notes else "RELEASE_NOTES_1.0.md")):
-        if (ow_src / src).is_file():
-            wr.add(f"Utilities/OpenWrite/{name}", (ow_src / src).read_bytes(), f"SYS:Utilities/OpenWrite/{name}")
-    for lic in sorted((ow_src / "licenses").glob("*")):
-        wr.add(f"Utilities/OpenWrite/licenses/{lic.name}", lic.read_bytes(), f"SYS:Utilities/OpenWrite/licenses/{lic.name}")
-    wr.add("Utilities/OpenWrite.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/OpenWrite.info", own=True)
-    wr.add("C/OWConvert", (ob / "OWConvert").read_bytes(), "SYS:C/OWConvert")
-    wr.add("Libs/z.library", (ROOT / "build/openzlib/libs/z.library").read_bytes(), "LIBS:z.library")
-    wr.write()
+    # The GFOffice Suite (gfoffice): GFOffice, the shared files (owf.library, z.library, the dictionary in
+    # SYS:Dictionaries, OWConvert), which OpenWrite, on owf.library, and OpenCalc need (gfoffice_parts)
+    gfo, wr, gcalc = gfoffice_parts(top, a.gfoffice, (ROOT / "build/openzlib/libs/z.library").read_bytes(),
+                                    (a.guest / "LICENSE").read_bytes(), icons)
+    for p in (gfo, wr, gcalc):
+        if p:
+            p.write()
 
     # OpenMUI: zunemaster.library, MUI from Zune for OS 3.x (openamigamui), a
     # preview beside MUI, which it doesn't replace; ZuneTest shows it working.
@@ -2270,6 +2354,9 @@ def main() -> int:
                     + ([(dm.dir / f"Utilities/OpenDemos/{n}.info", "page") for n in ("Boing", "Chrome Gears", "Copper Tunnel")]
                        + [(dm.dir / "Utilities/OpenDemos.info", None)] if dm else [])
                     + ([(tg.dir / "Utilities/UnofficialTelegram.info", "page")] if tg else [])
+                    # OpenCalc has no picture of its own in icons/open yet
+                    + ([(gcalc.dir / "Utilities/OpenCalc/OpenCalc.info", "page"), (gcalc.dir / "Utilities/OpenCalc.info", None)]
+                       if gcalc else [])
                     + ([(dev.dir / "Developer/OpenGPU-SDK.info", None), (dev.dir / "Developer.info", None)] if dev else [])
                     + ([(oin.dir / "Utilities/OpenUp/Docs.info", None)]
                        + [(oin.dir / f"Utilities/OpenUp/Docs/{n}.info", "page") for n in ("OpenInput.txt", "Design-OpenInput.txt", "Gamepads.txt")]
