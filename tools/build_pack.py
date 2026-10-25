@@ -497,13 +497,27 @@ def archive_art() -> bytes:
     return img.tobytes()
 
 
+def late_combine_off(cc) -> list[str]:
+    """["-fno-late-combine-instructions"] when cc knows the option, else []. OpenAmigaGCC 16.2.0-open3's late-combine
+    pass can store a copy one place late (GCC PR 123853): built with it, openuptool.c's manifest_save copied the
+    manifest's first line (OpenUp, a tab, 0.1) as "move.b (a0)+,(a0,d1.l)", a byte late. Off until OpenAmigaGCC
+    open4 (openamigagcc #29). The os32 stove's GCC 6.5 refuses the option, and gets none."""
+    try:
+        r = subprocess.run([str(cc), "-fno-late-combine-instructions", "-S", "-o", "/dev/null", "-x", "c", "/dev/null"],
+                           stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return []
+    return ["-fno-late-combine-instructions"] if r.returncode == 0 else []
+
+
 def build_parts(a):
     """Each part's own build, into its own build folder."""
     env = dict(os.environ, AMIGA_CC=str(CC), PATH=f"{CC.parent}:{os.environ['PATH']}")
+    late = late_combine_off(CC)   # for this file's own compiles below; the parts' scripts have their own probe
     (ROOT / "build/os3").mkdir(parents=True, exist_ok=True)   # a fresh checkout has no build folder
-    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
+    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, *late, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpTool", ROOT / "src/openuptool.c"], env=env)
-    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, "-fno-common",
+    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, *late, "-fno-common",
          "-o", ROOT / "build/os3/OpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
     # OpenMonitor, the task manager (0.4 on: src/openmonitor/, its own build.sh, GCC 16 as opengadtools wants),
     # built resident (libnix -resident: each run its own variables), so one seglist serves every run. The ROM
@@ -521,8 +535,8 @@ def build_parts(a):
     out = g / "build/guest/os32"
     run(["sh", g / "devices/accontrol.device/build.sh", out], env=env)
     inc = g / "devices/accontrol.device/include"
-    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-O2", NULL_OK, "-Wall", f"-I{inc}", g / "tools/acclip/acclip.c", "-o", out / "ACClip"], env=env)
-    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-O2", NULL_OK, "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
+    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-O2", NULL_OK, *late, "-Wall", f"-I{inc}", g / "tools/acclip/acclip.c", "-o", out / "ACClip"], env=env)
+    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-O2", NULL_OK, *late, "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
     run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=env)        # OpenGPU's driver for the ACRTG board
     # opengfx.library 1.2: the stub that sends opengfx.library's calls to opengpu.library 0.6 (GCC 16)
@@ -1821,7 +1835,7 @@ def main() -> int:
 
     # OpenMenus: the engine, started at boot, and its editor (openamigaprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "OpenMenus", "0.4.5", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
+    menus = Part(top, "OpenMenus", "0.4.6", "OpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/OpenMenus", (a.openamigaprefs / "Menus/build/os3/OpenMenus").read_bytes(), "SYS:C/OpenMenus")
     menus.line("startup Run >NIL: C:OpenMenus")
     menus.write()
