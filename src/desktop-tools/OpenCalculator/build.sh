@@ -1,7 +1,7 @@
 #!/bin/sh
-# OpenCalc with the os32 stove (m68k-amigaos-gcc, NDK 3.2): the portable engine (src/opencalc.c,
+# OpenCalculator (OpenCalc until 25 October 2026) with the os32 stove (m68k-amigaos-gcc, NDK 3.2): the portable engine (src/opencalc.c,
 # OpenUp Desktop Tools 0.1) and its Workbench window (src/calc_amiga.c).
-#   OpenCalc/build.sh [OUT_DIR]       (default build/os3)
+#   OpenCalculator/build.sh [OUT_DIR] (default build/os3)
 # 68040 with soft float, as every Open app (the specs file keeps libm020); -lm for the engine's sin, cos, log and pow.
 # MIT, Copyright (c) 2026 AmigaChrome Team.
 set -eu
@@ -16,5 +16,5 @@ CFLAGS="-noixemul -m68040 -specs=$SPECS -std=gnu99 -Wall -Werror -O2 -fno-delete
 # manifest came out so): off until open4 (openamigagcc #29), on a compiler that knows the option (GCC 6.5 doesn't).
 if "$CC" -fno-late-combine-instructions -S -o /dev/null -x c /dev/null 2>/dev/null; then CFLAGS="$CFLAGS -fno-late-combine-instructions"; fi
 mkdir -p "$OUT"
-"$CC" $CFLAGS -o "$OUT/OpenCalc" "$HERE/src/calc_amiga.c" "$HERE/src/opencalc.c" -lm
-echo "$OUT/OpenCalc ($(wc -c < "$OUT/OpenCalc") bytes)"
+"$CC" $CFLAGS -o "$OUT/OpenCalculator" "$HERE/src/calc_amiga.c" "$HERE/src/opencalc.c" -lm
+echo "$OUT/OpenCalculator ($(wc -c < "$OUT/OpenCalculator") bytes)"
