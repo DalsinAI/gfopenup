@@ -16,6 +16,8 @@ pack Cradle offers new instances.
     without a 64-bit divide;
   - a path painted with a colour, a LINEAR gradient or a pattern (a picture under a matrix), drawn a run at a time;
   - COMPOSITE's bilinear scale of an ARGB32 picture, with a source row's mixes kept for the next target row.
+  The blend modes HUE, SATURATION, COLOR and LUMINOSITY no longer divide by 0 over a colour past its alpha, which
+  was a Software Failure on the 68k (openamigartg #141).
   opengpu.library is in the OpenGPU part, and in the OpenRTG part beside openrtg.library. On Kickstart 3.2.3 that
   copy is the one programs open. The OpenKick ROM carries its own opengpu.library 0.20, and programs open the ROM's
   (the same version in LIBS: isn't loaded), so there the faster drawing comes with Team 4's next ROM build.
