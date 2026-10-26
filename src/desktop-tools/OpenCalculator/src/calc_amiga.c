@@ -1,8 +1,9 @@
-/* OpenCalc: the calculator's Workbench window, on the engine in opencalc.c (OpenUp Desktop Tools 0.1,
- * received 10 October 2026). GadTools, styled by OpenLook as every Open app. It takes over
+/* OpenCalculator: the calculator's Workbench window, on the engine in opencalc.c (OpenUp Desktop Tools 0.1,
+ * received 10 October 2026, as OpenCalc; renamed OpenCalculator on 25 October 2026, as Dale decided, since the
+ * GFOffice Suite's spreadsheet is OpenCalc). GadTools, styled by OpenLook as every Open app. It takes over
  * SYS:Tools/Calculator (OpenUp's RECONCILE retires that one).
  *
- *   OpenCalc [EXPRESSION]           from a Shell: prints the result and ends
+ *   OpenCalculator [EXPRESSION]     from a Shell: prints the result and ends
  *
  * One editable expression line, the result under it, the keypad, the scientific keys, degrees or
  * radians, the memory keys (MC MR M+ M-), the last calculations as a list (a click puts one back
@@ -30,9 +31,9 @@
 
 #include "opencalc.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenCalc 0.3 (11.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
-#define TITLE "Calculator"
-#define SCREEN_TITLE "OpenCalc 0.2"
+static const char version[] __attribute__((used)) = "$VER: OpenCalculator 0.4 (25.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
+#define TITLE "OpenCalculator"
+#define SCREEN_TITLE "OpenCalculator 0.4"
 #define EXPR_MAX 200
 #define HIST_MAX 24
 
@@ -332,7 +333,7 @@ int main(int argc, char **argv)
     (void)version;
     OC_Init(&ctx);
     new_list(&hist);
-    if (argc > 1) {                                  /* OpenCalc 2+2: the answer on the Shell */
+    if (argc > 1) {                                  /* OpenCalculator 2+2: the answer on the Shell */
         double v = 0; OC_Status st; char num[40], line[EXPR_MAX + 1] = "";
         for (i = 1; i < argc; i++) { if (strlen(line) + strlen(argv[i]) + 1 <= EXPR_MAX) { if (i > 1) strcat(line, " "); strcat(line, argv[i]); } }
         st = OC_Eval(&ctx, line, &v);

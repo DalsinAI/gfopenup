@@ -9,7 +9,10 @@
  *   ./test_openup_lines install PART MANIFEST   INSTALL's "needs part" check of the Part file against the manifest
  *                                          (OpenUp.manifest's form): "missing <part>" for each part it needs that
  *                                          isn't installed, and 5 (RETURN_WARN: left out); else the manifest as
- *                                          INSTALL leaves it (the part's line, its needpart lines), and 0
+ *                                          INSTALL leaves it (the part's line, its needpart and startup lines), and 0
+ *   ./test_openup_lines install PART MANIFEST fail   the same install with a file that couldn't be put in place:
+ *                                          the manifest as INSTALL leaves it then (no part line, the startup and
+ *                                          needpart lines as they were), and 10 (RETURN_ERROR)
  *   ./test_openup_lines remove PART MANIFEST    REMOVE's check: "needed by <part>" and 5 while an installed part
  *                                          needs this one; else the manifest as REMOVE leaves it, and 0
  * tests/test_build_pack.py runs these forms over the parts build_pack.py writes.
@@ -37,6 +40,7 @@ static void truth(const char *what, int got, int want)
 }
 
 static int need_checks(void);
+static int way_checks(void);
 
 static int checks(void)
 {
@@ -126,6 +130,69 @@ static int need_checks(void)
           && !strcmp(name, "OpenWrite"), 1);
     truth("part name: partial is no part line", oul_part_name("partial x\n", name, sizeof name), 0);
     truth("part name: one too long for the buffer", oul_part_name("part ABCDEFGHIJKLMNOPQRSTUVWXYZ 1\n", name, sizeof name), 0);
+    return way_checks();
+}
+
+static const char *way(const char *path, int i)
+{
+    static char out[32];
+    return oul_way(path, i, out, sizeof out) ? out : NULL;
+}
+
+/* The kinds of a manifest's lines, in order, the taken-out ones left out: "part startup ostartup ..." */
+static const char *kinds(const oul_entry *e, int n)
+{
+    static char out[256];
+    int i;
+    out[0] = 0;
+    for (i = 0; i < n; i++)
+        if (e[i].kind[0]) { if (out[0]) strcat(out, " "); strcat(out, e[i].kind); }
+    return out;
+}
+
+/* INSTALL's way (a file where a part's drawer goes) and its end (a failed install isn't listed), 25 Oct 2026 */
+static int way_checks(void)
+{
+    same("way 0 of SYS:Utilities/OpenCalc/OpenCalc", way("SYS:Utilities/OpenCalc/OpenCalc", 0), "SYS:Utilities");
+    same("way 1: the OpenCalc drawer, where Instance-32's calculator is a file", way("SYS:Utilities/OpenCalc/OpenCalc", 1),
+         "SYS:Utilities/OpenCalc");
+    same("way 2: none (the file itself isn't a drawer of its way)", way("SYS:Utilities/OpenCalc/OpenCalc", 2), NULL);
+    same("a file at a volume's top has no drawers", way("LIBS:owf.library", 0), NULL);
+    same("a quoted name with a space", way("SYS:Utilities/Open Write/OpenWrite", 0), "SYS:Utilities");
+    same("no volume: the first name", way("Utilities/OpenCalc", 0), "Utilities");
+    same("a parent's \"/\" right after the volume: nothing is looked at", way("SYS:/x/y", 0), NULL);
+    same("\"//\": the drawer before it", way("SYS:a//b/c", 0), "SYS:a");
+    same("\"//\": nothing at or after it", way("SYS:a//b/c", 1), NULL);
+    same("one that doesn't fit the buffer", way("SYS:AVeryLongDrawerNameIndeedThatGoesOn/x", 0), NULL);
+    {
+        /* OpenMenus 0.4.5 to 0.4.6: one startup line kept, one changed; GFOffice needed before and now */
+        oul_entry m[12] = {
+            { "part", "OpenMenus", "0.4.5" }, { "startup", "Run >NIL: C:OpenMenus", "OpenMenus" },
+            { "startup", "C:OpenMenus OLD", "OpenMenus" }, { "startup", "Run >NIL: C:OpenDock", "OpenDock" },
+            { OUL_NEEDPART, "OpenMenus", "GFOffice" }, { OUL_NEEDPART, "OpenWrite", "GFOffice" },
+        };
+        oul_entry k[12];
+        int n = 6, first, i;
+        /* pass 1, as openuptool.c install does it: mark, keep the line still there, add the new ones */
+        for (i = 0; i < n; i++)
+            if (!strcmp(m[i].kind, "startup") && !strcmp(m[i].b, "OpenMenus")) strcpy(m[i].kind, "ostartup");
+        oul_mark_needs(m, n, "OpenMenus");
+        same("needs marked: OpenMenus's only", kinds(m, n), "part ostartup ostartup startup oneedpart needpart");
+        first = n;
+        strcpy(m[1].kind, "startup");                           /* still in the Part file: kept, in its place */
+        m[n].a = "C:OpenMenus NEW"; m[n].b = "OpenMenus"; strcpy(m[n++].kind, "startup");
+        m[n].a = "OpenMenus"; m[n].b = "OpenFont"; strcpy(m[n++].kind, OUL_NEEDPART);
+        memcpy(k, m, sizeof m);
+        oul_settle(m, n, first, "OpenMenus", 1);
+        same("settled, installed: the old lines go, the kept and new ones stay", kinds(m, n),
+             "part startup startup needpart startup needpart");
+        truth("installed: OpenDock's startup line and OpenWrite's need untouched",
+              !strcmp(m[3].kind, "startup") && !strcmp(m[5].kind, OUL_NEEDPART), 1);
+        oul_settle(k, n, first, "OpenMenus", 0);
+        same("settled, failed: the lines are as before the install", kinds(k, n), "part startup startup startup needpart needpart");
+        truth("failed: the changed line is back, the new ones are out",
+              !strcmp(k[2].kind, "startup") && !strcmp(k[4].kind, OUL_NEEDPART) && !k[6].kind[0] && !k[7].kind[0], 1);
+    }
     printf(fails ? "%d FAILED\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }
@@ -198,15 +265,18 @@ static void print_manifest(void)
     }
 }
 
-/* INSTALL's "needs part" lines (openuptool.c install): pass 0 refuses, pass 1 notes; the files aren't copied here.
- * The lines' conditions are read as on an AmigaChrome instance on OS 3.2.3's ROM (Instance-32). */
-static int install_part(const char *part, const char *manifest)
+/* INSTALL's "needs part" and startup lines (openuptool.c install): pass 0 refuses, pass 1 notes; the files aren't
+ * copied here. With fail, a file couldn't be put in place: the part isn't listed, and its startup and needpart
+ * lines stay as they were (oul_settle; 25 Oct 2026), and 10 (RETURN_ERROR). The lines' conditions are read as on
+ * an AmigaChrome instance on OS 3.2.3's ROM (Instance-32). */
+static int install_part(const char *part, const char *manifest, int fail)
 {
     char *text = read_all(part), partname[64] = "", partver[32] = "";
-    int pass, refused = 0, i, found = 0;
+    int pass, refused = 0, i, found = 0, first = 0;
     if (!text || !load(manifest)) return 2;
     for (pass = 0; pass < 2 && !refused; pass++) {
         char *copy = dup_text(text), *p;
+        if (pass == 1) first = nents;
         for (p = copy; p && *p; ) {
             char *line = p, *w[12];
             const char *need;
@@ -214,12 +284,31 @@ static int install_part(const char *part, const char *manifest)
             while (*p && *p != '\n') p++;
             if (*p) *p++ = 0;
             line[strcspn(line, "\r")] = 0;
-            if (!(line = (char *)oul_strip(line, OUL_AMIGACHROME, 0)) || !strncmp(line, "startup ", 8)) continue;
+            if (!(line = (char *)oul_strip(line, OUL_AMIGACHROME, 0))) continue;
+            if (!strncmp(line, "startup ", 8)) {
+                if (pass == 1) {
+                    int kept = 0, have = 0;
+                    for (i = 0; i < nents; i++) {
+                        if (!strcmp(ents[i].kind, "ostartup") && !strcmp(ents[i].a, line + 8) && !strcmp(ents[i].b, partname)) {
+                            strcpy(ents[i].kind, "startup");            /* kept, in its place */
+                            kept = 1;
+                            break;
+                        }
+                        if (!strcmp(ents[i].kind, "startup") && !strcmp(ents[i].a, line + 8)) have = 1;
+                    }
+                    if (!kept && !have) add("startup", line + 8, partname);
+                }
+                continue;
+            }
             if (!(n = oul_words(line, w, 12))) continue;
             if (!strcmp(w[0], "part") && n >= 3) {
                 snprintf(partname, sizeof partname, "%s", w[1]);
                 snprintf(partver, sizeof partver, "%s", w[2]);
-                if (pass == 1) oul_drop_needs(ents, nents, partname);
+                if (pass == 1) {
+                    for (i = 0; i < nents; i++)
+                        if (!strcmp(ents[i].kind, "startup") && !strcmp(ents[i].b, partname)) strcpy(ents[i].kind, "ostartup");
+                    oul_mark_needs(ents, nents, partname);
+                }
             } else if (pass == 0 && (need = oul_needs_part(w, n))) {
                 if (!oul_installed(ents, nents, need)) { printf("missing %s\n", need); refused = 1; }
             } else if (pass == 1 && (need = oul_needs_part(w, n))) {
@@ -230,11 +319,14 @@ static int install_part(const char *part, const char *manifest)
     }
     free(text);
     if (refused) return 5;                              /* RETURN_WARN: left out, nothing changed */
-    for (i = 0; i < nents; i++)
-        if (!strcmp(ents[i].kind, "part") && !strcmp(ents[i].a, partname)) { ents[i].b = dup_text(partver); found = 1; }
-    if (!found) add("part", partname, partver);
+    oul_settle(ents, nents, first, partname, !fail);
+    if (!fail) {
+        for (i = 0; i < nents; i++)
+            if (!strcmp(ents[i].kind, "part") && !strcmp(ents[i].a, partname)) { ents[i].b = dup_text(partver); found = 1; }
+        if (!found) add("part", partname, partver);
+    }
     print_manifest();
-    return 0;
+    return fail ? 10 : 0;
 }
 
 /* REMOVE's check (openuptool.c remove_part), then the part's own lines out of the manifest (its files aren't
@@ -264,7 +356,8 @@ int main(int argc, char **argv)
     int any = 0;
     FILE *f;
     if (argc < 3) return checks();
-    if (argc == 4 && !strcmp(argv[1], "install")) return install_part(argv[2], argv[3]);
+    if ((argc == 4 || (argc == 5 && !strcmp(argv[4], "fail"))) && !strcmp(argv[1], "install"))
+        return install_part(argv[2], argv[3], argc == 5);
     if (argc == 4 && !strcmp(argv[1], "remove")) return remove_part(argv[2], argv[3]);
     if (!strncmp(argv[2], "openkick101", 11)) have |= OUL_OPENKICK;   /* oul_prefs_task(1, 47, 101) */
     else if (!strcmp(argv[2], "remove")) any = 1;
