@@ -21,6 +21,8 @@ pack Cradle offers new instances.
   opengpu.library is in the OpenGPU part, and in the OpenRTG part beside openrtg.library. On Kickstart 3.2.3 that
   copy is the one programs open. The OpenKick ROM carries its own opengpu.library 0.20, and programs open the ROM's
   (the same version in LIBS: isn't loaded), so there the faster drawing comes with Team 4's next ROM build.
+  Warp3D.library 5.0 and minigl.library 29.10 link OpenGPU's core into themselves, so the Warp3D part brings them
+  rebuilt with it, on every ROM.
 
 ## Since 0.8.9 (in 0.8.10, which wasn't released)
 
