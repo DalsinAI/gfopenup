@@ -23,7 +23,8 @@ Each part is built by its own repository's scripts, from checkouts given on
 the command line (or found beside this one), then laid out as it goes, with
 a Part file that C/OpenUpTool reads:
 
-  OpenUp/               OpenUpTool and the uninstaller, OpenUpMenu: the
+  OpenUp/               OpenUpTool and the uninstaller; C:ACROMFix, SetPatch for the open ROM
+                        (amigachrome-guest tools/acromfix), in the boot's OpenUp lines (first on a new install); OpenUpMenu: the
                         Tools menu's OpenUp and Preferences sub-menus, and
                         OpenMonitor, the task manager, and its icon in SYS:Utilities, on every ROM:
                         the disk's 0.4 and on is newer than the open ROM's 0.3.3, and the newer
@@ -146,12 +147,14 @@ a Part file that C/OpenUpTool reads:
   OpenEdit/             OpenEdit, the text editor with tabs (openamigaedit)
   OpenDrawer/           OpenDrawer, the drawer windows of the Team's own Workbench, beside the OS's
                         Workbench, in SYS:Utilities; off by default (opengadtools workbench/)
-  GFOffice/             what the GFOffice Suite's programs share: LIBS:owf.library, LIBS:z.library (ours,
+  GFOffice/             what the GFOffice Suite's programs share: their four libraries (LIBS:owfwrite.library,
+                        owfcalc.library, owfpub.library and owfpresent.library), LIBS:z.library (ours,
                         OpenZlib), the spelling dictionary in SYS:Dictionaries and C:OWConvert, with their
-                        licences; installed with OpenWrite (gfoffice; amigachrome-guest's openzlib)
-  OpenWrite/            OpenWrite, the word processor, on owf.library; it needs GFOffice ("needs part")
+                        licences; it retires LIBS:owf.library, which the four replace; installed with
+                        OpenWrite (gfoffice; amigachrome-guest's openzlib)
+  OpenWrite/            OpenWrite, the word processor, on owfwrite.library; it needs GFOffice ("needs part")
                         (gfoffice, openamigalayout)
-  OpenCalc/             OpenCalc, the GFOffice Suite's spreadsheet; it needs GFOffice. Left out when gfoffice's
+  OpenCalc/             OpenCalc, the GFOffice Suite's spreadsheet, on owfcalc.library; it needs GFOffice. Left out when gfoffice's
                         build didn't make it; no Installer choice yet (OpenUpTool INSTALL Parts/OpenCalc)
   OpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (openamigamui)
   OpenMulticore/        openmulticore.library: jobs on a cores board's other cores, or on
@@ -588,11 +591,10 @@ def build_parts(a):
     run(["sh", a.openamigamui / "os3/build.sh"], env=env)
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     # The GFOffice Suite (gfoffice) carries its own OpenGadTools copy and needs GCC 16 (its build-os3.sh stops on
-    # the os32 stove's 6.5); OpenWrite's pages are OpenLayout's. Built twice (GFO_LINKED, GFO_LIBRARY): with libowf
-    # linked in, for OWConvert and OpenCalc, and on owf.library, for the library and OpenWrite (gfoffice_parts).
-    # Deflate is z.library's (openzlib, below), so there is no zlib source in the build
+    # the os32 stove's 6.5); OpenWrite's pages are OpenLayout's. Built on its four libraries (GFO_LIBRARY,
+    # OWF=library: gfoffice docs/suite/owf-libraries.md), each program on its own, OWConvert on all four
+    # (gfoffice_parts). Deflate is z.library's (openzlib, below), so there is no zlib source in the build
     gfo_env = dict(env, OS32_GCC16=gcc16_root, OPENLAYOUT_SRC=str(a.openamigalayout))
-    run(["sh", a.gfoffice / "build-os3.sh", a.gfoffice / GFO_LINKED], env=dict(gfo_env, OWF="linked"))
     run(["sh", a.gfoffice / "build-os3.sh", a.gfoffice / GFO_LIBRARY], env=dict(gfo_env, OWF="library"))
     # OpenMail: GCC 16 (its build-os3.sh's own default), TLS through OpenTLS, whose headers it carries
     run(["sh", a.openamigamail / "build-os3.sh"], env=dict(env, STOVE=gcc16_root))
@@ -653,6 +655,8 @@ def build_parts(a):
     run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
     # softfpu.library (amigachrome-guest libraries/opensoftfpu, its default os32-gcc16 stove): the OpenUp part's
     run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
+    # ACROMFix (amigachrome-guest tools/acromfix, the os32 stove as its build.sh): the OpenUp part's
+    run(["sh", a.guest / "tools/acromfix/build-amiga.sh"], env=dict(genv, STOVE=str(STOVE), OUT=str(ROOT / "build/acromfix")))
     # printer.device (amigachrome-guest devices/openprinter.device, its default os32-gcc16 stove): the OpenPrinter part's
     run(["sh", a.guest / "devices/openprinter.device/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openprinter")))
     if a.openamigainput:
@@ -828,6 +832,17 @@ def opensnap_part(top: Path, program: bytes, icons) -> "Part":
     return sn
 
 
+def acromfix_lines(core: "Part", acromfix: bytes) -> None:
+    """ACROMFix (amigachrome-guest tools/acromfix): SetPatch for the open ROM. It brings an OpenKick ROM it knows up
+    to the fixes merged after that ROM was built, until Team 4's next ROM build has them (on 25 October 2026:
+    #516, a boot's Workbench in its ScreenMode prefs, and #518, system requesters measured in their font, for
+    Instance-32's full14b; #518 for the standard full15). On OS 3.2.3's Kickstart, an open ROM it doesn't know and
+    one with every fix it changes nothing, so the file and its line go in on every ROM: an install can move to
+    another ROM. QUIET: no boot window; its STATUS says what it did."""
+    core.add("C/ACROMFix", acromfix, "SYS:C/ACROMFix")
+    core.line("startup C:ACROMFix QUIET")
+
+
 def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
     """What the OpenUp part does by the ROM (the no-ROM-volume design of 24 October 2026, sections 5.5, 7 and 10).
 
@@ -843,44 +858,51 @@ def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
     core.line('when OpenKick retire "ENVARC:Sys/CommandSwap.prefs"')
 
 
-# The GFOffice Suite's two builds (gfoffice build-os3.sh, OUT_DIR under the checkout): with libowf linked in
-# (OWF=linked) for OWConvert, which carries the workbooks owf.library has no calls for yet, and OpenCalc (linked
-# only, for the same reason); and on owf.library (OWF=library: build-library.sh's owf.library in OUT_DIR/library)
-# for the library and OpenWrite, so libowf is in memory once however many of the suite's programs run (the
-# GFOffice design's section 1.2)
-GFO_LINKED = "build/os3"
+# The GFOffice Suite's build (gfoffice build-os3.sh, OUT_DIR under the checkout), on its libraries (OWF=library:
+# build-library.sh's owfwrite, owfcalc, owfpub and owfpresent.library in OUT_DIR/library; gfoffice
+# docs/suite/owf-libraries.md): OpenWrite on owfwrite.library, OpenCalc on owfcalc.library and OWConvert on all
+# four, so each program loads its own part of libowf, once however many of the suite's programs run. (Until
+# 25 October 2026 it was built twice: OWConvert and OpenCalc with libowf linked in, OpenWrite on owf.library.)
 GFO_LIBRARY = "build/os3-library"
+GFO_LIBS = ("owfwrite", "owfcalc", "owfpub", "owfpresent")
 
 
 def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icons) -> tuple["Part", "Part", "Part | None"]:
     """The GFOffice Suite's parts (gfoffice docs/gfoffice/Design-Suite-Shared.md, section 12, 25 October 2026).
 
-    GFOffice holds what the suite's programs share, so those files have one owner: LIBS:owf.library, LIBS:z.library
-    (ours, OpenZlib: deflate, for saving compressed and for PNG pictures in PDFs; libowf reads zip packages without
-    it since its own inflater), the spelling dictionaries in SYS:Dictionaries (where OpenWrite looks after its own
-    drawer), C:OWConvert, and their licences in SYS:Utilities/OpenUp/Licences. Its version is owf.library's.
+    GFOffice holds what the suite's programs share, so those files have one owner: the suite's four libraries,
+    LIBS:owfwrite.library, owfcalc.library, owfpub.library and owfpresent.library (libowf split by program, gfoffice
+    docs/suite/owf-libraries.md), LIBS:z.library (ours, OpenZlib: deflate, for saving compressed and for PNG
+    pictures in PDFs; libowf reads zip packages without it since its own inflater), the spelling dictionaries in
+    SYS:Dictionaries (where OpenWrite looks after its own drawer), C:OWConvert (on the four), and their licences in
+    SYS:Utilities/OpenUp/Licences. It retires LIBS:owf.library, the one library the four replace (OpenUp keeps it
+    in SYS:Storage/OpenUp-Superseded). Its version is owfwrite.library's (3.0 at the split, after owf.library's
+    2.x).
 
     Each program's part needs it ("needs part GFOffice", the design's recommended way): OpenUpTool INSTALL leaves
     the program out until GFOffice is installed, and REMOVE of GFOffice refuses while a program that needs it is
-    installed. OpenWrite is built on owf.library, in SYS:Utilities/OpenWrite as before; the dictionary an earlier
+    installed. OpenWrite is built on owfwrite.library, in SYS:Utilities/OpenWrite as before; the dictionary an earlier
     part put beside it is archived (it finds SYS:Dictionaries' instead; the user's own words, user.words, stay).
-    OpenCalc, the spreadsheet, goes in SYS:Utilities/OpenCalc; it is None, and left out, when gfoffice's build
+    OpenCalc, the spreadsheet, on owfcalc.library, goes in SYS:Utilities/OpenCalc; it is None, and left out, when gfoffice's build
     didn't make it. The parts are returned unwritten."""
-    linked, onlib = src / GFO_LINKED, src / GFO_LIBRARY
+    onlib = src / GFO_LIBRARY
     lic = "Utilities/OpenUp/Licences/"
-    lib = (onlib / "library/owf.library").read_bytes()
-    version = binary_version(lib, "owf.library")
+    libs = {name: (onlib / f"library/{name}.library").read_bytes() for name in GFO_LIBS}
+    version = binary_version(libs["owfwrite"], "owfwrite.library")
     if not version:
-        raise SystemExit(f"GFOffice: {onlib / 'library/owf.library'} has no version string")
-    gf = Part(top, "GFOffice", version, "GFOffice: what the GFOffice Suite's programs share: owf.library, z.library, "
-              "the dictionary in SYS:Dictionaries and C:OWConvert")
-    gf.add("Libs/owf.library", lib, "LIBS:owf.library")
+        raise SystemExit(f"GFOffice: {onlib / 'library/owfwrite.library'} has no version string")
+    gf = Part(top, "GFOffice", version, "GFOffice: what the GFOffice Suite's programs share: their libraries "
+              "(owfwrite, owfcalc, owfpub and owfpresent.library), z.library, the dictionary in SYS:Dictionaries "
+              "and C:OWConvert")
+    for name in GFO_LIBS:
+        gf.add(f"Libs/{name}.library", libs[name], f"LIBS:{name}.library")
     gf.add("Libs/z.library", zlib, "LIBS:z.library")
     words = sorted((src / "Dictionaries").glob("*.words"))
     for d in words:
         gf.add(f"Dictionaries/{d.name}", d.read_bytes(), f"SYS:Dictionaries/{d.name}")
-    gf.add("C/OWConvert", (linked / "OWConvert").read_bytes(), "SYS:C/OWConvert")
-    gf.add(lic + "GFOffice.txt", b"owf.library and C:OWConvert are the GFOffice Suite's (DalsinAI/gfoffice):\n\n"
+    gf.add("C/OWConvert", (onlib / "OWConvert").read_bytes(), "SYS:C/OWConvert")
+    gf.add(lic + "GFOffice.txt", b"owfwrite.library, owfcalc.library, owfpub.library, owfpresent.library and C:OWConvert "
+           b"are the GFOffice Suite's (DalsinAI/gfoffice):\n\n"
            + (src / "LICENSE").read_bytes(), "SYS:" + lic + "GFOffice.txt")
     zver = binary_version(zlib, "z.library")
     gf.add(lic + "z.library.txt", f"LIBS:z.library{' ' + zver if zver else ''} is OpenZlib, the AmigaChrome Team's own "
@@ -909,9 +931,12 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
     for d in words:                             # GFOffice's now, in SYS:Dictionaries
         wr.line(f'retire "SYS:Utilities/OpenWrite/Dictionaries/{d.name}"')
 
-    # OpenCalc: the spreadsheet (gfoffice app/opencalc.c), with libowf linked in
+    # owf.library 2, the one library before the split: the four replace it, so it is archived
+    gf.line('retire "LIBS:owf.library"')
+
+    # OpenCalc: the spreadsheet (gfoffice app/opencalc.c), on owfcalc.library
     oc = None
-    prog = linked / "OpenCalc"
+    prog = onlib / "OpenCalc"
     if prog.is_file():
         data = prog.read_bytes()
         oc = Part(top, "OpenCalc", binary_version(data, "OpenCalc") or "?",
@@ -961,7 +986,7 @@ PART_MAIN = {
     "OpenEdit": ("C/OpenEdit", "OpenEdit"),
     "OpenDrawer": ("Utilities/OpenDrawer", "OpenDrawer"),
     "OpenWrite": ("Utilities/OpenWrite/OpenWrite", "OpenWrite"),
-    "GFOffice": ("Libs/owf.library", "owf.library"),          # the GFOffice Suite's shared files: owf.library's version
+    "GFOffice": ("Libs/owfwrite.library", "owfwrite.library"),  # the GFOffice Suite's shared files: owfwrite.library's version
     "OpenCalc": ("Utilities/OpenCalc/OpenCalc", "OpenCalc"),
     "OpenMail": ("Utilities/OpenMail/OpenMail", "OpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
@@ -1577,8 +1602,12 @@ def main() -> int:
     # programs) and a Preferences one (the settings editors), each showing only
     # what is installed (DESIGN.md section 7). Started at boot; it waits for
     # Workbench, as S:User-Startup runs before LoadWB.
-    core = Part(top, "OpenUp", a.version, "OpenUpTool, the uninstaller, OpenUp's programs and settings in Workbench's Tools menu, and OpenMonitor")
+    core = Part(top, "OpenUp", a.version, "OpenUpTool, the uninstaller, ACROMFix, OpenUp's programs and settings in Workbench's Tools menu, and OpenMonitor")
     core.add("C/OpenUpTool", tool, "SYS:C/OpenUpTool")
+    acromfix = ROOT / "build/acromfix/C/ACROMFix"
+    if not acromfix.is_file():
+        raise SystemExit(f"{acromfix} wasn't built (amigachrome-guest tools/acromfix/build-amiga.sh)")
+    acromfix_lines(core, acromfix.read_bytes())
     core.add("C/OpenUpMenu", (ROOT / "build/os3/OpenUpMenu").read_bytes(), "SYS:C/OpenUpMenu")
     core.line("startup Run >NIL: C:OpenUpMenu")
     # AmigaOS 3.2.3's own icons and their default tools (names and tool strings): FIXTOOLS puts back the ones
@@ -2238,8 +2267,9 @@ def main() -> int:
     od.add("Utilities/OpenDrawer.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Utilities/OpenDrawer.info")
     od.write()
 
-    # The GFOffice Suite (gfoffice): GFOffice, the shared files (owf.library, z.library, the dictionary in
-    # SYS:Dictionaries, OWConvert), which OpenWrite, on owf.library, and OpenCalc need (gfoffice_parts)
+    # The GFOffice Suite (gfoffice): GFOffice, the shared files (the suite's four libraries, z.library, the
+    # dictionary in SYS:Dictionaries, OWConvert), which OpenWrite, on owfwrite.library, and OpenCalc, on
+    # owfcalc.library, need (gfoffice_parts)
     gfo, wr, gcalc = gfoffice_parts(top, a.gfoffice, (ROOT / "build/openzlib/libs/z.library").read_bytes(),
                                     (a.guest / "LICENSE").read_bytes(), icons)
     for p in (gfo, wr, gcalc):

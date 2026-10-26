@@ -89,8 +89,9 @@ choose:
 - OpenWrite (new): a word processor for DOCX, ODT and Amiga documents,
   with PDF export, printing, spelling and an ARexx port
   (SYS:Utilities/OpenWrite). It comes with GFOffice, the GFOffice Suite's
-  shared files: owf.library, z.library, the dictionary in SYS:Dictionaries
-  and C:OWConvert for scripts;
+  shared files: its four libraries (owfwrite, owfcalc, owfpub and
+  owfpresent.library, which replace owf.library), z.library, the dictionary
+  in SYS:Dictionaries and C:OWConvert for scripts;
 - OpenMail (new, a preview, off unless picked): a mail reader for IMAP mail
   over TLS, set up from the address for Gmail, Outlook and others
   (SYS:Utilities/OpenMail); it reaches mail servers through OpenTLS,
