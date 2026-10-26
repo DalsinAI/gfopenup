@@ -55,6 +55,14 @@ static int checks(void)
     truth("OpenKick, prefs.resource 48.0: the prefs task", oul_prefs_task(1, 48, 0), 1);
     truth("OpenKick, prefs.resource 46.200: no prefs task", oul_prefs_task(1, 46, 200), 0);
     truth("OpenKick, no prefs.resource: no prefs task", oul_prefs_task(1, 0, 0), 0);
+    /* the ACRTG board, each of its sizes (W144, 26 October 2026: Instance-32's 256 MiB board was "RTG: none") */
+    truth("ACRTG: product 9, the 16 MiB board", oul_acrtg_product(9), 1);
+    truth("ACRTG: product 15, the 64 MiB board", oul_acrtg_product(15), 1);
+    truth("ACRTG: product 16, the 256 MiB board", oul_acrtg_product(16), 1);
+    truth("ACRTG: product 1 (ACBridge) is not one", oul_acrtg_product(1), 0);
+    truth("ACRTG: product 2 (ACStorage) is not one", oul_acrtg_product(2), 0);
+    truth("ACRTG: product 6 (the OpenSocket card) is not one", oul_acrtg_product(6), 0);
+    truth("ACRTG: product 17 is not one (yet)", oul_acrtg_product(17), 0);
     /* lines without a condition stay as they are */
     same("a plain line", oul_strip("copy \"a\" \"SYS:a\"", none, 0), "copy \"a\" \"SYS:a\"");
     same("a startup line", oul_strip("startup Run >NIL: C:OpenUpMenu", both, 0), "startup Run >NIL: C:OpenUpMenu");

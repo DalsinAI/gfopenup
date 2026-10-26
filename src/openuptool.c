@@ -501,11 +501,18 @@ static int is_amigachrome(void)
     return board(1) || board(2);        /* ACBridge, ACStorage */
 }
 
-/* An ACRTG graphics board: product 9 is the 16 MiB board, product 15 the 64 MiB one ("rtgVramMiB": 64 with
- * acrtg.card 2.6). Up to OpenUpTool 0.7.5 only 9 counted, so a 64 MiB machine had "RTG: none" and no OpenRTG. */
+/* An ACRTG graphics board: any of its products (src/openup_lines.h, oul_acrtg_products: 9 the 16 MiB board, 15
+ * the 64 MiB one, 16 the 256 MiB one). Up to OpenUpTool 0.7.5 only 9 counted, so a 64 MiB machine had "RTG: none"
+ * and no OpenRTG; up to 0.8.11 16 didn't, so Instance-32's 256 MiB board had the same. */
 static int acrtg_board(void)
 {
-    return board(9) || board(15);
+    static const ULONG mfrs[2] = { AMIGACHROME_MFR, AMIGACHROME_MFR_OLD };
+    struct ConfigDev *cd;
+    int i;
+    for (i = 0; i < 2; i++)
+        for (cd = NULL; (cd = FindConfigDev(cd, mfrs[i], -1)) != NULL; )
+            if (oul_acrtg_product(cd->cd_Rom.er_Product)) return 1;
+    return 0;
 }
 
 /* The OpenKick ROM (0.8.7): OpenKickROM's header mark, the long 'OKR1' at the main ROM's start + $14, $F80014
