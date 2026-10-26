@@ -35,6 +35,23 @@ static int oul_prefs_task(int okr, unsigned version, unsigned revision)
     return okr && (version > 47u || (version == 47u && revision >= 101u));
 }
 
+/* The ACRTG graphics board's Zorro products (amigachrome-guest common/protocol/acrtg.h, ACRTG_PRODUCT*): 9 the
+ * 16 MiB board, 15 the 64 MiB one ("rtgVramMiB": 64, acrtg.card 2.6), 16 the 256 MiB one ("rtgVramMiB": 256,
+ * acrtg.card 2.8). DETECT's "RTG:" line, ENV:OpenUp/RTG and a Part file's "needs ACRTG" take any of them. Up to
+ * OpenUpTool 0.7.5 only 9 counted; up to 0.8.11 16 didn't, so Instance-32 (256 MiB) had "RTG: none" and its
+ * OpenRTG part was left out ("needs an ACRTG graphics board"), at 0.19.0 (W144, 26 October 2026). */
+#define OUL_ACRTG_PRODUCTS 3
+static const unsigned short oul_acrtg_products[OUL_ACRTG_PRODUCTS] = { 9, 15, 16 };
+
+/* 1 when the Zorro product is one of the ACRTG board's */
+static int oul_acrtg_product(unsigned product)
+{
+    int i;
+    for (i = 0; i < OUL_ACRTG_PRODUCTS; i++)
+        if (oul_acrtg_products[i] == product) return 1;
+    return 0;
+}
+
 static int oul_blank(char c) { return c == ' ' || c == '\t'; }
 
 /* The word at s is w, followed by a blank: the length of w, else 0. */
