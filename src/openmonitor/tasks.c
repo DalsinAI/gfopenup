@@ -7,9 +7,11 @@
  *
  * How busy a task is: on OpenExec (the open ROM), exactly, from taskclock.resource (amigachrome-guest
  * common/include/taskclock.h, the design's P4): exec charges each task its time at every switch while
- * OpenMonitor reads. Elsewhere AmigaOS keeps no time per task, so OpenMonitor looks 50 (or 60) times a
- * second, in a vertical blank interrupt server, at which task is running, and counts; a task waiting, the
- * machine idle, counts as idle.
+ * OpenMonitor reads. OpenMonitor reads it only while the Tasks or the Interrupts view is shown (the user,
+ * 24 October 2026: P4 "as long as it doesn't kill performance"; the switches cost more while exec keeps
+ * time). Then, and elsewhere (AmigaOS keeps no time per task), OpenMonitor looks 50 (or 60) times a second,
+ * in a vertical blank interrupt server, at which task is running, and counts; a task waiting, the machine
+ * idle, counts as idle. CPU time adds up both: exec's time while it kept it, the samples otherwise.
  *
  * The actions, each with its confirmation: Priority... (a window with the number, a scale and what it means),
  * Break (Ctrl-C), Signal... (Ctrl-C to Ctrl-F), Freeze and Resume, End program... (Ctrl-C, up to 3 seconds,
@@ -53,6 +55,7 @@
 #include "taskclock.h"
 
 static ULONG cpu_tenths, switches, disp_before;
+static int clock_changed;               /* exec's clock taken up or put down since the last look */
 
 /* ---- the task clock: OpenExec's (taskclock.resource), when there is one ------------------------------- */
 
@@ -91,7 +94,13 @@ static void tc_attach(void)
     tc_prev = AllocVec((TASKCLOCK_TASKS + 1) * sizeof *tc_prev, MEMF_ANY | MEMF_CLEAR);
     tc_delta = AllocVec(TASKCLOCK_TASKS * sizeof *tc_delta, MEMF_ANY | MEMF_CLEAR);
     t = AllocVec(sizeof *t, MEMF_PUBLIC | MEMF_CLEAR);
-    if (!tc_prev || !tc_delta || !t) { if (t) FreeVec(t); tcres = NULL; return; }
+    if (!tc_prev || !tc_delta || !t) {
+        if (t) FreeVec(t);
+        if (tc_prev) FreeVec(tc_prev);
+        if (tc_delta) FreeVec(tc_delta);
+        tc_prev = NULL; tc_delta = NULL; tcres = NULL;
+        return;
+    }
     t->version = TASKCLOCK_VERSION;
     Disable();
     if (!tcres->table) { tcres->table = t; t = NULL; }
@@ -205,7 +214,7 @@ static int *order, norder;              /* the rows shown: filtered and sorted *
 /* CPU time since the start, kept by task (its address, its name's pointer and its stack: exec reuses a freed
  * task's memory, so the address alone could be a newer task) */
 #define MAXACC 256
-struct acc { struct Task *t; STRPTR lnname; APTR spl; ULONG hits; UBYTE seen; };
+struct acc { struct Task *t; STRPTR lnname; APTR spl; ULONG hits; unsigned long long us; UBYTE seen; };
 static struct acc *accs;
 static int naccs;
 
@@ -521,21 +530,22 @@ static void take(int full)
         /* a second's switches: the time since the last look is exec's clock's, else the VBlanks'; the second's
          * timer only starts again after the drawing, so on a busy machine the look comes later than a second */
         us = tcl ? tc_total : (unsigned long long)got.total * 1000000 / hz;
-        switches = us ? (ULONG)(((unsigned long long)(disp - disp_before) * 1000000 + us / 2) / us) : disp - disp_before;
+        if (clock_changed) clock_changed = 0;   /* the time since then is part of the second: the last rate kept */
+        else switches = us ? (ULONG)(((unsigned long long)(disp - disp_before) * 1000000 + us / 2) / us) : disp - disp_before;
         disp_before = disp;
     }
     for (i = 0; i < nrows; i++) {
         struct trow *r = &rows[i];
         struct acc *a = acc_find(r->task, r->lnname, r->splower, full);
-        if (tcl) {                              /* exact: exec's time for it (since OpenMonitor began reading) */
+        if (tcl) {                              /* exact: exec's time for it in the last second */
             int k = tc_index(r->task);
-            if (full) r->tenths = k >= 0 && tc_total ? (ULONG)((unsigned long long)tc_delta[k] * 1000 / tc_total) : 0;
-            else for (j = 0; j < nprev; j++)
+            if (full) {
+                r->tenths = k >= 0 && tc_total ? (ULONG)((unsigned long long)tc_delta[k] * 1000 / tc_total) : 0;
+                if (a && k >= 0) a->us += tc_delta[k];
+                if (a) a->seen = 1;
+            } else for (j = 0; j < nprev; j++)
                 if (prev[j].t == r->task && prev[j].lnname == r->lnname && prev[j].spl == r->splower) { r->tenths = prev[j].tenths; break; }
-            r->ms = k >= 0 ? (ULONG)(rd64(&tcl->task[k].hi, &tcl->task[k].lo) / 1000) : 0;
-            continue;
-        }
-        if (full) {
+        } else if (full) {
             for (j = 0; j < (int)got.n; j++)
                 if (got.task[j] == r->task) {
                     r->tenths = got.total ? got.hits[j] * 1000 / got.total : 0;
@@ -547,7 +557,7 @@ static void take(int full)
             for (j = 0; j < nprev; j++)
                 if (prev[j].t == r->task && prev[j].lnname == r->lnname && prev[j].spl == r->splower) { r->tenths = prev[j].tenths; break; }
         }
-        if (a) r->ms = a->hits * 1000 / hz;
+        if (a) r->ms = (ULONG)(a->us / 1000) + a->hits * 1000 / hz;
     }
     if (full) om_graphs_push_cpu(cpu_tenths, switches, 0);
     make_order();
@@ -1432,9 +1442,43 @@ static int event(ULONG cls, UWORD code, UWORD qual, APTR ia, int mx, int my, ULO
     return 0;
 }
 
+/* Exec's task clock read while a view that shows it wants it (Tasks: the CPU column and the graph; Interrupts:
+ * exec's counts a second), the sampler otherwise. The first look after a change covers less than a second;
+ * the shares are of the time it covers. */
+static int exact_wanted;
+
+static void sampler(int on)
+{
+    if (on && !vbi_on) {
+        memset(&S, 0, sizeof S);        /* not in the chain yet: nothing else writes it */
+        AddIntServer(INTB_VERTB, &vbi);
+        vbi_on = 1;
+    } else if (!on && vbi_on) {
+        RemIntServer(INTB_VERTB, &vbi);
+        vbi_on = 0;
+    }
+}
+
+void om_tasks_exact(int who, int on)
+{
+    int i;
+    if (on) exact_wanted |= who;
+    else exact_wanted &= ~who;
+    if (exact_wanted && !tcl) {
+        tc_attach();
+        if (tcl) clock_changed = 1;
+    } else if (!exact_wanted && tcl) {
+        tc_detach();
+        for (i = 0; i < 16; i++) irq_rate[i] = -1;
+        clock_changed = 1;
+    }
+    sampler(!tcl);
+}
+
 static void shown(int on)
 {
     if (!on) om_table_free(&T);
+    om_tasks_exact(OM_EXACT_TASKS, on);
 }
 
 void om_tasks_choose(struct Task *t)
@@ -1450,6 +1494,7 @@ const struct om_view om_tasks_view = { "Tasks", layout, gadgets, draw, tick, eve
 
 int om_tasks_init(void)
 {
+    int i;
     rows = AllocVec(MAXT * sizeof *rows, MEMF_ANY | MEMF_CLEAR);
     order = AllocVec(MAXT * sizeof *order, MEMF_ANY | MEMF_CLEAR);
     accs = AllocVec(MAXACC * sizeof *accs, MEMF_ANY | MEMF_CLEAR);
@@ -1469,11 +1514,9 @@ int om_tasks_init(void)
     vbi.is_Node.ln_Name = (char *)"OpenMonitor";
     vbi.is_Data = &S;
     vbi.is_Code = (void (*)())vb_server;
-    tc_attach();
-    if (!tcl) {                         /* no task clock: the sampler */
-        AddIntServer(INTB_VERTB, &vbi);
-        vbi_on = 1;
-    }
+    exact_wanted = 0;
+    for (i = 0; i < 16; i++) irq_rate[i] = -1;
+    sampler(1);                         /* until a view asks for exec's clock (om_tasks_exact) */
     disp_before = SysBase->DispCount;
     return 1;
 }
@@ -1481,9 +1524,9 @@ int om_tasks_init(void)
 void om_tasks_free(void)
 {
     while (nfrz > 0) resume_k(nfrz - 1);
-    if (vbi_on) RemIntServer(INTB_VERTB, &vbi);
-    vbi_on = 0;
+    sampler(0);
     tc_detach();
+    exact_wanted = 0;
     if (rows) FreeVec(rows);
     if (order) FreeVec(order);
     if (accs) FreeVec(accs);
