@@ -150,8 +150,9 @@ a Part file that C/OpenUpTool reads:
   GFOffice/             what the GFOffice Suite's programs share: their four libraries (LIBS:owfwrite.library,
                         owfcalc.library, owfpub.library and owfpresent.library), LIBS:z.library (ours,
                         OpenZlib), the spelling dictionary in SYS:Dictionaries and C:OWConvert, with their
-                        licences; it retires LIBS:owf.library, which the four replace; installed with
-                        OpenWrite (gfoffice; amigachrome-guest's openzlib)
+                        licences; it retires LIBS:owf.library, which the four replace (one an earlier
+                        OpenUp installed is deleted; one from elsewhere goes to SYS:Storage/OpenUp-Superseded);
+                        installed with OpenWrite (gfoffice; amigachrome-guest's openzlib)
   OpenWrite/            OpenWrite, the word processor, on owfwrite.library; it needs GFOffice ("needs part")
                         (gfoffice, openamigalayout)
   OpenCalc/             OpenCalc, the GFOffice Suite's spreadsheet, on owfcalc.library; it needs GFOffice. Left out when gfoffice's
@@ -875,9 +876,12 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
     docs/suite/owf-libraries.md), LIBS:z.library (ours, OpenZlib: deflate, for saving compressed and for PNG
     pictures in PDFs; libowf reads zip packages without it since its own inflater), the spelling dictionaries in
     SYS:Dictionaries (where OpenWrite looks after its own drawer), C:OWConvert (on the four), and their licences in
-    SYS:Utilities/OpenUp/Licences. It retires LIBS:owf.library, the one library the four replace (OpenUp keeps it
-    in SYS:Storage/OpenUp-Superseded). Its version is owfwrite.library's (3.0 at the split, after owf.library's
-    2.x).
+    SYS:Utilities/OpenUp/Licences. It retires LIBS:owf.library, the one library the four replace, by OpenUpTool's
+    retire rule (src/openuptool.c, retire_file()): an owf.library an earlier OpenUp installed (the GFOffice part's
+    first builds, 25 October 2026) is OpenUp's own, so it is deleted and its manifest line goes; only one that came
+    from elsewhere is kept in SYS:Storage/OpenUp-Superseded, for REMOVE and UNINSTALL to put back. gfoffice still
+    builds owf.library (2.5 with OpenWrite 2.0.23), but no part ships it. Its version is owfwrite.library's (3.0 at
+    the split, after owf.library's 2.x).
 
     Each program's part needs it ("needs part GFOffice", the design's recommended way): OpenUpTool INSTALL leaves
     the program out until GFOffice is installed, and REMOVE of GFOffice refuses while a program that needs it is
@@ -916,7 +920,7 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
                "SYS:" + lic + "GFOffice-Dictionaries.txt")
 
     # OpenWrite: the word processor, as its 1.0 release laid it out, on owf.library
-    wr = Part(top, "OpenWrite", "2.0.22", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr = Part(top, "OpenWrite", "2.0.23", "OpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.needs_part("GFOffice")
     wr.add("Utilities/OpenWrite/OpenWrite", (onlib / "OpenWrite").read_bytes(), "SYS:Utilities/OpenWrite/OpenWrite")
     wr.add("Utilities/OpenWrite/OpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/OpenWrite/OpenWrite.info")
@@ -931,7 +935,8 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
     for d in words:                             # GFOffice's now, in SYS:Dictionaries
         wr.line(f'retire "SYS:Utilities/OpenWrite/Dictionaries/{d.name}"')
 
-    # owf.library 2, the one library before the split: the four replace it, so it is archived
+    # owf.library 2, the one library before the split: the four replace it, so it is retired (an earlier OpenUp's
+    # copy is deleted, as OpenUp's own; one from elsewhere goes to SYS:Storage/OpenUp-Superseded)
     gf.line('retire "LIBS:owf.library"')
 
     # OpenCalc: the spreadsheet (gfoffice app/opencalc.c), on owfcalc.library
