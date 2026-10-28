@@ -1,12 +1,12 @@
-/* OpenMonitor 0.8: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
+/* OpenMonitor 1.0: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
  * into the Amiga's task manager (the user, 24 October 2026: "a true task manager, a blend of what it is today,
  * SysInfo, ShowConfig and SnoopDos"; the design of that day, agreed at 15:05).
  *
  * This file: the start (one window, leaving the Shell), the window and its look, the tabs, the status bar,
  * the second's tick, and the settings. Each view is its own file.
  *
- * The ROM keeps OpenMonitor 0.3.3 (../openmonitor.c) until 1.0 goes into it (the design's P6): this one is
- * the disk's, SYS:Utilities/OpenMonitor, which OpenUp installs on every ROM until then.
+ * The same file is the open ROM's C/OpenMonitor (amigachrome-guest's romprefs.sh, the design's P6) and the
+ * disk's SYS:Utilities/OpenMonitor, which OpenUp installs on every ROM.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
 

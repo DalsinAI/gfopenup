@@ -1,11 +1,11 @@
 #!/bin/sh
-# OpenMonitor (0.4 on) for the disk (OpenUp's SYS:Utilities/OpenMonitor), with the os32-gcc16 stove:
+# OpenMonitor 1.0, the disk's (OpenUp's SYS:Utilities/OpenMonitor) and the open ROM's (amigachrome-guest's
+# trial-1m romprefs.sh builds the ROM's C/OpenMonitor with this script), with the os32-gcc16 stove:
 #   OGT=<opengadtools checkout> GUEST=<amigachrome-guest checkout> sh src/openmonitor/build.sh [OUT]   (default build/os3/OpenMonitor)
 # The compiler: the os32-gcc16 stove at OS32_GCC16 (default ~/AmigaChrome/stoves/os32-gcc16), GCC 16 or
 # later. Built resident (libnix -resident: each run its own variables), 68040 code, soft float as
 # opengadtools is (no FPU needed), -Os. A cell or a status line cut to its room is meant:
-# -Wno-format-truncation. The ROM keeps OpenMonitor 0.3.3 (src/openmonitor.c, built by amigachrome-guest's
-# romprefs.sh) until this goes into it (the design's P6).
+# -Wno-format-truncation.
 # GUEST: an amigachrome-guest checkout, for sysprobe (common/sysprobe: the Hardware and Speed views read the
 # machine as ShowConfig and ACInfo do), accontrol.device's header and taskclock.h (OpenExec's task clock).
 # MIT, Copyright (c) 2026 AmigaChrome Team.
