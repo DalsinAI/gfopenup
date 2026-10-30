@@ -19,5 +19,5 @@ CFLAGS="-noixemul -m68040 -specs=$SPECS -std=gnu99 -Wall -Werror -O2 -fno-delete
 if "$CC" -fno-late-combine-instructions -S -o /dev/null -x c /dev/null 2>/dev/null; then CFLAGS="$CFLAGS -fno-late-combine-instructions"; fi
 mkdir -p "$OUT"
 "$CC" $CFLAGS -o "$OUT/OpenClock" "$HERE/src/openclock.c" \
-    "$OGT/lib/ogt_theme.c" "$OGT/lib/ogt_draw.c" "$OGT/lib/ogt_look.c"
+    "$OGT/lib/ogt_theme.c" "$OGT/lib/ogt_draw.c" "$OGT/lib/ogt_look.c" "$OGT/lib/ogt_font.c"
 echo "$OUT/OpenClock ($(wc -c < "$OUT/OpenClock") bytes)"
