@@ -32,6 +32,7 @@
 #include "ogt_theme.h"
 #include "ogt_draw.h"
 #include "ogt_look.h"
+#include "ogt_font.h"
 
 static const char version[] __attribute__((used)) = "$VER: OpenClock 0.1 (10.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
 #define PREFS_ENV "ENV:OpenClock/Clock"
@@ -47,6 +48,8 @@ static APTR vi;
 static struct Menu *menu;
 static ogt_theme theme;
 static ogt_ctx ctx;
+static struct TextFont *font;     /* the theme's font, as every Open app draws in */
+static struct TextAttr font_ta;
 static int theme_mode;
 
 static int view = V_BOTH, show_secs = 1, h24 = 1, show_date = 1;
@@ -293,7 +296,8 @@ int main(int argc, char **argv)
         mark_menus();
         SetMenuStrip(win, menu);
     }
-    SetFont(win->RPort, scr->RastPort.Font);
+    font = ogt_open_font(&theme, scr, &font_ta);
+    SetFont(win->RPort, font ? font : scr->RastPort.Font);
     draw_all();
 
     /* a tick a second, from timer.device */
@@ -358,6 +362,7 @@ int main(int argc, char **argv)
     if (tport) DeleteMsgPort(tport);
 out:
     if (win) { if (menu) ClearMenuStrip(win); CloseWindow(win); }
+    if (font) CloseFont(font);
     if (menu) FreeMenus(menu);
     if (vi) FreeVisualInfo(vi);
     if (scr) UnlockPubScreen(NULL, scr);
