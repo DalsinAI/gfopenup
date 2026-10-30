@@ -33,9 +33,9 @@
 #include "ogt_look.h"
 #include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenCalculator 0.4 (25.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenCalculator 0.5 (30.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
 #define TITLE "OpenCalculator"
-#define SCREEN_TITLE "OpenCalculator 0.4"
+#define SCREEN_TITLE "OpenCalculator 0.5"
 #define EXPR_MAX 200
 #define HIST_MAX 24
 

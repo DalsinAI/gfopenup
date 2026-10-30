@@ -34,7 +34,7 @@
 #include "ogt_look.h"
 #include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenClock 0.1 (10.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenClock 0.2 (30.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
 #define PREFS_ENV "ENV:OpenClock/Clock"
 #define PREFS_ENVARC "ENVARC:OpenClock/Clock"
 
@@ -282,7 +282,7 @@ int main(int argc, char **argv)
     vi = GetVisualInfoA(scr, NULL);
     ogt_ctx_init(&ctx, scr, &theme, theme_mode);
     if (view == V_DIGITAL) { W = 160; H = 60; }
-    win = OpenWindowTags(NULL, WA_Title, (ULONG)"Clock", WA_ScreenTitle, (ULONG)"OpenClock 0.1",
+    win = OpenWindowTags(NULL, WA_Title, (ULONG)"Clock", WA_ScreenTitle, (ULONG)"OpenClock 0.2",
                          WA_PubScreen, (ULONG)scr,
                          WA_InnerWidth, W, WA_InnerHeight, H,
                          WA_Left, scr->Width - W - 60 > 0 ? scr->Width - W - 60 : 0, WA_Top, scr->BarHeight + 24,
