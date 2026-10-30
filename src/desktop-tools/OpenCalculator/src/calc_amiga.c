@@ -30,10 +30,12 @@
 #include <math.h>
 
 #include "opencalc.h"
+#include "ogt_look.h"
+#include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenCalculator 0.4 (25.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: OpenCalculator 0.5 (30.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
 #define TITLE "OpenCalculator"
-#define SCREEN_TITLE "OpenCalculator 0.4"
+#define SCREEN_TITLE "OpenCalculator 0.5"
 #define EXPR_MAX 200
 #define HIST_MAX 24
 
@@ -208,19 +210,31 @@ static int gui(void)
     struct NewGadget ng;
     struct Menu *menu = NULL;
     int fh, lh, top, row, quit = 0, rc = RETURN_OK, W, bw, bh, r, c, sx, sw, lvh, hx, hw;
+    ogt_theme theme;
+    int mode;
+    struct TextAttr ta;
+    struct TextFont *font;
+    struct RastPort mrp;            /* measures in the font the gadgets are drawn in */
     if (!vi) { if (scr) UnlockPubScreen(NULL, scr); return RETURN_FAIL; }
     memset(gad, 0, sizeof gad);
-    fh = scr->Font->ta_YSize;
+    /* the theme's font, as every Open app draws in (opengadtools' OPEN_APPS.md); the title bar keeps the screen's */
+    ogt_look_load(&theme, &mode);
+    font = ogt_open_font(&theme, scr, &ta);
+    ogt_theme_free(&theme);
+    if (!font) { FreeVisualInfo(vi); UnlockPubScreen(NULL, scr); return RETURN_FAIL; }
+    InitRastPort(&mrp);
+    SetFont(&mrp, font);
+    fh = font->tf_YSize;
     lh = fh + 6;
     bh = fh + 8;
-    top = scr->WBorTop + fh + 1 + 8;
-    bw = TextLength(&scr->RastPort, (STRPTR)"sqrt", 4) + 20;
+    top = scr->WBorTop + scr->Font->ta_YSize + 1 + 8;
+    bw = TextLength(&mrp, (STRPTR)"sqrt", 4) + 20;
     if (bw < 34) bw = 34;
     sx = 12 + COLS * (bw + 4) + 12;
     sw = SCOLS * (bw + 4) - 4;
     /* 0.3 (the Team, 11 October 2026: "the results box ... should be above the input field so it's more vertical,
      * and ... 50% less tall"): the history on top, as wide as the keys, half the keys' height; the window narrower */
-    hw = TextLength(&scr->RastPort, (STRPTR)"12345678 * 3.14159 = 38785", 26) + 30;
+    hw = TextLength(&mrp, (STRPTR)"12345678 * 3.14159 = 38785", 26) + 30;
     W = sx + sw + 12;
     if (W < hw + 24) W = hw + 24;
     hx = 12;
@@ -229,7 +243,7 @@ static int gui(void)
 
     g = CreateContext(&glist);
     memset(&ng, 0, sizeof ng);
-    ng.ng_TextAttr = scr->Font;
+    ng.ng_TextAttr = &ta;
     ng.ng_VisualInfo = vi;
 #define G(kind, id, x, y, w, h, text, flags, ...) \
     (ng.ng_LeftEdge = (x), ng.ng_TopEdge = (y), ng.ng_Width = (w), ng.ng_Height = (h), ng.ng_GadgetText = (STRPTR)(text), \
@@ -252,7 +266,7 @@ static int gui(void)
     if (!g) { rc = RETURN_FAIL; goto out; }
     win = OpenWindowTags(NULL, WA_Title, (ULONG)TITLE, WA_ScreenTitle, (ULONG)SCREEN_TITLE, WA_PubScreen, (ULONG)scr,
                          WA_Left, (scr->Width - W) / 2 > 0 ? (scr->Width - W) / 2 : 0, WA_Top, scr->BarHeight + 24,
-                         WA_InnerWidth, W, WA_InnerHeight, row - scr->WBorTop - fh - 1,
+                         WA_InnerWidth, W, WA_InnerHeight, row - scr->WBorTop - scr->Font->ta_YSize - 1,
                          WA_Gadgets, (ULONG)glist, WA_DragBar, TRUE, WA_DepthGadget, TRUE, WA_CloseGadget, TRUE, WA_Activate, TRUE,
                          WA_SmartRefresh, TRUE, WA_NewLookMenus, TRUE,
                          WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_REFRESHWINDOW | IDCMP_MENUPICK | IDCMP_VANILLAKEY | BUTTONIDCMP |
@@ -324,6 +338,7 @@ out:
     FreeGadgets(glist);
     FreeVisualInfo(vi);
     UnlockPubScreen(NULL, scr);
+    CloseFont(font);
     return rc;
 }
 
