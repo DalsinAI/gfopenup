@@ -1,11 +1,11 @@
-/* OpenClock: the clock on the desktop, in the Open family's look. It takes over SYS:Utilities/Clock
- * (OpenUp's RECONCILE retires that one).
+/* GFOpenClock: the clock on the desktop, in the GFOpen family's look. It takes over SYS:Utilities/Clock
+ * (GFOpenUp's RECONCILE retires that one).
  *
- *   OpenClock [DIGITAL | ANALOGUE | BOTH] [SECONDS | NOSECONDS] [AMPM | H24]
+ *   GFOpenClock [DIGITAL | ANALOGUE | BOTH] [SECONDS | NOSECONDS] [AMPM | H24]
  *
  * An analogue face drawn from the theme, a digital line under it, and the date. The window can be
  * resized and the face follows it; the view, seconds and 12- or 24-hour are on the menu and are kept
- * in ENVARC:OpenClock/Clock, so the window comes back as it was left.
+ * in ENVARC:GFOpenClock/Clock, so the window comes back as it was left.
  *
  * No maths library and no floating point: the hands come from a table of sines for 60 positions,
  * scaled by 1024, so this runs with no FPU, as every Open app must.
@@ -34,9 +34,9 @@
 #include "ogt_look.h"
 #include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenClock 0.2 (30.10.2026) OpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
-#define PREFS_ENV "ENV:OpenClock/Clock"
-#define PREFS_ENVARC "ENVARC:OpenClock/Clock"
+static const char version[] __attribute__((used)) = "$VER: GFOpenClock 0.2 (30.10.2026) GFOpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
+#define PREFS_ENV "ENV:GFOpenClock/Clock"
+#define PREFS_ENVARC "ENVARC:GFOpenClock/Clock"
 
 enum { V_ANALOGUE, V_DIGITAL, V_BOTH };
 enum { M_ANALOGUE = 1, M_DIGITAL, M_BOTH, M_SECONDS, M_H24, M_DATE, M_SAVE, M_QUIT };
@@ -98,7 +98,7 @@ static void settings_write(const char *path)
     if (!path) return;
     fh = Open((STRPTR)path, MODE_NEWFILE);
     if (!fh) return;
-    n = snprintf(buf, sizeof buf, "; OpenClock's settings, written by the Settings menu\nview %s\nseconds %s\nhours %d\ndate %s\n",
+    n = snprintf(buf, sizeof buf, "; GFOpenClock's settings, written by the Settings menu\nview %s\nseconds %s\nhours %d\ndate %s\n",
                  view == V_ANALOGUE ? "analogue" : view == V_DIGITAL ? "digital" : "both",
                  show_secs ? "on" : "off", h24 ? 24 : 12, show_date ? "on" : "off");
     Write(fh, buf, n);
@@ -107,9 +107,9 @@ static void settings_write(const char *path)
 
 static void settings_save(void)
 {
-    BPTR lock = CreateDir((STRPTR)"ENV:OpenClock");
+    BPTR lock = CreateDir((STRPTR)"ENV:GFOpenClock");
     if (lock) UnLock(lock);
-    lock = CreateDir((STRPTR)"ENVARC:OpenClock");
+    lock = CreateDir((STRPTR)"ENVARC:GFOpenClock");
     if (lock) UnLock(lock);
     settings_write(PREFS_ENV);
     settings_write(PREFS_ENVARC);
@@ -282,7 +282,7 @@ int main(int argc, char **argv)
     vi = GetVisualInfoA(scr, NULL);
     ogt_ctx_init(&ctx, scr, &theme, theme_mode);
     if (view == V_DIGITAL) { W = 160; H = 60; }
-    win = OpenWindowTags(NULL, WA_Title, (ULONG)"Clock", WA_ScreenTitle, (ULONG)"OpenClock 0.2",
+    win = OpenWindowTags(NULL, WA_Title, (ULONG)"Clock", WA_ScreenTitle, (ULONG)"GFOpenClock 0.2",
                          WA_PubScreen, (ULONG)scr,
                          WA_InnerWidth, W, WA_InnerHeight, H,
                          WA_Left, scr->Width - W - 60 > 0 ? scr->Width - W - 60 : 0, WA_Top, scr->BarHeight + 24,

@@ -1,4 +1,4 @@
-/* OpenMonitor: the Calls view (the design, section 6): SnoopDos's part, the call monitor.
+/* GFOpenMonitor: the Calls view (the design, section 6): SnoopDos's part, the call monitor.
  *
  * Start monitoring wedges 22 calls (SetFunction, under Forbid): exec's OpenLibrary, OpenDevice, OpenResource,
  * FindPort, FindTask (by name only), FindSemaphore and FindResident; dos's Open, Lock, DeleteFile, CreateDir,
@@ -6,8 +6,8 @@
  * graphics' OpenFont. Each call goes on as before, then is logged: the time, the task, the call, its name, its
  * second argument, the result and IoErr() when it failed, into a ring of 2,048 entries.
  *
- * Each wedge is a stub of 72 bytes in memory of its own, not OpenMonitor's code: it counts the call in, loads
- * OpenMonitor's a4 (built resident, its variables are reached through a4, which another task's call doesn't
+ * Each wedge is a stub of 72 bytes in memory of its own, not GFOpenMonitor's code: it counts the call in, loads
+ * GFOpenMonitor's a4 (built resident, its variables are reached through a4, which another task's call doesn't
  * have), calls the C wedge (the old vector with the caller's registers, then the log), counts it out. Its
  * handler at 0, it passes the call straight to the old vector.
  *
@@ -17,7 +17,7 @@
  * their code unchanged, unless one was patched over), so a call already on its way through one always finds
  * code there.
  *
- * The log keeps everything; the view filters (the groups, failures only, a task's or a name's text, OpenMonitor
+ * The log keeps everything; the view filters (the groups, failures only, a task's or a name's text, GFOpenMonitor
  * itself) when it shows it, once a second. Pause stops the view, not the log.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
@@ -97,7 +97,7 @@ static ULONG read_eclock(struct EClockVal *v)
     return d0;
 }
 
-/* Runs in the caller's task, OpenMonitor's a4 loaded by the stub: no call here goes through a wedge. */
+/* Runs in the caller's task, GFOpenMonitor's a4 loaded by the stub: no call here goes through a wedge. */
 static void log_call(int fn, const char *name, LONG a2, int ok)
 {
     struct Task *t = SysBase->ThisTask;
@@ -232,7 +232,7 @@ static void put_l(UBYTE **p, ULONG l) { put_w(p, l >> 16); put_w(p, l); }
  *      addq.l  #1,INUSE.l          counted in
  *      tst.l   HANDLER.l
  *      beq.s   pass                0: straight through
- *      movea.l DATA.l,a4           OpenMonitor's a4
+ *      movea.l DATA.l,a4           GFOpenMonitor's a4
  *      pea     back.l
  *      move.l  HANDLER.l,-(sp)
  *      rts                         into the C wedge, which returns to back
@@ -449,7 +449,7 @@ static void layout(int x, int y, int w, int h)
     gh = bh;
     for (i = 0; i < G_COUNT; i++) { gw[i] = 0; gad[i] = NULL; }
     if (!U.compact) {
-        for (i = 0; i < G_N; i++) {               /* the groups, then Failures only and Hide OpenMonitor */
+        for (i = 0; i < G_N; i++) {               /* the groups, then Failures only and Hide GFOpenMonitor */
             gx[CB_0 + i] = cx; gy[CB_0 + i] = y; gw[CB_0 + i] = cbw;
             cx += cbw + 6 + om_text_width(U.font, group_label[i]) + 18;
         }
@@ -497,7 +497,7 @@ static struct Gadget *gadgets(struct Gadget *g)
         } else {
             int on = i == CB_FAIL ? failures : i == CB_HIDE ? hide_om : (int)(groups_on >> (i - CB_0) & 1);
             ng.ng_Height = U.fh + 6; ng.ng_Flags = PLACETEXT_RIGHT;
-            ng.ng_GadgetText = (STRPTR)(i == CB_FAIL ? "Failures only" : i == CB_HIDE ? "Hide OpenMonitor" : group_label[i - CB_0]);
+            ng.ng_GadgetText = (STRPTR)(i == CB_FAIL ? "Failures only" : i == CB_HIDE ? "Hide GFOpenMonitor" : group_label[i - CB_0]);
             g = gad[i] = CreateGadget(CHECKBOX_KIND, g, &ng, GTCB_Checked, (ULONG)on, GTCB_Scaled, TRUE, TAG_DONE);
         }
     }
@@ -515,7 +515,7 @@ static void draw(void)
         ogt_text(rp, U.pen_muted, T.x + 12, T.y + T.head_h + 10,
                  "Start monitoring wedges 22 calls of exec, dos and graphics; every program's calls are then logged here.", T.w - 24);
         ogt_text(rp, U.pen_muted, T.x + 12, T.y + T.head_h + 16 + U.fh,
-                 "Each logged call costs a few microseconds on AmigaChrome; Stop monitoring takes the wedges out.", T.w - 24);
+                 "Each logged call costs a few microseconds on AmiCradle; Stop monitoring takes the wedges out.", T.w - 24);
     }
 }
 
@@ -556,8 +556,8 @@ static void start_stop(void)
 
 static void save(void)
 {
-    static const char *const path = "RAM:OpenMonitor-Calls.txt";
-    if (om_ask("OpenMonitor", "Save|Cancel", "Save the %d calls shown as text, as %s?", nrows, path) != 1) return;
+    static const char *const path = "RAM:GFOpenMonitor-Calls.txt";
+    if (om_ask("GFOpenMonitor", "Save|Cancel", "Save the %d calls shown as text, as %s?", nrows, path) != 1) return;
     om_status(0, om_table_save(&T, path) ? "Saved as %s." : "%s couldn't be written.", path);
 }
 

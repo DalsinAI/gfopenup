@@ -1,9 +1,9 @@
-/* OpenMonitor: the Speed view (the design, section 4.8): SysInfo's part.
+/* GFOpenMonitor: the Speed view (the design, section 4.8): SysInfo's part.
  *
  * ACInfo SPEED's test, built in (sysprobe's sp_speed, which ACInfo runs too): copy speed in chip and fast
  * memory, then a Dhrystone-style loop for a second under Forbid(), timed by the E clock, in SysInfo's units,
  * against six Amigas on a log scale. Each run of this session is kept, so a slow one stands out: on
- * AmigaChrome the score follows the PC's load. On AmigaChrome a run can be made at a chosen pace
+ * AmiCradle the score follows the PC's load. On AmiCradle a run can be made at a chosen pace
  * (accontrol.device), which is put back afterwards.
  *
  * Nothing runs until asked: the machine stops for about 1.3 seconds while it measures, and the view says so.
@@ -32,7 +32,7 @@ struct run { ULONG dhry, chip, fast, pace; UBYTE pace_known; char when[10]; };
 static struct run runs[MAXRUN];
 static int nruns, order[MAXRUN];
 
-/* the paces offered on AmigaChrome (Hz; 0: hyper); the first entry leaves it as it is */
+/* the paces offered on AmiCradle (Hz; 0: hyper); the first entry leaves it as it is */
 static const ULONG paces[] = { 0, 7093790, 14187580, 28375160, 50000000, 0 };
 static const char *const pace_labels[] = { "Pace: as it is", "7 MHz (an A500)", "14 MHz (an A1200)", "28 MHz", "50 MHz", "hyper", NULL };
 static int pace_choice, ac_present;
@@ -179,7 +179,7 @@ static void draw_top(void)
     ogt_text(rp, U.pen_text, U.px + 10, y + 2 * U.fh + 10, s, U.pw - 20);
     SetFont(rp, U.font);
     ogt_text(rp, U.pen_muted, U.px + 10, y + 2 * U.fh + 14 + U.tfh,
-             ac_present ? "On AmigaChrome the score follows the PC's load: run it again when the PC is quiet." :
+             ac_present ? "On AmiCradle the score follows the PC's load: run it again when the PC is quiet." :
                           "The loop runs for a second under Forbid(), timed by the E clock.", U.pw - 20);
 }
 
@@ -267,7 +267,7 @@ static void draw(void)
 {
     draw_top();
     draw_bars();
-    if (head_y >= 0) om_heading(U.px, head_y, "Runs since OpenMonitor started");
+    if (head_y >= 0) om_heading(U.px, head_y, "Runs since GFOpenMonitor started");
     om_table_set_count(&T, nruns);
     om_table_draw(&T);
 }
@@ -306,7 +306,7 @@ static int event(ULONG cls, UWORD code, UWORD qual, APTR ia, int mx, int my, ULO
         switch (code) {
         case 'r': case 'R': case 13: run(1); return 1;
         case 't': case 'T': run(3); return 1;
-        case 'p': case 'P':                     /* the next pace (on AmigaChrome) */
+        case 'p': case 'P':                     /* the next pace (on AmiCradle) */
             if (ac_present && gad[G_PACE]) {
                 pace_choice = (pace_choice + 1) % (int)(sizeof paces / sizeof paces[0]);
                 GT_SetGadgetAttrs(gad[G_PACE], U.win, NULL, GTCY_Active, (ULONG)pace_choice, TAG_DONE);

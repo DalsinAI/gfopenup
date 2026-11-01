@@ -1,6 +1,6 @@
-# OpenMouseAccel Component Contract
+# GFOpenMouseAccel Component Contract
 
-OpenMouseAccel interprets low-speed motion as aiming and high-speed motion as travel.
+GFOpenMouseAccel interprets low-speed motion as aiming and high-speed motion as travel.
 
 ## Hard contracts
 

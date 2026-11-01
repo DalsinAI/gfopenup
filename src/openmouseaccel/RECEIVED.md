@@ -1,8 +1,8 @@
-# OpenMouseAccel 0.1: received source, kept for analysis and a later build
+# GFOpenMouseAccel 0.1: received source, kept for analysis and a later build
 
 **Received:** 10 October 2026, from the user, as `OpenMouseAccel_0.1_Source.zip` (25,495 bytes, sha256 `27c7fb817fd0eba10f6e699c53c5be1837691725fca3da1a5e71547440d894d7`).
-**State:** source only, kept as received. It is **not** built into the OpenUp pack: `tools/build_pack.py` does not know it, and no part installs it. It is here so the Team can analyse it and build it later.
-**Design:** the goal it implements is `Design-Pointer-Acceleration.md` in DalsinAI/openamigainput (OpenInput's design, section 13), from the user's specification of the same day.
+**State:** source only, kept as received. It is **not** built into the GFOpenUp pack: `tools/build_pack.py` does not know it, and no part installs it. It is here so the Team can analyse it and build it later.
+**Design:** the goal it implements is `Design-Pointer-Acceleration.md` in DalsinAI/openamigainput (GFOpenInput's design, section 13), from the user's specification of the same day.
 
 ## What is here
 
@@ -11,12 +11,12 @@
 | `include/openup/openmouseaccel.h` | The API: `OMA_Config`, `OMA_Context`, `OMA_Process`, presets, a text prefs format |
 | `src/oma_core.c` | The engine: velocity from each report's interval, smoothing up and down, the curve, the caps, direction reset, residuals |
 | `src/oma_config.c` | Load and save the prefs as `key=value` text |
-| `src/oma_filter.c` | A small shim for OpenInput's filter stage, to be wired to OpenInput's own registration |
+| `src/oma_filter.c` | A small shim for GFOpenInput's filter stage, to be wired to GFOpenInput's own registration |
 | `prefs/OpenMouseAccelPrefs.c` | A preferences program: MUI with `OMA_USE_MUI`, otherwise a host test harness |
 | `tests/test_core.c`, `Makefile` | Host checks of the engine (`make test`) |
 | `README.md`, `docs/OPENMOUSEACCEL_COMPONENT.md` | The author's notes and the component contract |
 
-Every file is byte for byte as received; the checksums are below. Left out on purpose: the zip's `build/` folder, which held two prebuilt x86-64 Linux programs (`test_core`, `OpenMouseAccelPrefs-host`). Build output is never kept in git; `.gitignore` here keeps `build/` out.
+Every file is byte for byte as received; the checksums are below. Left out on purpose: the zip's `build/` folder, which held two prebuilt x86-64 Linux programs (`test_core`, `GFOpenMouseAccelPrefs-host`). Build output is never kept in git; `.gitignore` here keeps `build/` out.
 
 ## Checked on 10 October 2026 (x86-64 host, gcc)
 
@@ -29,15 +29,15 @@ Every file is byte for byte as received; the checksums are below. Left out on pu
 1. **The same movement should give the same result however the mouse reports it** (the specification's section 8). It does not yet: six one-count reports over 6 ms moved 16 pixels, one six-count report over the same 6 ms moved 11. The smoothing advances once per report, not over a time window, so a mouse that reports often accelerates more. The specification asks for velocity over a rolling 8 to 20 ms window.
 2. **Floating point.** `powf`, `acosf` and `sqrtf` on every report. Fine on a 68040 with its FPU and on the AC090; slow on a 68020 without one. A fixed-point version, or tables, may be wanted for real hardware.
 3. **The speed cap** is not applied to a report with no previous timestamp (the first after a reset).
-4. **The prefs file** is `ENV:OpenUp/OpenMouseAccel.prefs` here; OpenInput's design keeps its settings in `ENV:OpenInput/` and `ENVARC:OpenInput/`. One place should be chosen.
-5. **The preferences program** is MUI. The Open family's rule is GadTools (or MUI) and settings in OpenPrefs; the design's open question 2 asks whether this becomes a page of OpenPrefs' Input editor.
-6. **The OpenInput hook** (`oma_filter.c`) is a shim by design; the real registration waits on OpenInput's relative-pointer sources, which are not built yet.
+4. **The prefs file** is `ENV:GFOpenUp/GFOpenMouseAccel.prefs` here; GFOpenInput's design keeps its settings in `ENV:GFOpenInput/` and `ENVARC:GFOpenInput/`. One place should be chosen.
+5. **The preferences program** is MUI. The GFOpen family's rule is GadTools (or MUI) and settings in GFOpenPrefs; the design's open question 2 asks whether this becomes a page of GFOpenPrefs' Input editor.
+6. **The GFOpenInput hook** (`oma_filter.c`) is a shim by design; the real registration waits on GFOpenInput's relative-pointer sources, which are not built yet.
 7. **No licence text** is in the files. They are kept here as the Team's files under this repository's MIT licence (Copyright (c) 2026 AmigaChrome Team); to be confirmed when the component is built.
-8. **Wording** in the author's notes ("OpenUp/OpenInput", no person's name) already follows the Team's rules.
+8. **Wording** in the author's notes ("GFOpenUp/GFOpenInput", no person's name) already follows the Team's rules.
 
 ## Building it later
 
-On a host: `make test` and `make prefs-host` in this folder. On the Amiga: the engine is plain C99 with `<math.h>`; build the core and the filter into OpenInput (the os32 or os32-gcc16 stove, with the Team's 68k flags such as `-fno-delete-null-pointer-checks`), and the prefs program with `OMA_USE_MUI` against OpenMUI. A host test that replays recorded mouse traces through `OMA_Process` (the design's proof, section 11a) should come before any Amiga build.
+On a host: `make test` and `make prefs-host` in this folder. On the Amiga: the engine is plain C99 with `<math.h>`; build the core and the filter into GFOpenInput (the os32 or os32-gcc16 stove, with the Team's 68k flags such as `-fno-delete-null-pointer-checks`), and the prefs program with `OMA_USE_MUI` against GFOpenMUI. A host test that replays recorded mouse traces through `OMA_Process` (the design's proof, section 11a) should come before any Amiga build.
 
 ## Checksums (sha256, as received)
 

@@ -1,4 +1,4 @@
-/* OpenMonitor: the Libraries view (the design, section 4.4).
+/* GFOpenMonitor: the Libraries view (the design, section 4.4).
  *
  * Four lists behind four buttons: exec's libraries, devices and resources, and its ROM modules (ResModules).
  * Name, version, open count, base, where it came from and the ID string; for a module its priority, type and
@@ -403,7 +403,7 @@ static void flush_unused(void)
     for (n = SysBase->DeviceList.lh_Head; n->ln_Succ; n = n->ln_Succ) if (!((struct Library *)n)->lib_OpenCnt) candidates++;
     Permit();
     if (!candidates) { om_status(0, "Every library and device is open: nothing to flush."); return; }
-    if (om_ask("OpenMonitor", "Flush|Cancel",
+    if (om_ask("GFOpenMonitor", "Flush|Cancel",
                "Flush the %d libraries and devices nobody has open?\n\n"
                "Each is taken out of memory (one may say not now).\n"
                "It loads again when a program asks for it.", candidates) != 1) {
@@ -435,7 +435,7 @@ static void show_file(void)
         return;
     }
     read_disk_copy(r);
-    om_ask("OpenMonitor", "OK", "%s %u.%u, running: from %s.\n\n%s", r->name, r->ver, r->rev,
+    om_ask("GFOpenMonitor", "OK", "%s %u.%u, running: from %s.\n\n%s", r->name, r->ver, r->rev,
            r->where == W_ROM ? "the ROM" : r->where == W_GROUP ? "the ROM's groups (on demand)" : "the disk",
            disk_line[0] ? disk_line : "No copy on the disk.");
 }

@@ -1,6 +1,6 @@
-# OpenUp 0.8.8 (21 October 2026)
+# GFOpenUp 0.8.8 (21 October 2026)
 
-OpenBrowser 0.7 as the companion, and OpenRTG with a version C:Version can read.
+OpenBrowser 0.7 as the companion, and GFOpenRTG with a version C:Version can read.
 
 - **OpenBrowser companion 0.7.** `--openbrowser` takes only the archive pinned in `OPENBROWSER`: OpenBrowser 0.7 from
   openamigabrowser d41a340 (0.7's version string, #43, with only a lab script after it). Over 0.6 it adds
@@ -14,7 +14,7 @@ OpenBrowser 0.7 as the companion, and OpenRTG with a version C:Version can read.
     seconds, 0 means never.
 
   Archive sha256 eb85e19b…, built on the home PC at -Os (OpenBrowser.engine 94.2 MB).
-- **OpenRTG 0.19.1.** openrtg.library has a `$VER:` string (openamigartg #103), so C:Version finds it, and its
+- **GFOpenRTG 0.19.1.** gfopenrtg.library has a `$VER:` string (openamigartg #103), so C:Version finds it, and its
   version goes up from 0.19 (#105) so the update brings it to machines that have 0.19.
-- OpenUpTool 0.8.8. Every other part is at its repository's main, as in 0.8.7. OpenBrowser Lite (v0.4.1) and
+- GFOpenUpTool 0.8.8. Every other part is at its repository's main, as in 0.8.7. OpenBrowser Lite (v0.4.1) and
   OpenAmigaPython (v2.7.18-ac3) stay pinned to their latest releases.

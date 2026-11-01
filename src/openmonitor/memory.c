@@ -1,4 +1,4 @@
-/* OpenMonitor: the Memory view (the design, section 4.3).
+/* GFOpenMonitor: the Memory view (the design, section 4.3).
  *
  * The last minute of chip and fast memory in use, three boxes (chip, fast, the graphics card's video
  * memory), and exec's memory regions: name, CHIP or FAST, attributes, priority, the range, the size, what is
@@ -9,9 +9,9 @@
  * list: every region's free pieces walked and checked (inside the region, in order, apart, a multiple of 8,
  * adding up to what the region says is free).
  *
- * The video memory: openrtg.library doesn't yet say how much of the card is in use, so its total comes from
+ * The video memory: gfopenrtg.library doesn't yet say how much of the card is in use, so its total comes from
  * the card's AutoConfig board (ACRTG, AmigaChrome Team $DA15 product 9, 15 or 16, less its ROM and register
- * pages), as OpenMeters reads it.
+ * pages), as GFOpenMeters reads it.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
 
@@ -274,7 +274,7 @@ static void draw_box(int x, int w, const char *name, ULONG total, ULONG freeb, U
         snprintf(s, sizeof s, "total   %15s bytes", commas(total, a));
         ogt_text(rp, U.pen_text, x + 10, ty, s, w - 20);
         ogt_text(rp, U.pen_muted, x + 10, ty + lh, total ? "in use: not told yet" : "no graphics card", w - 20);
-        ogt_text(rp, U.pen_muted, x + 10, ty + 2 * lh, total ? "(openrtg.library)" : "", w - 20);
+        ogt_text(rp, U.pen_muted, x + 10, ty + 2 * lh, total ? "(gfopenrtg.library)" : "", w - 20);
     }
 }
 
@@ -347,10 +347,10 @@ static void check_list(void)
     }
     Permit();
     if (!bad)
-        om_ask("OpenMonitor", "OK", "The memory list is sound.\n\n%d regions, %lu free pieces: each inside its region,\n"
+        om_ask("GFOpenMonitor", "OK", "The memory list is sound.\n\n%d regions, %lu free pieces: each inside its region,\n"
                "in order, apart from the next, and adding up to what is free.", regions, (unsigned long)pieces);
     else
-        om_ask("OpenMonitor", "OK", "The memory list is damaged.\n\n%s.\n\n"
+        om_ask("GFOpenMonitor", "OK", "The memory list is damaged.\n\n%s.\n\n"
                "A program wrote where it shouldn't, or freed memory twice.\n"
                "Save your work and restart.", where);
 }

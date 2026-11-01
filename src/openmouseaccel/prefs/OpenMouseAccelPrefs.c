@@ -1,5 +1,5 @@
 /*
- * OpenMouseAccelPrefs
+ * GFOpenMouseAccelPrefs
  *
  * A MUI-oriented preferences UI for AmigaOS/AROS. The implementation below
  * keeps the UI logic isolated so it can be retargeted to Reaction if desired.
@@ -71,7 +71,7 @@ int main(void)
     ULONG sigs = 0;
     LONG id;
     OMA_DefaultConfig(&cfg);
-    OMA_LoadConfigFile(&cfg, "ENV:OpenUp/OpenMouseAccel.prefs");
+    OMA_LoadConfigFile(&cfg, "ENV:GFOpenUp/GFOpenMouseAccel.prefs");
 
     enable_check = MUI_MakeObject(MUIO_Checkmark, "Enable variable mouse acceleration");
     precision_slider = SliderObject,
@@ -90,10 +90,10 @@ int main(void)
     status_text = TextObject, MUIA_Text_Contents, "Move the pointer to feel changes live.", End;
 
     app = ApplicationObject,
-        MUIA_Application_Title, "OpenMouseAccel",
-        MUIA_Application_Version, "$VER: OpenMouseAccelPrefs 0.1",
+        MUIA_Application_Title, "GFOpenMouseAccel",
+        MUIA_Application_Version, "$VER: GFOpenMouseAccelPrefs 0.1",
         SubWindow, win = WindowObject,
-            MUIA_Window_Title, "OpenMouseAccel",
+            MUIA_Window_Title, "GFOpenMouseAccel",
             WindowContents, VGroup,
                 Child, TextObject, MUIA_Text_Contents, "\033bVariable Pointer Acceleration", End,
                 Child, HGroup, Child, enable_check, Child, TextObject, MUIA_Text_Contents, "Enable", End, End,
@@ -137,8 +137,8 @@ int main(void)
     }
 
     ui_to_config(&cfg);
-    OMA_SaveConfigFile(&cfg, "ENV:OpenUp/OpenMouseAccel.prefs");
-    OMA_SaveConfigFile(&cfg, "ENVARC:OpenUp/OpenMouseAccel.prefs");
+    OMA_SaveConfigFile(&cfg, "ENV:GFOpenUp/GFOpenMouseAccel.prefs");
+    OMA_SaveConfigFile(&cfg, "ENVARC:GFOpenUp/GFOpenMouseAccel.prefs");
     MUI_DisposeObject(app);
     return 0;
 }
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
     if (argc > 1 && !strcmp(argv[1], "precision")) OMA_PresetPrecision(&cfg);
     else if (argc > 1 && !strcmp(argv[1], "fast")) OMA_PresetFast(&cfg);
     else if (argc > 1 && !strcmp(argv[1], "extreme")) OMA_PresetExtreme(&cfg);
-    printf("OpenMouseAccelPrefs host fallback\n");
+    printf("GFOpenMouseAccelPrefs host fallback\n");
     printf("precision_velocity=%.1f\n", cfg.precision_velocity);
     printf("max_multiplier=%.1f\n", cfg.max_multiplier);
     printf("curve_exponent=%.2f\n", cfg.curve_exponent);

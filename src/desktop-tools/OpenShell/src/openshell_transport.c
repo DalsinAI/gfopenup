@@ -1,9 +1,9 @@
 /*
  * openshell_transport.c
  *
- * Integration boundary for the OpenShell UI and the real Amiga Shell.
+ * Integration boundary for the GFOpenShell UI and the real Amiga Shell.
  *
- * This intentionally contains no invented private OpenUp ABI. The repository
+ * This intentionally contains no invented private GFOpenUp ABI. The repository
  * adapter should implement these operations using the project's selected
  * AmigaOS/AROS process, pipe and message primitives.
  */

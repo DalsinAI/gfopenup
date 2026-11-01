@@ -1,0 +1,76 @@
+; $VER: Uninstall-GFOpenUp @VERSION@ (@DATE@)
+; Takes GFOpenUp out: every file it added goes, every file it replaced comes
+; back from SYS:Storage/GFOpenUp-Superseded, and its lines leave
+; S:User-Startup. MIT, Copyright (c) 2026 AmigaChrome Team.
+
+(set @app-name "GFOpenUp")
+(set #tool (if (exists "C/GFOpenUpTool") "C/GFOpenUpTool" "C:GFOpenUpTool"))
+
+(welcome "This takes GFOpenUp out and puts back everything it replaced.")
+
+(if (askbool
+        (prompt "Take GFOpenUp out of this Amiga?")
+        (help "GFOpenUp keeps a list of every file it added or replaced "
+              "(ENVARC:GFOpenAmiga/GFOpenUp.manifest). Uninstalling works from that list, "
+              "so files GFOpenUp didn't install are left alone.")
+        (default 1))
+    (
+        ; every icon GFOpenTypes changed (GFOpenUp 0.7.1 moved the kinds of file to
+        ; GFOpenView) goes back first, while GFOpenTypes is still there to do it.
+        ; MultiView itself comes back with the files GFOpenUp replaced. GFOpenUpTool
+        ; UNINSTALL then puts back any default tool still on GFOpenView (FIXTOOLS ALL),
+        ; for an Amiga where the record of GFOpenTypes' changes is gone.
+        ; GFOpenTypes is GFOpenPrefs's File Types page: SYS:Preferences/GFOpenPrefs since the no-ROM-volume design
+        ; (24 October 2026), its old name's stub in SYS:Prefs before
+        (if (exists "SYS:Preferences/GFOpenPrefs")
+            (run "SYS:Preferences/GFOpenPrefs TYPES UNDO >T:GFOpenUp-uninstall.log")
+            (if (exists "SYS:Prefs/OpenTypes")
+                (run "SYS:Prefs/OpenTypes UNDO >T:GFOpenUp-uninstall.log")))
+        (if (exists "ENVARC:GFOpenAmiga/GFOpenView-switched")
+            (delete "ENVARC:GFOpenAmiga/GFOpenView-switched"))
+        (if (exists "ENVARC:GFOpenAmiga/GFOpenFiles-place-reset")
+            (delete "ENVARC:GFOpenAmiga/GFOpenFiles-place-reset"))
+        ; GFOpenUp's entries leave the Tools menu now, before their programs go
+        (if (exists "SYS:C/GFOpenUpMenu")
+            (run "SYS:C/GFOpenUpMenu >NIL: QUIT"))
+        ; GFOpenLibs (0.8.0): the open ROM libraries OS 3.2's LoadModule loaded leave memory at the next start;
+        ; not on the GFOpenKick ROM (0.8.7), where OS 3.2's LoadModule never loaded them
+        (run (cat #tool " DETECT >NIL:"))
+        (if (and (exists "S:GFOpenLibs-Startup") (<> (getenv "GFOpenUp/ROM") "GFOpenKick"))
+            (run "C:LoadModule REMOVE NOREBOOT >>T:GFOpenUp-uninstall.log"))
+        (set #rc (run (cat #tool " UNINSTALL >>T:GFOpenUp-uninstall.log")))
+        ; GFOpenUp 0.6.12 to 0.7.4's Installer copied the OS's Sound editor into SYS:Prefs/Classic and
+        ; listed the copy nowhere, so it stayed behind. With the OS's own back in SYS:Prefs, a copy of
+        ; the same size goes too, and the drawer with it once it is empty. So does GFOpenPrefs' own old
+        ; Sound editor (0.6's, "Sound 0.1 ... GFOpenPrefs, Dalsin Limited"), which an Amiga upgraded
+        ; through 0.6 can have there instead (a lab copy of Instance-32, 12 October 2026).
+        (set #oldsound 0)
+        (if (= (exists "SYS:Prefs/Classic/Sound") 1)
+            (
+                (if (= (exists "SYS:Prefs/Sound") 1)
+                    (if (= (getsize "SYS:Prefs/Classic/Sound") (getsize "SYS:Prefs/Sound")) (set #oldsound 1)))
+                (if (= (run "C:Search >NIL: SYS:Prefs/Classic/Sound \"GFOpenPrefs, Dalsin\" QUIET") 0)
+                    (set #oldsound 1))))
+        (if #oldsound
+            (
+                (delete "SYS:Prefs/Classic/Sound" (optional "force" "nofail"))
+                (if (exists "SYS:Prefs/Classic/Sound.info")
+                    (delete "SYS:Prefs/Classic/Sound.info" (optional "force" "nofail")))
+                (delete "SYS:Prefs/Classic" (optional "nofail"))
+                (if (and (not (exists "SYS:Prefs/Classic")) (exists "SYS:Prefs/Classic.info"))
+                    (delete "SYS:Prefs/Classic.info" (optional "force" "nofail")))))
+        ; The dock's buttons, ENVARC:GFOpenDock/Dock: the Installer writes them (GFOpenDock SAVE on a first
+        ; install, GFOpenDock ADD on every one), and nothing listed them, so they stayed behind. Once
+        ; GFOpenDock itself is gone they go too; anything else in the drawer stays, and the drawer with it.
+        ; Not where GFOpenBench is: its own dock reads the same file.
+        (if (and (not (exists "SYS:C/GFOpenDock")) (not (exists "SYS:System/GFOpenBench")))
+            (
+                (if (exists "ENVARC:GFOpenDock/Dock") (delete "ENVARC:GFOpenDock/Dock" (optional "force" "nofail")))
+                (if (exists "ENV:GFOpenDock/Dock") (delete "ENV:GFOpenDock/Dock" (optional "force" "nofail")))
+                (if (exists "ENVARC:GFOpenDock") (delete "ENVARC:GFOpenDock" (optional "nofail")))
+                (if (exists "ENV:GFOpenDock") (delete "ENV:GFOpenDock" (optional "nofail")))))
+        (if (> #rc 5)
+            (message "Some files couldn't be put back. T:GFOpenUp-uninstall.log "
+                     "says which, and what to do."))
+        ; (quiet): no stock "Installation complete ... can be found in your Work: drawer" box after ours
+        (exit "GFOpenUp is out. Reboot the Amiga to finish." (quiet))))

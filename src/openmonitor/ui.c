@@ -1,4 +1,4 @@
-/* OpenMonitor: the table every view draws, and the pop-up menu.
+/* GFOpenMonitor: the table every view draws, and the pop-up menu.
  *
  * The table: a header in the theme's font (a click sorts, a right-click chooses the columns), the rows in
  * the table font (DejaVu Sans Mono 11), drawn by opengadtools' ogt_list. The menu: 0.3's right-click menu,
