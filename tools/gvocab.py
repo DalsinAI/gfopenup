@@ -2165,7 +2165,7 @@ def dashed(p, sel=False, **kw):
 
 @obj("mark")
 def amigachrome_mark(p, sel=False, **kw):
-    """AmigaChrome's mark (our own): a ring and a chevron; chosen, it lights."""
+    """AmiCradle's mark (our own): a ring and a chevron; chosen, it lights."""
     p.add(p.ellipse(4, 4, 60, 60), p.rad((22, 20), 56, lighter(g.BLUE, 0.4 if sel else 0.2), g.BLUE_LO), gloss=0.35)
     p.detail(p.ring(12, 12, 52, 52, 4), WHITE)
     p.detail(p.stroke([(22, 38), (32, 24), (42, 38)], 5), WHITE)
@@ -2174,7 +2174,7 @@ def amigachrome_mark(p, sel=False, **kw):
 
 @obj("openup")
 def openup_mark(p, sel=False, **kw):
-    """The OpenUp box with its arrow; chosen, the arrow sinks in."""
+    """The GFOpenUp box with its arrow; chosen, the arrow sinks in."""
     cardboard_box(p.sub(8, 14, 0.75))
     arrow(p.sub(16, -2 + (6 if sel else 0), 0.5), dir="down")
     return slots()

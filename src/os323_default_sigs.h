@@ -1,5 +1,5 @@
-/* OS 3.2.3's own default icons as its install leaves them (AmigaChrome's recipe, os32_host_install, copies them
- * as the OS Installer does, with the Glow icons), as OpenUpTool ICONSIG prints them: the whole icon's signature
+/* OS 3.2.3's own default icons as its install leaves them (AmiCradle's recipe, os32_host_install, copies them
+ * as the OS Installer does, with the Glow icons), as GFOpenUpTool ICONSIG prints them: the whole icon's signature
  * (picture, type, default tool, tool types, a program's or project's stack; not its place). OLDLOOK takes these out (0.8.4). Numbers only. */
 { 0xEE9020D2, 0xA6BD6848 },    /* ENVARC:Sys/def_card.info */
 { 0xA0C5B1BC, 0x63CF102F },    /* ENVARC:Sys/def_cd0.info */

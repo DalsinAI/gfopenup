@@ -1,4 +1,4 @@
-/* OpenMonitor: the Ports view (the design, section 4.5).
+/* GFOpenMonitor: the Ports view (the design, section 4.5).
  *
  * Exec's public message ports: name, owner (the task its signal goes to), signal bit, messages waiting (amber
  * when any wait), action (signal, soft interrupt, ignore) and address. Under them its public semaphores: name,

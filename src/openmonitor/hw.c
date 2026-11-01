@@ -1,6 +1,6 @@
-/* OpenMonitor: the Hardware view (the design, section 4.7): ShowConfig's part.
+/* GFOpenMonitor: the Hardware view (the design, section 4.7): ShowConfig's part.
  *
- * Processor, Chips, Software, the AmigaChrome machine and Memory in boxes, then the expansion boards (name,
+ * Processor, Chips, Software, the AmiCradle machine and Memory in boxes, then the expansion boards (name,
  * maker and product, bus, address, size, driver, ROM). What the machine is made of comes from sysprobe
  * (amigachrome-guest common/sysprobe), which ShowConfig and ACInfo read too, so the three say the same thing.
  * Read once when the view is first shown; F5 reads it again.
@@ -36,7 +36,7 @@
 /* ---- the boxes: lines of "what" and "value" ----------------------------------------------------------- */
 
 enum { B_CPU, B_CHIPS, B_SOFT, B_AC, B_MEM, B_N };
-static const char *const box_title[B_N] = { "Processor", "Chips", "Software", "AmigaChrome", "Memory" };
+static const char *const box_title[B_N] = { "Processor", "Chips", "Software", "AmiCradle", "Memory" };
 #define MAXLN 28
 struct line { UBYTE box; char what[12]; char value[64]; };
 static struct line *lines;
@@ -220,7 +220,7 @@ static void take(void)
         if (v) { add(B_SOFT, "Workbench", "%u.%u (version.library)", v->lib_Version, v->lib_Revision); CloseLibrary(v); }
         else add(B_SOFT, "Workbench", "no version.library");
     }
-    /* AmigaChrome: the host's status, in JSON (sysprobe reads its fields) */
+    /* AmiCradle: the host's status, in JSON (sysprobe reads its fields) */
     st = AllocVec(8192, MEMF_ANY);
     if (sp_ac(&ac, st, st ? 8192 : 0)) {
         char v1[48], v2[48];
@@ -241,7 +241,7 @@ static void take(void)
                 sp_json(st, "\"instance\"", "friendlyName", v2, sizeof v2) ? v2 : "");
         add(B_AC, "Bridge", "accontrol.device %u.%u", ac.ver, ac.rev);
     } else
-        add(B_AC, "", "%s", ac.error == 40 ? "Not an AmigaChrome machine (no ACBridge)." : "No accontrol.device in DEVS:.");
+        add(B_AC, "", "%s", ac.error == 40 ? "Not an AmiCradle machine (no ACBridge)." : "No accontrol.device in DEVS:.");
     if (st) FreeVec(st);
     /* Memory */
     mb_text(AvailMem(MEMF_CHIP | MEMF_TOTAL), a, sizeof a);
@@ -311,7 +311,7 @@ static void board_details(void)
     if (!b) { om_status(0, "Choose a board first."); return; }
     size_text(b->size, s, sizeof s);
     size_text(b->space, t, sizeof t);
-    om_ask("OpenMonitor", "OK",
+    om_ask("GFOpenMonitor", "OK",
            "%s\n\nMaker $%04X (%u), product %u: %s\n%s at $%08lx, %s (it asks for %s)\n"
            "AutoConfig type $%02x, flags $%02x: %s%s%s\nConfigDev at $%08lx, %s; driver %s",
            b->name, b->maker, b->maker, b->product, sp_maker_name(b->maker) ? sp_maker_name(b->maker) : "a maker not in the list",
@@ -351,7 +351,7 @@ static void drives(void)
         }
     }
     UnLockDosList(LDF_DEVICES | LDF_READ);
-    om_ask("OpenMonitor", "OK", "The drives (DOS's devices) and their sizes:\n\n%s", n ? text : "none\n");
+    om_ask("GFOpenMonitor", "OK", "The drives (DOS's devices) and their sizes:\n\n%s", n ? text : "none\n");
     FreeVec(text);
 }
 
@@ -361,7 +361,7 @@ static void save_report(void)
     char cmd[80];
     BPTR in, out;
     LONG rc;
-    if (om_ask("OpenMonitor", "Save|Cancel", "Save ShowConfig's report (AmigaGuide) as %s?\n\nShowConfig writes it.", file) != 1) return;
+    if (om_ask("GFOpenMonitor", "Save|Cancel", "Save ShowConfig's report (AmigaGuide) as %s?\n\nShowConfig writes it.", file) != 1) return;
     snprintf(cmd, sizeof cmd, "ShowConfig REPORT %s", file);
     in = Open((STRPTR)"NIL:", MODE_OLDFILE);
     out = Open((STRPTR)"NIL:", MODE_NEWFILE);
@@ -385,7 +385,7 @@ static void summary(void)
         }
         len += snprintf(text + len, 2400 - len, "  %-10s %s\n", lines[i].what, lines[i].value);
     }
-    om_ask("OpenMonitor", "OK", "%s", text);
+    om_ask("GFOpenMonitor", "OK", "%s", text);
     FreeVec(text);
 }
 

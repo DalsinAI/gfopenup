@@ -1,7 +1,7 @@
 /*
- * OpenInput glue.
+ * GFOpenInput glue.
  *
- * The actual OpenInput ABI is project-owned and may evolve, so this module
+ * The actual GFOpenInput ABI is project-owned and may evolve, so this module
  * deliberately exposes a tiny shim instead of inventing private OS hooks.
  * Wire OMA_FilterProcess() immediately after raw relative-device
  * normalisation and before pointer-position clamping/delivery.

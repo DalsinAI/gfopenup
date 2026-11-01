@@ -1,4 +1,4 @@
-/* OpenSnap 1.0: pictures of the screen, by hotkey (the user, 24 October 2026).
+/* GFOpenSnap 1.0: pictures of the screen, by hotkey (the user, 24 October 2026).
  *
  *   Shift + Right Amiga + S   the whole front screen
  *   Shift + Right Amiga + W   the active window: its box on its screen, borders included, cut to the screen
@@ -10,19 +10,19 @@
  * A short message on the screen's title bar says where it went, for three seconds; a requester only when
  * the file can't be saved.
  *
- * Screens: RTG truecolour screens (OpenRTG), 8-bit RTG screens with a palette, and the Amiga's own planar
+ * Screens: RTG truecolour screens (GFOpenRTG), 8-bit RTG screens with a palette, and the Amiga's own planar
  * screens, AGA's too (HAM is saved as its colours, Extra Half-Brite with its 64). An RTG screen's pixels are
- * read with cybergraphics.library's ReadPixelArray, which waits for the GPU's drawing to be done (OpenRTG
+ * read with cybergraphics.library's ReadPixelArray, which waits for the GPU's drawing to be done (GFOpenRTG
  * waits in ReadPixels, as the compositor's asynchronous ring will); video RAM is never read by address. A
  * planar screen's planes are read after WaitBlit.
  *
- * The PNG is written by openpng.datatype (OpenImage, opendatatypes 47.4: OIM_ENCODEPNG, deflate by
+ * The PNG is written by openpng.datatype (GFOpenImage, opendatatypes 47.4: OIM_ENCODEPNG, deflate by
  * z.library). Without them the picture is saved as the IFF ILBM instead (Snapshot-....iff) and the message
  * says so.
  *
- * A screen can't close while it is read: a public screen (Workbench's, OpenRTG's) is locked with
+ * A screen can't close while it is read: a public screen (Workbench's, GFOpenRTG's) is locked with
  * LockPubScreen; any other is read with Intuition's lock held (LockIBase), which only holds up Intuition
- * for the moment the read takes. OpenSnap waits at priority 4, so a hotkey is answered at once while a
+ * for the moment the read takes. GFOpenSnap waits at priority 4, so a hotkey is answered at once while a
  * program is busy, and saves at priority 0.
  *
  * A commodity: Exchange shows it and can disable, enable or quit it. Tool types (in its icon, or as
@@ -60,7 +60,7 @@
 #include <workbench/icon.h>
 #include <datatypes/datatypes.h>
 #include <datatypes/datatypesclass.h>
-#include <datatypes/openimage.h>
+#include <datatypes/gfopenimage.h>
 #include <cybergraphx/cybergraphics.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -75,7 +75,7 @@
 
 #include "opensnap_pic.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenSnap 1.0 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenSnap 1.0 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 unsigned long __stack = 32768;      /* libnix swaps to this when Run gives the Shell's 4 KB */
 
 struct IntuitionBase *IntuitionBase;
@@ -196,11 +196,11 @@ static void say(const char *pubname, struct Window *w, const char *text, struct 
 }
 
 #ifdef OSDEBUG
-/* lab builds: how long each step took, in T:OpenSnap.log */
+/* lab builds: how long each step took, in T:GFOpenSnap.log */
 static void lap(const char *what)
 {
     struct DateStamp d;
-    BPTR fh = Open((STRPTR)"T:OpenSnap.log", MODE_READWRITE);
+    BPTR fh = Open((STRPTR)"T:GFOpenSnap.log", MODE_READWRITE);
     DateStamp(&d);
     if (fh) {
         Seek(fh, 0, OFFSET_END);
@@ -272,7 +272,7 @@ static const char *read_pixels(struct Screen *scr, LONG x, LONG y, ULONG w, ULON
         if (!(s->argb = AllocVec(w * h * 4, MEMF_ANY))) return "not enough memory";
         InitRastPort(&rp);
         rp.BitMap = bm;
-        /* the GPU's drawing is done before the pixels come back (OpenRTG's ReadPixels waits for it) */
+        /* the GPU's drawing is done before the pixels come back (GFOpenRTG's ReadPixels waits for it) */
         if (!ReadPixelArray(s->argb, 0, 0, (UWORD)(w * 4), &rp, (UWORD)x, (UWORD)y, (UWORD)w, (UWORD)h, RECTFMT_ARGB))
             return "the screen's pixels couldn't be read";
         if (depth <= 8) {
@@ -305,7 +305,7 @@ static const char *read_pixels(struct Screen *scr, LONG x, LONG y, ULONG w, ULON
 
     /* the Amiga's own planar screen: the planes, after the blitter has finished */
     depth = GetBitMapAttr(bm, BMA_DEPTH);
-    if (depth < 1 || depth > 8) return "a screen of more than 8 planes without OpenRTG";
+    if (depth < 1 || depth > 8) return "a screen of more than 8 planes without GFOpenRTG";
     if (!(s->pens = AllocVec(w * h, MEMF_ANY | MEMF_CLEAR))) return "not enough memory";
     WaitBlit();
     {
@@ -541,7 +541,7 @@ static int write_file(const char *path, const UBYTE *data, ULONG size)
 
 static void cant_save(const char *what)
 {
-    struct EasyStruct es = { sizeof(struct EasyStruct), 0, (UBYTE *)"OpenSnap",
+    struct EasyStruct es = { sizeof(struct EasyStruct), 0, (UBYTE *)"GFOpenSnap",
                              (UBYTE *)"The snapshot couldn't be saved.\n\n%s: %s", (UBYTE *)"OK" };
     char why[96];
     Fault(IoErr(), NULL, (STRPTR)why, sizeof why);
@@ -568,7 +568,7 @@ static void snap(int kind, struct timerequest *tr)
     SetTaskPri(FindTask(NULL), PRI_SAVE);
     if (why) {
         char t[120];
-        strcpy(t, "OpenSnap: ");
+        strcpy(t, "GFOpenSnap: ");
         strncat(t, why, sizeof t - 12);
         say(s.pubname, IntuitionBase->ActiveWindow, t, tr);
         SetTaskPri(FindTask(NULL), PRI_WAIT);
@@ -610,11 +610,11 @@ static void snap(int kind, struct timerequest *tr)
         if (saved) {
             strcpy(t, name);
             strcat(t, " saved");
-            if (asiff) strcat(t, " (no PNG writer: OpenImage)");
+            if (asiff) strcat(t, " (no PNG writer: GFOpenImage)");
         }
         if (set.clipboard) {
             if (saved) strcat(t, clip ? ", and on the clipboard" : "; not on the clipboard");
-            else strcpy(t, clip ? "OpenSnap: on the clipboard" : "OpenSnap: not saved");
+            else strcpy(t, clip ? "GFOpenSnap: on the clipboard" : "GFOpenSnap: not saved");
         }
         say(s.pubname, s.active, t, tr);
     }
@@ -681,7 +681,7 @@ static void settings(int argc, char **argv)
 
 static char descr[CBD_DESCRLEN];
 static struct NewBroker nb = {
-    NB_VERSION, (STRPTR)"OpenSnap", (STRPTR)"OpenSnap 1.0: pictures of the screen", (STRPTR)descr,
+    NB_VERSION, (STRPTR)"GFOpenSnap", (STRPTR)"GFOpenSnap 1.0: pictures of the screen", (STRPTR)descr,
     NBU_UNIQUE | NBU_NOTIFY, 0, 0, NULL, 0
 };
 
@@ -723,8 +723,8 @@ int main(int argc, char **argv)
     nb.nb_Port = port;
     nb.nb_Pri = (BYTE)set.cxpri;
     if (!(broker = CxBroker(&nb, &err))) { rc = err == CBERR_DUP ? 0 : 20; goto out; }   /* running already */
-    if (!add_key(broker, set.screenkey, port, EV_SCREEN) && argc) Printf("OpenSnap: \"%s\" isn't a hotkey commodities knows\n", (ULONG)set.screenkey);
-    if (!add_key(broker, set.windowkey, port, EV_WINDOW) && argc) Printf("OpenSnap: \"%s\" isn't a hotkey commodities knows\n", (ULONG)set.windowkey);
+    if (!add_key(broker, set.screenkey, port, EV_SCREEN) && argc) Printf("GFOpenSnap: \"%s\" isn't a hotkey commodities knows\n", (ULONG)set.screenkey);
+    if (!add_key(broker, set.windowkey, port, EV_WINDOW) && argc) Printf("GFOpenSnap: \"%s\" isn't a hotkey commodities knows\n", (ULONG)set.windowkey);
     ActivateCxObj(broker, 1);
     if ((tport = CreateMsgPort()) && (tr = (struct timerequest *)CreateIORequest(tport, sizeof *tr)))
         timer = !OpenDevice((STRPTR)TIMERNAME, UNIT_VBLANK, (struct IORequest *)tr, 0);

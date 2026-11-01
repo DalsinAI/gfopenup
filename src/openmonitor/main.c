@@ -1,12 +1,12 @@
-/* OpenMonitor 1.0: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
+/* GFOpenMonitor 1.0: what the machine is doing, as Task Manager on Windows or Resources on Ubuntu show it, grown
  * into the Amiga's task manager (the user, 24 October 2026: "a true task manager, a blend of what it is today,
  * SysInfo, ShowConfig and SnoopDos"; the design of that day, agreed at 15:05).
  *
  * This file: the start (one window, leaving the Shell), the window and its look, the tabs, the status bar,
  * the second's tick, and the settings. Each view is its own file.
  *
- * The same file is the open ROM's C/OpenMonitor (amigachrome-guest's romprefs.sh, the design's P6) and the
- * disk's SYS:Utilities/OpenMonitor, which OpenUp installs on every ROM.
+ * The same file is the open ROM's C/GFOpenMonitor (amigachrome-guest's romprefs.sh, the design's P6) and the
+ * disk's SYS:Utilities/GFOpenMonitor, which GFOpenUp installs on every ROM.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
 
@@ -40,9 +40,9 @@
 #include "ogt_openfont.h"
 
 static const char version[] __attribute__((used)) =
-    "$VER: OpenMonitor " OM_VERSION " (" OM_DATE ") MIT, Copyright (c) 2026 AmigaChrome Team";
+    "$VER: GFOpenMonitor " OM_VERSION " (" OM_DATE ") MIT, Copyright (c) 2026 AmigaChrome Team";
 
-/* The window runs on 32 KB, however OpenMonitor is started (0.3.1: a Shell's 4 KB rebooted the machine
+/* The window runs on 32 KB, however GFOpenMonitor is started (0.3.1: a Shell's 4 KB rebooted the machine
  * when the window closed). libnix's start code swaps to a stack of this size when it was given less. */
 unsigned long __stack = 32768;
 
@@ -52,7 +52,7 @@ static char pubscreen[40];             /* PUBSCREEN/K: a public screen by its na
 const struct om_view *om_views[V_N] = { &om_tasks_view, &om_memory_view, &om_libs_view, &om_ports_view, &om_ints_view,
                                         &om_hw_view, &om_speed_view, &om_calls_view };
 
-/* ---- settings: ENV:OpenMonitor/Settings, "key value" lines, kept in ENVARC: too ------------------------- */
+/* ---- settings: ENV:GFOpenMonitor/Settings, "key value" lines, kept in ENVARC: too ------------------------- */
 
 #define MAXPREFS 40
 /* allocated: the view's variables (a4's 64 KB, built resident) are kept for what must be there */
@@ -64,7 +64,7 @@ static int npref;
 static void prefs_load(void)
 {
     char buf[3200], *p, *line;
-    LONG n = GetVar((STRPTR)"OpenMonitor/Settings", (STRPTR)buf, sizeof buf, GVF_GLOBAL_ONLY | GVF_BINARY_VAR);
+    LONG n = GetVar((STRPTR)"GFOpenMonitor/Settings", (STRPTR)buf, sizeof buf, GVF_GLOBAL_ONLY | GVF_BINARY_VAR);
     npref = 0;
     if (!P && !(P = AllocVec(sizeof *P, MEMF_ANY | MEMF_CLEAR))) return;
     if (n <= 0) return;
@@ -94,10 +94,10 @@ const char *om_pref(const char *key)
 static void prefs_save(void)
 {
     char buf[3200];
-    int i, len = snprintf(buf, sizeof buf, "; OpenMonitor %s's settings\n", OM_VERSION);
+    int i, len = snprintf(buf, sizeof buf, "; GFOpenMonitor %s's settings\n", OM_VERSION);
     for (i = 0; i < npref && len < (int)sizeof buf - 130; i++)
         len += snprintf(buf + len, sizeof buf - len, "%s %s\n", pref_key[i], pref_val[i]);
-    SetVar((STRPTR)"OpenMonitor/Settings", (STRPTR)buf, len, GVF_GLOBAL_ONLY | GVF_SAVE_VAR);
+    SetVar((STRPTR)"GFOpenMonitor/Settings", (STRPTR)buf, len, GVF_GLOBAL_ONLY | GVF_SAVE_VAR);
 }
 
 void om_set_pref(const char *key, const char *value)
@@ -219,7 +219,7 @@ LONG om_ask(const char *title, const char *buttons, const char *fmt, ...)
     es.es_GadgetFormat = (UBYTE *)buttons;
     {
         LONG r = EasyRequestArgs(U.win, &es, NULL, args);
-        if (U.win) ActivateWindow(U.win);       /* the keys come back to OpenMonitor */
+        if (U.win) ActivateWindow(U.win);       /* the keys come back to GFOpenMonitor */
         return r;
     }
 }
@@ -397,7 +397,7 @@ void om_open_view(int v)
 static struct TextFont *disk_font(struct TextAttr *ta);
 
 /* DejaVu Sans Mono 11, the system default text since amigachrome-guest #472: from the font list (the open
- * ROM adds it), else openfont.library or diskfont.library (FONTS:, OpenUp's ShellFont), else the system
+ * ROM adds it), else gfopenfont.library or diskfont.library (FONTS:, GFOpenUp's ShellFont), else the system
  * default text itself. */
 static struct TextFont *open_table_font(void)
 {
@@ -439,7 +439,7 @@ static struct TextFont *disk_font(struct TextAttr *ta)
     return f;
 }
 
-/* The labels' font when the theme's couldn't open (no openfont.library) and ogt_open_font gave the screen's
+/* The labels' font when the theme's couldn't open (no gfopenfont.library) and ogt_open_font gave the screen's
  * own, which is large on a tall screen (CGTriumvirate 23 on a 1920 x 1200 Workbench): the same family at
  * the theme's size through diskfont (bullet scales CGTriumvirate), else helvetica 13. */
 static void smaller_label_font(void)
@@ -610,7 +610,7 @@ static int gui(STRPTR first_view)
     if (X < 0 || X + W > scr->Width) X = (scr->Width - W) / 2;
     if (Y < scr->BarHeight + 1 || Y + H > scr->Height) Y = scr->BarHeight + 1 + (scr->Height - scr->BarHeight - 1 - H) / 2;
 
-    U.win = OpenWindowTags(NULL, WA_Title, (ULONG)"OpenMonitor", WA_ScreenTitle, (ULONG)("OpenMonitor " OM_VERSION),
+    U.win = OpenWindowTags(NULL, WA_Title, (ULONG)"GFOpenMonitor", WA_ScreenTitle, (ULONG)("GFOpenMonitor " OM_VERSION),
                            WA_PubScreen, (ULONG)scr, WA_Left, X, WA_Top, Y, WA_Width, W, WA_Height, H,
                            WA_MinWidth, minw, WA_MinHeight, minh, WA_MaxWidth, ~0, WA_MaxHeight, ~0,
                            WA_DragBar, TRUE, WA_DepthGadget, TRUE, WA_CloseGadget, TRUE, WA_SizeGadget, TRUE,
@@ -723,7 +723,7 @@ out:
 
 /* ---- one window, and leaving the Shell (0.3.2, unchanged) ----------------------------------------------- */
 
-#define FRONT_PORT "OpenMonitor"
+#define FRONT_PORT "GFOpenMonitor"
 
 static int send_to_front(void)
 {
@@ -767,7 +767,7 @@ static void release_front(struct MsgPort *p)
     DeleteMsgPort(p);
 }
 
-/* From a Shell: OpenMonitor starts again as a Shell process of its own (NIL: in and out), with WAIT, and this
+/* From a Shell: GFOpenMonitor starts again as a Shell process of its own (NIL: in and out), with WAIT, and this
  * command ends; a resident copy by its name, a file by its full path. 0 when it couldn't: it then runs here. */
 static int detach(const char *view, const char *task)
 {
@@ -818,7 +818,7 @@ int main(void)
          * TASK/K: the task to choose in the Tasks view, by its name; PUBSCREEN/K: the public screen to open on */
         LONG arg[4] = { 0, 0, 0, 0 };
         struct RDArgs *ra = ReadArgs((STRPTR)"WAIT/S,VIEW/K,TASK/K,PUBSCREEN/K", arg, NULL);
-        if (!ra) { PrintFault(IoErr(), (STRPTR)"OpenMonitor"); return RETURN_ERROR; }
+        if (!ra) { PrintFault(IoErr(), (STRPTR)"GFOpenMonitor"); return RETURN_ERROR; }
         if (arg[1]) { strncpy(view, (const char *)arg[1], sizeof view - 1); view[sizeof view - 1] = 0; }
         if (arg[2]) { strncpy(om_first_task, (const char *)arg[2], sizeof om_first_task - 1); om_first_task[sizeof om_first_task - 1] = 0; }
         if (arg[3]) { strncpy(pubscreen, (const char *)arg[3], sizeof pubscreen - 1); pubscreen[sizeof pubscreen - 1] = 0; }

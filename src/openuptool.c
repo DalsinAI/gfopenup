@@ -1,65 +1,65 @@
-/* OpenUpTool: what OpenUp's Installer scripts call (DESIGN.md section 3).
+/* GFOpenUpTool: what GFOpenUp's Installer scripts call (DESIGN.md section 3).
  *
- *   OpenUpTool DETECT                 what this machine is; ENV:OpenUp/... (ROM: OpenKick or Kickstart,
- *                                     0.8.7; OpenRTG: where openrtg.library is, 0.8.7)
- *   OpenUpTool INSTALL <part drawer>  installs one part, as its Part file says
- *   OpenUpTool REMOVE <part drawer>   takes one part out, putting back what it replaced (0.8.0)
- *   OpenUpTool STARTUP                writes the marked block in S:User-Startup
- *   OpenUpTool UNINSTALL              puts everything back
- *   OpenUpTool FIXTOOLS <table> [ALL] puts back default tools that OpenUp 0.6.14 to 0.7.0 changed
- *                                     to OpenView by mistake (see FIXTOOLS below)
- *   OpenUpTool LIST                   what is installed
- *   OpenUpTool SETTING <dest> <text>  a setting the Installer asked for, as a file
- *   OpenUpTool THEME <name> <look>    the look's theme: a saved look keeps its mode and other lines (see THEME)
- *   OpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-strip-<H>.png for the
+ *   GFOpenUpTool DETECT                 what this machine is; ENV:GFOpenUp/... (ROM: GFOpenKick or Kickstart,
+ *                                     0.8.7; GFOpenRTG: where gfopenrtg.library is, 0.8.7)
+ *   GFOpenUpTool INSTALL <part drawer>  installs one part, as its Part file says
+ *   GFOpenUpTool REMOVE <part drawer>   takes one part out, putting back what it replaced (0.8.0)
+ *   GFOpenUpTool STARTUP                writes the marked block in S:User-Startup
+ *   GFOpenUpTool UNINSTALL              puts everything back
+ *   GFOpenUpTool FIXTOOLS <table> [ALL] puts back default tools that GFOpenUp 0.6.14 to 0.7.0 changed
+ *                                     to GFOpenView by mistake (see FIXTOOLS below)
+ *   GFOpenUpTool LIST                   what is installed
+ *   GFOpenUpTool SETTING <dest> <text>  a setting the Installer asked for, as a file
+ *   GFOpenUpTool THEME <name> <look>    the look's theme: a saved look keeps its mode and other lines (see THEME)
+ *   GFOpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-strip-<H>.png for the
  *                                     screen's height, tiled, when there is one; else <prefix>-<W>x<H>.png, the
  *                                     one nearest the screen's shape, scaled to fit
- *   OpenUpTool FONT <font> <size>     the desktop's text: the screens' font and the icons'
+ *   GFOpenUpTool FONT <font> <size>     the desktop's text: the screens' font and the icons'
  *                                     text (Font prefs, "Screen text" and "Workbench icon text")
- *   OpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
+ *   GFOpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
  *                                     prefs, Appearance Settings, Title Bar Extra Height)
- *   OpenUpTool WBBACKDROP             Workbench as a backdrop: no frame, scroll bars or size gadget on
+ *   GFOpenUpTool WBBACKDROP             Workbench as a backdrop: no frame, scroll bars or size gadget on
  *                                     its window (Workbench's prefs, WBConfig.prefs)
- *   OpenUpTool OLDLOOK                takes out the look's files OpenUp up to 0.8.1 wrote (C:OpenLook,
+ *   GFOpenUpTool OLDLOOK                takes out the look's files GFOpenUp up to 0.8.1 wrote (C:GFOpenLook,
  *                                     the theme) where they are as it wrote them (Font and IControl
  *                                     prefs stay: they are the user's settings, 0.8.7),
  *                                     and the default icons in ENVARC:Sys and SYS:Disk.info: OS 3.2.3's
- *                                     own and OpenUp's faces of them (0.8.3, 0.8.4), and Gorilla's faces
+ *                                     own and GFOpenUp's faces of them (0.8.3, 0.8.4), and Gorilla's faces
  *                                     on the other icons, each where it is still as installed (0.8.4)
- *   OpenUpTool WBGAUGE                No fill gauge in a drive's window (Workbench's prefs, "No
+ *   GFOpenUpTool WBGAUGE                No fill gauge in a drive's window (Workbench's prefs, "No
  *                                     volume gauge": the bar down the left border that shows how
  *                                     full the disk is; the border is slim like any window's)
- *   OpenUpTool P96LEFTOVER            5 (WARN) on a real Amiga with Picasso96's
+ *   GFOpenUpTool P96LEFTOVER            5 (WARN) on a real Amiga with Picasso96's
  *                                     library left in LIBS: and no Picasso96 board running
- *   OpenUpTool RECONCILE [CHECK|APPLY [ONCE]|UNDO]  one desktop, the Open one: old prefs editors to
- *                                     SYS:Prefs/Classic, replaced tools retired, settings OpenUp owns kept in
+ *   GFOpenUpTool RECONCILE [CHECK|APPLY [ONCE]|UNDO]  one desktop, the Open one: old prefs editors to
+ *                                     SYS:Prefs/Classic, replaced tools retired, settings GFOpenUp owns kept in
  *                                     step; CHECK says what it would do (see the RECONCILE section)
- *   OpenUpTool TIDY [ONCE]            the system's drawers cleaned up, sized to fit (at most 800 x 600) and
+ *   GFOpenUpTool TIDY [ONCE]            the system's drawers cleaned up, sized to fit (at most 800 x 600) and
  *                                     snapshotted by Workbench itself, so they open neat (see TIDY)
- *   OpenUpTool ICONS [CHECK|APPLY]    old icons (four colours, NewIcons) found on SYS: and Work: and given
- *                                     our faces, by name from OpenIcons' set, else by kind (see ICONS)
- *   OpenUpTool ICONSIG <icon|drawer>  each icon's picture and whole signatures (see OLDLOOK)
- *   OpenUpTool RETIRE <file>          moves a file to SYS:Storage/OpenUp-Superseded, to
+ *   GFOpenUpTool ICONS [CHECK|APPLY]    old icons (four colours, NewIcons) found on SYS: and Work: and given
+ *                                     our faces, by name from GFOpenIcons' set, else by kind (see ICONS)
+ *   GFOpenUpTool ICONSIG <icon|drawer>  each icon's picture and whole signatures (see OLDLOOK)
+ *   GFOpenUpTool RETIRE <file>          moves a file to SYS:Storage/GFOpenUp-Superseded, to
  *                                     come back with UNINSTALL
- *   OpenUpTool UNPLACE <program>      drops the program's windows from OpenWindows' Places
- *                                     (ENV: and ENVARC:OpenPrefs/WindowPlaces), so they open
+ *   GFOpenUpTool UNPLACE <program>      drops the program's windows from GFOpenWindows' Places
+ *                                     (ENV: and ENVARC:GFOpenPrefs/WindowPlaces), so they open
  *                                     at the program's own first size again
- *   OpenUpTool UPDATE [CHECK|YES]     a newer pack Cradle put in DH1:OpenUp: CHECK says
+ *   GFOpenUpTool UPDATE [CHECK|YES]     a newer pack Cradle put in DH1:GFOpenUp: CHECK says
  *                                     (WARN when one waits); UPDATE shows what changes and
  *                                     asks; YES doesn't ask. It never runs on its own
  *
  * The rules it keeps:
- * - The base OS stays as shipped. A file OpenUp replaces goes first to
- *   SYS:Storage/OpenUp-Superseded/ (its path, with the colon as a slash),
+ * - The base OS stays as shipped. A file GFOpenUp replaces goes first to
+ *   SYS:Storage/GFOpenUp-Superseded/ (its path, with the colon as a slash),
  *   and only the first time: that copy is the original.
  * - It never overwrites another stack: a part's "keep" lines name files that
  *   must already be ours (a marker string inside them) or absent.
  * - Every file, directory and startup line it adds is listed in the
- *   manifest, ENVARC:OpenAmiga/OpenUp.manifest (and ENV:), so UNINSTALL can
+ *   manifest, ENVARC:GFOpenAmiga/GFOpenUp.manifest (and ENV:), so UNINSTALL can
  *   take exactly those away and put the originals back.
  * - Startup lines go in one marked block in S:User-Startup:
- *   ";BEGIN OpenUp" to ";END OpenUp". A line listed in
- *   ENVARC:OpenAmiga/Startup.off (OpenUp Setup's switches) is written with
+ *   ";BEGIN GFOpenUp" to ";END GFOpenUp". A line listed in
+ *   ENVARC:GFOpenAmiga/Startup.off (GFOpenUp Setup's switches) is written with
  *   ";OFF " in front, so AmigaDOS skips it, and a line whose program isn't on
  *   the disk with ";MISSING " (STARTUP writes it back in once it is there).
  *   A part's lines are the ones its Part file has now (0.7.5).
@@ -67,18 +67,18 @@
  *
  * A part's drawer holds its files, laid out as they go, and a Part file:
  *   part <name> <version>
- *   needs AmigaChrome                  (only on an AmigaChrome instance)
+ *   needs AmiCradle                  (only on an AmiCradle instance)
  *   needs ACRTG                        (only with an ACRTG graphics board)
- *   needs Kickstart                    (not on the OpenKick ROM: for OS 3.2's LoadModule, 0.8.7)
+ *   needs Kickstart                    (not on the GFOpenKick ROM: for OS 3.2's LoadModule, 0.8.7)
  *   needs part <name>                  (25 Oct 2026: only once the part <name> is installed, and REMOVE of <name>
  *                                       refuses while this part is installed; the GFOffice Suite's programs need
  *                                       the GFOffice part, their shared files; src/openup_lines.h)
  *   keep <dest> <marker> [<marker>...]  (dest must be absent or contain a marker)
  *   copy <file in the drawer> <dest>
  *   default <file in the drawer> <dest> (copied only when dest is missing)
- *   add <file in the drawer> <dest>     (copied when dest is missing or OpenUp
+ *   add <file in the drawer> <dest>     (copied when dest is missing or GFOpenUp
  *                                        put it there; another program's stays)
- *   retire <dest>                       (moved to SYS:Storage/OpenUp-Superseded,
+ *   retire <dest>                       (moved to SYS:Storage/GFOpenUp-Superseded,
  *                                        so it no longer runs; UNINSTALL puts it back)
  *   face <icon in the drawer> <dest .info>  (0.6: the icon's picture only; dest keeps
  *                                        its type, tools, tool types and window;
@@ -87,9 +87,9 @@
  *                                        system's: where it is <from> exactly it becomes <to>, and
  *                                        the rest of the icon stays; REMOVE puts <from> back)
  *   startup <the rest of the line>
- *   when AmigaChrome <copy|default|add|face|retire line>  (0.6.3: the line only on an AmigaChrome instance)
- *   unless AmigaChrome <line>, when OpenKick <line>, unless OpenKick <line>  (0.8.9, any line, startup lines
- *                                        too: OpenKick is the open ROM whose intuition applies the boot's
+ *   when AmiCradle <copy|default|add|face|retire line>  (0.6.3: the line only on an AmiCradle instance)
+ *   unless AmiCradle <line>, when GFOpenKick <line>, unless GFOpenKick <line>  (0.8.9, any line, startup lines
+ *                                        too: GFOpenKick is the open ROM whose intuition applies the boot's
  *                                        settings, prefs.resource 47.101 or later; src/openup_lines.h)
  * Words with spaces are quoted.
  *
@@ -125,7 +125,7 @@
 
 #include "openup_lines.h"
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpTool 0.8.11 (26.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.11 (26.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -137,16 +137,16 @@ static int same_word(const char *a, const char *b)
     return !*a && !*b;
 }
 
-#define MANIFEST "ENVARC:OpenAmiga/OpenUp.manifest"
-#define MANIFEST_ENV "ENV:OpenAmiga/OpenUp.manifest"
-#define SUPERSEDED "SYS:Storage/OpenUp-Superseded"
+#define MANIFEST "ENVARC:GFOpenAmiga/GFOpenUp.manifest"
+#define MANIFEST_ENV "ENV:GFOpenAmiga/GFOpenUp.manifest"
+#define SUPERSEDED "SYS:Storage/GFOpenUp-Superseded"
 #define USER_STARTUP "S:User-Startup"
-#define BLOCK_BEGIN ";BEGIN OpenUp"
-#define BLOCK_END ";END OpenUp"
-#define STARTUP_OFF "ENVARC:OpenAmiga/Startup.off"
+#define BLOCK_BEGIN ";BEGIN GFOpenUp"
+#define BLOCK_END ";END GFOpenUp"
+#define STARTUP_OFF "ENVARC:GFOpenAmiga/Startup.off"
 
-#define AMIGACHROME_MFR 0xDA15
-#define AMIGACHROME_MFR_OLD 2011
+#define AMICRADLE_MFR 0xDA15
+#define AMICRADLE_MFR_OLD 2011
 
 /* ---- small helpers ----------------------------------------------------------- */
 
@@ -202,9 +202,9 @@ static int is_file(const char *path)
     return file;
 }
 
-/* 0.7.8: a synchronous SystemTags never gets a NULL input or output (12 Oct 2026), as OpenDock 0.6.4 and
- * OpenMenus 0.4.4 give their programs (openamigaprefs #94). quiet: both are NIL:. Otherwise the command gets
- * OpenUpTool's own input and output when it has them (a Shell, or OpenUp Update's window, where the messages
+/* 0.7.8: a synchronous SystemTags never gets a NULL input or output (12 Oct 2026), as GFOpenDock 0.6.4 and
+ * GFOpenMenus 0.4.4 give their programs (openamigaprefs #94). quiet: both are NIL:. Otherwise the command gets
+ * GFOpenUpTool's own input and output when it has them (a Shell, or GFOpenUp Update's window, where the messages
  * belong) and NIL: in place of either it hasn't got (started from Workbench). A synchronous call leaves the
  * handles to the caller, so the NIL: ones opened here are closed here. -1 when NIL: can't be opened. */
 static LONG run_sync(const char *cmd, int quiet)
@@ -281,7 +281,7 @@ static int name_free(const char *path)
 }
 
 /* Two names beside path, nothing there with either: the new copy's (.tmp) and the old file's while the new one
- * takes its name (.bak). OpenUp, the task's address and a count in hex: 20 characters, for a 30-character file
+ * takes its name (.bak). GFOpenUp, the task's address and a count in hex: 22 characters, for a 30-character file
  * system. 1, else 0. */
 static int side_names(const char *path, char *temp, char *backup, int size)
 {
@@ -290,19 +290,19 @@ static int side_names(const char *path, char *temp, char *backup, int size)
     ULONG id = (ULONG)FindTask(NULL);
     int dir = strlen(path), tries, i, t, b = 0;
     while (dir && path[dir - 1] != '/' && path[dir - 1] != ':') dir--;
-    if (dir + 21 > size)
+    if (dir + 23 > size)
         return 0;
     for (tries = 0; tries < 256; tries++) {
         unsigned n = count++;
         char *name = temp + dir;
         memcpy(temp, path, dir);
-        memcpy(name, "OpenUp", 6);
-        for (i = 0; i < 8; i++) name[6 + i] = hex[(id >> (28 - 4 * i)) & 15];
-        name[14] = hex[(n >> 4) & 15];
-        name[15] = hex[n & 15];
-        strcpy(name + 16, ".tmp");
+        memcpy(name, "GFOpenUp", 8);
+        for (i = 0; i < 8; i++) name[8 + i] = hex[(id >> (28 - 4 * i)) & 15];
+        name[16] = hex[(n >> 4) & 15];
+        name[17] = hex[n & 15];
+        strcpy(name + 18, ".tmp");
         strcpy(backup, temp);
-        strcpy(backup + dir + 16, ".bak");
+        strcpy(backup + dir + 18, ".bak");
         if ((t = name_free(temp)) < 0 || (t && (b = name_free(backup)) < 0))
             return 0;
         if (t && b)
@@ -343,7 +343,7 @@ static int put_in_place(const char *temp, const char *backup, const char *dest, 
             Rename((STRPTR)backup, (STRPTR)dest);
             ok = 0;
         } else if (ok && !DeleteFile((STRPTR)backup)) {
-            say("OpenUp: the old ", dest, " is still in use, so it is kept beside it until it can be deleted:");
+            say("GFOpenUp: the old ", dest, " is still in use, so it is kept beside it until it can be deleted:");
             say("  ", backup, NULL);
         }
     }
@@ -397,7 +397,7 @@ static int write_file(const char *path, const char *data, LONG len)
 /* One line each: kind, then up to three tab-separated fields. Kinds:
  *   part <name> <version>   new <dest>   replaced <dest> <backup>
  *   same <dest>   dir <path>   bdir <path>   startup <part> <line>
- *   newfile <path> (a file OpenUp made, such as S:User-Startup)
+ *   newfile <path> (a file GFOpenUp made, such as S:User-Startup)
  *   needpart <part> <the part it needs> (a "needs part" line of an installed part's Part file, 25 Oct 2026)
  * 1024 entries was too few (0.7.3 and earlier): every part ticked comes to about 1,150 lines in 0.7.5,
  * an upgrade keeps the lines of files earlier versions put in, and a lab copy of an instance upgraded
@@ -448,7 +448,7 @@ static void manifest_load(void)
         f[n++] = line;
         for (char *q = line; *q && n < 3; q++)
             if (*q == '\t') { *q = 0; f[n++] = q + 1; }
-        if (!strcmp(f[0], "OpenUp") || !f[0][0])
+        if (!strcmp(f[0], "GFOpenUp") || !f[0][0])
             continue;
         strlcpy(ents[nents].kind, f[0], sizeof ents[0].kind);
         if (!set_text(&ents[nents].a, f[1] ? f[1] : "") || !set_text(&ents[nents].b, f[2] ? f[2] : "")) {
@@ -473,7 +473,7 @@ static int manifest_save(void)
     int i, ok;
     if (manifest_short) {                   /* a list loaded short would lose files */
         if (!said++)
-            say("OpenUp: its list of installed files (" MANIFEST ") is cut short or can't be read, so nothing is "
+            say("GFOpenUp: its list of installed files (" MANIFEST ") is cut short or can't be read, so nothing is "
                 "written over it: that would lose what it lists. If " MANIFEST_ENV " is whole, copy it in its place.",
                 NULL, NULL);
         return 0;
@@ -496,8 +496,8 @@ static int manifest_save(void)
     strcpy(p, OUL_MANIFEST_END "\n");     /* the list is whole (oul_manifest_whole) */
     p += strlen(p);
     len = p - buf;
-    ensure_dir("ENVARC:OpenAmiga", 1);
-    ensure_dir("ENV:OpenAmiga", 0);
+    ensure_dir("ENVARC:GFOpenAmiga", 1);
+    ensure_dir("ENV:GFOpenAmiga", 0);
     ok = write_file(MANIFEST, buf, len);
     write_file(MANIFEST_ENV, buf, len);
     FreeVec(buf);
@@ -518,7 +518,7 @@ static entry *add_entry(const char *kind, const char *a, const char *b)
     static int said_full;
     entry *e;
     if (nents >= MAXE) {
-        if (!said_full++) say("OpenUp: its list of installed files (" MANIFEST ") is full.", NULL, NULL);
+        if (!said_full++) say("GFOpenUp: its list of installed files (" MANIFEST ") is full.", NULL, NULL);
         return NULL;
     }
     e = &ents[nents];
@@ -632,7 +632,7 @@ static int copy_file(const char *from, const char *to, int record_dirs)
     return 1;
 }
 
-/* Where a file's original goes: SYS:Storage/OpenUp-Superseded/LIBS/x. */
+/* Where a file's original goes: SYS:Storage/GFOpenUp-Superseded/LIBS/x. */
 static void backup_path(const char *dest, char *out, int outlen)
 {
     char *p;
@@ -664,20 +664,20 @@ static int has_marker(const char *path, char **markers, int n)
 
 static int board(UWORD product)
 {
-    return FindConfigDev(NULL, AMIGACHROME_MFR, product) || FindConfigDev(NULL, AMIGACHROME_MFR_OLD, product);
+    return FindConfigDev(NULL, AMICRADLE_MFR, product) || FindConfigDev(NULL, AMICRADLE_MFR_OLD, product);
 }
 
-static int is_amigachrome(void)
+static int is_amicradle(void)
 {
     return board(1) || board(2);        /* ACBridge, ACStorage */
 }
 
 /* An ACRTG graphics board: any of its products (src/openup_lines.h, oul_acrtg_products: 9 the 16 MiB board, 15
- * the 64 MiB one, 16 the 256 MiB one). Up to OpenUpTool 0.7.5 only 9 counted, so a 64 MiB machine had "RTG: none"
- * and no OpenRTG; up to 0.8.11 16 didn't, so Instance-32's 256 MiB board had the same. */
+ * the 64 MiB one, 16 the 256 MiB one). Up to GFOpenUpTool 0.7.5 only 9 counted, so a 64 MiB machine had "RTG: none"
+ * and no GFOpenRTG; up to 0.8.11 16 didn't, so Instance-32's 256 MiB board had the same. */
 static int acrtg_board(void)
 {
-    static const ULONG mfrs[2] = { AMIGACHROME_MFR, AMIGACHROME_MFR_OLD };
+    static const ULONG mfrs[2] = { AMICRADLE_MFR, AMICRADLE_MFR_OLD };
     struct ConfigDev *cd;
     int i;
     for (i = 0; i < 2; i++)
@@ -686,23 +686,23 @@ static int acrtg_board(void)
     return 0;
 }
 
-/* The OpenKick ROM (0.8.7): OpenKickROM's header mark, the long 'OKR1' at the main ROM's start + $14, $F80014
+/* The GFOpenKick ROM (0.8.7): GFOpenKickROM's header mark, the long 'OKR1' at the main ROM's start + $14, $F80014
  * (amigachrome-guest libraries/openexec/exec_boot.h, OEXB_OKR1), or its system-startup module's ID string, which
- * says "OpenKick". A Kickstart 3.2.3 ROM has neither. OS 3.2's LoadModule and S:Pre-LoadModule-Startup are for
- * Kickstart ROMs: on Instance-32 (OpenKick) the OpenLibs startup stopped the boot with "device not mounted". */
+ * says "GFOpenKick". A Kickstart 3.2.3 ROM has neither. OS 3.2's LoadModule and S:Pre-LoadModule-Startup are for
+ * Kickstart ROMs: on Instance-32 (GFOpenKick) the GFOpenLibs startup stopped the boot with "device not mounted". */
 static int openkick_rom(void)
 {
     const volatile ULONG *mark = (const volatile ULONG *)0xF80014;
     struct Resident *r;
     if (*mark == 0x4F4B5231UL) return 1;                           /* 'OKR1' */
     r = FindResident((STRPTR)"system-startup");
-    return r && r->rt_IdString && strstr((const char *)r->rt_IdString, "OpenKick") != NULL;
+    return r && r->rt_IdString && strstr((const char *)r->rt_IdString, "GFOpenKick") != NULL;
 }
 
 /* 0.8.9: the open ROM whose intuition applies the boot's settings (the no-ROM-volume design of 24 October 2026,
  * sections 9 and 10): its prefs task applies Sound's levels, Gamepads' patch and the stack caps from ENV:, which
- * OpenPrefs APPLY did from S:User-Startup, and prefs.resource says so by its version, 47.101 or later. This is
- * "OpenKick" to a Part file's when and unless lines. OS 3.2.3's ROM has no prefs.resource. */
+ * GFOpenPrefs APPLY did from S:User-Startup, and prefs.resource says so by its version, 47.101 or later. This is
+ * "GFOpenKick" to a Part file's when and unless lines. OS 3.2.3's ROM has no prefs.resource. */
 static int prefs_task_rom(void)
 {
     struct Library *pr = (struct Library *)OpenResource((STRPTR)"prefs.resource");
@@ -712,20 +712,20 @@ static int prefs_task_rom(void)
 /* The OUL_ bits a Part file's conditions ask about (src/openup_lines.h) */
 static unsigned machine_bits(void)
 {
-    return (is_amigachrome() ? OUL_AMIGACHROME : 0) | (prefs_task_rom() ? OUL_OPENKICK : 0);
+    return (is_amicradle() ? OUL_AMICRADLE : 0) | (prefs_task_rom() ? OUL_OPENKICK : 0);
 }
 
 static void set_env(const char *name, const char *value)
 {
-    ensure_dir("ENV:OpenUp", 0);
+    ensure_dir("ENV:GFOpenUp", 0);
     SetVar((STRPTR)name, (STRPTR)value, -1, GVF_GLOBAL_ONLY);
 }
 
-#define LOOK_ENVARC "ENVARC:OpenGadTools/Look"
-#define LOOK_ENV "ENV:OpenGadTools/Look"
+#define LOOK_ENVARC "ENVARC:GFOpenGadTools/Look"
+#define LOOK_ENV "ENV:GFOpenGadTools/Look"
 
-/* The theme of the look saved in ENVARC:OpenGadTools/Look: the first word of its first line ("Graphite" of
- * "Graphite dark"), as OpenLook reads it (a first line that is a comment is Classic); "" when there is no
+/* The theme of the look saved in ENVARC:GFOpenGadTools/Look: the first word of its first line ("Graphite" of
+ * "Graphite dark"), as GFOpenLook reads it (a first line that is a comment is Classic); "" when there is no
  * look saved, as before a new install. */
 static void saved_theme(char *out, int size)
 {
@@ -750,39 +750,39 @@ static int detect(void)
     char summary[600], theme[80];
     const char *machine;
     UWORD attn = ((struct ExecBase *)SysBase)->AttnFlags;
-    int ac = is_amigachrome(), okick = openkick_rom();
-    if (ac) machine = "AmigaChrome";
+    int ac = is_amicradle(), okick = openkick_rom();
+    if (ac) machine = "AmiCradle";
     else if (OpenResource((STRPTR)"devicetree.resource")) machine = "PiStorm";
     else machine = "Amiga";
-    set_env("OpenUp/Machine", machine);
-    /* the look this Amiga has (OpenUpTool 0.7.5): the Installer keeps it on an upgrade, and picks one only
+    set_env("GFOpenUp/Machine", machine);
+    /* the look this Amiga has (GFOpenUpTool 0.7.5): the Installer keeps it on an upgrade, and picks one only
      * for a new install */
     saved_theme(theme, sizeof theme);
-    set_env("OpenUp/Theme", theme);
-    set_env("OpenUp/RTG", acrtg_board() ? "ACRTG" : "");
-    set_env("OpenUp/Network", board(6) ? "OpenSocket card" : "");
-    /* 0.8.7: the ROM, so the Installer leaves OS 3.2's LoadModule (OpenLibs' ROM modules) out on the OpenKick ROM;
-     * and where openrtg.library is, so an upgrade (a Novice one never sees the questions) brings OpenRTG up to date
-     * wherever OpenUp put it or the ROM has it, not only where LIBS:openrtg.library is on the disk */
-    set_env("OpenUp/ROM", okick ? "OpenKick" : "Kickstart");
+    set_env("GFOpenUp/Theme", theme);
+    set_env("GFOpenUp/RTG", acrtg_board() ? "ACRTG" : "");
+    set_env("GFOpenUp/Network", board(6) ? "GFOpenSocket card" : "");
+    /* 0.8.7: the ROM, so the Installer leaves OS 3.2's LoadModule (GFOpenLibs' ROM modules) out on the GFOpenKick ROM;
+     * and where gfopenrtg.library is, so an upgrade (a Novice one never sees the questions) brings GFOpenRTG up to date
+     * wherever GFOpenUp put it or the ROM has it, not only where LIBS:gfopenrtg.library is on the disk */
+    set_env("GFOpenUp/ROM", okick ? "GFOpenKick" : "Kickstart");
     manifest_load();
-    set_env("OpenUp/OpenRTG", find_entry("part", "OpenRTG") ? "OpenUp"
-                              : exists("SYS:Libs/openrtg.library") ? "LIBS"
-                              : FindResident((STRPTR)"openrtg.library") ? "ROM" : "");
+    set_env("GFOpenUp/GFOpenRTG", find_entry("part", "GFOpenRTG") ? "GFOpenUp"
+                              : exists("SYS:Libs/gfopenrtg.library") ? "LIBS"
+                              : FindResident((STRPTR)"gfopenrtg.library") ? "ROM" : "");
     strcpy(summary, "This is ");
-    strcat(summary, ac ? "an AmigaChrome instance" : !strcmp(machine, "PiStorm") ? "a PiStorm (Emu68)" : "an Amiga");
+    strcat(summary, ac ? "an AmiCradle instance" : !strcmp(machine, "PiStorm") ? "a PiStorm (Emu68)" : "an Amiga");
     strcat(summary, ", with a ");
     strcat(summary, attn & AFF_68060 ? "68060" : attn & AFF_68040 ? "68040" : attn & AFF_68030 ? "68030" : attn & AFF_68020 ? "68020" : "68000");
     strcat(summary, attn & (AFF_68881 | AFF_FPU40) ? " and an FPU" : " and no FPU");
-    strcat(summary, okick ? ", on the OpenKick ROM.\n" : ".\n");
+    strcat(summary, okick ? ", on the GFOpenKick ROM.\n" : ".\n");
     if (ac) {
         strcat(summary, acrtg_board() ? "RTG: an ACRTG card.\n" : "RTG: none.\n");
-        strcat(summary, board(6) ? "Network: the OpenSocket card is fitted.\n"
-                                 : "Network: the OpenSocket card isn't fitted (turn the instance's Network switch on in Cradle).\n");
+        strcat(summary, board(6) ? "Network: the GFOpenSocket card is fitted.\n"
+                                 : "Network: the GFOpenSocket card isn't fitted (turn the instance's Network switch on in Cradle).\n");
     } else {
-        strcat(summary, "OpenUp 0.1 is for AmigaChrome instances. On this machine it offers only the parts that need no AmigaChrome boards.\n");
+        strcat(summary, "GFOpenUp 0.1 is for AmiCradle instances. On this machine it offers only the parts that need no AmiCradle boards.\n");
     }
-    set_env("OpenUp/Summary", summary);
+    set_env("GFOpenUp/Summary", summary);
     PutStr((STRPTR)summary);
     return RETURN_OK;
 }
@@ -795,7 +795,7 @@ static int words(char *line, char **w, int max)
     return oul_words(line, w, max);
 }
 
-/* One file out of a drawer's way (clear_way): one OpenUp put there ("new") goes; one OpenUp replaced goes, its
+/* One file out of a drawer's way (clear_way): one GFOpenUp put there ("new") goes; one GFOpenUp replaced goes, its
  * original staying listed in SYS:Storage; any other is kept in SYS:Storage now, listed as replaced. 0, or -1
  * (said why). */
 static int out_of_way(const char *path)
@@ -805,28 +805,28 @@ static int out_of_way(const char *path)
     int made = 0;
     if (e && (!strcmp(e->kind, "new") || !strcmp(e->kind, "replaced"))) {
         if (!DeleteFile((STRPTR)path)) {
-            say("OpenUp: can't move ", path, " out of the way of the drawer that goes there. Is it in use, or the disk write-protected?");
+            say("GFOpenUp: can't move ", path, " out of the way of the drawer that goes there. Is it in use, or the disk write-protected?");
             return -1;
         }
-        if (!strcmp(e->kind, "new")) e->kind[0] = 0;        /* OpenUp's own: gone */
+        if (!strcmp(e->kind, "new")) e->kind[0] = 0;        /* GFOpenUp's own: gone */
         return 0;
     }
     backup_path(path, backup, sizeof backup);
     parent_of(backup, bdir, sizeof bdir);
     if (!exists(backup)) {
         if (!ensure_dir(bdir, 0) || !copy_file(path, backup, 0)) {
-            say("OpenUp: can't keep a copy of ", path, " in SYS:Storage, so the drawer that goes there wasn't made. Is SYS: full or write-protected?");
+            say("GFOpenUp: can't keep a copy of ", path, " in SYS:Storage, so the drawer that goes there wasn't made. Is SYS: full or write-protected?");
             return -1;
         }
         made = 1;
     }
     if (!DeleteFile((STRPTR)path)) {
         if (made) DeleteFile((STRPTR)backup);
-        say("OpenUp: can't move ", path, " out of the way of the drawer that goes there. Is it in use, or the disk write-protected?");
+        say("GFOpenUp: can't move ", path, " out of the way of the drawer that goes there. Is it in use, or the disk write-protected?");
         return -1;
     }
     if (e ? !set_text(&e->b, backup) : !add_entry("replaced", path, backup)) {
-        say("OpenUp: out of memory noting ", path, "; it is in SYS:Storage/OpenUp-Superseded.");
+        say("GFOpenUp: out of memory noting ", path, "; it is in SYS:Storage/GFOpenUp-Superseded.");
         return -1;
     }
     if (e) strcpy(e->kind, "replaced");
@@ -834,7 +834,7 @@ static int out_of_way(const char *path)
 }
 
 /* A file where a drawer of dest's path goes is taken out of the way (25 Oct 2026; src/openup_lines.h, oul_way),
- * with its icon: Instance-32's own calculator at SYS:Utilities/OpenCalc, where the GFOffice Suite's OpenCalc drawer
+ * with its icon: Instance-32's own calculator at SYS:Utilities/GFOpenCalc, where the GFOffice Suite's GFOpenCalc drawer
  * goes. Each is kept as a replaced file is (out_of_way). The drawer comes after it in the manifest; UNINSTALL takes
  * the drawer out once its files are out, then puts the file back, and REMOVE does when the drawer it made is gone.
  * Before, the part's files couldn't be written there and INSTALL listed them anyway. 0, or -1 (said why). */
@@ -850,15 +850,15 @@ static int clear_way(const char *dest)
         if (strlcpy(icon, dir, sizeof icon) < sizeof icon && str_cat(icon, ".info", sizeof icon) < sizeof icon
             && is_file(icon) && out_of_way(icon) < 0)
             return -1;                              /* its icon: the drawer's goes there */
-        say("OpenUp: ", dir, " was a file where a drawer goes; it is kept in SYS:Storage/OpenUp-Superseded.");
+        say("GFOpenUp: ", dir, " was a file where a drawer goes; it is kept in SYS:Storage/GFOpenUp-Superseded.");
     }
     return 0;
 }
 
-/* Puts one file in place, keeping the original the first time OpenUp
+/* Puts one file in place, keeping the original the first time GFOpenUp
  * replaces it, and notes it in the manifest (loaded by the caller).
  * only_if_missing: 1 leaves any file already there (the user's own setting);
- * 2 replaces only a file OpenUp itself added, so an upgrade reaches it.
+ * 2 replaces only a file GFOpenUp itself added, so an upgrade reaches it.
  * 1 copied, 0 nothing to do, -1 failed (said why). */
 static int install_file(const char *from, const char *dest, int only_if_missing)
 {
@@ -875,16 +875,16 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
         return 0;
     }
     if (exists(dest) && (!e || !strcmp(e->kind, "same"))) {
-        /* The first time OpenUp replaces this file: keep the original. */
+        /* The first time GFOpenUp replaces this file: keep the original. */
         char dir[260];
         backup_path(dest, backup, sizeof backup);
         parent_of(backup, dir, sizeof dir);
         if (!exists(backup) && (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0))) {
-            say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; it wasn't replaced. Is SYS: full or write-protected?");
+            say("GFOpenUp: can't keep a copy of ", dest, " in SYS:Storage; it wasn't replaced. Is SYS: full or write-protected?");
             return -1;
         }
         if (e ? !set_text(&e->b, backup) : !add_entry("replaced", dest, backup)) {
-            say("OpenUp: out of memory noting ", dest, "; it wasn't replaced.");
+            say("GFOpenUp: out of memory noting ", dest, "; it wasn't replaced.");
             return -1;
         }
         if (e) strcpy(e->kind, "replaced");
@@ -893,14 +893,14 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
     }
     if (!copy_file(from, dest, 1)) {
         if (added) added->kind[0] = 0;              /* never there, so not listed (25 Oct 2026) */
-        say("OpenUp: can't write ", dest, ". Is the disk full or write-protected?");
+        say("GFOpenUp: can't write ", dest, ". Is the disk full or write-protected?");
         return -1;
     }
     return 1;
 }
 
 /* Takes a file out of the way (another program's monitor driver, say),
- * keeping it in SYS:Storage/OpenUp-Superseded for UNINSTALL to put back.
+ * keeping it in SYS:Storage/GFOpenUp-Superseded for UNINSTALL to put back.
  * 1 moved, 0 nothing to do, -1 failed (said why). */
 static int retire_file(const char *dest)
 {
@@ -909,15 +909,15 @@ static int retire_file(const char *dest)
     if (!exists(dest))
         return 0;                                   /* absent */
     if ((e = find_entry(NULL, dest))) {
-        /* OpenUp's own file, from an earlier part that the retiring part has taken over: it goes. A "new"
+        /* GFOpenUp's own file, from an earlier part that the retiring part has taken over: it goes. A "new"
          * one leaves the manifest with it; a "replaced" one keeps its entry, so UNINSTALL still puts the
          * original back from SYS:Storage. A "same" file is the user's own bytes and stays. Before, every
-         * file in the manifest was left: on Dale's disk (OpenUp 0.7.9's parts) OpenPrefs's retire lines
-         * left seven old editors' icons beside OpenPrefs's (lab t5-events, W53) */
+         * file in the manifest was left: on Dale's disk (GFOpenUp 0.7.9's parts) GFOpenPrefs's retire lines
+         * left seven old editors' icons beside GFOpenPrefs's (lab t5-events, W53) */
         if (strcmp(e->kind, "new") && strcmp(e->kind, "replaced"))
             return 0;
         if (!DeleteFile((STRPTR)dest)) {
-            say("OpenUp: can't move ", dest, " out of the way. Is it in use, or the disk write-protected?");
+            say("GFOpenUp: can't move ", dest, " out of the way. Is it in use, or the disk write-protected?");
             return -1;
         }
         if (!strcmp(e->kind, "new"))
@@ -927,12 +927,12 @@ static int retire_file(const char *dest)
     backup_path(dest, backup, sizeof backup);
     parent_of(backup, dir, sizeof dir);
     if (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0)) {
-        say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; it was left in place. Is SYS: full or write-protected?");
+        say("GFOpenUp: can't keep a copy of ", dest, " in SYS:Storage; it was left in place. Is SYS: full or write-protected?");
         return -1;
     }
     if (!DeleteFile((STRPTR)dest)) {
         DeleteFile((STRPTR)backup);
-        say("OpenUp: can't move ", dest, " out of the way. Is it in use, or the disk write-protected?");
+        say("GFOpenUp: can't move ", dest, " out of the way. Is it in use, or the disk write-protected?");
         return -1;
     }
     add_entry("replaced", dest, backup);
@@ -941,7 +941,7 @@ static int retire_file(const char *dest)
 
 /* 1 when icon b already shows icon a's picture, as icon.library reads them (OS 3.5 icons): the size, the
  * frame, and both images with their palettes and transparent colours. A face is only the picture, so an
- * icon that has it already is left as it is. Before OpenUpTool 0.7.5 every face line wrote its icon again
+ * icon that has it already is left as it is. Before GFOpenUpTool 0.7.5 every face line wrote its icon again
  * on every install and upgrade: the GorillaIcons part counted every icon it faces as changed each time
  * (59 on one lab copy of Instance-32, 76 on another), and Workbench redrew each of them. */
 static int same_picture(struct DiskObject *a, struct DiskObject *b)
@@ -976,7 +976,7 @@ static int same_picture(struct DiskObject *a, struct DiskObject *b)
 
 /* Writes name.info: pic's picture with old's own type, default tool, tool types, stack, place and drawer window
  * (lent for the write, then given back). face_icon writes the icon this way, and OLDLOOK writes it again into T:
- * to know whether an icon is still as OpenUp left it. 1 written. */
+ * to know whether an icon is still as GFOpenUp left it. 1 written. */
 static int put_face(struct DiskObject *pic, struct DiskObject *old, const char *name, int notify)
 {
     UBYTE type = pic->do_Type;
@@ -995,11 +995,11 @@ static int put_face(struct DiskObject *pic, struct DiskObject *old, const char *
     return ok;
 }
 
-/* A new face for an icon that stays the system's (OpenIcons' pictures on SYS:'s
+/* A new face for an icon that stays the system's (GFOpenIcons' pictures on SYS:'s
  * drawers and programs and on the DefIcons file types, ICONS.md section 8): the
  * picture comes from the part's icon, and everything else (type, default
  * tool, tool types, stack, the drawer's window, its place) stays the icon's
- * own. The original goes to SYS:Storage/OpenUp-Superseded the first time, as
+ * own. The original goes to SYS:Storage/GFOpenUp-Superseded the first time, as
  * for a replaced file, so UNINSTALL puts it back. An icon the machine hasn't
  * got, or one that shows the picture already (same_picture), is left alone.
  * 1 changed, 0 nothing to do, -1 failed (said why). */
@@ -1019,7 +1019,7 @@ static int face_icon(const char *from, const char *dest)
     backup_path(dest, backup, sizeof backup);
     e = find_entry(NULL, dest);
     if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) {
-        say("OpenUp: icon.library 44 or later is needed to give ", dest, " its new picture.");
+        say("GFOpenUp: icon.library 44 or later is needed to give ", dest, " its new picture.");
         return -1;
     }
     pic = GetIconTags((STRPTR)fname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE);
@@ -1031,7 +1031,7 @@ static int face_icon(const char *from, const char *dest)
         IconBase = NULL;
         return 0;
     }
-    /* 0.8.4: an icon OpenUp faced before gets a new face only while it is its original (OLDLOOK put it back
+    /* 0.8.4: an icon GFOpenUp faced before gets a new face only while it is its original (OLDLOOK put it back
      * from Gorilla's picture): one the user changed since keeps what they gave it */
     if (e && !strcmp(e->kind, "replaced") && pic && old) {
         FreeDiskObject(pic);                        /* still_face opens icon.library for itself */
@@ -1041,7 +1041,7 @@ static int face_icon(const char *from, const char *dest)
         /* (still its original picture, over its original fields or over its own now: a tooltype line, the
          * Shell icon's, changes a field and not the picture, 24 October 2026) */
         if (!e->b || !exists(e->b) || (!still_face(dest, e->b, e->b) && !still_face(dest, e->b, dest))) {
-            say("OpenUp: kept ", dest, ": it has been changed since OpenUp last gave it a picture");
+            say("GFOpenUp: kept ", dest, ": it has been changed since GFOpenUp last gave it a picture");
             return 0;
         }
         if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) return -1;
@@ -1051,7 +1051,7 @@ static int face_icon(const char *from, const char *dest)
     if (!e || !strcmp(e->kind, "same")) {          /* the first time: keep the original */
         parent_of(backup, dir, sizeof dir);
         if (!exists(backup) && (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0))) {
-            say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; its picture wasn't changed. Is SYS: full or write-protected?");
+            say("GFOpenUp: can't keep a copy of ", dest, " in SYS:Storage; its picture wasn't changed. Is SYS: full or write-protected?");
             if (pic) FreeDiskObject(pic);
             if (old) FreeDiskObject(old);
             CloseLibrary(IconBase);
@@ -1066,12 +1066,12 @@ static int face_icon(const char *from, const char *dest)
     CloseLibrary(IconBase);
     IconBase = NULL;
     if (!ok) {
-        say("OpenUp: can't give ", dest, " its new picture. Is the disk write-protected?");
+        say("GFOpenUp: can't give ", dest, " its new picture. Is the disk write-protected?");
         return -1;
     }
-    if (!e) { if (!add_entry("replaced", dest, backup)) { say("OpenUp: out of memory noting ", dest, "'s new picture."); return -1; } }
+    if (!e) { if (!add_entry("replaced", dest, backup)) { say("GFOpenUp: out of memory noting ", dest, "'s new picture."); return -1; } }
     else if (!strcmp(e->kind, "same")) {
-        if (!set_text(&e->b, backup)) { say("OpenUp: out of memory noting ", dest, "'s new picture."); return -1; }
+        if (!set_text(&e->b, backup)) { say("GFOpenUp: out of memory noting ", dest, "'s new picture."); return -1; }
         strcpy(e->kind, "replaced");
     }
     return 1;
@@ -1081,7 +1081,7 @@ static int face_icon(const char *from, const char *dest)
  * WINDOW=CON:0///130/... without its 130, so a Shell from the icon opens 80 x 24 of the system font, as
  * NewShell's own window does). Where the icon has the tool type from, exactly, it becomes to; its picture, its
  * other tool types and everything else stay as they are. With keep (INSTALL), the icon as it was goes to
- * SYS:Storage/OpenUp-Superseded the first time, as for a face, and the manifest lists it as replaced, so
+ * SYS:Storage/GFOpenUp-Superseded the first time, as for a face, and the manifest lists it as replaced, so
  * UNINSTALL puts it back; REMOVE calls this the other way round (to back to from), without keep, so the icon
  * keeps whatever picture it has then. An icon the machine hasn't got, or one without that tool type (it has
  * the other one already, or the user changed it), is left alone. 1 changed, 0 nothing to do, -1 failed. */
@@ -1097,13 +1097,13 @@ static int tooltype_icon(const char *dest, const char *from, const char *to, int
         return 0;
     no_info(dname, dest, sizeof dname);
     if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) {
-        say("OpenUp: icon.library 44 or later is needed to change ", dest, "'s tool types.");
+        say("GFOpenUp: icon.library 44 or later is needed to change ", dest, "'s tool types.");
         return -1;
     }
     if (!(o = GetIconTags((STRPTR)dname, ICONGETA_FailIfUnavailable, TRUE, TAG_DONE))) {
         CloseLibrary(IconBase);
         IconBase = NULL;
-        say("OpenUp: can't read the icon ", dest, NULL);
+        say("GFOpenUp: can't read the icon ", dest, NULL);
         return -1;
     }
     for (n = 0; o->do_ToolTypes && o->do_ToolTypes[n]; n++)
@@ -1113,7 +1113,7 @@ static int tooltype_icon(const char *dest, const char *from, const char *to, int
         backup_path(dest, backup, sizeof backup);
         parent_of(backup, dir, sizeof dir);
         if (!exists(backup) && (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0))) {
-            say("OpenUp: can't keep a copy of ", dest, " in SYS:Storage; its tool types weren't changed. Is SYS: full or write-protected?");
+            say("GFOpenUp: can't keep a copy of ", dest, " in SYS:Storage; its tool types weren't changed. Is SYS: full or write-protected?");
             ok = -1;
         }
     }
@@ -1128,15 +1128,15 @@ static int tooltype_icon(const char *dest, const char *from, const char *to, int
             o->do_ToolTypes = was;
             FreeVec(tts);
         }
-        if (ok < 0) say("OpenUp: can't write ", dest, "'s tool types. Is the disk write-protected?");
+        if (ok < 0) say("GFOpenUp: can't write ", dest, "'s tool types. Is the disk write-protected?");
     }
     FreeDiskObject(o);
     CloseLibrary(IconBase);
     IconBase = NULL;
     if (ok == 1 && keep) {
-        if (!e) { if (!add_entry("replaced", dest, backup)) { say("OpenUp: out of memory noting ", dest, "'s new tool type."); return -1; } }
+        if (!e) { if (!add_entry("replaced", dest, backup)) { say("GFOpenUp: out of memory noting ", dest, "'s new tool type."); return -1; } }
         else if (!strcmp(e->kind, "same")) {
-            if (!set_text(&e->b, backup)) { say("OpenUp: out of memory noting ", dest, "'s new tool type."); return -1; }
+            if (!set_text(&e->b, backup)) { say("GFOpenUp: out of memory noting ", dest, "'s new tool type."); return -1; }
             strcpy(e->kind, "replaced");
         }
     }
@@ -1166,7 +1166,7 @@ static int install(const char *drawer)
     path[200] = 0;
     AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
     if (!(text = read_file(path, NULL))) {
-        say("OpenUp: can't read ", path, ". Run the Installer from the OpenUp drawer.");
+        say("GFOpenUp: can't read ", path, ". Run the Installer from the GFOpenUp drawer.");
         return RETURN_FAIL;
     }
     manifest_load();
@@ -1213,8 +1213,8 @@ static int install(const char *drawer)
             } else if (pass == 0 && (need = oul_needs_part(w, n))) {
                 /* another part first: the GFOffice Suite's programs need the GFOffice part, their shared files */
                 if (!oul_installed(ents, nents, need)) {
-                    Printf((STRPTR)"OpenUp: %s needs the %s part, which isn't installed, so it was left out.\n"
-                           "        Install %s first (OpenUpTool INSTALL Parts/%s), then %s.\n",
+                    Printf((STRPTR)"GFOpenUp: %s needs the %s part, which isn't installed, so it was left out.\n"
+                           "        Install %s first (GFOpenUpTool INSTALL Parts/%s), then %s.\n",
                            (LONG)partname, (LONG)need, (LONG)need, (LONG)need, (LONG)partname);
                     refused = 1;
                 }
@@ -1222,22 +1222,22 @@ static int install(const char *drawer)
                 /* noted, so REMOVE of that part asks for this one to go first */
                 if (!add_entry(OUL_NEEDPART, partname, need)) errors++;
             } else if (pass == 0 && !strcmp(w[0], "needs") && n >= 2) {
-                if (!strcmp(w[1], "AmigaChrome") && !is_amigachrome()) {
-                    say("OpenUp: ", partname, " is for AmigaChrome instances; left out here.");
+                if (!strcmp(w[1], "AmiCradle") && !is_amicradle()) {
+                    say("GFOpenUp: ", partname, " is for AmiCradle instances; left out here.");
                     refused = 1;
                 }
                 if (!strcmp(w[1], "Kickstart") && openkick_rom()) {
-                    say("OpenUp: ", partname, " is loaded by OS 3.2's LoadModule, which is for Kickstart ROMs; the OpenKick ROM has its own, so it is left out here.");
+                    say("GFOpenUp: ", partname, " is loaded by OS 3.2's LoadModule, which is for Kickstart ROMs; the GFOpenKick ROM has its own, so it is left out here.");
                     refused = 1;
                 }
                 if (!strcmp(w[1], "ACRTG") && !acrtg_board()) {
-                    say("OpenUp: ", partname, " needs an ACRTG graphics board; left out here. In AmigaChrome, fit one in Cradle (Hardware, Display).");
+                    say("GFOpenUp: ", partname, " needs an ACRTG graphics board; left out here. In AmiCradle, fit one in Cradle (Hardware, Display).");
                     refused = 1;
                 }
             } else if (pass == 0 && !strcmp(w[0], "keep") && n >= 3) {
                 if (exists(w[1]) && !has_marker(w[1], w + 2, n - 2) && !find_entry(NULL, w[1])) {
-                    say("OpenUp: ", w[1], " belongs to another program, so OpenUp leaves it and this part out.");
-                    say("        To use ", partname, ", remove that program first, then run OpenUp again.");
+                    say("GFOpenUp: ", w[1], " belongs to another program, so GFOpenUp leaves it and this part out.");
+                    say("        To use ", partname, ", remove that program first, then run GFOpenUp again.");
                     refused = 1;
                 }
             } else if (pass == 1 && !strcmp(w[0], "face") && n >= 3) {
@@ -1279,36 +1279,36 @@ static int install(const char *drawer)
     if (!errors) {
         entry *pe = find_entry("part", partname);
         if (pe ? !set_text(&pe->b, partver) : !add_entry("part", partname, partver)) {
-            say("OpenUp: out of memory noting ", partname, "; run the install again.");
+            say("GFOpenUp: out of memory noting ", partname, "; run the install again.");
             return RETURN_ERROR;
         }
     }
     if (!manifest_save()) {
-        say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
+        say("GFOpenUp: can't write its list of installed files in ENVARC:GFOpenAmiga. Is SYS: full?", NULL, NULL);
         return RETURN_ERROR;
     }
     if (errors) {
         entry *pe = find_entry("part", partname);
-        Printf((STRPTR)"OpenUp: %s %s didn't install completely (%ld file%s changed, %ld problem%s above), so ",
+        Printf((STRPTR)"GFOpenUp: %s %s didn't install completely (%ld file%s changed, %ld problem%s above), so ",
                (LONG)partname, (LONG)partver, files, (LONG)(files == 1 ? "" : "s"), errors, (LONG)(errors == 1 ? "" : "s"));
         if (pe) Printf((STRPTR)"the list still has %s %s.\n", (LONG)partname, (LONG)pe->b);
         else Printf((STRPTR)"it isn't listed as installed.\n");
         return RETURN_ERROR;
     }
-    Printf((STRPTR)"OpenUp: %s %s installed (%ld file%s changed)\n", (LONG)partname, (LONG)partver, files, (LONG)(files == 1 ? "" : "s"));
+    Printf((STRPTR)"GFOpenUp: %s %s installed (%ld file%s changed)\n", (LONG)partname, (LONG)partver, files, (LONG)(files == 1 ? "" : "s"));
     return RETURN_OK;
 }
 
 /* ---- REMOVE: one part taken out (0.8.0) ------------------------------------------------------ */
 
 /* Takes out the files one part's Part file names, as UNINSTALL takes out everything: a file the part added
- * is deleted, a file it replaced or retired gets its original back from SYS:Storage/OpenUp-Superseded, and
+ * is deleted, a file it replaced or retired gets its original back from SYS:Storage/GFOpenUp-Superseded, and
  * its startup lines and its "part" line leave the manifest (STARTUP writes S:User-Startup again after). The
- * directories it made go when empty. The OpenLibs switches use it: unticking a library puts OS 3.2's own
- * back. Only a file the manifest lists is touched, so a file the part names but OpenUp never put there (the
+ * directories it made go when empty. The GFOpenLibs switches use it: unticking a library puts OS 3.2's own
+ * back. Only a file the manifest lists is touched, so a file the part names but GFOpenUp never put there (the
  * user's own) stays. 0 when the part isn't installed.
  * A part another installed part needs (its "needs part" line, noted as needpart in the manifest) stays, and
- * nothing changes: GFOffice stays while OpenWrite or OpenCalc is installed (25 Oct 2026). */
+ * nothing changes: GFOffice stays while GFOpenWrite or GFOpenCalc is installed (25 Oct 2026). */
 static int remove_part(const char *drawer)
 {
     char path[220], *text, *p, *line, partname[64] = "";
@@ -1319,7 +1319,7 @@ static int remove_part(const char *drawer)
     path[200] = 0;
     AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
     if (!(text = read_file(path, NULL))) {
-        say("OpenUp: can't read ", path, ". Run the Installer from the OpenUp drawer.");
+        say("GFOpenUp: can't read ", path, ". Run the Installer from the GFOpenUp drawer.");
         return RETURN_FAIL;
     }
     manifest_load();
@@ -1330,7 +1330,7 @@ static int remove_part(const char *drawer)
     }
     if (oul_part_name(text, partname, sizeof partname) && oul_installed(ents, nents, partname) &&
         (by = oul_needed_by(ents, nents, partname))) {
-        Printf((STRPTR)"OpenUp: %s stays: %s needs it. Take out %s first (OpenUpTool REMOVE Parts/%s), then %s.\n",
+        Printf((STRPTR)"GFOpenUp: %s stays: %s needs it. Take out %s first (GFOpenUpTool REMOVE Parts/%s), then %s.\n",
                (LONG)partname, (LONG)by, (LONG)by, (LONG)by, (LONG)partname);
         FreeVec(text);
         return RETURN_WARN;
@@ -1363,15 +1363,15 @@ static int remove_part(const char *drawer)
             continue;
         if (!strcmp(e->kind, "new")) {
             if (DeleteFile((STRPTR)e->a) || !exists(e->a)) { removed++; e->kind[0] = 0; }
-            else { say("OpenUp: can't delete ", e->a, "; is it in use?"); problems++; continue; }
+            else { say("GFOpenUp: can't delete ", e->a, "; is it in use?"); problems++; continue; }
         } else if (!strcmp(e->kind, "replaced")) {
             if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; e->kind[0] = 0; }
-            else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); problems++; continue; }
+            else { say("GFOpenUp: can't put back ", e->a, "; its original is in SYS:Storage/GFOpenUp-Superseded."); problems++; continue; }
         } else if (!strcmp(e->kind, "same")) {
             e->kind[0] = 0;
             continue;
         } else continue;
-        /* the directories OpenUp made for it, deepest first, while empty */
+        /* the directories GFOpenUp made for it, deepest first, while empty */
         parent_of(dest, dir, sizeof dir);
         while (dir[0] && dir[strlen(dir) - 1] != ':') {
             char up[ENTRY_PATH];
@@ -1381,7 +1381,7 @@ static int remove_part(const char *drawer)
             /* a file that was where the drawer went (INSTALL's clear_way, 25 Oct 2026) comes back now it's gone */
             if ((f = find_entry("replaced", dir))) {
                 if (copy_file(f->b, f->a, 0)) { DeleteFile((STRPTR)f->b); restored++; f->kind[0] = 0; }
-                else { say("OpenUp: can't put back ", f->a, "; it is in SYS:Storage/OpenUp-Superseded."); problems++; }
+                else { say("GFOpenUp: can't put back ", f->a, "; it is in SYS:Storage/GFOpenUp-Superseded."); problems++; }
             }
             parent_of(dir, up, sizeof up);
             strcpy(dir, up);
@@ -1390,7 +1390,7 @@ static int remove_part(const char *drawer)
     FreeVec(text);
     if (!partname[0] || !find_entry("part", partname)) {
         if (!removed && !restored) {
-            Printf((STRPTR)"OpenUp: %s isn't installed\n", (LONG)(partname[0] ? partname : drawer));
+            Printf((STRPTR)"GFOpenUp: %s isn't installed\n", (LONG)(partname[0] ? partname : drawer));
             return RETURN_OK;
         }
     }
@@ -1400,10 +1400,10 @@ static int remove_part(const char *drawer)
             ents[i].kind[0] = 0;
     oul_drop_needs(ents, nents, partname);          /* what it needed may go now */
     if (!manifest_save()) {
-        say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
+        say("GFOpenUp: can't write its list of installed files in ENVARC:GFOpenAmiga. Is SYS: full?", NULL, NULL);
         return RETURN_ERROR;
     }
-    Printf((STRPTR)"OpenUp: %s taken out (%ld file%s removed, %ld put back as they were)\n", (LONG)partname, removed,
+    Printf((STRPTR)"GFOpenUp: %s taken out (%ld file%s removed, %ld put back as they were)\n", (LONG)partname, removed,
            (LONG)(removed == 1 ? "" : "s"), restored);
     return problems ? RETURN_ERROR : RETURN_OK;
 }
@@ -1411,9 +1411,9 @@ static int remove_part(const char *drawer)
 /* ---- S:User-Startup ---------------------------------------------------------------------- */
 
 /* 1 when the line from p to e is exactly the marker (trailing blanks
- * allowed): ";BEGIN OpenUp" and not ";BEGIN OpenUpSomething", another
+ * allowed): ";BEGIN GFOpenUp" and not ";BEGIN OpenUpSomething", another
  * program's block whose name starts the same way. Any number of leading
- * semicolons counts as one: a block once marked ";;BEGIN OpenUp" (an edit by
+ * semicolons counts as one: a block once marked ";;BEGIN GFOpenUp" (an edit by
  * hand or another tool) is ours too, so STARTUP replaces it instead of adding
  * a second block and starting every program twice (10 Oct 2026). */
 static int is_marker_line(const char *p, const char *e, const char *marker)
@@ -1449,7 +1449,7 @@ static char *without_block(const char *text, int *had)
     return out;
 }
 
-/* 1 when line is listed in ENVARC:OpenAmiga/Startup.off (OpenUp Setup's
+/* 1 when line is listed in ENVARC:GFOpenAmiga/Startup.off (GFOpenUp Setup's
  * switches: one startup line per line, ";" comments, blanks ignored). */
 static int switched_off(const char *off, const char *line)
 {
@@ -1466,7 +1466,7 @@ static int switched_off(const char *off, const char *line)
     return 0;
 }
 
-/* ---- OpenWindows' places ------------------------------------------------------- */
+/* ---- GFOpenWindows' places ------------------------------------------------------- */
 
 /* The places text without the lines for a program's windows: each line is
  * "program:title" in quotes, then left, top, width and height. */
@@ -1496,12 +1496,12 @@ static char *without_places(const char *text, const char *prog, int *dropped)
     return out;
 }
 
-/* Drops a program's windows from both copies of OpenWindows' places file,
+/* Drops a program's windows from both copies of GFOpenWindows' places file,
  * so they open at the program's own first size again. A file that isn't
  * there, or has no line for it, is fine. */
 static int unplace(const char *prog)
 {
-    static const char *const files[2] = { "ENV:OpenPrefs/WindowPlaces", "ENVARC:OpenPrefs/WindowPlaces" };
+    static const char *const files[2] = { "ENV:GFOpenPrefs/WindowPlaces", "ENVARC:GFOpenPrefs/WindowPlaces" };
     int k, rc = RETURN_OK;
     for (k = 0; k < 2; k++) {
         char *text = read_file(files[k], NULL), *out;
@@ -1510,7 +1510,7 @@ static int unplace(const char *prog)
             continue;
         out = without_places(text, prog, &dropped);
         if (out && dropped && !write_file(files[k], out, strlen(out))) {
-            say("OpenUp: can't write ", files[k], NULL);
+            say("GFOpenUp: can't write ", files[k], NULL);
             rc = RETURN_ERROR;
         }
         if (out) FreeVec(out);
@@ -1519,7 +1519,7 @@ static int unplace(const char *prog)
     return rc;
 }
 
-/* 1 when a startup line runs a program named by its path ("SYS:Prefs/OpenSound USE", "Run >NIL: C:OpenDock")
+/* 1 when a startup line runs a program named by its path ("SYS:Prefs/OpenSound USE", "Run >NIL: C:GFOpenDock")
  * and that program isn't on the disk. A command found on the path (Assign ...) isn't checked. Such a line,
  * written as it is, stops S:User-Startup and the boot with "Unknown command": a part not ticked in an upgrade
  * keeps its old line (0.7.3's "SYS:Prefs/Gamepads USE"), and a program can be moved by hand. */
@@ -1546,7 +1546,7 @@ static int write_startup(int remove_only)
     text = read_file(USER_STARTUP, &len);
     if (!text) {
         if (IoErr() != ERROR_OBJECT_NOT_FOUND) {    /* there but not read: a new one would lose the user's lines */
-            say("OpenUp: can't read " USER_STARTUP ", so it is left as it is.", NULL, NULL);
+            say("GFOpenUp: can't read " USER_STARTUP ", so it is left as it is.", NULL, NULL);
             return 0;
         }
         if (remove_only)
@@ -1573,12 +1573,12 @@ static int write_startup(int remove_only)
         if (lines) {
             char *off = read_file(STARTUP_OFF, NULL);
             if (buf[0] && buf[strlen(buf) - 1] != '\n') strcat(buf, "\n");
-            strcat(buf, BLOCK_BEGIN "\n; Added by OpenUp. OpenUpTool UNINSTALL takes it out.\n");
+            strcat(buf, BLOCK_BEGIN "\n; Added by GFOpenUp. GFOpenUpTool UNINSTALL takes it out.\n");
             for (i = 0; i < nents; i++)
                 if (!strcmp(ents[i].kind, "startup") && strlen(buf) + strlen(ents[i].a) + 32 < (ULONG)(64 + MAXE * 2 + 8192)) {
-                    if (off && switched_off(off, ents[i].a)) strcat(buf, ";OFF ");     /* switched off in OpenUp Setup */
+                    if (off && switched_off(off, ents[i].a)) strcat(buf, ";OFF ");     /* switched off in GFOpenUp Setup */
                     else if (program_missing(ents[i].a)) {                           /* back in when the program is */
-                        say("OpenUp: left out of S:User-Startup, as its program isn't there: ", ents[i].a, NULL);
+                        say("GFOpenUp: left out of S:User-Startup, as its program isn't there: ", ents[i].a, NULL);
                         strcat(buf, ";MISSING ");
                     }
                     strcat(buf, ents[i].a);
@@ -1593,22 +1593,22 @@ static int write_startup(int remove_only)
     return i;
 }
 
-/* ---- FIXTOOLS: default tools OpenTypes' SWITCH changed that it should not have --------------- */
+/* ---- FIXTOOLS: default tools GFOpenTypes' SWITCH changed that it should not have --------------- */
 
-/* OpenUp 0.6.14 to 0.7.0 ran "OpenTypes SWITCH MultiView TO OpenView IN SYS:". A bug in OpenTypes (its
+/* GFOpenUp 0.6.14 to 0.7.0 ran "GFOpenTypes SWITCH MultiView TO GFOpenView IN SYS:". A bug in GFOpenTypes (its
  * Stricmp was called with A6 still holding dos.library) made it see every icon and every kind of file as
  * MultiView's, so about 40 of AmigaOS 3.2.3's own icons (the datatype descriptors', the pointer presets',
- * DOSDrivers', the Picasso96 guides', Help...) and 16 default icons opened OpenView. FIXTOOLS puts the
- * default tool back. It changes an icon only when that icon's default tool is OpenView now and its
+ * DOSDrivers', the Picasso96 guides', Help...) and 16 default icons opened GFOpenView. FIXTOOLS puts the
+ * default tool back. It changes an icon only when that icon's default tool is GFOpenView now and its
  * original is known, from, in this order:
- *   1. OpenTypes' own record, ENVARC:OpenTypes/Changes and the icon it kept in Backup (exact);
+ *   1. GFOpenTypes' own record, ENVARC:GFOpenTypes/Changes and the icon it kept in Backup (exact);
  *   2. the table, StockDefaultTools: "<icon without .info><TAB><default tool>" for AmigaOS 3.2.3's icons.
- * The kinds of file OpenTypes switched on purpose (ENVARC:Sys/def_<kind> that named MultiView) stay on
- * OpenView, unless ALL is given (UNINSTALL gives it). Every change is logged. */
-#define OT_CHANGES "ENVARC:OpenTypes/Changes"
-#define STOCK_TOOLS "ENVARC:OpenAmiga/StockDefaultTools"
-#define REPAIR_LOG "ENVARC:OpenAmiga/DefaultTools-repair.log"
-#define REPAIRED_MARK "ENVARC:OpenAmiga/DefaultTools-repaired"
+ * The kinds of file GFOpenTypes switched on purpose (ENVARC:Sys/def_<kind> that named MultiView) stay on
+ * GFOpenView, unless ALL is given (UNINSTALL gives it). Every change is logged. */
+#define OT_CHANGES "ENVARC:GFOpenTypes/Changes"
+#define STOCK_TOOLS "ENVARC:GFOpenAmiga/StockDefaultTools"
+#define REPAIR_LOG "ENVARC:GFOpenAmiga/DefaultTools-repair.log"
+#define REPAIRED_MARK "ENVARC:GFOpenAmiga/DefaultTools-repaired"
 
 static char fix_log[20000];
 static int fix_log_len;
@@ -1655,7 +1655,7 @@ static int is_default_icon(const char *path)
     return starts_with(path, "ENVARC:Sys/def_") || starts_with(path, "ENV:Sys/def_");
 }
 
-/* One icon (path without .info): its default tool goes back to orig when it is OpenView now. */
+/* One icon (path without .info): its default tool goes back to orig when it is GFOpenView now. */
 static void fix_icon(const char *path, const char *orig, int all, const char *why)
 {
     struct DiskObject *dob;
@@ -1668,14 +1668,14 @@ static void fix_icon(const char *path, const char *orig, int all, const char *wh
     if (!dob) return;
     fix_checked++;
     cur = dob->do_DefaultTool;
-    if (cur && same_program((const char *)cur, "OpenView") && !same_program(orig, "OpenView")) {
+    if (cur && same_program((const char *)cur, "GFOpenView") && !same_program(orig, "GFOpenView")) {
         if (!all && is_default_icon(path) && same_program(orig, "MultiView")) {
             int i, seen = 0;
             for (i = 0; i < fix_nkept; i++) if (same_word(fix_kept_paths[i], path)) seen = 1;     /* once, not for the table too */
             if (!seen) {
                 fix_kept++;
                 if (fix_nkept < 64 && strlen(path) < sizeof fix_kept_paths[0]) strcpy(fix_kept_paths[fix_nkept++], path);
-                fix_say("kept: ", path, " opens with OpenView, as the switch of kinds of file made it", NULL);
+                fix_say("kept: ", path, " opens with GFOpenView, as the switch of kinds of file made it", NULL);
             }
         } else {
             int ok;
@@ -1684,7 +1684,7 @@ static void fix_icon(const char *path, const char *orig, int all, const char *wh
             dob->do_DefaultTool = cur;
             if (ok) {
                 fix_restored++;
-                fix_say("restored: ", path, ": OpenView -> ", orig);
+                fix_say("restored: ", path, ": GFOpenView -> ", orig);
                 if (why) fix_say("   (", why, ")", NULL);
             } else {
                 fix_failed++;
@@ -1722,11 +1722,11 @@ static int fix_tools(const char *table, int all)
     fix_log_len = 0; fix_log[0] = 0;
     fix_checked = fix_restored = fix_kept = fix_failed = fix_nkept = 0;
     if (!(IconBase = OpenLibrary((STRPTR)"icon.library", 44))) {
-        say("OpenUp: icon.library 44 or later is needed to check the icons' default tools.", NULL, NULL);
+        say("GFOpenUp: icon.library 44 or later is needed to check the icons' default tools.", NULL, NULL);
         return RETURN_WARN;
     }
     fix_say("FIXTOOLS", all ? " ALL" : "", NULL, NULL);
-    /* 1. what OpenTypes recorded */
+    /* 1. what GFOpenTypes recorded */
     if ((text = read_file(OT_CHANGES, NULL))) {
         fix_say("from ", OT_CHANGES, NULL, NULL);
         for (p = text; *p; ) {
@@ -1741,7 +1741,7 @@ static int fix_tools(const char *table, int all)
             strcpy(path, line); path[strlen(path) - 5] = 0;
             strcpy(line_copy, bk); line_copy[strlen(line_copy) - 5] = 0;
             if (icon_tool(line_copy, orig, sizeof orig))
-                fix_icon(path, orig, all, "its original, kept by OpenTypes");
+                fix_icon(path, orig, all, "its original, kept by GFOpenTypes");
         }
         FreeVec(text);
     }
@@ -1765,12 +1765,12 @@ static int fix_tools(const char *table, int all)
     }
     CloseLibrary(IconBase);
     IconBase = NULL;
-    Printf((STRPTR)"OpenUp: default tools: %ld icon%s checked, %ld put back, %ld kept on OpenView (kinds of file), %ld failed\n",
+    Printf((STRPTR)"GFOpenUp: default tools: %ld icon%s checked, %ld put back, %ld kept on GFOpenView (kinds of file), %ld failed\n",
            (LONG)fix_checked, (LONG)(fix_checked == 1 ? "" : "s"), (LONG)fix_restored, (LONG)fix_kept, (LONG)fix_failed);
-    /* the log, kept: what was put back is there to read, and the Installer's T:OpenUp.log has it too */
+    /* the log, kept: what was put back is there to read, and the Installer's T:GFOpenUp.log has it too */
     if (fix_restored || fix_kept || fix_failed) {
         PutStr((STRPTR)fix_log);
-        if (exists("ENVARC:OpenAmiga")) {
+        if (exists("ENVARC:GFOpenAmiga")) {
             BPTR fh = Open((STRPTR)REPAIR_LOG, MODE_READWRITE);
             if (fh) { Seek(fh, 0, OFFSET_END); Write(fh, fix_log, fix_log_len); Close(fh); }
         }
@@ -1785,19 +1785,19 @@ static int fix_tools(const char *table, int all)
 static int install_text(const char *dest, const char *text)
 {
     int rc;
-    if (!write_file("T:OpenUp-setting", text, strlen(text))) return RETURN_ERROR;
-    rc = install_file("T:OpenUp-setting", dest, 0) < 0 ? RETURN_ERROR : RETURN_OK;
-    DeleteFile((STRPTR)"T:OpenUp-setting");
+    if (!write_file("T:GFOpenUp-setting", text, strlen(text))) return RETURN_ERROR;
+    rc = install_file("T:GFOpenUp-setting", dest, 0) < 0 ? RETURN_ERROR : RETURN_OK;
+    DeleteFile((STRPTR)"T:GFOpenUp-setting");
     if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     return rc;
 }
 
-/* The look's theme (OpenUpTool 0.7.5). ENVARC:OpenGadTools/Look's first line is "<theme> <mode>", and the
- * lines after it are the user's own, written by OpenPrefs Look: dark mode by the clock, an accent, Lite,
- * "profile auto", which screens and programs are drawn in the theme, the windows' gadgets. Up to OpenUp 0.7.5
+/* The look's theme (GFOpenUpTool 0.7.5). ENVARC:GFOpenGadTools/Look's first line is "<theme> <mode>", and the
+ * lines after it are the user's own, written by GFOpenPrefs Look: dark mode by the clock, an accent, Lite,
+ * "profile auto", which screens and programs are drawn in the theme, the windows' gadgets. Up to GFOpenUp 0.7.5
  * the Installer wrote the whole file again on every run, with the theme its question gave: a Novice never sees
  * the question, so every Novice upgrade put back Open, light, without the user's lines.
- *   OpenUpTool THEME <name> <look>   with a look saved already, only its theme becomes <name>, as OpenLook
+ *   GFOpenUpTool THEME <name> <look>   with a look saved already, only its theme becomes <name>, as GFOpenLook
  *                                    THEME <name> SAVE does (the mode and every other line stay); with none
  *                                    (a new install), <look> is the look. ENVARC: and ENV: both. */
 /* The look THEME writes: with old (a look saved already) its first word becomes name and the rest stays; with
@@ -1836,11 +1836,11 @@ static int set_theme(const char *name, const char *look)
     if (old) FreeVec(old);
     if (!text) return RETURN_FAIL;
     manifest_load();
-    ensure_dir("ENV:OpenGadTools", 0);
+    ensure_dir("ENV:GFOpenGadTools", 0);
     rc = install_text(LOOK_ENVARC, text);
     if (rc == RETURN_OK) rc = install_text(LOOK_ENV, text);
-    if (rc == RETURN_OK) say("OpenUp: the look's theme is ", name, "");
-    else say("OpenUp: can't write ", LOOK_ENVARC, ". Is SYS: full or write-protected?");
+    if (rc == RETURN_OK) say("GFOpenUp: the look's theme is ", name, "");
+    else say("GFOpenUp: can't write ", LOOK_ENVARC, ". Is SYS: full or write-protected?");
     FreeVec(text);
     return rc;
 }
@@ -1851,9 +1851,9 @@ static int set_theme(const char *name, const char *look)
 #define WBPATTERN_ENV "ENV:Sys/WBPattern.prefs"
 
 /* 0.7.7: Workbench's backdrop setting goes back first, before any file is deleted. Whoever shows the backdrop
- * (IPrefs for Hyperion's Workbench, OpenBench 0.1.19 for itself) keeps its picture's file open until the
+ * (IPrefs for Hyperion's Workbench, GFOpenBench 0.1.19 for itself) keeps its picture's file open until the
  * setting changes; before, the setting went back in the same pass as the pictures, so the picture could
- * still be in use when its turn came. A setting OpenUp made from nothing is put back as a pattern file with
+ * still be in use when its turn came. A setting GFOpenUp made from nothing is put back as a pattern file with
  * no picture in ENV: (ENV: is gone at the next boot), so the picture is let go now. */
 static void backdrop_setting_back(int *restored, int *problems)
 {
@@ -1864,18 +1864,18 @@ static void backdrop_setting_back(int *restored, int *problems)
         if (strcmp(e->a, WBPATTERN) && strcmp(e->a, WBPATTERN_ENV)) continue;
         if (!strcmp(e->kind, "replaced")) {
             if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); (*restored)++; e->kind[0] = 0; }
-            else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); (*problems)++; }
+            else { say("GFOpenUp: can't put back ", e->a, "; its original is in SYS:Storage/GFOpenUp-Superseded."); (*problems)++; }
         } else if (!strcmp(e->kind, "new") && !strcmp(e->a, WBPATTERN_ENV)) {
             if (write_file(e->a, empty, (LONG)sizeof empty - 1)) e->kind[0] = 0;
         }
     }
 }
 
-/* 1 when path is in OpenUp's own backdrop drawer. Everything there is OpenUp's: a picture an earlier install
+/* 1 when path is in GFOpenUp's own backdrop drawer. Everything there is GFOpenUp's: a picture an earlier install
  * put there before the manifest listed it is marked "same", and each picture's tone sits beside it as
  * "<picture>.tone", never listed (Daletop's lab, 12 Oct 2026: 80 logo pictures and 296 .tone files were left
  * after UNINSTALL). */
-#define BACKDROP_DRAWER "SYS:Prefs/Presets/Backdrops/OpenUp/"
+#define BACKDROP_DRAWER "SYS:Prefs/Presets/Backdrops/GFOpenUp/"
 static int in_backdrop_drawer(const char *path)
 {
     return !strncmp(path, BACKDROP_DRAWER, sizeof BACKDROP_DRAWER - 1);
@@ -1894,14 +1894,14 @@ static int uninstall(void)
     int i, problems = 0, restored = 0, removed = 0, said_wait = 0;
     manifest_load();
     if (!nents && !exists(MANIFEST)) {
-        say("OpenUp isn't installed here: there is no list of its files (" MANIFEST ").", NULL, NULL);
+        say("GFOpenUp isn't installed here: there is no list of its files (" MANIFEST ").", NULL, NULL);
         return RETURN_WARN;
     }
-    /* default tools still on OpenView (OpenTypes' UNDO has run before this when the Uninstall-OpenUp script
-     * does it): put back, with the kinds of file too, before OpenView goes */
+    /* default tools still on GFOpenView (GFOpenTypes' UNDO has run before this when the Uninstall-GFOpenUp script
+     * does it): put back, with the kinds of file too, before GFOpenView goes */
     if (exists(STOCK_TOOLS)) fix_tools(STOCK_TOOLS, 1);
     if (!write_startup(1)) {
-        say("OpenUp: can't take its block out of S:User-Startup. Remove the lines from \"" BLOCK_BEGIN "\" to \"" BLOCK_END "\" by hand.", NULL, NULL);
+        say("GFOpenUp: can't take its block out of S:User-Startup. Remove the lines from \"" BLOCK_BEGIN "\" to \"" BLOCK_END "\" by hand.", NULL, NULL);
         problems++;
     }
     backdrop_setting_back(&restored, &problems);
@@ -1910,7 +1910,7 @@ static int uninstall(void)
         if (in_backdrop_drawer(e->a) && (!strcmp(e->kind, "new") || !strcmp(e->kind, "same")))
             delete_tone(e->a);
         if (!strcmp(e->kind, "same") && in_backdrop_drawer(e->a))
-            strcpy(e->kind, "new");                         /* OpenUp's drawer: OpenUp's picture */
+            strcpy(e->kind, "new");                         /* GFOpenUp's drawer: GFOpenUp's picture */
         if (!strcmp(e->kind, "new") || !strcmp(e->kind, "newfile") || !strcmp(e->kind, "rnew")) {
             if (!strcmp(e->kind, "newfile")) {
                 LONG len = 0;
@@ -1926,37 +1926,37 @@ static int uninstall(void)
                 /* In use, as the backdrop picture is until whoever shows it has read the setting put back
                  * above and let it go; decoding the new one takes a while on a 68k: up to 30 seconds. */
                 int tries;
-                if (!said_wait++) say("OpenUp: waiting for ", e->a, " to be let go...");
+                if (!said_wait++) say("GFOpenUp: waiting for ", e->a, " to be let go...");
                 for (tries = 0; tries < 60 && !DeleteFile((STRPTR)e->a) && exists(e->a); tries++)
                     Delay(25);
-                if (exists(e->a)) { say("OpenUp: can't delete ", e->a, " yet: it is in use."); problems++; }
+                if (exists(e->a)) { say("GFOpenUp: can't delete ", e->a, " yet: it is in use."); problems++; }
                 else { removed++; e->kind[0] = 0; }
             }
         } else if (!strcmp(e->kind, "moved")) {                /* RECONCILE's: moved back */
             LONG ok = exists(e->a) ? 0 : Rename((STRPTR)e->b, (STRPTR)e->a);
             if (ok) { restored++; e->kind[0] = 0; }
-            else { say("OpenUp: can't put back ", e->a, "; it is in SYS:Prefs/Classic or SYS:Storage/OpenUp-Superseded"); problems++; }
+            else { say("GFOpenUp: can't put back ", e->a, "; it is in SYS:Prefs/Classic or SYS:Storage/GFOpenUp-Superseded"); problems++; }
         } else if (!strcmp(e->kind, "replaced") && !find_entry("dir", e->a)) {
             if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; e->kind[0] = 0; }
-            else { say("OpenUp: can't put back ", e->a, "; its original is in SYS:Storage/OpenUp-Superseded."); problems++; }
+            else { say("GFOpenUp: can't put back ", e->a, "; its original is in SYS:Storage/GFOpenUp-Superseded."); problems++; }
         }
     }
     for (i = nents - 1; i >= 0; i--)
         if (!strcmp(ents[i].kind, "dir"))
             DeleteFile((STRPTR)ents[i].a);            /* only an empty one goes */
-    /* A file that was where a drawer of OpenUp's went (INSTALL's clear_way, 25 Oct 2026; listed as replaced, with a
+    /* A file that was where a drawer of GFOpenUp's went (INSTALL's clear_way, 25 Oct 2026; listed as replaced, with a
      * dir line of the same name): back now the drawer is gone. */
     for (i = nents - 1; i >= 0; i--)
         if (!strcmp(ents[i].kind, "replaced") && find_entry("dir", ents[i].a)) {
             entry *e = &ents[i];
             if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; e->kind[0] = 0; }
-            else { say("OpenUp: can't put back ", e->a, "; it is in SYS:Storage/OpenUp-Superseded, and its drawer isn't empty."); problems++; }
+            else { say("GFOpenUp: can't put back ", e->a, "; it is in SYS:Storage/GFOpenUp-Superseded, and its drawer isn't empty."); problems++; }
         }
     /* The originals' drawers, deepest first: they go once empty. */
     for (i = nents - 1; i >= 0; i--)
         if (!strcmp(ents[i].kind, "replaced")) {
             char dir[ENTRY_PATH];
-            if (strlcpy(dir, ents[i].b, sizeof dir) >= sizeof dir) continue;   /* too long to be OpenUp's */
+            if (strlcpy(dir, ents[i].b, sizeof dir) >= sizeof dir) continue;   /* too long to be GFOpenUp's */
             for (;;) {
                 char *s = strrchr(dir, '/');
                 if (!s || strlen(dir) <= strlen(SUPERSEDED)) break;
@@ -1966,17 +1966,17 @@ static int uninstall(void)
         }
     DeleteFile((STRPTR)SUPERSEDED);
     if (!problems) {
-        /* OpenUp's own marks in ENVARC:OpenAmiga go with it (OpenUpTool 0.7.5). Each records that a step of
-         * OpenUp's has run; with OpenUp gone they mean nothing, and a later install would believe them and skip
+        /* GFOpenUp's own marks in ENVARC:GFOpenAmiga go with it (GFOpenUpTool 0.7.5). Each records that a step of
+         * GFOpenUp's has run; with GFOpenUp gone they mean nothing, and a later install would believe them and skip
          * the step (Setup's first-start questions, RECONCILE, TIDY). The user's settings stay, as any program's
-         * settings in ENVARC: stay when the program goes, and a later install finds them: Sound (OpenPrefs
-         * Sound's levels and beep), PrefsView (simple or advanced, for every OpenPrefs editor) and
-         * Startup.off (the startup lines switched off in OpenUp Setup). */
+         * settings in ENVARC: stay when the program goes, and a later install finds them: Sound (GFOpenPrefs
+         * Sound's levels and beep), PrefsView (simple or advanced, for every GFOpenPrefs editor) and
+         * Startup.off (the startup lines switched off in GFOpenUp Setup). */
         static const char *const marks[] = {
-            "ENVARC:OpenAmiga/Reconcile.done",      /* RECONCILE APPLY has run (its moves are put back above) */
-            "ENVARC:OpenAmiga/Tidy.done",           /* TIDY has tidied the system's drawers */
-            "ENVARC:OpenAmiga/Setup.done",          /* OpenUp Setup, the first-start wizard, has run or won't come back */
-            "ENVARC:OpenAmiga/Backdrop.tone",       /* the backdrop's tone, remembered by OpenUpTool */
+            "ENVARC:GFOpenAmiga/Reconcile.done",      /* RECONCILE APPLY has run (its moves are put back above) */
+            "ENVARC:GFOpenAmiga/Tidy.done",           /* TIDY has tidied the system's drawers */
+            "ENVARC:GFOpenAmiga/Setup.done",          /* GFOpenUp Setup, the first-start wizard, has run or won't come back */
+            "ENVARC:GFOpenAmiga/Backdrop.tone",       /* the backdrop's tone, remembered by GFOpenUpTool */
         };
         for (i = 0; i < (int)(sizeof marks / sizeof marks[0]); i++) {
             char env[ENTRY_PATH];
@@ -1989,15 +1989,15 @@ static int uninstall(void)
         DeleteFile((STRPTR)REPAIR_LOG);
         DeleteFile((STRPTR)MANIFEST);
         DeleteFile((STRPTR)MANIFEST_ENV);
-        DeleteFile((STRPTR)"ENVARC:OpenAmiga");
-        DeleteFile((STRPTR)"ENV:OpenAmiga");
+        DeleteFile((STRPTR)"ENVARC:GFOpenAmiga");
+        DeleteFile((STRPTR)"ENV:GFOpenAmiga");
     } else if (manifest_save()) {
         /* 0.7.7: what is left stays listed (what was done is taken out), so UNINSTALL can be run again to
          * finish: after a reboot nothing holds a backdrop picture. Before, the list kept everything, and a
          * second run failed on the originals already put back. */
-        say("OpenUp: reboot, then run OpenUpTool UNINSTALL again to finish.", NULL, NULL);
+        say("GFOpenUp: reboot, then run GFOpenUpTool UNINSTALL again to finish.", NULL, NULL);
     }
-    Printf((STRPTR)"OpenUp: uninstalled: %ld file%s removed, %ld put back as they were%s\n", removed, (LONG)(removed == 1 ? "" : "s"),
+    Printf((STRPTR)"GFOpenUp: uninstalled: %ld file%s removed, %ld put back as they were%s\n", removed, (LONG)(removed == 1 ? "" : "s"),
            restored, (LONG)(problems ? "; see the messages above" : ". Reboot to finish."));
     return problems ? RETURN_ERROR : RETURN_OK;
 }
@@ -2009,7 +2009,7 @@ static void put32(UBYTE *p, ULONG v) { p[0] = v >> 24; p[1] = v >> 16; p[2] = v 
 
 /* Workbench's backdrop (the ROOT pattern of WBPattern.prefs) becomes the
  * picture nearest the screen's shape, scaled to fit; the drawer and screen
- * patterns are kept as they are. The old file is kept, as every file OpenUp
+ * patterns are kept as they are. The old file is kept, as every file GFOpenUp
  * replaces is. */
 static int backdrop(const char *prefix)
 {
@@ -2063,7 +2063,7 @@ static int backdrop(const char *prefix)
         if (exists(name) && (best < 0 || d < bestd)) { best = i; bestd = d; strcpy(pic, name); }
     }
     if (best < 0) {
-        say("OpenUp: no backdrop pictures named ", prefix, "-<width>x<height>.png. Install the Backdrops part first.");
+        say("GFOpenUp: no backdrop pictures named ", prefix, "-<width>x<height>.png. Install the Backdrops part first.");
         return RETURN_ERROR;
     }
     old = (UBYTE *)read_file(WBPATTERN, &oldlen);
@@ -2106,22 +2106,22 @@ static int backdrop(const char *prefix)
     manifest_load();
     ensure_dir("ENVARC:Sys", 0);
     ensure_dir("ENV:Sys", 0);
-    i = write_file("T:OpenUp-wbpattern", (char *)buf, len)
-        && install_file("T:OpenUp-wbpattern", WBPATTERN, 0) >= 0
-        && install_file("T:OpenUp-wbpattern", WBPATTERN_ENV, 0) >= 0
+    i = write_file("T:GFOpenUp-wbpattern", (char *)buf, len)
+        && install_file("T:GFOpenUp-wbpattern", WBPATTERN, 0) >= 0
+        && install_file("T:GFOpenUp-wbpattern", WBPATTERN_ENV, 0) >= 0
         && manifest_save();
-    DeleteFile((STRPTR)"T:OpenUp-wbpattern");
+    DeleteFile((STRPTR)"T:GFOpenUp-wbpattern");
     FreeVec(buf);
     if (!i)
         return RETURN_ERROR;
-    say("OpenUp: Workbench's backdrop is ", pic, "");
+    say("GFOpenUp: Workbench's backdrop is ", pic, "");
     return RETURN_OK;
 }
 
 /* ---- FONT and TITLEBARS: OS 3.2's own prefs files, changed in one place ------------------ */
 
 /* Puts a prefs file built in memory in place in ENVARC:, the original kept
- * as any file OpenUp replaces. Not ENV:: IPrefs would reset the Workbench
+ * as any file GFOpenUp replaces. Not ENV:: IPrefs would reset the Workbench
  * screen at once, while the Installer's window is open on it ("Intuition is
  * attempting to reset the Workbench screen"); ENV: gets it at the next boot. */
 static int install_prefs(const char *name, const UBYTE *data, LONG len)
@@ -2131,10 +2131,10 @@ static int install_prefs(const char *name, const UBYTE *data, LONG len)
     strcpy(envarc, "ENVARC:Sys/"); strcat(envarc, name);
     manifest_load();
     ensure_dir("ENVARC:Sys", 0);
-    ok = write_file("T:OpenUp-prefs", (const char *)data, len)
-         && install_file("T:OpenUp-prefs", envarc, 0) >= 0
+    ok = write_file("T:GFOpenUp-prefs", (const char *)data, len)
+         && install_file("T:GFOpenUp-prefs", envarc, 0) >= 0
          && manifest_save();
-    DeleteFile((STRPTR)"T:OpenUp-prefs");
+    DeleteFile((STRPTR)"T:GFOpenUp-prefs");
     return ok;
 }
 
@@ -2171,11 +2171,11 @@ static UBYTE *font_chunk(UBYTE *o, int type, int front, int back, int mode, int 
 }
 
 /* The desktop's text: the screens' font (fp_Type 2, FP_SCREENFONT) and the
- * icons' text (fp_Type 0, FP_WBFONT) in the same font and size. OpenUp owns
+ * icons' text (fp_Type 0, FP_WBFONT) in the same font and size. GFOpenUp owns
  * the desktop's text, so the icons no longer keep Topaz 8 in a filled box
  * under the new screen text (the user, 10 October 2026): the label is drawn
  * as text only (JAM1) in the pens it had; a shadow or an outline chosen in
- * OpenPrefs Look is kept. The system font (fp_Type 1, fixed width for the
+ * GFOpenPrefs Look is kept. The system font (fp_Type 1, fixed width for the
  * Shell) stays as it is. */
 /* The Font.prefs FONT makes from old (NULL: none): the length in *lenp. NULL when out of memory; FreeVec it. */
 static UBYTE *font_prefs(const UBYTE *old, LONG oldlen, const char *font, LONG size, LONG *lenp)
@@ -2209,7 +2209,7 @@ static int set_font(const char *font, LONG size)
     LONG oldlen = 0, len = 0;
     UBYTE *old, *buf;
     int ok;
-    if (size < 6 || size > 64 || strlen(font) > 120) { say("OpenUp: FONT wants a font name and a size from 6 to 64", NULL, NULL); return RETURN_FAIL; }
+    if (size < 6 || size > 64 || strlen(font) > 120) { say("GFOpenUp: FONT wants a font name and a size from 6 to 64", NULL, NULL); return RETURN_FAIL; }
     old = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &oldlen);
     buf = font_prefs(old, oldlen, font, size, &len);
     if (old) FreeVec(old);
@@ -2217,7 +2217,7 @@ static int set_font(const char *font, LONG size)
     ok = install_prefs("Font.prefs", buf, len);
     FreeVec(buf);
     if (!ok) return RETURN_ERROR;
-    say("OpenUp: the screens' and the icons' text are ", font, " (from the next reboot)");
+    say("GFOpenUp: the screens' and the icons' text are ", font, " (from the next reboot)");
     return RETURN_OK;
 }
 
@@ -2269,7 +2269,7 @@ static int set_titlebars(LONG screen, LONG window)
     LONG oldlen = 0, len = 0;
     UBYTE *old, *buf;
     int ok;
-    if (screen < 0 || screen > 16 || window < 0 || window > 16) { say("OpenUp: TITLEBARS wants two numbers from 0 to 16", NULL, NULL); return RETURN_FAIL; }
+    if (screen < 0 || screen > 16 || window < 0 || window > 16) { say("GFOpenUp: TITLEBARS wants two numbers from 0 to 16", NULL, NULL); return RETURN_FAIL; }
     old = (UBYTE *)read_file("ENVARC:Sys/IControl.prefs", &oldlen);
     buf = ictl_prefs(old, oldlen, screen, window, &len);
     if (old) FreeVec(old);
@@ -2277,28 +2277,28 @@ static int set_titlebars(LONG screen, LONG window)
     ok = install_prefs("IControl.prefs", buf, len);
     FreeVec(buf);
     if (!ok) return RETURN_ERROR;
-    say("OpenUp: title bars have extra height (from the next reboot)", NULL, NULL);
+    say("GFOpenUp: title bars have extra height (from the next reboot)", NULL, NULL);
     return RETURN_OK;
 }
 
 /* ---- OLDLOOK: the look's files earlier OpenUps wrote, taken out (0.8.2) ------------------------------------------
  *
- * The OpenKick ROM draws Workbench's look itself (a 24-pixel screen bar in CGTriumvirate on a 1080-line screen,
+ * The GFOpenKick ROM draws Workbench's look itself (a 24-pixel screen bar in CGTriumvirate on a 1080-line screen,
  * the icons on the backdrop), and on OS 3.2.3 the look is the OS's own; the files below only changed that (the
- * user, 16 October 2026: "it should be default, straight from the rom"). OpenUp up to 0.8.1 wrote them through
- * its OpenLook part; 0.8.2 writes none, and an upgrade takes out what an earlier one wrote:
- *   C:OpenLook and its line in S:User-Startup
- *   ENVARC: and ENV:OpenGadTools/Theme   (SETTING, a theme's name)
- *   ENVARC: and ENV:OpenGadTools/Look    (THEME)
- * A file goes only when the manifest lists it as OpenUp's and its bytes are what OpenUp wrote, worked out again
- * from the original OpenUp kept (or from none, where there was none). The original comes back where there was
+ * user, 16 October 2026: "it should be default, straight from the rom"). GFOpenUp up to 0.8.1 wrote them through
+ * its GFOpenLook part; 0.8.2 writes none, and an upgrade takes out what an earlier one wrote:
+ *   C:GFOpenLook and its line in S:User-Startup
+ *   ENVARC: and ENV:GFOpenGadTools/Theme   (SETTING, a theme's name)
+ *   ENVARC: and ENV:GFOpenGadTools/Look    (THEME)
+ * A file goes only when the manifest lists it as GFOpenUp's and its bytes are what GFOpenUp wrote, worked out again
+ * from the original GFOpenUp kept (or from none, where there was none). The original comes back where there was
  * one. A file the user has changed since stays as it is, and the log says so.
  *
  * Font prefs and IControl prefs (FONT CGTriumvirate.font 13, TITLEBARS 0 2) are no longer taken out (0.8.7). Up to
  * 0.8.6 OLDLOOK put back the stock Font.prefs and deleted IControl.prefs where their bytes were still FONT's and
  * TITLEBARS's, but bytes alone can't say whether the user chose them since: on Instance-32 (20 October 2026) the
  * 0.8.6 upgrade put the stock font back and took IControl prefs away from under the user. They are the user's
- * settings now and stay as they are; the originals stay in SYS:Storage/OpenUp-Superseded, for UNINSTALL. */
+ * settings now and stay as they are; the originals stay in SYS:Storage/GFOpenUp-Superseded, for UNINSTALL. */
 
 static UBYTE *font_of_type(UBYTE *d, LONG len, int type);
 
@@ -2353,11 +2353,11 @@ static int take_out_old(const char *dest, int (*was)(const UBYTE *, LONG, const 
     if (!(cur = (UBYTE *)read_file(dest, &len))) return 0;
     if (replaced && !(orig = (UBYTE *)read_file(e->b, &olen))) {
         FreeVec(cur);
-        say("OpenUp: kept ", dest, ": its original isn't in SYS:Storage/OpenUp-Superseded any more");
+        say("GFOpenUp: kept ", dest, ": its original isn't in SYS:Storage/GFOpenUp-Superseded any more");
         return 0;
     }
     if (!was(cur, len, orig, olen)) {
-        say("OpenUp: kept ", dest, ": it has been changed since OpenUp wrote it");
+        say("GFOpenUp: kept ", dest, ": it has been changed since GFOpenUp wrote it");
         FreeVec(cur);
         if (orig) FreeVec(orig);
         return 0;
@@ -2366,8 +2366,8 @@ static int take_out_old(const char *dest, int (*was)(const UBYTE *, LONG, const 
     if (ok) {
         if (replaced) DeleteFile((STRPTR)e->b);
         e->kind[0] = 0;
-        say("OpenUp: ", dest, replaced ? ": its original is back" : ": taken out");
-    } else say("OpenUp: can't take out ", dest, "; is the disk write-protected?");
+        say("GFOpenUp: ", dest, replaced ? ": its original is back" : ": taken out");
+    } else say("GFOpenUp: can't take out ", dest, "; is the disk write-protected?");
     FreeVec(cur);
     if (orig) FreeVec(orig);
     return ok;
@@ -2379,11 +2379,11 @@ static int take_out_old(const char *dest, int (*was)(const UBYTE *, LONG, const 
  * images with their palettes and transparent colours; the planar images when it has no colour ones) and, for
  * the whole icon, its type, default tool, tool types and stack too (a program's or project's stack: a disk's,
  * drawer's or trashcan's means nothing, and Workbench's snapshot writes it anew). Its place and drawer window are left out:
- * Workbench writes those whenever it is snapshot. OLDLOOK tells by them the pictures OpenUp gave up to 0.8.3
+ * Workbench writes those whenever it is snapshot. OLDLOOK tells by them the pictures GFOpenUp gave up to 0.8.3
  * (Gorilla's, which the pack no longer carries) and OS 3.2.3's own default icons as its install leaves them.
- *   OpenUpTool ICONSIG <icon or drawer>   prints each icon's picture and whole signatures
- *   OpenUpTool ICONSIG <icon> <fields>   says whether the icon is its own picture over the other icon's fields,
- *                                         as OLDLOOK asks, and leaves what it compared with in T:OpenUp-oldface.info */
+ *   GFOpenUpTool ICONSIG <icon or drawer>   prints each icon's picture and whole signatures
+ *   GFOpenUpTool ICONSIG <icon> <fields>   says whether the icon is its own picture over the other icon's fields,
+ *                                         as OLDLOOK asks, and leaves what it compared with in T:GFOpenUp-oldface.info */
 typedef struct { ULONG a, b; } isig;
 
 static void sig_add(isig *s, const void *p, ULONG n)
@@ -2517,34 +2517,34 @@ static int icon_sigs(const char *path)
     return RETURN_OK;
 }
 
-/* ---- The look up to 0.8.3 taken out, OpenIcons' put on (0.8.3, 0.8.4) --------------------------------------
+/* ---- The look up to 0.8.3 taken out, GFOpenIcons' put on (0.8.3, 0.8.4) --------------------------------------
  *
  * The user, 16 October 2026: "we should remove them and use ours". Up to 0.8.3 the GorillaIcons part gave the
- * system's icons AROS's Gorilla pictures; 0.8.4's OpenIcons part gives them our own (OpenIcons look B), and the
+ * system's icons AROS's Gorilla pictures; 0.8.4's GFOpenIcons part gives them our own (GFOpenIcons look B), and the
  * pack carries no Gorilla picture any more. So OLDLOOK tells Gorilla's pictures by their signatures (gorilla_pics,
  * made with ICONSIG from 0.8.3's pack: every picture the part gave, its faces and the ones 0.8.3 retired):
- *   - An icon OpenUp faced (listed "replaced", its original in SYS:Storage/OpenUp-Superseded) that is still as
- *     OpenUp left it gets its original back. "As OpenUp left it" is W25's rule: the icon written again into T:
+ *   - An icon GFOpenUp faced (listed "replaced", its original in SYS:Storage/GFOpenUp-Superseded) that is still as
+ *     GFOpenUp left it gets its original back. "As GFOpenUp left it" is W25's rule: the icon written again into T:
  *     from its own picture over the original's fields is the same, byte for byte, as the file (its place and
  *     the pointers an icon file stores left out), and that picture is one of Gorilla's. Where its colour images
  *     are packed otherwise than icon.library packs them today, the same picture and fields as icon.library
- *     reads them count (same_fields). The OpenIcons part then
- *     gives it our picture; one OpenIcons has none for keeps its original.
+ *     reads them count (same_fields). The GFOpenIcons part then
+ *     gives it our picture; one GFOpenIcons has none for keeps its original.
  *   - An icon the user changed since stays as it is, and so does its listing; face_icon leaves it too.
  *
- * The default icons. The OpenKick ROM's icon.library has its own default icons, OpenIcons look B (RAM, hard
+ * The default icons. The GFOpenKick ROM's icon.library has its own default icons, GFOpenIcons look B (RAM, hard
  * disk, floppy, CD, RAD, card, Kickstart, drawer, tool, project, trashcan), and a def_<kind>.info in ENVARC:Sys,
  * or SYS:'s own Disk.info, wins over them. Each of those below goes when it is:
- *   - OpenUp's face of it, as above (up to 0.8.2 the GorillaIcons part faced def_RAM, def_Harddisk... and SYS:);
- *   - or OS 3.2.3's original: the original OpenUp kept, unchanged but for its place; or, never listed, an icon
+ *   - GFOpenUp's face of it, as above (up to 0.8.2 the GorillaIcons part faced def_RAM, def_Harddisk... and SYS:);
+ *   - or OS 3.2.3's original: the original GFOpenUp kept, unchanged but for its place; or, never listed, an icon
  *     whose whole signature is one of OS 3.2.3's (os_defaults, made with ICONSIG on a new 3.2.3 install). That
- *     one is kept in SYS:Storage/OpenUp-Superseded first and listed, as RETIRE does.
- * Every original stays in SYS:Storage/OpenUp-Superseded, listed, so UNINSTALL puts it back. A user's own
- * default icon (any other picture, tool or tool types) stays, and T:OpenUp.log says so. Kickstart 3.2.3 has
+ *     one is kept in SYS:Storage/GFOpenUp-Superseded first and listed, as RETIRE does.
+ * Every original stays in SYS:Storage/GFOpenUp-Superseded, listed, so UNINSTALL puts it back. A user's own
+ * default icon (any other picture, tool or tool types) stays, and T:GFOpenUp.log says so. Kickstart 3.2.3 has
  * built-in icons for all of them, so the stock ROM shows a disk and a drawer still. Work:Disk.info may be
  * unlisted and still carry Gorilla's hard disk (from the faced def_Harddisk, when the volume was snapshot):
  * then it goes when it is that picture over its own fields. The DefIcons file types (def_ascii, def_picture...)
- * stay, with OpenIcons' pictures. */
+ * stay, with GFOpenIcons' pictures. */
 static const ULONG gorilla_pics[][2] = {
 #include "gorilla_sigs.h"
 };
@@ -2562,8 +2562,8 @@ static const char *const default_icons[] = {
     "ENVARC:Sys/def_card.info", "ENVARC:Sys/def_kickstart.info", "ENVARC:Sys/def_sys.info",
     "ENVARC:Sys/def_work.info", "ENVARC:Sys/def_CDROM.info", "ENVARC:Sys/def_Kick.info",
 };
-#define FACE_TMP "T:OpenUp-oldface"
-static int keep_face_tmp;                          /* ICONSIG <icon> <fields>: T:OpenUp-oldface.info stays to look at */
+#define FACE_TMP "T:GFOpenUp-oldface"
+static int keep_face_tmp;                          /* ICONSIG <icon> <fields>: T:GFOpenUp-oldface.info stays to look at */
 
 /* An icon file holds memory addresses where the structures had pointers: icon.library reads them only as "there"
  * or "not there", and each write has new ones. These are the DiskObject's (its gadget's, the default tool's, the
@@ -2683,9 +2683,9 @@ static int same_fields(const char *a_name, const char *b_name)
     return same;
 }
 
-/* 1 when dest is still one of Gorilla's pictures, as OpenUp gave it, over the fields of fields_name: byte for
+/* 1 when dest is still one of Gorilla's pictures, as GFOpenUp gave it, over the fields of fields_name: byte for
  * byte (still_face), or, where the icon's colour images are packed otherwise than icon.library packs them now
- * (SYS:Expansion.info on Instance-32, faced by an older OpenUp: the same pixels and palette, other bytes), the
+ * (SYS:Expansion.info on Instance-32, faced by an older GFOpenUp: the same pixels and palette, other bytes), the
  * same picture and fields as icon.library reads them */
 static int still_gorilla(const char *dest, const char *fields_name)
 {
@@ -2730,8 +2730,8 @@ static int is_default_icon_name(const char *dest)
     return 0;
 }
 
-/* Gorilla's faces on everything but the default icons: each one still as OpenUp left it gets its original back
- * (the OpenIcons part faces it after). Returns how many. */
+/* Gorilla's faces on everything but the default icons: each one still as GFOpenUp left it gets its original back
+ * (the GFOpenIcons part faces it after). Returns how many. */
 static int gorilla_out(void)
 {
     int i, n = 0, l;
@@ -2743,11 +2743,11 @@ static int gorilla_out(void)
         if (!still_gorilla(e->a, e->b)) {
             isig p;
             if (file_sig(e->a, &p, NULL) && sig_in(&p, gorilla_pics, NGORILLA))
-                say("OpenUp: kept ", e->a, ": it has been changed since OpenUp gave it Gorilla's picture");
+                say("GFOpenUp: kept ", e->a, ": it has been changed since GFOpenUp gave it Gorilla's picture");
             continue;
         }
-        if (put_original(e->a, e->b)) { say("OpenUp: ", e->a, ": Gorilla's picture taken out"); n++; }
-        else say("OpenUp: can't put back ", e->a, "'s own picture; is the disk write-protected?");
+        if (put_original(e->a, e->b)) { say("GFOpenUp: ", e->a, ": Gorilla's picture taken out"); n++; }
+        else say("GFOpenUp: can't put back ", e->a, "'s own picture; is the disk write-protected?");
     }
     return n;
 }
@@ -2761,44 +2761,44 @@ static int default_out(const char *dest)
     if (!exists(dest)) return 0;
     if (e && !strcmp(e->kind, "replaced") && e->b && exists(e->b)) {
         if (!still_face(dest, e->b, e->b) && !still_gorilla(dest, e->b)) {
-            say("OpenUp: kept ", dest, ": it has been changed since OpenUp listed it");
+            say("GFOpenUp: kept ", dest, ": it has been changed since GFOpenUp listed it");
             return 0;
         }
-        if (!DeleteFile((STRPTR)dest)) { say("OpenUp: can't take out ", dest, "; is the disk write-protected?"); return 0; }
-        say("OpenUp: ", dest, ": taken out (the ROM's icon shows; its original stays in SYS:Storage/OpenUp-Superseded)");
+        if (!DeleteFile((STRPTR)dest)) { say("GFOpenUp: can't take out ", dest, "; is the disk write-protected?"); return 0; }
+        say("GFOpenUp: ", dest, ": taken out (the ROM's icon shows; its original stays in SYS:Storage/GFOpenUp-Superseded)");
         return 1;
     }
-    if (e) return 0;                                            /* "same" or "new": OpenUp's own file */
+    if (e) return 0;                                            /* "same" or "new": GFOpenUp's own file */
     theirs = !file_sig(dest, &p, &w);
     if (!theirs && sig_in(&w, os_defaults, NOSDEF)) {           /* OS 3.2.3's own, as installed */
         if (retire_file(dest) != 1) return 0;
-        say("OpenUp: ", dest, ": OS 3.2.3's, taken out (the ROM's icon shows; kept in SYS:Storage/OpenUp-Superseded)");
+        say("GFOpenUp: ", dest, ": OS 3.2.3's, taken out (the ROM's icon shows; kept in SYS:Storage/GFOpenUp-Superseded)");
         return 1;
     }
     if (!theirs && same_word(dest, "Work:Disk.info") && sig_in(&p, gorilla_pics, NGORILLA) && still_face(dest, dest, dest)) {
         if (!DeleteFile((STRPTR)dest)) return 0;
-        say("OpenUp: ", dest, ": taken out (the ROM's icon shows)");
+        say("GFOpenUp: ", dest, ": taken out (the ROM's icon shows)");
         return 1;
     }
-    say("OpenUp: kept ", dest, ": not OS 3.2.3's own or OpenUp's picture");
+    say("GFOpenUp: kept ", dest, ": not OS 3.2.3's own or GFOpenUp's picture");
     return 0;
 }
 
-/* Gorilla's pictures OpenUp's list doesn't name where they are: icons RECONCILE moved (SYS:Prefs/Classic's old prefs
- * editors), drawers and programs an older OpenUp or a hand change made from a faced icon (SYS:Prefs/Classic,
- * SYS:Developer/OpenGPU-SDK...). Found on lab copies of Instance-32, 16 October 2026. Each icon on SYS: (three
- * drawers deep, as ICONS walks) that shows one of Gorilla's pictures and isn't listed, or is listed as OpenUp's
- * own file (SYS:Developer/OpenGPU-SDK.info, which the OpenGPUDev part makes), gets OpenIcons' picture
+/* Gorilla's pictures GFOpenUp's list doesn't name where they are: icons RECONCILE moved (SYS:Prefs/Classic's old prefs
+ * editors), drawers and programs an older GFOpenUp or a hand change made from a faced icon (SYS:Prefs/Classic,
+ * SYS:Developer/GFOpenGPU-SDK...). Found on lab copies of Instance-32, 16 October 2026. Each icon on SYS: (three
+ * drawers deep, as ICONS walks) that shows one of Gorilla's pictures and isn't listed, or is listed as GFOpenUp's
+ * own file (SYS:Developer/GFOpenGPU-SDK.info, which the GFOpenGPUDev part makes), gets GFOpenIcons' picture
  * instead: the part's own for that place (its face line), else by its name, else of its kind (face_icon: its
  * fields and place stay, the
- * icon as it was goes to SYS:Storage/OpenUp-Superseded for UNINSTALL). Returns how many. */
-#define OI_PART "Parts/OpenIcons"
+ * icon as it was goes to SYS:Storage/GFOpenUp-Superseded for UNINSTALL). Returns how many. */
+#define OI_PART "Parts/GFOpenIcons"
 static int old_icon(const char *path, int *type);
 static int sweep_n;
 
-static char *oi_part_text;                         /* Parts/OpenIcons/Part, read once for gorilla_sweep */
+static char *oi_part_text;                         /* Parts/GFOpenIcons/Part, read once for gorilla_sweep */
 
-/* the OpenIcons part's own picture for dest (its face line), in from; 1 found */
+/* the GFOpenIcons part's own picture for dest (its face line), in from; 1 found */
 static int part_face_for(const char *dest, char *from, int size)
 {
     char *p, *copy, *line;
@@ -2839,13 +2839,13 @@ static void gorilla_sweep(const char *dir, int depth)
                 if (sub[strlen(sub) - 1] != ':') str_cat(sub, "/", sizeof sub);
                 str_cat(sub, n, sizeof sub);
                 if (fib->fib_DirEntryType > 0) {
-                    if (depth < 3 && strcmp(n, "OpenUp-Superseded") && strcmp(n, "Parts") && strcmp(n, "T") &&
+                    if (depth < 3 && strcmp(n, "GFOpenUp-Superseded") && strcmp(n, "Parts") && strcmp(n, "T") &&
                         strcmp(n, "Trashcan") && strncmp(n, ".", 1))
                         gorilla_sweep(sub, depth + 1);
                     continue;
                 }
                 if (l <= 5 || !same_word(n + l - 5, ".info") || is_default_icon_name(sub) ||
-                    ((e = find_entry(NULL, sub)) && strcmp(e->kind, "new")) ||   /* OpenUp's own file is ours to face */
+                    ((e = find_entry(NULL, sub)) && strcmp(e->kind, "new")) ||   /* GFOpenUp's own file is ours to face */
                     !file_sig(sub, &p, NULL) || !sig_in(&p, gorilla_pics, NGORILLA))
                     continue;
                 if (!part_face_for(sub, from, sizeof from)) {   /* the part's face for it, else by name */
@@ -2862,7 +2862,7 @@ static void gorilla_sweep(const char *dir, int depth)
                     if (!exists(from)) continue;
                 }
                 if (face_icon(from, sub) > 0) {
-                    say("OpenUp: ", sub, ": Gorilla's picture where the list has none: OpenIcons' given instead");
+                    say("GFOpenUp: ", sub, ": Gorilla's picture where the list has none: GFOpenIcons' given instead");
                     sweep_n++;
                 }
             }
@@ -2886,12 +2886,12 @@ static int old_faces_out(void)
         n += sweep_n;
     }
     /* what the GorillaIcons part copied (its PNGs and licence texts in SYS:Storage/Icons/Gorilla, its licence note)
-     * and its part line: OpenUp's own, listed as new */
+     * and its part line: GFOpenUp's own, listed as new */
     for (i = 0; i < nents; i++) {
         entry *e = &ents[i];
         if (!strcmp(e->kind, "part") && !strcmp(e->a, "GorillaIcons")) { e->kind[0] = 0; continue; }
         if (strcmp(e->kind, "new") || !e->a) continue;
-        if (!strncmp(e->a, "SYS:Storage/Icons/Gorilla/", 26) || same_word(e->a, "SYS:Utilities/OpenUp/Licences/Gorilla.txt")) {
+        if (!strncmp(e->a, "SYS:Storage/Icons/Gorilla/", 26) || same_word(e->a, "SYS:Utilities/GFOpenUp/Licences/Gorilla.txt")) {
             if (DeleteFile((STRPTR)e->a) || !exists(e->a)) { e->kind[0] = 0; n++; }
         }
     }
@@ -2907,44 +2907,44 @@ static int old_look(void)
     int n = 0, i, lines = 0;
     entry *e;
     manifest_load();
-    /* C:OpenLook, OpenUp's own copy (listed as new, and OpenLook's by its version string) */
-    if ((e = find_entry("new", "SYS:C/OpenLook")) && exists("SYS:C/OpenLook")) {
-        /* put together here: as one string in the program, Version found it first and said "OpenLook" */
+    /* C:GFOpenLook, GFOpenUp's own copy (listed as new, and GFOpenLook's by its version string) */
+    if ((e = find_entry("new", "SYS:C/GFOpenLook")) && exists("SYS:C/GFOpenLook")) {
+        /* put together here: as one string in the program, Version found it first and said "GFOpenLook" */
         static char look[24], *mark[] = { look };
         look[0] = '$';
-        strcpy(look + 1, "VER: OpenLook ");
-        if (has_marker("SYS:C/OpenLook", mark, 1) && DeleteFile((STRPTR)"SYS:C/OpenLook")) {
+        strcpy(look + 1, "VER: GFOpenLook ");
+        if (has_marker("SYS:C/GFOpenLook", mark, 1) && DeleteFile((STRPTR)"SYS:C/GFOpenLook")) {
             e->kind[0] = 0;
-            say("OpenUp: SYS:C/OpenLook: taken out", NULL, NULL);
+            say("GFOpenUp: SYS:C/GFOpenLook: taken out", NULL, NULL);
             n++;
         }
     }
     for (i = 0; i < nents; i++)
-        if ((!strcmp(ents[i].kind, "startup") && strstr(ents[i].a, "C:OpenLook")) ||
-            (!strcmp(ents[i].kind, "part") && !strcmp(ents[i].a, "OpenLook"))) {
+        if ((!strcmp(ents[i].kind, "startup") && strstr(ents[i].a, "C:GFOpenLook")) ||
+            (!strcmp(ents[i].kind, "part") && !strcmp(ents[i].a, "GFOpenLook"))) {
             if (!strcmp(ents[i].kind, "startup")) lines++;
             ents[i].kind[0] = 0;
         }
     n += lines;
-    n += take_out_old("ENVARC:OpenGadTools/Theme", was_theme);
-    n += take_out_old("ENV:OpenGadTools/Theme", was_theme);
+    n += take_out_old("ENVARC:GFOpenGadTools/Theme", was_theme);
+    n += take_out_old("ENV:GFOpenGadTools/Theme", was_theme);
     n += take_out_old(LOOK_ENVARC, was_look);
     n += take_out_old(LOOK_ENV, was_look);
     /* ENVARC:Sys/Font.prefs and IControl.prefs stay: the user's settings (0.8.7, above) */
     if (exists("ENVARC:Sys/Font.prefs") && find_entry(NULL, "ENVARC:Sys/Font.prefs"))
-        say("OpenUp: kept ENVARC:Sys/Font.prefs", ": the user's settings stay", NULL);
+        say("GFOpenUp: kept ENVARC:Sys/Font.prefs", ": the user's settings stay", NULL);
     if (exists("ENVARC:Sys/IControl.prefs") && find_entry(NULL, "ENVARC:Sys/IControl.prefs"))
-        say("OpenUp: kept ENVARC:Sys/IControl.prefs", ": the user's settings stay", NULL);
+        say("GFOpenUp: kept ENVARC:Sys/IControl.prefs", ": the user's settings stay", NULL);
     n += old_faces_out();                           /* 0.8.3, 0.8.4: the default icons, and Gorilla's faces */
     if (!manifest_save()) {
-        say("OpenUp: can't write its list of installed files in ENVARC:OpenAmiga. Is SYS: full?", NULL, NULL);
+        say("GFOpenUp: can't write its list of installed files in ENVARC:GFOpenAmiga. Is SYS: full?", NULL, NULL);
         return RETURN_ERROR;
     }
     if (lines && !write_startup(0)) {
-        say("OpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL);
+        say("GFOpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL);
         return RETURN_ERROR;
     }
-    Printf((STRPTR)"OpenUp: the old look: %ld thing%s taken out\n", (LONG)n, (LONG)(n == 1 ? "" : "s"));
+    Printf((STRPTR)"GFOpenUp: the old look: %ld thing%s taken out\n", (LONG)n, (LONG)(n == 1 ? "" : "s"));
     return RETURN_OK;
 }
 
@@ -2983,7 +2983,7 @@ static int set_wb_backdrop(void)
     ok = install_prefs("WBConfig.prefs", buf, len);
     FreeVec(buf);
     if (!ok) return RETURN_ERROR;
-    say("OpenUp: Workbench is a backdrop (from the next reboot)", NULL, NULL);
+    say("GFOpenUp: Workbench is a backdrop (from the next reboot)", NULL, NULL);
     return RETURN_OK;
 }
 
@@ -3026,7 +3026,7 @@ static int set_wb_gauge(void)
     ok = install_prefs("Workbench.prefs", buf, len);
     FreeVec(buf);
     if (!ok) return RETURN_ERROR;
-    say("OpenUp: drives' windows have no fill gauge (from the next reboot)", NULL, NULL);
+    say("GFOpenUp: drives' windows have no fill gauge (from the next reboot)", NULL, NULL);
     return RETURN_OK;
 }
 
@@ -3037,46 +3037,46 @@ static int set_wb_gauge(void)
  * home, and nothing is ever deleted.
  *   classic  an OS prefs editor goes to SYS:Prefs/Classic (one drawer in, still runs from there); its
  *            settings files stay, since programs read them
- *   retire   goes to SYS:Storage/OpenUp-Superseded, only once its Open replacement is on the disk
- *   replace  goes to SYS:Storage/OpenUp-Superseded and its Open replacement takes its name, so every icon
- *            and script that starts it starts the replacement (TextEdit: OpenEdit; no icon is changed)
+ *   retire   goes to SYS:Storage/GFOpenUp-Superseded, only once its Open replacement is on the disk
+ *   replace  goes to SYS:Storage/GFOpenUp-Superseded and its Open replacement takes its name, so every icon
+ *            and script that starts it starts the replacement (TextEdit: GFOpenEdit; no icon is changed)
  *   wait     stays: its Open home is still to build (listed, so the list is the build list)
  *   keep     stays: the OS's own, and wanted (said why)
  * Each move is a "moved" line in the manifest: RECONCILE UNDO and UNINSTALL put it back.
- * It also keeps the settings OpenUp owns in step: the icons' text is the screens' text (Font prefs), in a
+ * It also keeps the settings GFOpenUp owns in step: the icons' text is the screens' text (Font prefs), in a
  * light colour with a shadow over a dark backdrop and a dark one over a light backdrop (the backdrop's tone
  * from its theme's desktop colours), and the Open apps are on the dock (Dock ADD).
- *   OpenUpTool RECONCILE [CHECK]       says what it would do (changes nothing)
- *   OpenUpTool RECONCILE APPLY [ONCE]  does it; ONCE (at boot) only when this map is newer than the last run
- *   OpenUpTool RECONCILE UNDO          puts back everything RECONCILE moved */
+ *   GFOpenUpTool RECONCILE [CHECK]       says what it would do (changes nothing)
+ *   GFOpenUpTool RECONCILE APPLY [ONCE]  does it; ONCE (at boot) only when this map is newer than the last run
+ *   GFOpenUpTool RECONCILE UNDO          puts back everything RECONCILE moved */
 #define RECONCILE_MAP_VERSION "1"
-#define RECONCILE_DONE "ENVARC:OpenAmiga/Reconcile.done"
+#define RECONCILE_DONE "ENVARC:GFOpenAmiga/Reconcile.done"
 #define CLASSIC "SYS:Prefs/Classic"
 
 typedef struct { const char *path, *action, *home, *what; } rmap;
 static const rmap reconcile_map[] = {
-    { "SYS:Prefs/Asl",          "classic", NULL, "OpenLook: file requesters (to build)" },
-    { "SYS:Prefs/Font",         "classic", NULL, "OpenLook: fonts (to build); OpenUp sets the screens' and icons' text" },
-    { "SYS:Prefs/Palette",      "classic", NULL, "OpenLook: colours (to build)" },
-    { "SYS:Prefs/Pointer",      "classic", NULL, "OpenLook: pointer, with OpenMouseAccel (to build); the old editor crashes on this desktop" },
-    { "SYS:Prefs/ReAction",     "classic", NULL, "OpenLook: ReAction's look (to build)" },
-    { "SYS:Prefs/WBPattern",    "classic", NULL, "OpenLook: backdrop (to build)" },
-    { "SYS:Prefs/Workbench",    "classic", NULL, "OpenLook: Workbench (to build)" },
-    { "SYS:Prefs/ScreenMode",   "classic", NULL, "OpenLook Screen: mode and overscan (to build)" },
-    { "SYS:Prefs/Overscan",     "classic", NULL, "OpenLook Screen: mode and overscan (to build)" },
-    { "SYS:Prefs/Input",        "classic", NULL, "OpenInput's editor: input and IControl (to build)" },
-    { "SYS:Prefs/IControl",     "classic", NULL, "OpenInput's editor: input and IControl (to build)" },
+    { "SYS:Prefs/Asl",          "classic", NULL, "GFOpenLook: file requesters (to build)" },
+    { "SYS:Prefs/Font",         "classic", NULL, "GFOpenLook: fonts (to build); GFOpenUp sets the screens' and icons' text" },
+    { "SYS:Prefs/Palette",      "classic", NULL, "GFOpenLook: colours (to build)" },
+    { "SYS:Prefs/Pointer",      "classic", NULL, "GFOpenLook: pointer, with GFOpenMouseAccel (to build); the old editor crashes on this desktop" },
+    { "SYS:Prefs/ReAction",     "classic", NULL, "GFOpenLook: ReAction's look (to build)" },
+    { "SYS:Prefs/WBPattern",    "classic", NULL, "GFOpenLook: backdrop (to build)" },
+    { "SYS:Prefs/Workbench",    "classic", NULL, "GFOpenLook: Workbench (to build)" },
+    { "SYS:Prefs/ScreenMode",   "classic", NULL, "GFOpenLook Screen: mode and overscan (to build)" },
+    { "SYS:Prefs/Overscan",     "classic", NULL, "GFOpenLook Screen: mode and overscan (to build)" },
+    { "SYS:Prefs/Input",        "classic", NULL, "GFOpenInput's editor: input and IControl (to build)" },
+    { "SYS:Prefs/IControl",     "classic", NULL, "GFOpenInput's editor: input and IControl (to build)" },
     { "SYS:Prefs/Time",         "classic", NULL, "Open Time and Locale (to build)" },
     { "SYS:Prefs/Locale",       "classic", NULL, "Open Time and Locale (to build)" },
-    { "SYS:Prefs/Printer",      "classic", NULL, "OpenPrint's printer settings (to build)" },
-    { "SYS:Prefs/PrinterGfx",   "classic", NULL, "OpenPrint's printer settings (to build)" },
-    { "SYS:Prefs/PrinterPS",    "classic", NULL, "OpenPrint's printer settings (to build)" },
-    { "SYS:Prefs/DefaultIcons", "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's File Types, which takes over default icons" },
-    { "SYS:Prefs/Serial",       "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's Serial" },
-    { "SYS:Prefs/Sound",        "classic", "SYS:Preferences/OpenPrefs", "OpenPrefs's Sound (a Sound in Prefs is the OS's)" },
-    { "SYS:Tools/Commodities/Blanker", "retire", "SYS:Tools/Commodities/OpenBlanker", "OpenBlanker" },
-    { "SYS:Tools/Calculator",   "wait",    NULL, "OpenCalculator (source in OpenUp, to build)" },
-    { "SYS:Tools/TextEdit",     "replace", "C:OpenEdit", "OpenEdit, under TextEdit's name, so every icon that opens TextEdit opens OpenEdit" },
+    { "SYS:Prefs/Printer",      "classic", NULL, "GFOpenPrint's printer settings (to build)" },
+    { "SYS:Prefs/PrinterGfx",   "classic", NULL, "GFOpenPrint's printer settings (to build)" },
+    { "SYS:Prefs/PrinterPS",    "classic", NULL, "GFOpenPrint's printer settings (to build)" },
+    { "SYS:Prefs/DefaultIcons", "classic", "SYS:Preferences/GFOpenPrefs", "GFOpenPrefs's File Types, which takes over default icons" },
+    { "SYS:Prefs/Serial",       "classic", "SYS:Preferences/GFOpenPrefs", "GFOpenPrefs's Serial" },
+    { "SYS:Prefs/Sound",        "classic", "SYS:Preferences/GFOpenPrefs", "GFOpenPrefs's Sound (a Sound in Prefs is the OS's)" },
+    { "SYS:Tools/Commodities/Blanker", "retire", "SYS:Tools/Commodities/GFOpenBlanker", "GFOpenBlanker" },
+    { "SYS:Tools/Calculator",   "wait",    NULL, "GFOpenCalculator (source in GFOpenUp, to build)" },
+    { "SYS:Tools/TextEdit",     "replace", "C:GFOpenEdit", "GFOpenEdit, under TextEdit's name, so every icon that opens TextEdit opens GFOpenEdit" },
     { "SYS:WBStartup/AsyncWB",  "keep",    NULL, "OS 3.2.3's: Workbench copies and deletes in processes of their own" },
     { "SYS:WBStartup/RAWBInfo", "keep",    NULL, "OS 3.2.3's Information window" },
 };
@@ -3098,14 +3098,14 @@ static int move_noted(const char *a, const char *b)
         }
         return 0;
     }
-    if (exists(b)) { say("OpenUp: ", b, " is there already; left both as they are."); return -1; }
+    if (exists(b)) { say("GFOpenUp: ", b, " is there already; left both as they are."); return -1; }
     parent_of(b, dir, sizeof dir);
-    if (!ensure_dir(dir, 1)) { say("OpenUp: can't make ", dir, "."); return -1; }
+    if (!ensure_dir(dir, 1)) { say("GFOpenUp: can't make ", dir, "."); return -1; }
     ok = Rename((STRPTR)a, (STRPTR)b);
     if (!ok) {
-        if (!copy_file(a, b, 0)) { say("OpenUp: can't move ", a, "; left in place."); return -1; }
+        if (!copy_file(a, b, 0)) { say("GFOpenUp: can't move ", a, "; left in place."); return -1; }
         ok = DeleteFile((STRPTR)a);
-        if (!ok) { DeleteFile((STRPTR)b); say("OpenUp: can't move ", a, ". Is it running?"); return -1; }
+        if (!ok) { DeleteFile((STRPTR)b); say("GFOpenUp: can't move ", a, ". Is it running?"); return -1; }
     }
     add_entry("moved", a, b);
     strlcpy(ai, a, sizeof ai); str_cat(ai, ".info", sizeof ai);
@@ -3132,8 +3132,8 @@ static UBYTE *font_of_type(UBYTE *d, LONG len, int type)
 
 /* A picture's tone from its own pixels, through picture.datatype (V44: PDTM_READPIXELARRAY as ARGB):
  * twelve rows, every eighth pixel. 1 dark, 0 light, -1 couldn't read it. Remembered per picture in
- * ENVARC:OpenAmiga/Backdrop.tone, as decoding a big picture takes a moment on a 68k. */
-#define TONE_CACHE "ENVARC:OpenAmiga/Backdrop.tone"
+ * ENVARC:GFOpenAmiga/Backdrop.tone, as decoding a big picture takes a moment on a 68k. */
+#define TONE_CACHE "ENVARC:GFOpenAmiga/Backdrop.tone"
 static int picture_tone(const char *name)
 {
     struct Library *DataTypesBase;
@@ -3143,7 +3143,7 @@ static int picture_tone(const char *name)
     LONG len = 0, w, h, y, x, sum = 0, count = 0;
     char *cache, side[300];
     int tone = -1, nl = (int)strlen(name);
-    /* a .tone file beside the picture ("dark" or "light"), as OpenUp's backdrops carry */
+    /* a .tone file beside the picture ("dark" or "light"), as GFOpenUp's backdrops carry */
     strlcpy(side, name, sizeof side);
     str_cat(side, ".tone", sizeof side);
     if ((cache = read_file(side, &len))) {
@@ -3152,7 +3152,7 @@ static int picture_tone(const char *name)
         if (tone >= 0) return tone;
     }
     /* never a big picture at boot: decoding a full-screen PNG takes minutes on a 68k, and S:User-Startup
-     * waited for it (the black screen of 10 October 2026, 18:15). Only OpenUp's strips (16 pixels wide). */
+     * waited for it (the black screen of 10 October 2026, 18:15). Only GFOpenUp's strips (16 pixels wide). */
     if (!strstr(name, "-strip-")) return -1;
     cache = read_file(TONE_CACHE, &len);
     if (cache) {
@@ -3197,13 +3197,13 @@ static int picture_tone(const char *name)
         char buf[300];
         strlcpy(buf, name, sizeof buf - 4);
         str_cat(buf, tone ? "\ndark\n" : "\nlight\n", sizeof buf);
-        ensure_dir("ENVARC:OpenAmiga", 1);
+        ensure_dir("ENVARC:GFOpenAmiga", 1);
         write_file(TONE_CACHE, buf, strlen(buf));
     }
     return tone;
 }
 
-/* The backdrop's tone: 1 dark, 0 light, -1 not known. OpenUp's backdrops are named <Theme>-<mode>[-chrome]-...
+/* The backdrop's tone: 1 dark, 0 light, -1 not known. GFOpenUp's backdrops are named <Theme>-<mode>[-chrome]-...
  * (opengadtools' make_backdrops.py); the theme's desktop colours for that mode give the tone: the mean of
  * their luminance below 45 per cent is dark. Another picture is dark when its name says so. */
 static int backdrop_tone(void)
@@ -3349,7 +3349,7 @@ static int reconcile(const char *how, const char *once)
     int i, moved = 0, failed = 0, waiting = 0;
     char dest[ENTRY_PATH];
     if (how && !apply && !undo && !same_word(how, "CHECK")) {
-        PutStr((STRPTR)"Usage: OpenUpTool RECONCILE [CHECK | APPLY [ONCE] | UNDO]\n");
+        PutStr((STRPTR)"Usage: GFOpenUpTool RECONCILE [CHECK | APPLY [ONCE] | UNDO]\n");
         return RETURN_FAIL;
     }
     manifest_load();
@@ -3359,18 +3359,18 @@ static int reconcile(const char *how, const char *once)
             LONG ok;
             if (!strcmp(e->kind, "rnew")) {             /* a replacement RECONCILE put in an old program's place */
                 if (DeleteFile((STRPTR)e->a) || !exists(e->a)) e->kind[0] = 0;
-                else { say("OpenUp: can't take away ", e->a, "."); failed++; }
+                else { say("GFOpenUp: can't take away ", e->a, "."); failed++; }
                 continue;
             }
             if (strcmp(e->kind, "moved")) continue;
-            if (exists(e->a)) { say("OpenUp: ", e->a, " is back already; its moved copy stays where it is."); failed++; continue; }
+            if (exists(e->a)) { say("GFOpenUp: ", e->a, " is back already; its moved copy stays where it is."); failed++; continue; }
             ok = Rename((STRPTR)e->b, (STRPTR)e->a);
             if (ok) { e->kind[0] = 0; moved++; }
-            else { say("OpenUp: can't put back ", e->a, "."); failed++; }
+            else { say("GFOpenUp: can't put back ", e->a, "."); failed++; }
         }
         DeleteFile((STRPTR)RECONCILE_DONE);
         if (!manifest_save()) return RETURN_ERROR;
-        Printf((STRPTR)"OpenUp: %ld put back where they were\n", (LONG)moved);
+        Printf((STRPTR)"GFOpenUp: %ld put back where they were\n", (LONG)moved);
         return failed ? RETURN_WARN : RETURN_OK;
     }
     if (apply && once && same_word(once, "ONCE")) {
@@ -3381,7 +3381,7 @@ static int reconcile(const char *how, const char *once)
         if (done) FreeVec(done);
         if (same) return reconcile_icon_text(1) < 0 ? RETURN_WARN : RETURN_OK;   /* the backdrop may have changed */
     }
-    Printf((STRPTR)"OpenUp: reconcile (map %s)%s\n", (LONG)RECONCILE_MAP_VERSION, (LONG)(apply ? "" : ": what it would do; APPLY does it"));
+    Printf((STRPTR)"GFOpenUp: reconcile (map %s)%s\n", (LONG)RECONCILE_MAP_VERSION, (LONG)(apply ? "" : ": what it would do; APPLY does it"));
     for (i = 0; i < NRMAP; i++) {
         const rmap *m = &reconcile_map[i];
         const char *name = (const char *)FilePart((STRPTR)m->path);
@@ -3418,7 +3418,7 @@ static int reconcile(const char *how, const char *once)
                     add_entry("rnew", m->path, NULL);
                     Printf((STRPTR)"  replaced:   %s by %s\n", (LONG)m->path, (LONG)m->home);
                     moved++;
-                } else { say("OpenUp: can't put ", m->home, " in its place; RECONCILE UNDO puts the old one back."); failed++; }
+                } else { say("GFOpenUp: can't put ", m->home, " in its place; RECONCILE UNDO puts the old one back."); failed++; }
             } else failed++;
         } else if (!strcmp(m->action, "wait")) {
             if (!there) continue;
@@ -3430,19 +3430,19 @@ static int reconcile(const char *how, const char *once)
     }
     if (reconcile_icon_text(apply) < 0) failed++;
     /* the Open apps on the dock (the user, 10 October 2026): Dock ADD adds only those installed and not there. The
-     * editor is OpenPrefs's Dock page: SYS:Preferences/OpenPrefs DOCK since OpenUpTool 0.8.9 (the no-ROM-volume
+     * editor is GFOpenPrefs's Dock page: SYS:Preferences/GFOpenPrefs DOCK since GFOpenUpTool 0.8.9 (the no-ROM-volume
      * design, section 8), SYS:Prefs/OpenDock, its name's stub, before */
-    const char *dock_ed = exists("SYS:Preferences/OpenPrefs") ? "SYS:Preferences/OpenPrefs DOCK"
+    const char *dock_ed = exists("SYS:Preferences/GFOpenPrefs") ? "SYS:Preferences/GFOpenPrefs DOCK"
                           : exists("SYS:Prefs/OpenDock") ? "SYS:Prefs/OpenDock" : NULL;
     if (dock_ed) {
-        if (!apply) PutStr((STRPTR)"  dock: OpenWrite, OpenPlay, OpenCompress, OpenFTP and OpenPuTTY added if installed and missing\n");
+        if (!apply) PutStr((STRPTR)"  dock: GFOpenWrite, GFOpenPlay, GFOpenCompress, GFOpenFTP and GFOpenPuTTY added if installed and missing\n");
         else {
             char cmd[400];
             LONG r;
             strlcpy(cmd, dock_ed, sizeof cmd);
-            str_cat(cmd, " ADD SYS:Utilities/OpenFiles SYS:Utilities/OpenPrint/OpenView "
-                         "SYS:Utilities/OpenWrite/OpenWrite SYS:Utilities/OpenPlay SYS:Utilities/OpenCompress "
-                         "SYS:Utilities/OpenFTP/OpenFTP SYS:Utilities/OpenPuTTY/OpenPuTTY SAVE", sizeof cmd);
+            str_cat(cmd, " ADD SYS:Utilities/GFOpenFiles SYS:Utilities/GFOpenPrint/GFOpenView "
+                         "SYS:Utilities/GFOpenWrite/GFOpenWrite SYS:Utilities/GFOpenPlay SYS:Utilities/GFOpenCompress "
+                         "SYS:Utilities/GFOpenFTP/GFOpenFTP SYS:Utilities/GFOpenPuTTY/GFOpenPuTTY SAVE", sizeof cmd);
             r = run_sync(cmd, 1);
             PutStr((STRPTR)(r == 0 ? "  dock: the Open apps are on it\n" : "  dock: Dock ADD didn't run; the dock is as it was\n"));
         }
@@ -3450,7 +3450,7 @@ static int reconcile(const char *how, const char *once)
     if (apply) {
         if (!manifest_save()) return RETURN_ERROR;
         if (!failed) write_file(RECONCILE_DONE, RECONCILE_MAP_VERSION "\n", strlen(RECONCILE_MAP_VERSION) + 1);
-        Printf((STRPTR)"OpenUp: %ld moved, %ld waiting for their Open home%s\n", (LONG)moved, (LONG)waiting,
+        Printf((STRPTR)"GFOpenUp: %ld moved, %ld waiting for their Open home%s\n", (LONG)moved, (LONG)waiting,
                (LONG)(moved ? ". Choose Update in the drawers to see it." : ""));
     }
     return failed ? RETURN_WARN : RETURN_OK;
@@ -3461,11 +3461,11 @@ static int reconcile(const char *how, const char *once)
 /* The user, 10 October 2026: "the windows look pants when opening because we haven't sized them and made them
  * pretty". TIDY has Workbench itself clean up each of the system's drawers (by name), size the window to fit
  * its icons (never larger than 800 x 600 or the screen), and snapshot it all, so every drawer opens neat, in
- * the screen's own font. Through Workbench's ARexx port (WORKBENCH), as OpenMenus talks to it; nothing of
+ * the screen's own font. Through Workbench's ARexx port (WORKBENCH), as GFOpenMenus talks to it; nothing of
  * Workbench's is patched.
- *   OpenUpTool TIDY [ONCE]    ONCE (at boot): waits for Workbench, and does it once per tidy version */
+ *   GFOpenUpTool TIDY [ONCE]    ONCE (at boot): waits for Workbench, and does it once per tidy version */
 #define TIDY_VERSION "1"
-#define TIDY_DONE "ENVARC:OpenAmiga/Tidy.done"
+#define TIDY_DONE "ENVARC:GFOpenAmiga/Tidy.done"
 struct RxsLib *RexxSysBase;
 
 /* One command to Workbench; 0 is RC_OK. Waits up to ticks fiftieths of a second for the answer. */
@@ -3561,7 +3561,7 @@ static int tidy(const char *once)
     }
     if (wb_cmd("GETATTR SCREEN.WIDTH", num, sizeof num, 250) == 0) scrw = atol(num);
     if (wb_cmd("GETATTR SCREEN.HEIGHT", num, sizeof num, 250) == 0) scrh = atol(num);
-    if (scrw <= 0 || scrh <= 0) { say("OpenUp: Workbench isn't answering; nothing tidied.", NULL, NULL); return RETURN_WARN; }
+    if (scrw <= 0 || scrh <= 0) { say("GFOpenUp: Workbench isn't answering; nothing tidied.", NULL, NULL); return RETURN_WARN; }
     for (i = 0; i < (int)(sizeof drawers / sizeof drawers[0]); i++) {
         if (!exists(drawers[i]) || !wb_name(drawers[i], name, sizeof name)) continue;
         if (wb_cmd(wb_line(cmd, sizeof cmd, "WINDOW", name, "OPEN"), NULL, 0, 500)) continue;
@@ -3598,29 +3598,29 @@ static int tidy(const char *once)
         done++;
     }
     if (RexxSysBase) { CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL; }
-    if (!done) { say("OpenUp: Workbench didn't open any drawer for TIDY; nothing tidied, it tries again next time.", NULL, NULL); return RETURN_WARN; }
-    ensure_dir("ENVARC:OpenAmiga", 1);
+    if (!done) { say("GFOpenUp: Workbench didn't open any drawer for TIDY; nothing tidied, it tries again next time.", NULL, NULL); return RETURN_WARN; }
+    ensure_dir("ENVARC:GFOpenAmiga", 1);
     write_file(TIDY_DONE, TIDY_VERSION "\n", strlen(TIDY_VERSION) + 1);
-    Printf((STRPTR)"OpenUp: %ld drawers tidied: cleaned up by name, sized to fit, snapshotted\n", (LONG)done);
+    Printf((STRPTR)"GFOpenUp: %ld drawers tidied: cleaned up by name, sized to fit, snapshotted\n", (LONG)done);
     return RETURN_OK;
 }
 
 /* ---- ICONS: every icon in the house style ------------------------------------------------------ */
 
-/* The user, 10 October 2026: an icon find and replace that hunts for icons that aren't AmigaChrome's and
- * offers ours, with the drawers tidied after. ICONS walks SYS: and Work: (three drawers deep, OpenUp's own
+/* The user, 10 October 2026: an icon find and replace that hunts for icons that aren't AmiCradle's and
+ * offers ours, with the drawers tidied after. ICONS walks SYS: and Work: (three drawers deep, GFOpenUp's own
  * Storage and Parts left out) for old icons: the classic four-colour pictures and NewIcons, anything that
- * isn't an OS 3.5 colour icon or a PNG icon and isn't one OpenUp gave already. Each gets a new face, the
+ * isn't an OS 3.5 colour icon or a PNG icon and isn't one GFOpenUp gave already. Each gets a new face, the
  * icon keeping its type, tool, tool types, stack, place and drawer window (face_icon, as the install does):
- *   - by its name, from the OpenIcons set OpenUp carries (Work:OpenUp/Parts/OpenIcons/Icons/<name>.info);
- *   - else by its kind, from OpenIcons' disk, drawer, tool, project and trashcan (Parts/OpenIcons/Kinds), the
- *     pictures the ROM's own default icons have; with no OpenIcons part, from the system's default icons
+ *   - by its name, from the GFOpenIcons set GFOpenUp carries (Work:GFOpenUp/Parts/GFOpenIcons/Icons/<name>.info);
+ *   - else by its kind, from GFOpenIcons' disk, drawer, tool, project and trashcan (Parts/GFOpenIcons/Kinds), the
+ *     pictures the ROM's own default icons have; with no GFOpenIcons part, from the system's default icons
  *     where there are any (an icon with neither keeps its picture).
- * The originals go to SYS:Storage/OpenUp-Superseded; UNINSTALL puts them back.
- *   OpenUpTool ICONS [CHECK]    lists what it would change
- *   OpenUpTool ICONS APPLY      changes them, then has Workbench tidy the system's drawers (TIDY) */
-#define ICON_LIB "Work:OpenUp/Parts/OpenIcons/Icons"
-#define ICON_KINDS "Work:OpenUp/Parts/OpenIcons/Kinds"
+ * The originals go to SYS:Storage/GFOpenUp-Superseded; UNINSTALL puts them back.
+ *   GFOpenUpTool ICONS [CHECK]    lists what it would change
+ *   GFOpenUpTool ICONS APPLY      changes them, then has Workbench tidy the system's drawers (TIDY) */
+#define ICON_LIB "Work:GFOpenUp/Parts/GFOpenIcons/Icons"
+#define ICON_KINDS "Work:GFOpenUp/Parts/GFOpenIcons/Kinds"
 #define ICONS_MAX 400
 static char *icon_found[ICONS_MAX], *icon_from[ICONS_MAX];
 static int icon_count;
@@ -3644,7 +3644,7 @@ static int old_icon(const char *path, int *type)
     return old;
 }
 
-/* the picture for an icon of this kind: OpenIcons' (the part's Kinds drawer, the ROM's look), else the
+/* the picture for an icon of this kind: GFOpenIcons' (the part's Kinds drawer, the ROM's look), else the
  * system's default icon where there is one */
 static const char *kind_default(int type)
 {
@@ -3684,13 +3684,13 @@ static void icons_walk(const char *dir, int depth)
                 if (sub[strlen(sub) - 1] != ':') str_cat(sub, "/", sizeof sub);
                 str_cat(sub, n, sizeof sub);
                 if (fib->fib_DirEntryType > 0) {
-                    if (depth < 3 && strcmp(n, "OpenUp-Superseded") && strcmp(n, "Parts") && strcmp(n, "T") &&
+                    if (depth < 3 && strcmp(n, "GFOpenUp-Superseded") && strcmp(n, "Parts") && strcmp(n, "T") &&
                         strcmp(n, "Trashcan") && strncmp(n, ".", 1))
                         icons_walk(sub, depth + 1);
                     continue;
                 }
                 if (l <= 5 || !same_word(n + l - 5, ".info") || find_entry(NULL, sub) || !old_icon(sub, &type)) continue;
-                /* the replacement: by name from OpenIcons' set, else by kind */
+                /* the replacement: by name from GFOpenIcons' set, else by kind */
                 strlcpy(lib, ICON_LIB "/", sizeof lib);
                 str_cat(lib, n, sizeof lib);
                 if (!exists(lib)) {
@@ -3711,20 +3711,20 @@ static void icons_walk(const char *dir, int depth)
 static int icons(const char *how)
 {
     int apply = how && same_word(how, "APPLY"), i, done = 0, failed = 0;
-    if (how && !apply && !same_word(how, "CHECK")) { PutStr((STRPTR)"Usage: OpenUpTool ICONS [CHECK | APPLY]\n"); return RETURN_FAIL; }
+    if (how && !apply && !same_word(how, "CHECK")) { PutStr((STRPTR)"Usage: GFOpenUpTool ICONS [CHECK | APPLY]\n"); return RETURN_FAIL; }
     manifest_load();
     icon_count = 0;
     icons_walk("SYS:", 0);
     if (exists("Work:")) icons_walk("Work:", 0);
-    if (!icon_count) { PutStr((STRPTR)"OpenUp: every icon is in the house style already\n"); return RETURN_OK; }
+    if (!icon_count) { PutStr((STRPTR)"GFOpenUp: every icon is in the house style already\n"); return RETURN_OK; }
     for (i = 0; i < icon_count; i++) {
         if (!apply) { Printf((STRPTR)"  old: %s  (new face: %s)\n", (LONG)icon_found[i], (LONG)icon_from[i]); continue; }
         if (face_icon(icon_from[i], icon_found[i]) > 0) { Printf((STRPTR)"  new face: %s\n", (LONG)icon_found[i]); done++; }
         else failed++;
     }
-    if (!apply) { Printf((STRPTR)"OpenUp: %ld old icons; ICONS APPLY gives them our faces\n", (LONG)icon_count); return RETURN_OK; }
+    if (!apply) { Printf((STRPTR)"GFOpenUp: %ld old icons; ICONS APPLY gives them our faces\n", (LONG)icon_count); return RETURN_OK; }
     if (!manifest_save()) return RETURN_ERROR;
-    Printf((STRPTR)"OpenUp: %ld icons given our faces, %ld left as they were\n", (LONG)done, (LONG)failed);
+    Printf((STRPTR)"GFOpenUp: %ld icons given our faces, %ld left as they were\n", (LONG)done, (LONG)failed);
     if (done) {
         struct MsgPort *wb;
         Forbid();
@@ -3739,18 +3739,18 @@ static int list(void)
 {
     int i, files = 0;
     manifest_load();
-    if (!nents) { PutStr((STRPTR)"OpenUp isn't installed here.\n"); return RETURN_WARN; }
+    if (!nents) { PutStr((STRPTR)"GFOpenUp isn't installed here.\n"); return RETURN_WARN; }
     for (i = 0; i < nents; i++)
         if (!strcmp(ents[i].kind, "part")) Printf((STRPTR)"%s %s\n", (LONG)ents[i].a, (LONG)ents[i].b);
         else if (!strcmp(ents[i].kind, "new") || !strcmp(ents[i].kind, "replaced")) files++;
-    Printf((STRPTR)"%ld files are OpenUp's (" MANIFEST ")\n", files);
+    Printf((STRPTR)"%ld files are GFOpenUp's (" MANIFEST ")\n", files);
     return RETURN_OK;
 }
 
-/* ---- UPDATE: a newer pack from Cradle (amigachrome docs/design/AutoDocs-OpenUp-Update.md) ---- */
+/* ---- UPDATE: a newer pack from Cradle (amicradle docs/design/AutoDocs-GFOpenUp-Update.md) ---- */
 
-#define CRADLE_DRAWER "DH1:OpenUp"
-#define CRADLE_PACK "DH1:OpenUp/Cradle-Pack"
+#define CRADLE_DRAWER "DH1:GFOpenUp"
+#define CRADLE_PACK "DH1:GFOpenUp/Cradle-Pack"
 #define RELEASES "https://github.com/DalsinAI/openamigaup/releases"
 
 /* Versions compare as numbers, dot by dot: 0.6.14 is newer than 0.6.9. */
@@ -3832,33 +3832,33 @@ static int update(const char *how)
     entry *e;
     int check = how && same_word(how, "CHECK"), yes = how && same_word(how, "YES");
     manifest_load();
-    if ((e = find_entry("part", "OpenUp")) != NULL)
+    if ((e = find_entry("part", "GFOpenUp")) != NULL)
         strlcpy(installed, e->b, sizeof installed);
     if (!installed[0]) {
-        say("OpenUp isn't installed here, so there is nothing to update. Run Install-OpenUp to install it.", NULL, NULL);
+        say("GFOpenUp isn't installed here, so there is nothing to update. Run Install-GFOpenUp to install it.", NULL, NULL);
         return RETURN_WARN;
     }
     if (!cradle_version(newer, sizeof newer)) {
-        say("OpenUp ", installed, " is installed. No newer OpenUp from Cradle: this Amiga isn't an AmigaChrome instance with OpenUp's drawer (DH1:OpenUp).");
-        say("On a real Amiga, newer packs are at " RELEASES ": unpack one and run its Install-OpenUp.", NULL, NULL);
+        say("GFOpenUp ", installed, " is installed. No newer GFOpenUp from Cradle: this Amiga isn't an AmiCradle instance with GFOpenUp's drawer (DH1:GFOpenUp).");
+        say("On a real Amiga, newer packs are at " RELEASES ": unpack one and run its Install-GFOpenUp.", NULL, NULL);
         return RETURN_OK;
     }
     if (version_cmp(newer, installed) <= 0) {
-        say("OpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
+        say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
         return RETURN_OK;
     }
-    Printf((STRPTR)"OpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
+    Printf((STRPTR)"GFOpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
     if (check) return RETURN_WARN;
     if (!show_changes()) say("  (the same parts, updated in place)", NULL, NULL);
     if (!yes) {
-        struct EasyStruct es = { sizeof(struct EasyStruct), 0, (UBYTE *)"OpenUp Update",
-            (UBYTE *)"OpenUp %s is ready to install (%s is installed now).\n\n"
-                     "OpenUp's Installer runs with your answers from last time;\n"
+        struct EasyStruct es = { sizeof(struct EasyStruct), 0, (UBYTE *)"GFOpenUp Update",
+            (UBYTE *)"GFOpenUp %s is ready to install (%s is installed now).\n\n"
+                     "GFOpenUp's Installer runs with your answers from last time;\n"
                      "what you have changed yourself stays.",
             (UBYTE *)"Not now|Update" };
         LONG answer = EasyRequest(NULL, &es, NULL, (LONG)newer, (LONG)installed);
         if (answer != 0) {           /* "Not now" is 1, the left; "Update" is 0, the right */
-            say("Not updated. OpenUpTool UPDATE asks again whenever you like.", NULL, NULL);
+            say("Not updated. GFOpenUpTool UPDATE asks again whenever you like.", NULL, NULL);
             return RETURN_OK;
         }
     }
@@ -3868,20 +3868,20 @@ static int update(const char *how)
         LONG rc;
         strcpy(cmd, "CD " CRADLE_DRAWER "\n");
         strcat(cmd, inst);
-        strcat(cmd, " Install-OpenUp APPNAME OpenUp NOLOG\n");       /* no install_log_file left in SYS: */
-        if (!write_file("T:OpenUp-update", cmd, strlen(cmd))) {
-            say("OpenUp: can't write T:OpenUp-update. Is T: full?", NULL, NULL);
+        strcat(cmd, " Install-GFOpenUp APPNAME GFOpenUp NOLOG\n");       /* no install_log_file left in SYS: */
+        if (!write_file("T:GFOpenUp-update", cmd, strlen(cmd))) {
+            say("GFOpenUp: can't write T:GFOpenUp-update. Is T: full?", NULL, NULL);
             return RETURN_ERROR;
         }
-        rc = run_sync("Execute T:OpenUp-update", 0);
-        DeleteFile((STRPTR)"T:OpenUp-update");
+        rc = run_sync("Execute T:GFOpenUp-update", 0);
+        DeleteFile((STRPTR)"T:GFOpenUp-update");
         return rc == 0 ? RETURN_OK : RETURN_WARN;
     }
 }
 
 static int real_main(void);
 
-/* OpenUpTool needs a big stack: FIXTOOLS reads and writes icons through icon.library, which takes far more
+/* GFOpenUpTool needs a big stack: FIXTOOLS reads and writes icons through icon.library, which takes far more
  * than the 4096 bytes a Shell, an Installer's Run Program step or an Execute script has by default (it did its
  * work and then never returned). When the stack is smaller than 32 KB, the whole program runs on one of 64 KB.
  * The swap's own variables are static: after StackSwap() the old stack can't be reached from the stack pointer. */
@@ -3919,7 +3919,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
+        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -3930,7 +3930,7 @@ static int real_main(void)
     if (same_word(cmd, "DETECT")) rc = detect();
     else if (same_word(cmd, "INSTALL") && args[1]) rc = install((const char *)args[1]);
     else if (same_word(cmd, "REMOVE") && args[1]) rc = remove_part((const char *)args[1]);
-    else if (same_word(cmd, "STARTUP")) rc = write_startup(0) ? RETURN_OK : (say("OpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL), RETURN_ERROR);
+    else if (same_word(cmd, "STARTUP")) rc = write_startup(0) ? RETURN_OK : (say("GFOpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL), RETURN_ERROR);
     else if (same_word(cmd, "UNINSTALL")) rc = uninstall();
     else if (same_word(cmd, "FIXTOOLS") && args[1]) rc = fix_tools((const char *)args[1], args[2] && same_word((const char *)args[2], "ALL"));
     else if (same_word(cmd, "LIST")) rc = list();
@@ -3948,7 +3948,7 @@ static int real_main(void)
         int same;
         keep_face_tmp = 1;
         same = still_face((const char *)args[1], (const char *)args[1], (const char *)args[2]);
-        Printf((STRPTR)"%s: %s the picture over %s's fields (T:OpenUp-oldface.info)\n", args[1],
+        Printf((STRPTR)"%s: %s the picture over %s's fields (T:GFOpenUp-oldface.info)\n", args[1],
                (LONG)(same ? "is" : "is not"), args[2]);
         rc = same ? RETURN_OK : RETURN_WARN;
     }
@@ -3966,12 +3966,12 @@ static int real_main(void)
     else if (same_word(cmd, "P96LEFTOVER")) {
         /* Picasso96API.library in LIBS: with no Picasso96 board running (its
          * monitor driver would have opened rtg.library at boot) hangs SDL's
-         * video start (6 Oct 2026). AmigaChrome's instances are never asked. */
+         * video start (6 Oct 2026). AmiCradle's instances are never asked. */
         int rtg;
         Forbid();
         rtg = FindName(&SysBase->LibList, (STRPTR)"rtg.library") != NULL;
         Permit();
-        rc = (!is_amigachrome() && !rtg && exists("LIBS:Picasso96API.library")) ? RETURN_WARN : RETURN_OK;
+        rc = (!is_amicradle() && !rtg && exists("LIBS:Picasso96API.library")) ? RETURN_WARN : RETURN_OK;
     }
     else if (same_word(cmd, "UPDATE")) rc = update((const char *)args[1]);
     else if (same_word(cmd, "RETIRE") && args[1]) {
@@ -3980,7 +3980,7 @@ static int real_main(void)
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
-    else { PutStr((STRPTR)"Usage: OpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;

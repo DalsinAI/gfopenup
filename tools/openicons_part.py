@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""The OpenIcons part: our own icon set, look B, as the system icons' new faces (ICONS.md section 8).
+"""The GFOpenIcons part: our own icon set, look B, as the system icons' new faces (ICONS.md section 8).
 
     python3 tools/openicons_part.py OUT_DIR --guest DIR
 
-OpenIcons is the Team's own icon set (amigachrome-guest icons/openicons): every
+GFOpenIcons is the Team's own icon set (amigachrome-guest icons/openicons): every
 picture drawn new from vector sources by its generator, under the MIT licence.
-Look B is the look the OpenKick ROM's own default icons have (amigachrome-guest
+Look B is the look the GFOpenKick ROM's own default icons have (amigachrome-guest
 #336), so the system's drawers, programs and file types match the ROM's disks,
 drawers and tools.
 
@@ -17,28 +17,28 @@ set's source by its commit.
 
 For each icon the system already has (a SYS: drawer, a program of OS 3.2.3's,
 a prefs editor, a monitor, printer, keymap or DOS driver, a DefIcons file type's
-icon in ENVARC:Sys), it writes OpenIcons' icon into OUT_DIR/Icons/<name>.info and
-a Part file whose "face" lines give each system icon that picture: OpenUpTool
+icon in ENVARC:Sys), it writes GFOpenIcons' icon into OUT_DIR/Icons/<name>.info and
+a Part file whose "face" lines give each system icon that picture: GFOpenUpTool
 keeps the icon's type, default tool, tool types, stack and place, keeps the
-original in SYS:Storage/OpenUp-Superseded, and UNINSTALL puts it back. An icon
+original in SYS:Storage/GFOpenUp-Superseded, and UNINSTALL puts it back. An icon
 the machine doesn't have is left alone.
 
 Not faced: the default icons (ENVARC:Sys/def_RAM, def_harddisk, def_disk,
 def_drawer, def_tool, def_project, def_trashcan, def_cd0, def_rad, def_card,
 def_kickstart, def_sys, def_work) and the volumes' Disk.info. The ROM's own
-icons are OpenIcons look B already, and OpenUpTool OLDLOOK takes those files out
+icons are GFOpenIcons look B already, and GFOpenUpTool OLDLOOK takes those files out
 (the user, 16 October 2026: "we should remove them and use ours").
 
 0.2 (W78, 18 October 2026): also the drawers it names in a second place
 (ELSEWHERE: OS 3.2.3's Presets/Backdrops, Presets/Pointers, Storage/WBStartup
-and RECONCILE's Prefs/Classic; AmigaChrome's Apps, Games and Demos on either
-volume), and own_drawers(), which build_pack.py runs on OpenUp's own drawer
-icons (OpenUp, OpenPrint, OpenWrite, OpenDemos, Developer...) so they are look
+and RECONCILE's Prefs/Classic; AmiCradle's Apps, Games and Demos on either
+volume), and own_drawers(), which build_pack.py runs on GFOpenUp's own drawer
+icons (GFOpenUp, GFOpenPrint, GFOpenWrite, GFOpenDemos, Developer...) so they are look
 B drawers with their program's motif, not the Gorilla-era or Boxie drawers.
 
-OUT_DIR/Kinds holds OpenIcons' disk, drawer, tool, project and trashcan, and
-OUT_DIR/Icons AmigaChrome's own (OpenCalc, OpenClock...), with no face line:
-OpenUpTool ICONS, and OLDLOOK for a Gorilla picture OpenUp's list doesn't name,
+OUT_DIR/Kinds holds GFOpenIcons' disk, drawer, tool, project and trashcan, and
+OUT_DIR/Icons AmiCradle's own (GFOpenCalc, GFOpenClock...), with no face line:
+GFOpenUpTool ICONS, and OLDLOOK for a Gorilla picture GFOpenUp's list doesn't name,
 give an icon its picture by name, else the one of its kind.
 
 MIT, Copyright (c) 2026 AmigaChrome Team.
@@ -52,7 +52,7 @@ from pathlib import Path
 
 LOOK = "B"
 
-# The default icons: the ROM's own show (OpenUpTool OLDLOOK takes these files out); never faced
+# The default icons: the ROM's own show (GFOpenUpTool OLDLOOK takes these files out); never faced
 DEFAULTS = {f"ENVARC:Sys/def_{k}".lower() for k in (
     "RAM", "harddisk", "disk", "drawer", "tool", "project", "trashcan", "cd0", "rad", "card", "kickstart", "sys", "work")}
 
@@ -81,38 +81,38 @@ TYPE_ALIASES = {
     "def_zip": "def_archive", "def_keymap": "def_key", "def_pref": "def_prefs",
 }
 
-# OpenUpTool ICONS: a picture by kind (the part's Kinds drawer), from these manifest entries
+# GFOpenUpTool ICONS: a picture by kind (the part's Kinds drawer), from these manifest entries
 KINDS = {"Disk": "def_disk", "Drawer": "def_drawer", "Tool": "def_tool", "Project": "def_project", "Trashcan": "def_trashcan"}
 
 # Drawers the manifest names that a machine also has elsewhere (W78, 18 October 2026: "we need to fix those
-# older icons to our new style"): OS 3.2.3's own in a second place, and AmigaChrome's on either volume (the
+# older icons to our new style"): OS 3.2.3's own in a second place, and AmiCradle's on either volume (the
 # amigachrome recipe makes Work:Apps and Work:Games). Each gets a face line; a machine without it is left alone.
 ELSEWHERE = {
     "SYS:Prefs/Presets/Backdrops": "Backdrops", "SYS:Prefs/Presets/Pointers": "Pointers",
     "SYS:Storage/WBStartup": "WBStartup", "SYS:Prefs/Classic": "Prefs",
     "SYS:Apps": "Apps", "Work:Apps": "Apps", "SYS:Games": "Games", "Work:Games": "Games",
-    "SYS:Demos": "Demos", "Work:Demos": "Demos", "SYS:Developer/OpenGPU-SDK": "OpenGPU-SDK",
+    "SYS:Demos": "Demos", "Work:Demos": "Demos", "SYS:Developer/GFOpenGPU-SDK": "GFOpenGPU-SDK",
 }
 
-# OpenUp's own drawers (the pack's, ICONS.md section 1), drawn as OpenIcons look B drawers with the program's
+# GFOpenUp's own drawers (the pack's, ICONS.md section 1), drawn as GFOpenIcons look B drawers with the program's
 # motif. Until 0.8.4 they were the Gorilla-era drawer with a badge (drawer-NAME) or Boxie's blue drawer.
 OWN_DRAWERS = {
-    "OpenUp": "install", "OpenPrint": "printer", "OpenWrite": "pages", "OpenBrowser": "globe",
-    "OpenDemos": "film", "OpenGPU-SDK": "cube", "Developer": "code", "Docs": "page", "OpenFTP": "swap",
-    "OpenPuTTY": "terminal", "Licences": "scroll", "Samples": "pages",
-    "Preferences": "sliders",               # OpenPrefs's drawer, with the Prefs drawer's motif (no-ROM-volume design)
+    "GFOpenUp": "install", "GFOpenPrint": "printer", "GFOpenWrite": "pages", "OpenBrowser": "globe",
+    "GFOpenDemos": "film", "GFOpenGPU-SDK": "cube", "Developer": "code", "Docs": "page", "GFOpenFTP": "swap",
+    "GFOpenPuTTY": "terminal", "Licences": "scroll", "Samples": "pages",
+    "Preferences": "sliders",               # GFOpenPrefs's drawer, with the Prefs drawer's motif (no-ROM-volume design)
 }
 
 
 def own_drawer(name: str) -> dict:
-    """A manifest-like entry for one of OpenUp's own drawers: look B's drawer with the program's motif."""
+    """A manifest-like entry for one of GFOpenUp's own drawers: look B's drawer with the program's motif."""
     return {"name": name, "group": "openup", "wbtype": "drawer", "base": "drawer", "motif": OWN_DRAWERS[name],
             "badge": "", "mv": {}, "bv": {}, "text": "", "body": "", "default_tool": "", "stack": 0, "path": ""}
 
 
 def face_bytes(old: bytes, entry: dict, pic: dict, guest: Path) -> bytes:
     """old (an icon file's bytes) with look B's picture pic for entry: its type, default tool, tool types,
-    stack, place and drawer window stay its own, as OpenUpTool's face keeps them (put_face)."""
+    stack, place and drawer window stay its own, as GFOpenUpTool's face keeps them (put_face)."""
     generator(guest)
     from openicons import info as infofmt
     from openicons.build import info_dict
@@ -131,7 +131,7 @@ def face_bytes(old: bytes, entry: dict, pic: dict, guest: Path) -> bytes:
 
 
 def own_drawers(guest: Path, files: list[Path]) -> int:
-    """Gives each of OpenUp's own drawer icons in files (a missing one is skipped) look B's drawer with its
+    """Gives each of GFOpenUp's own drawer icons in files (a missing one is skipped) look B's drawer with its
     program's motif (OWN_DRAWERS, by the icon's name), in place. Returns how many it changed."""
     generator(guest)
     from openicons.build import load_looks, render_icon
@@ -189,10 +189,10 @@ def short_names(paths: list[str], suffix: str) -> dict[str, str]:
 
 
 def generator(guest: Path):
-    """amigachrome-guest's OpenIcons generator: (load_manifest, spec_of, load_looks, render_icon, write_entry)."""
+    """amigachrome-guest's GFOpenIcons generator: (load_manifest, spec_of, load_looks, render_icon, write_entry)."""
     root = guest / "icons" / "openicons"
     if not (root / "oi.py").is_file():
-        raise SystemExit(f"{guest}: no icons/openicons/oi.py (OpenIcons is in amigachrome-guest from #329)")
+        raise SystemExit(f"{guest}: no icons/openicons/oi.py (GFOpenIcons is in amigachrome-guest from #329)")
     sys.path.insert(0, str(root))
     import oi
     from openicons.build import load_looks, render_icon, write_entry
@@ -226,7 +226,7 @@ def faces(rows: list[dict]) -> list[tuple[str, dict]]:
                         if path.startswith(a + twin + "/"):
                             dests = [path, b + path[len(a):]]
         if path.startswith("SYS:Prefs/") and path.count("/") == 1 and e["wbtype"] == "tool":
-            dests.append("SYS:Prefs/Classic/" + path.split("/", 1)[1])   # where OpenUpTool RECONCILE moves the OS's editors
+            dests.append("SYS:Prefs/Classic/" + path.split("/", 1)[1])   # where GFOpenUpTool RECONCILE moves the OS's editors
         for d in dests:
             add(d, e)
     for alias, name in TYPE_ALIASES.items():
@@ -259,14 +259,14 @@ def build(out: Path, guest: Path) -> list[str]:
             rendered[key] = render_icon(spec_of(e), look)
         return rendered[key]
 
-    lines = [f"; OpenIcons look {LOOK}, our own icons (amigachrome-guest {commit}, MIT): new faces for the system's icons"]
+    lines = [f"; GFOpenIcons look {LOOK}, our own icons (amigachrome-guest {commit}, MIT): new faces for the system's icons"]
     todo = faces(rows)
     names = short_names([dest for dest, _ in todo], ".info")
     for dest, e in todo:
         write_entry(e, picture(e), str(out / "Icons" / names[dest]))
         lines.append(f'face "Icons/{names[dest]}" "{dest}.info"')
-    # by name only, with no face line: AmigaChrome's own (OpenCalc, OpenClock...), for an icon OpenUpTool gives a
-    # picture by its name (ICONS, and OLDLOOK for a Gorilla picture OpenUp's list doesn't name)
+    # by name only, with no face line: AmiCradle's own (GFOpenCalc, GFOpenClock...), for an icon GFOpenUpTool gives a
+    # picture by its name (ICONS, and OLDLOOK for a Gorilla picture GFOpenUp's list doesn't name)
     used = {n.lower() for n in names.values()}
     for e in rows:
         n = e["name"] + ".info"
@@ -286,7 +286,7 @@ def main(argv=None) -> int:
     ap.add_argument("--guest", type=Path, required=True, help="the amigachrome-guest checkout (icons/openicons)")
     a = ap.parse_args(argv)
     lines = build(a.out, a.guest)
-    (a.out / "Part").write_text("part OpenIcons 0.2\n" + "\n".join(lines) + "\n")
+    (a.out / "Part").write_text("part GFOpenIcons 0.2\n" + "\n".join(lines) + "\n")
     print(f"{len(lines) - 1} faces in {a.out}")
     return 0
 

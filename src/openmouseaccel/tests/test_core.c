@@ -49,6 +49,6 @@ int main(void)
     feed(&ctx, 100, 0, 2001000ULL, &out);
     assert(out.multiplier <= 10.0f);
 
-    puts("OpenMouseAccel core tests: PASS");
+    puts("GFOpenMouseAccel core tests: PASS");
     return 0;
 }

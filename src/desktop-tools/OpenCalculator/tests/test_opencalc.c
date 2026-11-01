@@ -13,6 +13,6 @@ int main(void) {
     assert(OC_Eval(&c, "sin(30)", &v) == OC_OK); near(v,0.5);
     assert(OC_Eval(&c, "2^3^2", &v) == OC_OK); near(v,512);
     assert(OC_Eval(&c, "1/0", &v) == OC_ERR_DIVZERO);
-    puts("OpenCalc core tests: PASS");
+    puts("GFOpenCalc core tests: PASS");
     return 0;
 }
