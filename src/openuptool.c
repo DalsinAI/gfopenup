@@ -255,8 +255,9 @@ static char *read_file(const char *path, LONG *lenp)
 /* ---- writing a file so that a failure leaves the old one (1 Nov 2026) ------------------------------
  * A file was written over where it was: cut to nothing first, so a full SYS: left a library in use short, and a
  * short manifest lost the originals UNINSTALL puts back. Now the new bytes go to a short name beside the file and
- * take its name only once they are all written and closed (put_in_place). Files are copied and compared 64 KB at
- * a time, not read whole (OpenBrowser's 80 MB, twice). */
+ * take its name only once they are all written and closed (put_in_place); on the RAM disk they are written in
+ * place as before (in_ram). Files are copied and compared 64 KB at a time, not read whole (OpenBrowser's 80 MB,
+ * twice). */
 
 #define CHUNK 65536
 
@@ -351,15 +352,39 @@ static int put_in_place(const char *temp, const char *backup, const char *dest, 
     return ok;
 }
 
+/* 1 when path is on the RAM disk (ENV:, T:). A file there is written in place, as before: OS 3.2's RAM:ENV shows
+ * ENVARC:'s files through a link, and while ENVARC: has one, its name in ENV: stays taken after Rename has moved
+ * it (lab t4-openup-20261101: "object already exists"). The RAM disk is gone at a reboot anyway, and ENVARC: and
+ * SYS: keep their own copies. */
+static int in_ram(const char *path)
+{
+    struct Process *me = (struct Process *)FindTask(NULL);
+    APTR win = me->pr_WindowPtr;
+    struct DevProc *p, *r;
+    int ram;
+    me->pr_WindowPtr = (APTR)-1;
+    p = GetDeviceProc((STRPTR)path, NULL);
+    r = GetDeviceProc((STRPTR)"RAM:", NULL);
+    me->pr_WindowPtr = win;
+    ram = p && r && p->dvp_Port == r->dvp_Port;
+    if (p) FreeDeviceProc(p);
+    if (r) FreeDeviceProc(r);
+    return ram;
+}
+
 static int write_file(const char *path, const char *data, LONG len)
 {
     char temp[260], backup[260];
+    int ram = in_ram(path), ok;
     BPTR fh;
-    int ok;
-    if (!side_names(path, temp, backup, sizeof temp) || !(fh = Open((STRPTR)temp, MODE_NEWFILE)))
+    if (ram) fh = Open((STRPTR)path, MODE_NEWFILE);
+    else if (!side_names(path, temp, backup, sizeof temp)) return 0;
+    else fh = Open((STRPTR)temp, MODE_NEWFILE);
+    if (!fh)
         return 0;
     ok = Write(fh, (APTR)data, len) == len;
     if (!Close(fh)) ok = 0;
+    if (ram) return ok;
     if (!ok) {
         DeleteFile((STRPTR)temp);
         return 0;
@@ -567,31 +592,34 @@ static int same_file(const char *a, const char *b)
 }
 
 /* Copies a file, its protection bits too, making the directories it needs: a chunk at a time into a new file
- * beside to, which takes to's name once it is all written (put_in_place). A copy that fails leaves to as it was. */
+ * beside to, which takes to's name once it is all written (put_in_place). A copy that fails leaves to as it was.
+ * On the RAM disk the copy goes straight to to, as before (in_ram). */
 static int copy_file(const char *from, const char *to, int record_dirs)
 {
     char dir[200], temp[260], backup[260];
+    const char *out_name = temp;
     struct FileInfoBlock *fib;
     BPTR in, out, l;
     char *buf;
     LONG n = -1;
-    int ok = 0;
+    int ok = 0, ram = in_ram(to);
+    if (ram) out_name = to;
     if (!(in = Open((STRPTR)from, MODE_OLDFILE)))
         return 0;
     parent_of(to, dir, sizeof dir);
-    if ((dir[strlen(dir) - 1] == ':' || ensure_dir(dir, record_dirs)) && side_names(to, temp, backup, sizeof temp)
+    if ((dir[strlen(dir) - 1] == ':' || ensure_dir(dir, record_dirs)) && (ram || side_names(to, temp, backup, sizeof temp))
         && (buf = AllocVec(CHUNK, MEMF_ANY))) {
-        if ((out = Open((STRPTR)temp, MODE_NEWFILE))) {
+        if ((out = Open((STRPTR)out_name, MODE_NEWFILE))) {
             while ((n = Read(in, buf, CHUNK)) > 0 && Write(out, buf, n) == n)
                 ;
             ok = n == 0;                                /* to the end, every chunk written */
             if (!Close(out)) ok = 0;
-            if (!ok) DeleteFile((STRPTR)temp);
+            if (!ok && !ram) DeleteFile((STRPTR)temp);
         }
         FreeVec(buf);
     }
     Close(in);
-    if (!ok || !put_in_place(temp, backup, to, 0))
+    if (!ok || (!ram && !put_in_place(temp, backup, to, 0)))
         return 0;
     if ((fib = AllocDosObject(DOS_FIB, NULL))) {
         if ((l = Lock((STRPTR)from, ACCESS_READ))) {
