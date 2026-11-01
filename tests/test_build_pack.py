@@ -161,6 +161,12 @@ def manifest_run(filt: Path, how: str, part_file: Path, manifest: str, tmp: Path
     return r.returncode, r.stdout
 
 
+def entries(manifest: str) -> list[str]:
+    """A manifest's lines but its first ("OpenUp", a tab, the form) and its end ("OpenUp", a tab, end: OpenUpTool
+    writes it whole or not at all since 1 November 2026, src/openup_lines.h)."""
+    return [x for x in manifest.splitlines() if not x.startswith("OpenUp\t")]
+
+
 def gfoffice_checks(tmp: Path, filt: Path) -> None:
     """The GFOffice Suite's parts (gfoffice docs/gfoffice/Design-Suite-Shared.md, section 12, 25 October 2026): the
     GFOffice part's shared files (the suite's four libraries since gfoffice docs/suite/owf-libraries.md), OpenWrite
@@ -309,7 +315,9 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     rc, m5 = manifest_run(filt, "remove", cp, m4, tmp)
     rc2, m6 = manifest_run(filt, "remove", gp, m5, tmp)
     check("REMOVE GFOffice once no program needs it: taken out", rc == 0 and rc2 == 0
-          and m6.splitlines() == fresh.splitlines(), m6)
+          and entries(m6) == entries(fresh), m6)
+    check("the manifest written whole: its first line and its end line", m6.splitlines()[0] == "OpenUp\t0.2"
+          and m6.splitlines()[-1] == "OpenUp\tend", m6)
     # Instance-32: an OpenWrite from an earlier OpenUp, with libowf linked in and no need noted, and no GFOffice
     old = fresh + "part\tOpenWrite\t2.0.1\nnew\tLIBS:z.library\nnew\tSYS:C/OWConvert\n"
     rc, out = manifest_run(filt, "install", wp, old, tmp)

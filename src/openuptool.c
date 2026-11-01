@@ -220,39 +220,151 @@ static LONG run_sync(const char *cmd, int quiet)
     return rc;
 }
 
+/* The whole file, NUL-ended, in memory of its own (FreeVec it); NULL when it can't be had, with IoErr saying
+ * why: ERROR_OBJECT_NOT_FOUND only when there is no such file, so a caller starts a file afresh only then (1 Nov
+ * 2026: a read that failed for any reason was taken as no file, and S:User-Startup was written anew, without the
+ * user's lines). */
 static char *read_file(const char *path, LONG *lenp)
 {
     BPTR fh = Open((STRPTR)path, MODE_OLDFILE);
-    LONG len;
-    char *buf;
+    LONG len, err = 0;
+    char *buf = NULL;
     if (!fh)
         return NULL;
     Seek(fh, 0, OFFSET_END);
     len = Seek(fh, 0, OFFSET_BEGINNING);
-    if (len < 0 || !(buf = AllocVec(len + 1, MEMF_ANY))) {
-        Close(fh);
-        return NULL;
-    }
-    if (Read(fh, buf, len) != len) {
+    if (len < 0)
+        err = IoErr();
+    else if (!(buf = AllocVec(len + 1, MEMF_ANY)))
+        err = ERROR_NO_FREE_STORE;
+    else if (Read(fh, buf, len) != len) {
+        err = IoErr();
         FreeVec(buf);
-        Close(fh);
+        buf = NULL;
+    }
+    Close(fh);
+    if (!buf) {
+        SetIoErr(err && err != ERROR_OBJECT_NOT_FOUND ? err : ERROR_SEEK_ERROR);
         return NULL;
     }
     buf[len] = 0;
-    Close(fh);
     if (lenp) *lenp = len;
     return buf;
 }
 
+/* ---- writing a file so that a failure leaves the old one (1 Nov 2026) ------------------------------
+ * A file was written over where it was: cut to nothing first, so a full SYS: left a library in use short, and a
+ * short manifest lost the originals UNINSTALL puts back. Now the new bytes go to a short name beside the file and
+ * take its name only once they are all written and closed (put_in_place). Files are copied and compared 64 KB at
+ * a time, not read whole (OpenBrowser's 80 MB, twice). */
+
+#define CHUNK 65536
+
+/* 1 when nothing has the name, 0 when something has, -1 when it can't be told (a volume not there): no
+ * "Please insert volume" requester, as exists. */
+static int name_free(const char *path)
+{
+    struct Process *me = (struct Process *)FindTask(NULL);
+    APTR win = me->pr_WindowPtr;
+    BPTR l;
+    LONG err;
+    me->pr_WindowPtr = (APTR)-1;
+    l = Lock((STRPTR)path, ACCESS_READ);
+    err = l ? 0 : IoErr();
+    me->pr_WindowPtr = win;
+    if (l) {
+        UnLock(l);
+        return 0;
+    }
+    return err == ERROR_OBJECT_NOT_FOUND ? 1 : -1;
+}
+
+/* Two names beside path, nothing there with either: the new copy's (.tmp) and the old file's while the new one
+ * takes its name (.bak). OpenUp, the task's address and a count in hex: 20 characters, for a 30-character file
+ * system. 1, else 0. */
+static int side_names(const char *path, char *temp, char *backup, int size)
+{
+    static const char hex[] = "0123456789abcdef";
+    static UBYTE count;
+    ULONG id = (ULONG)FindTask(NULL);
+    int dir = strlen(path), tries, i, t, b = 0;
+    while (dir && path[dir - 1] != '/' && path[dir - 1] != ':') dir--;
+    if (dir + 21 > size)
+        return 0;
+    for (tries = 0; tries < 256; tries++) {
+        unsigned n = count++;
+        char *name = temp + dir;
+        memcpy(temp, path, dir);
+        memcpy(name, "OpenUp", 6);
+        for (i = 0; i < 8; i++) name[6 + i] = hex[(id >> (28 - 4 * i)) & 15];
+        name[14] = hex[(n >> 4) & 15];
+        name[15] = hex[n & 15];
+        strcpy(name + 16, ".tmp");
+        strcpy(backup, temp);
+        strcpy(backup + dir + 16, ".bak");
+        if ((t = name_free(temp)) < 0 || (t && (b = name_free(backup)) < 0))
+            return 0;
+        if (t && b)
+            return 1;
+    }
+    return 0;
+}
+
+/* The new copy, temp (written and closed), takes dest's name. A file there steps aside as backup first (Rename
+ * doesn't replace a file) and goes once the new copy has its name; if the new copy can't take the name, the old
+ * file gets it back at once. keep_bits: the new copy gets the old file's protection bits and comment (a file
+ * written anew, as S:User-Startup). A drawer, or a file protected from writing or deleting, isn't replaced: it
+ * couldn't be written over before either. temp goes whenever it doesn't take the name. 1 done. */
+static int put_in_place(const char *temp, const char *backup, const char *dest, int keep_bits)
+{
+    struct Process *me = (struct Process *)FindTask(NULL);
+    APTR win = me->pr_WindowPtr;
+    struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
+    BPTR l;
+    int ok = 0;
+    me->pr_WindowPtr = (APTR)-1;
+    l = fib ? Lock((STRPTR)dest, ACCESS_READ) : 0;
+    me->pr_WindowPtr = win;
+    if (!fib) {
+        /* no memory to look at it with: nothing replaced */
+    } else if (!l) {
+        ok = Rename((STRPTR)temp, (STRPTR)dest) != 0;           /* refused when something is there after all */
+    } else {
+        ok = Examine(l, fib) && fib->fib_DirEntryType < 0 && !(fib->fib_Protection & (FIBF_WRITE | FIBF_DELETE));
+        UnLock(l);
+        if (ok && keep_bits) {
+            SetProtection((STRPTR)temp, fib->fib_Protection & ~FIBF_ARCHIVE);    /* new bytes: not backed up yet */
+            if (fib->fib_Comment[0]) SetComment((STRPTR)temp, (STRPTR)fib->fib_Comment);
+        }
+        if (ok && !Rename((STRPTR)dest, (STRPTR)backup)) {
+            ok = 0;
+        } else if (ok && !Rename((STRPTR)temp, (STRPTR)dest)) {
+            Rename((STRPTR)backup, (STRPTR)dest);
+            ok = 0;
+        } else if (ok && !DeleteFile((STRPTR)backup)) {
+            say("OpenUp: the old ", dest, " is still in use, so it is kept beside it until it can be deleted:");
+            say("  ", backup, NULL);
+        }
+    }
+    if (!ok) DeleteFile((STRPTR)temp);
+    if (fib) FreeDosObject(DOS_FIB, fib);
+    return ok;
+}
+
 static int write_file(const char *path, const char *data, LONG len)
 {
-    BPTR fh = Open((STRPTR)path, MODE_NEWFILE);
+    char temp[260], backup[260];
+    BPTR fh;
     int ok;
-    if (!fh)
+    if (!side_names(path, temp, backup, sizeof temp) || !(fh = Open((STRPTR)temp, MODE_NEWFILE)))
         return 0;
     ok = Write(fh, (APTR)data, len) == len;
-    Close(fh);
-    return ok;
+    if (!Close(fh)) ok = 0;
+    if (!ok) {
+        DeleteFile((STRPTR)temp);
+        return 0;
+    }
+    return put_in_place(temp, backup, path, 1);
 }
 
 /* ---- the manifest -------------------------------------------------------------- */
@@ -275,7 +387,7 @@ typedef oul_entry entry;                     /* kind, a, b (src/openup_lines.h, 
 static entry ents[MAXE];
 static int nents;
 static char no_text[] = "";
-static int manifest_short;                   /* out of memory while loading: never save a short list */
+static int manifest_short;                   /* not read whole (cut short, unreadable, out of memory): never save it */
 
 /* Sets a or b to a copy of s; 0 (and the field as it was) when out of memory. */
 static int set_text(char **field, const char *s)
@@ -291,11 +403,17 @@ static int set_text(char **field, const char *s)
 
 static void manifest_load(void)
 {
-    char *text = read_file(MANIFEST, NULL), *p, *line;
+    LONG len = 0;
+    char *text = read_file(MANIFEST, &len), *p, *line;
     nents = 0;
     manifest_short = 0;
-    if (!text)
+    if (!text) {
+        if (IoErr() != ERROR_OBJECT_NOT_FOUND)
+            manifest_short = 1;             /* there but not read: saving would put an empty list over it */
         return;
+    }
+    if (!oul_manifest_whole(text, len))
+        manifest_short = 1;                 /* cut short (src/openup_lines.h): read what is there, never save it */
     for (p = text; *p && nents < MAXE; ) {
         char *f[3] = { NULL, NULL, NULL };
         int n = 0;
@@ -324,17 +442,23 @@ static int ensure_dir(const char *path, int record);
 
 static int manifest_save(void)
 {
-    LONG size = 32, len = 0;
+    static int said;
+    LONG size = 64, len = 0;
     char *buf, *p;
     int i, ok;
-    if (manifest_short)
-        return 0;                           /* a list loaded short would lose files */
+    if (manifest_short) {                   /* a list loaded short would lose files */
+        if (!said++)
+            say("OpenUp: its list of installed files (" MANIFEST ") is cut short or can't be read, so nothing is "
+                "written over it: that would lose what it lists. If " MANIFEST_ENV " is whole, copy it in its place.",
+                NULL, NULL);
+        return 0;
+    }
     for (i = 0; i < nents; i++)
         size += strlen(ents[i].kind) + strlen(ents[i].a) + strlen(ents[i].b) + 3;
     if (!(buf = AllocVec(size, MEMF_ANY)))
         return 0;
     p = buf;
-    strcpy(p, "OpenUp\t0.1\n");
+    strcpy(p, OUL_MANIFEST_HEAD "\n");
     p += strlen(p);
     for (i = 0; i < nents; i++) {
         if (!ents[i].kind[0])
@@ -344,6 +468,8 @@ static int manifest_save(void)
         if (ents[i].b[0]) { *p++ = '\t'; strcpy(p, ents[i].b); p += strlen(p); }
         *p++ = '\n';
     }
+    strcpy(p, OUL_MANIFEST_END "\n");     /* the list is whole (oul_manifest_whole) */
+    p += strlen(p);
     len = p - buf;
     ensure_dir("ENVARC:OpenAmiga", 1);
     ensure_dir("ENV:OpenAmiga", 0);
@@ -416,41 +542,58 @@ static void parent_of(const char *path, char *out, int outlen)
     else if ((slash = strchr(out, ':'))) slash[1] = 0;
 }
 
-/* 1 when both files have the same bytes. */
+/* 1 when both files have the same bytes, compared a chunk at a time. */
 static int same_file(const char *a, const char *b)
 {
-    LONG la, lb;
-    char *da = read_file(a, &la), *db;
+    BPTR fa = Open((STRPTR)a, MODE_OLDFILE), fb = fa ? Open((STRPTR)b, MODE_OLDFILE) : 0;
+    char *buf = fb ? AllocVec(2 * CHUNK, MEMF_ANY) : NULL;
+    LONG na, nb;
     int same = 0;
-    if (!da)
-        return 0;
-    if ((db = read_file(b, &lb))) {
-        same = la == lb && !memcmp(da, db, la);
-        FreeVec(db);
+    if (buf) {
+        Seek(fa, 0, OFFSET_END);
+        Seek(fb, 0, OFFSET_END);
+        if ((na = Seek(fa, 0, OFFSET_BEGINNING)) >= 0 && na == Seek(fb, 0, OFFSET_BEGINNING))
+            for (;;) {
+                na = Read(fa, buf, CHUNK);
+                nb = Read(fb, buf + CHUNK, CHUNK);
+                if (na < 0 || na != nb || memcmp(buf, buf + CHUNK, na)) break;
+                if (!na) { same = 1; break; }
+            }
+        FreeVec(buf);
     }
-    FreeVec(da);
+    if (fb) Close(fb);
+    if (fa) Close(fa);
     return same;
 }
 
-/* Copies a file, its protection bits too, making the directories it needs. */
+/* Copies a file, its protection bits too, making the directories it needs: a chunk at a time into a new file
+ * beside to, which takes to's name once it is all written (put_in_place). A copy that fails leaves to as it was. */
 static int copy_file(const char *from, const char *to, int record_dirs)
 {
-    char dir[200];
-    LONG len;
-    char *data = read_file(from, &len);
+    char dir[200], temp[260], backup[260];
     struct FileInfoBlock *fib;
-    BPTR l;
-    int ok;
-    if (!data)
+    BPTR in, out, l;
+    char *buf;
+    LONG n = -1;
+    int ok = 0;
+    if (!(in = Open((STRPTR)from, MODE_OLDFILE)))
         return 0;
     parent_of(to, dir, sizeof dir);
-    if (dir[strlen(dir) - 1] != ':' && !ensure_dir(dir, record_dirs)) {
-        FreeVec(data);
-        return 0;
+    if ((dir[strlen(dir) - 1] == ':' || ensure_dir(dir, record_dirs)) && side_names(to, temp, backup, sizeof temp)
+        && (buf = AllocVec(CHUNK, MEMF_ANY))) {
+        if ((out = Open((STRPTR)temp, MODE_NEWFILE))) {
+            while ((n = Read(in, buf, CHUNK)) > 0 && Write(out, buf, n) == n)
+                ;
+            ok = n == 0;                                /* to the end, every chunk written */
+            if (!Close(out)) ok = 0;
+            if (!ok) DeleteFile((STRPTR)temp);
+        }
+        FreeVec(buf);
     }
-    ok = write_file(to, data, len);
-    FreeVec(data);
-    if (ok && (fib = AllocDosObject(DOS_FIB, NULL))) {
+    Close(in);
+    if (!ok || !put_in_place(temp, backup, to, 0))
+        return 0;
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
         if ((l = Lock((STRPTR)from, ACCESS_READ))) {
             if (Examine(l, fib))
                 SetProtection((STRPTR)to, fib->fib_Protection);
@@ -458,7 +601,7 @@ static int copy_file(const char *from, const char *to, int record_dirs)
         }
         FreeDosObject(DOS_FIB, fib);
     }
-    return ok;
+    return 1;
 }
 
 /* Where a file's original goes: SYS:Storage/OpenUp-Superseded/LIBS/x. */
@@ -999,6 +1142,11 @@ static int install(const char *drawer)
         return RETURN_FAIL;
     }
     manifest_load();
+    if (manifest_short) {                           /* nothing done that couldn't be listed (manifest_save says why) */
+        manifest_save();
+        FreeVec(text);
+        return RETURN_ERROR;
+    }
     /* Pass 0 checks (needs, keep); pass 1 copies. Lines are split in a copy each pass. */
     for (pass = 0; pass < 2 && !refused; pass++) {
         char *copy = AllocVec(strlen(text) + 1, MEMF_ANY);
@@ -1147,6 +1295,11 @@ static int remove_part(const char *drawer)
         return RETURN_FAIL;
     }
     manifest_load();
+    if (manifest_short) {                           /* nothing done that couldn't be listed (manifest_save says why) */
+        manifest_save();
+        FreeVec(text);
+        return RETURN_ERROR;
+    }
     if (oul_part_name(text, partname, sizeof partname) && oul_installed(ents, nents, partname) &&
         (by = oul_needed_by(ents, nents, partname))) {
         Printf((STRPTR)"OpenUp: %s stays: %s needs it. Take out %s first (OpenUpTool REMOVE Parts/%s), then %s.\n",
@@ -1364,6 +1517,10 @@ static int write_startup(int remove_only)
     int had, i, lines = 0;
     text = read_file(USER_STARTUP, &len);
     if (!text) {
+        if (IoErr() != ERROR_OBJECT_NOT_FOUND) {    /* there but not read: a new one would lose the user's lines */
+            say("OpenUp: can't read " USER_STARTUP ", so it is left as it is.", NULL, NULL);
+            return 0;
+        }
         if (remove_only)
             return 1;
         if (!(text = AllocVec(1, MEMF_CLEAR)))

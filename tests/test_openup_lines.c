@@ -41,6 +41,7 @@ static void truth(const char *what, int got, int want)
 
 static int need_checks(void);
 static int way_checks(void);
+static int manifest_checks(void);
 
 static int checks(void)
 {
@@ -201,6 +202,41 @@ static int way_checks(void)
         truth("failed: the changed line is back, the new ones are out",
               !strcmp(k[2].kind, "startup") && !strcmp(k[4].kind, OUL_NEEDPART) && !k[6].kind[0] && !k[7].kind[0], 1);
     }
+    return manifest_checks();
+}
+
+static int whole(const char *text)
+{
+    return oul_manifest_whole(text, (long)strlen(text));
+}
+
+/* The manifest whole or cut short (1 Nov 2026): a short one is never saved over, so its "replaced" lines, the
+ * originals UNINSTALL puts back, aren't lost */
+static int manifest_checks(void)
+{
+    const char *now = OUL_MANIFEST_HEAD "\npart\tOpenUp\t0.8.12\nreplaced\tLIBS:x.library\tSYS:Storage/OpenUp-Superseded/LIBS/x.library\n"
+                      OUL_MANIFEST_END "\n";
+    char cut[256];
+    size_t i;
+    int all_short = 1;
+    truth("a manifest as OpenUpTool writes it now is whole", whole(now), 1);
+    truth("an empty list (the first line and the end) is whole", whole(OUL_MANIFEST_HEAD "\n" OUL_MANIFEST_END "\n"), 1);
+    for (i = 0; i < strlen(now); i++) {             /* every shorter copy, at a line's end too */
+        memcpy(cut, now, i);
+        cut[i] = 0;
+        if (oul_manifest_whole(cut, (long)i)) all_short = 0;
+    }
+    truth("every copy of it cut short, at a line's end too, is short", all_short, 1);
+    truth("nothing at all (a file cut to nothing) is short", oul_manifest_whole("", 0), 0);
+    truth("an end line that isn't the last line doesn't count",
+          whole(OUL_MANIFEST_HEAD "\n" OUL_MANIFEST_END "\nnew\tC:x\n"), 0);
+    truth("Windows line ends are read too", whole("OpenUp\t0.2\r\nnew\tC:x\r\nOpenUp\tend\r\n"), 1);
+    truth("an older OpenUpTool's manifest (0.1, no end line) is whole when its last line ends",
+          whole(OUL_MANIFEST_OLD "\npart\tOpenUp\t0.8.9\nnew\tSYS:C/OpenUpTool\n"), 1);
+    truth("an older one cut in a line is short", whole(OUL_MANIFEST_OLD "\npart\tOpenUp\t0.8.9\nnew\tSYS:C/Open"), 0);
+    truth("a later one (0.3) needs the end line", whole("OpenUp\t0.3\nnew\tC:x\n"), 0);
+    truth("a later one with it is whole", whole("OpenUp\t0.3\nnew\tC:x\n" OUL_MANIFEST_END "\n"), 1);
+    truth("no first line: not a manifest", whole("new\tC:x\n" OUL_MANIFEST_END "\n"), 0);
     printf(fails ? "%d FAILED\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }
@@ -264,13 +300,14 @@ static int load(const char *path)
 static void print_manifest(void)
 {
     int i;
-    puts("OpenUp\t0.1");
+    puts(OUL_MANIFEST_HEAD);
     for (i = 0; i < nents; i++) {
         if (!ents[i].kind[0]) continue;                /* taken out */
         printf("%s\t%s", ents[i].kind, ents[i].a);
         if (ents[i].b[0]) printf("\t%s", ents[i].b);
         putchar('\n');
     }
+    puts(OUL_MANIFEST_END);
 }
 
 /* INSTALL's "needs part" and startup lines (openuptool.c install): pass 0 refuses, pass 1 notes; the files aren't
