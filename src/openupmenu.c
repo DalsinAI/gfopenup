@@ -40,7 +40,7 @@
  * read of GFOpenUpTool every two seconds for as long as the Amiga ran. Once
  * Workbench has the entries, GFOpenUpMenu only waits on its ports.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 #include <exec/types.h>
 #include <exec/memory.h>
 #include <exec/ports.h>
@@ -58,7 +58,7 @@
 
 #include <string.h>
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpMenu 0.1.6 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpMenu 0.1.6 (24.10.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct Library *WorkbenchBase, *IconBase;
 

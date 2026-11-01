@@ -4,7 +4,7 @@
  * the table font (DejaVu Sans Mono 11), drawn by opengadtools' ogt_list. The menu: 0.3's right-click menu,
  * made general (ticks, sub-menus, a heading, the dangerous entry in red).
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/memory.h>

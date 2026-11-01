@@ -8,7 +8,7 @@
  * The same file is the open ROM's C/GFOpenMonitor (amigachrome-guest's romprefs.sh, the design's P6) and the
  * disk's SYS:Utilities/GFOpenMonitor, which GFOpenUp installs on every ROM.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/execbase.h>
@@ -40,7 +40,7 @@
 #include "ogt_openfont.h"
 
 static const char version[] __attribute__((used)) =
-    "$VER: GFOpenMonitor " OM_VERSION " (" OM_DATE ") MIT, Copyright (c) 2026 AmigaChrome Team";
+    "$VER: GFOpenMonitor " OM_VERSION " (" OM_DATE ") MIT, Copyright (c) 2026 AmiCradle Team";
 
 /* The window runs on 32 KB, however GFOpenMonitor is started (0.3.1: a Shell's 4 KB rebooted the machine
  * when the window closed). libnix's start code swaps to a stack of this size when it was given less. */

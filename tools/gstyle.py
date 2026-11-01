@@ -2,7 +2,7 @@
 """A small drawing kit for icons in the Gorilla style: bold black outlines,
 soft top-left light, a gentle gloss and a soft shadow down and to the right.
 Shapes are drawn in a 64-unit frame, four times over, and reduced.
-MIT, Copyright (c) 2026 AmigaChrome Team."""
+MIT, Copyright (c) 2026 AmiCradle Team."""
 from __future__ import annotations
 import math
 import numpy as np

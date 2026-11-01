@@ -2,7 +2,7 @@
 # GFOpenUpTool and GFOpenUpMenu for Cradle's stove_build (target .): Cradle checks out this repository alone and sets
 # STOVE and OUT. These two need nothing but this repository and are built as tools/build_pack.py builds them
 # (68040 code, soft float, the same options); the pack itself, with every part, is build_pack.py's.
-# MIT, Copyright (c) 2026 AmigaChrome Team.
+# MIT, Copyright (c) 2026 AmiCradle Team.
 set -eu
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 OUT=${OUT:-$HERE/build/os3}

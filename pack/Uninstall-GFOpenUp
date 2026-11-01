@@ -1,7 +1,7 @@
 ; $VER: Uninstall-GFOpenUp @VERSION@ (@DATE@)
 ; Takes GFOpenUp out: every file it added goes, every file it replaced comes
 ; back from SYS:Storage/GFOpenUp-Superseded, and its lines leave
-; S:User-Startup. MIT, Copyright (c) 2026 AmigaChrome Team.
+; S:User-Startup. MIT, Copyright (c) 2026 AmiCradle Team.
 
 (set @app-name "GFOpenUp")
 (set #tool (if (exists "C/GFOpenUpTool") "C/GFOpenUpTool" "C:GFOpenUpTool"))

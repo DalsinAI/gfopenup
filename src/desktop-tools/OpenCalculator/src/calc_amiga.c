@@ -10,7 +10,7 @@
  * on the line). Typing goes to the line; Return works it out; Escape clears it. Nothing is shown as
  * NaN or infinity: the engine's errors are said in words.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 #include <exec/types.h>
 #include <exec/memory.h>
 #include <exec/lists.h>
@@ -33,7 +33,7 @@
 #include "ogt_look.h"
 #include "ogt_font.h"
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenCalculator 0.5 (30.10.2026) GFOpenUp, MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenCalculator 0.5 (30.10.2026) GFOpenUp, MIT, Copyright (c) 2026 AmiCradle Team";
 #define TITLE "GFOpenCalculator"
 #define SCREEN_TITLE "GFOpenCalculator 0.5"
 #define EXPR_MAX 200

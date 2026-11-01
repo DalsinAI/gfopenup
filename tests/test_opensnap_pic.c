@@ -5,7 +5,7 @@
  * Every ILBM it writes is read back here by a reader of its own (FORM, BMHD, CMAP, CAMG, BODY, ByteRun1
  * unpacked) and compared pixel for pixel. tests/test_build_pack.py runs it.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
