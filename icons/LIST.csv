@@ -38,7 +38,7 @@ Disks and devices,SFS partition,Smart File System,Hard disk with SFS mark,P3,Gor
 Disks and devices,Network share,A shared folder on another computer (SMB),Drive with network cable,P1,Gorilla: Computers/Networked_Generic,png/disks/Network share.info
 Disks and devices,NFS share,A Unix NFS export,"Drive with network cable, NFS tag",P3,,png/disks/NFS share.info
 Disks and devices,FTP mount,A remote site mounted as a disk,Drive with a globe,P3,,png/disks/FTP mount.info
-Disks and devices,This PC (AmigaChrome),The host computer's shared folder through AmigaChrome,PC tower with the AmigaChrome mark,P1,Gorilla: Computers/Generic,png/disks/This PC (AmigaChrome).info
+Disks and devices,This PC (AmiCradle),The host computer's shared folder through AmiCradle,PC tower with the AmiCradle mark,P1,Gorilla: Computers/Generic,png/disks/This PC (AmiCradle).info
 Disks and devices,Emulator folder,A UAE/WinUAE directory mounted as a drive,Folder disk with chip,P3,,png/disks/Emulator folder.info
 Disks and devices,Parallel link,ParNet / PLIP link to another Amiga,Two machines and a cable,P3,,png/disks/Parallel link.info
 Disks and devices,Other computer,"A networked computer (Envoy, SMB host)",Computer,P2,Gorilla: Computers/Networked_Generic,png/disks/Other computer.info
@@ -77,7 +77,7 @@ Workbench drawers (SYS:),Locale/Languages,Language files,"Drawer with ""A文""",
 Workbench drawers (SYS:),Locale/Help,AmigaGuide help,Drawer with a lifebuoy,P2,Gorilla: Locale/Help,png/drawers/Help.info
 Workbench drawers (SYS:),Prefs,Preferences editors,Drawer with a monitor and question mark,P1,Gorilla: Prefs,png/drawers/Prefs.info
 Workbench drawers (SYS:),Prefs/Presets,Saved prefs and themes,Drawer with a bookmark,P1,Gorilla: Prefs/Presets,png/drawers/Presets.info
-Workbench drawers (SYS:),Prefs/Presets/Themes,OpenLook themes,Drawer with swatches,P1,Gorilla: Prefs/Presets/Themes,png/drawers/Themes.info
+Workbench drawers (SYS:),Prefs/Presets/Themes,GFOpenLook themes,Drawer with swatches,P1,Gorilla: Prefs/Presets/Themes,png/drawers/Themes.info
 Workbench drawers (SYS:),Prefs/Presets/Backdrops,Backdrop pictures,Drawer with a landscape,P1,Gorilla: Prefs/Presets/Wallpapers,png/drawers/Backdrops.info
 Workbench drawers (SYS:),Prefs/Presets/Patterns,Workbench patterns,Drawer with tiles,P2,Gorilla: Prefs/Presets/Patterns,png/drawers/Patterns.info
 Workbench drawers (SYS:),Prefs/Env-Archive,Saved settings (ENVARC:),Drawer with a cog,P2,,png/drawers/Env-Archive.info
@@ -95,7 +95,7 @@ Workbench drawers (SYS:),Tools,"Tools: Calculator, HDToolBox, IconEdit",Drawer w
 Workbench drawers (SYS:),Tools/Commodities,Background helpers,Drawer with a cog and lightning,P1,Gorilla: Tools/Commodities,png/drawers/Commodities.info
 Workbench drawers (SYS:),Utilities,"Clock, MultiView, Installer",Drawer with a filing cabinet,P1,Gorilla: Utilities,png/drawers/Utilities.info
 Workbench drawers (SYS:),WBStartup,Programs started with Workbench,Drawer with a rocket/power,P1,Gorilla: WBStartup,png/drawers/WBStartup.info
-Workbench drawers (SYS:),Devs/Drivers,Hardware drivers (OpenService and others),Drawer with a chip,P2,Gorilla: Devs/Drivers,png/drawers/Drivers.info
+Workbench drawers (SYS:),Devs/Drivers,Hardware drivers (GFOpenService and others),Drawer with a chip,P2,Gorilla: Devs/Drivers,png/drawers/Drivers.info
 Workbench drawers (SYS:),Trashcan drawer,The trashcan as a drawer window,See Trashcan,P1,,png/drawers/Trashcan drawer.info
 Your drawers (Work:),Drawer (plain),Any drawer with no picture of its own,"Drawer, empty face",P1,Gorilla: Env-Archive/SYS/def_Drawer,png/drawers/Drawer (plain).info
 Your drawers (Work:),Documents,Your documents,Drawer with a page,P1,,png/drawers/Documents.info
@@ -116,7 +116,7 @@ Your drawers (Work:),Archives,Archive files,Drawer with a compressed box,P2,,png
 Your drawers (Work:),Backup,Backups,Drawer with a safe,P2,,png/drawers/Backup.info
 Your drawers (Work:),Home,Your own drawer,Drawer with a house,P2,Gorilla: Env-Archive/SYS/def_Home,png/drawers/Home.info
 Your drawers (Work:),Shared,A drawer shared with other machines,Drawer with network cable,P2,,png/drawers/Shared.info
-Your drawers (Work:),Send Out,AmigaChrome's drop drawer out of the Amiga,Drawer with an arrow to a computer,P1,,png/drawers/Send Out.info
+Your drawers (Work:),Send Out,AmiCradle's drop drawer out of the Amiga,Drawer with an arrow to a computer,P1,,png/drawers/Send Out.info
 Your drawers (Work:),Disk images,"ADF, HDF, ISO files",Drawer with a floppy,P2,,png/drawers/Disk images.info
 Your drawers (Work:),Kickstarts,ROM files for emulators,Drawer with a chip,P3,,png/drawers/Kickstarts.info
 Your drawers (Work:),Fonts (user),Fonts you added,"Drawer with ""Aa""",P3,Gorilla: Fonts,png/drawers/Fonts (user).info
@@ -142,25 +142,25 @@ Prefs editors: OS 3.2.3,Workbench,Workbench options,Workbench window with a tick
 Prefs editors: OS 3.2.3,DefIcons,Default icons by file type (check on 3.2.3),Icons with a tag,P1,,png/prefs/DefIcons.info
 Prefs editors: OS 3.2.3,Presets,Saved prefs drawer,Bookmark,P2,Gorilla: Prefs/Presets,png/prefs/Presets.info
 Prefs editors: OS 3.2.3,Trackdisk,Floppy drive settings (check on 3.2.3),Floppy drive,P3,Gorilla: Prefs/Trackdisk,png/prefs/Trackdisk.info
-Prefs editors: OpenUp and AmigaChrome,Look,"OpenLook: theme, mode, accent, icons",Window of swatches and a brush,P1,Gorilla: Prefs/Theme,png/prefs/Look.info
-Prefs editors: OpenUp and AmigaChrome,Windows,"OpenWindows: snapping, edges, places",Three windows stacked,P1,,png/prefs/Windows.info
-Prefs editors: OpenUp and AmigaChrome,Dock,OpenDock: buttons and shelf,Dock with four buttons,P1,,png/prefs/Dock.info
-Prefs editors: OpenUp and AmigaChrome,Menus,OpenMenus: menu bar and right-click menus,Menu with a row lit,P1,,png/prefs/Menus.info
-Prefs editors: OpenUp and AmigaChrome,Title bar,"OpenTitle: logo, memory, clock, cog",Title bar and clock,P1,,png/prefs/Title bar.info
-Prefs editors: OpenUp and AmigaChrome,Sound (OpenUp),"Volume, Paula's and AHI's levels",Speaker with waves,P1,Gorilla: Prefs/AHI,png/prefs/Sound (OpenUp).info
-Prefs editors: OpenUp and AmigaChrome,OpenTypes,Which program opens each kind of file,Documents with an arrow to a program,P1,,png/prefs/OpenTypes.info
-Prefs editors: OpenUp and AmigaChrome,OpenUp Setup,First-start wizard and startup switches,Box with a wand,P1,,png/prefs/OpenUp Setup.info
-Prefs editors: OpenUp and AmigaChrome,OpenPrint,Printers and print queue,Printer with a page out,P1,,png/prefs/OpenPrint.info
-Prefs editors: OpenUp and AmigaChrome,OpenSocket,Network through this PC,Network plug,P1,Gorilla: Prefs/Network,png/prefs/OpenSocket.info
-Prefs editors: OpenUp and AmigaChrome,Classic,Back to the OS's own look,Old Workbench window,P1,,png/prefs/Classic.info
-Prefs editors: OpenUp and AmigaChrome,OpenBlanker,Screen blanker and its shows,Monitor with stars,P1,,png/prefs/OpenBlanker.info
-Prefs editors: OpenUp and AmigaChrome,OpenRTG,Screen modes on OpenRTG,Monitor with a graphics card,P1,Gorilla: Prefs/ScreenMode,png/prefs/OpenRTG.info
-Prefs editors: OpenUp and AmigaChrome,All Prefs,"The cog's ""All Prefs..."" entry",Cog with a drawer,P2,,png/prefs/All Prefs.info
-Prefs editors: OpenUp and AmigaChrome,Wi-Fi,Wireless network (OpenSocket),Wi-Fi fan,P2,Gorilla: Prefs/WiFi,png/prefs/Wi-Fi.info
-Prefs editors: OpenUp and AmigaChrome,AmigaChrome Sharing,Clipboard and file sharing with the PC,Two clipboards and arrows,P1,,png/prefs/AmigaChrome Sharing.info
-Prefs editors: OpenUp and AmigaChrome,OpenTata,Warns before loading programs and files known to fail (Tata),Page with a warning sign,P1,,png/prefs/OpenTata.info
+Prefs editors: GFOpenUp and AmiCradle,Look,"GFOpenLook: theme, mode, accent, icons",Window of swatches and a brush,P1,Gorilla: Prefs/Theme,png/prefs/Look.info
+Prefs editors: GFOpenUp and AmiCradle,Windows,"GFOpenWindows: snapping, edges, places",Three windows stacked,P1,,png/prefs/Windows.info
+Prefs editors: GFOpenUp and AmiCradle,Dock,GFOpenDock: buttons and shelf,Dock with four buttons,P1,,png/prefs/Dock.info
+Prefs editors: GFOpenUp and AmiCradle,Menus,GFOpenMenus: menu bar and right-click menus,Menu with a row lit,P1,,png/prefs/Menus.info
+Prefs editors: GFOpenUp and AmiCradle,Title bar,"GFOpenTitle: logo, memory, clock, cog",Title bar and clock,P1,,png/prefs/Title bar.info
+Prefs editors: GFOpenUp and AmiCradle,Sound (GFOpenUp),"Volume, Paula's and AHI's levels",Speaker with waves,P1,Gorilla: Prefs/AHI,png/prefs/Sound (GFOpenUp).info
+Prefs editors: GFOpenUp and AmiCradle,GFOpenTypes,Which program opens each kind of file,Documents with an arrow to a program,P1,,png/prefs/GFOpenTypes.info
+Prefs editors: GFOpenUp and AmiCradle,GFOpenUp Setup,First-start wizard and startup switches,Box with a wand,P1,,png/prefs/GFOpenUp Setup.info
+Prefs editors: GFOpenUp and AmiCradle,GFOpenPrint,Printers and print queue,Printer with a page out,P1,,png/prefs/GFOpenPrint.info
+Prefs editors: GFOpenUp and AmiCradle,GFOpenSocket,Network through this PC,Network plug,P1,Gorilla: Prefs/Network,png/prefs/GFOpenSocket.info
+Prefs editors: GFOpenUp and AmiCradle,Classic,Back to the OS's own look,Old Workbench window,P1,,png/prefs/Classic.info
+Prefs editors: GFOpenUp and AmiCradle,GFOpenBlanker,Screen blanker and its shows,Monitor with stars,P1,,png/prefs/GFOpenBlanker.info
+Prefs editors: GFOpenUp and AmiCradle,GFOpenRTG,Screen modes on GFOpenRTG,Monitor with a graphics card,P1,Gorilla: Prefs/ScreenMode,png/prefs/GFOpenRTG.info
+Prefs editors: GFOpenUp and AmiCradle,All Prefs,"The cog's ""All Prefs..."" entry",Cog with a drawer,P2,,png/prefs/All Prefs.info
+Prefs editors: GFOpenUp and AmiCradle,Wi-Fi,Wireless network (GFOpenSocket),Wi-Fi fan,P2,Gorilla: Prefs/WiFi,png/prefs/Wi-Fi.info
+Prefs editors: GFOpenUp and AmiCradle,AmiCradle Sharing,Clipboard and file sharing with the PC,Two clipboards and arrows,P1,,png/prefs/AmiCradle Sharing.info
+Prefs editors: GFOpenUp and AmiCradle,GFOpenTata,Warns before loading programs and files known to fail (Tata),Page with a warning sign,P1,,png/prefs/GFOpenTata.info
 Prefs editors: other people's,MUI,MUI's look and settings,MUI window with sliders,P2,Gorilla: Prefs/Zune,png/prefs/MUI.info
-Prefs editors: other people's,Zune,Zune's settings (OpenMUI),Zune window with sliders,P2,Gorilla: Prefs/Zune,png/prefs/Zune.info
+Prefs editors: other people's,Zune,Zune's settings (GFOpenMUI),Zune window with sliders,P2,Gorilla: Prefs/Zune,png/prefs/Zune.info
 Prefs editors: other people's,AHI,AHI audio modes,Speaker and sound card,P2,Gorilla: Prefs/AHI,png/prefs/AHI.info
 Prefs editors: other people's,Picasso96Mode,Picasso96 screen modes,Monitor with a card,P2,Gorilla: Prefs/ScreenMode,png/prefs/Picasso96Mode.info
 Prefs editors: other people's,CyberGraphX,CyberGraphX modes,Monitor with a card,P3,Gorilla: Prefs/ScreenMode,png/prefs/CyberGraphX.info
@@ -218,38 +218,38 @@ Commodities,MouseBlanker,Hides the pointer while typing,Pointer fading,P2,,png/s
 Commodities,NoCapsLock,Turns Caps Lock off,Caps key crossed out,P2,Gorilla: Tools/Commodities/NoCapsLock,png/system/NoCapsLock.info
 Commodities,DepthMenu,Menu of windows by depth,Stacked windows,P3,Gorilla: Tools/Commodities/DepthMenu,png/system/DepthMenu.info
 Commodities,ASCIITable,Character table,Grid of letters,P3,Gorilla: Tools/Commodities/ASCIITable,png/system/ASCIITable.info
-Commodities,OpenWindows,OpenUp's window behaviour,Three windows and a magnet,P1,,png/system/OpenWindows.info
-Commodities,OpenSocketControl,Network control,Plug with a switch,P1,,png/system/OpenSocketControl.info
-Commodities,ACNetControl,AmigaChrome's network switch,Plug and PC,P1,,png/system/ACNetControl.info
+Commodities,GFOpenWindows,GFOpenUp's window behaviour,Three windows and a magnet,P1,,png/system/GFOpenWindows.info
+Commodities,GFOpenSocketControl,Network control,Plug with a switch,P1,,png/system/GFOpenSocketControl.info
+Commodities,ACNetControl,AmiCradle's network switch,Plug and PC,P1,,png/system/ACNetControl.info
 Commodities,ToolsDaemon,Tools menu helper,Menu with tools,P3,,png/system/ToolsDaemon.info
 Commodities,Yak,Yet Another Commodity,Yak,P3,,png/system/Yak.info
-Open apps and AmigaChrome,OpenUp,The OpenUp drawer,Blue cabinet with the OpenUp badge,P1,,png/open/OpenUp.info
-Open apps and AmigaChrome,Install-OpenUp,Installs OpenUp,Arrow over a box,P1,Gorilla: Utilities/Installer,png/open/Install-OpenUp.info
-Open apps and AmigaChrome,Uninstall-OpenUp,Puts the system back,Arrow out of a box,P1,,png/open/Uninstall-OpenUp.info
-Open apps and AmigaChrome,OpenFiles,Two-pane file manager,"Two panes, a file chosen",P1,Gorilla: System/WorkBook,png/open/OpenFiles.info
-Open apps and AmigaChrome,OpenView,Picture and document viewer,Picture with a magnifier,P1,Gorilla: Utilities/MultiView,png/open/OpenView.info
-Open apps and AmigaChrome,OpenEdit,Text editor with tabs,Pad and pencil,P1,Gorilla: Tools/Editor,png/open/OpenEdit.info
-Open apps and AmigaChrome,OpenWrite,Word processor,Page with a quill,P1,,png/open/OpenWrite.info
-Open apps and AmigaChrome,OpenPlay,Media player,Film with a play button,P1,,png/open/OpenPlay.info
-Open apps and AmigaChrome,OpenBrowser,Web browser,Globe in a ring,P1,,png/open/OpenBrowser.info
-Open apps and AmigaChrome,OpenMail,Email,Envelope,P1,,png/open/OpenMail.info
-Open apps and AmigaChrome,OpenCompress,Archives and disk images,Box with an arrow out,P1,,png/open/OpenCompress.info
-Open apps and AmigaChrome,OpenPrint queue,Print queue,Page in the tray,P1,Gorilla: Prefs/Printer,png/open/OpenPrint queue.info
-Open apps and AmigaChrome,OpenSocket,Network through the PC,Network plug and PC,P1,,png/open/OpenSocket.info
-Open apps and AmigaChrome,OpenService,Board services,Board with a bell,P2,,png/open/OpenService.info
-Open apps and AmigaChrome,OpenSpeaker,Speaker on the bar,Speaker,P1,,png/open/OpenSpeaker.info
-Open apps and AmigaChrome,ZuneTest,Zune gadget gallery,Window of gadgets,P3,,png/open/ZuneTest.info
-Open apps and AmigaChrome,OpenMUI,MUI from Zune,MUI window,P2,,png/open/OpenMUI.info
-Open apps and AmigaChrome,Theme Builder,Makes OpenLook themes,Swatches and a ruler,P2,Gorilla: Prefs/Theme,png/open/Theme Builder.info
-Open apps and AmigaChrome,ACKitchen,Developer tools for AmigaChrome,Chef's knife and code,P2,,png/open/ACKitchen.info
-Open apps and AmigaChrome,OpenRTG,Graphics without Picasso96,Graphics card,P1,,png/open/OpenRTG.info
-Open apps and AmigaChrome,OpenGames,Game launcher,Joystick with a play button,P2,,png/open/OpenGames.info
-Open apps and AmigaChrome,ACDrop,Drop files to the PC,Arrow into a PC,P1,,png/open/ACDrop.info
-Open apps and AmigaChrome,ACClip,Shared clipboard,Clipboard with arrows,P1,,png/open/ACClip.info
-Open apps and AmigaChrome,Send Out,AmigaChrome's drop icon on the backdrop,Computer with an arrow,P1,,png/open/Send Out.info
-Open apps and AmigaChrome,OpenUp update,An update is ready,Box with a star,P2,,png/open/OpenUp update.info
-Open apps and AmigaChrome,Dock buttons: Start,Phase 2 start pop-up,AmigaChrome mark in a circle,P2,,png/open/Dock buttons- Start.info
-Open apps and AmigaChrome,Telegram,Unofficial Telegram for Amiga (Open),Paper plane in a blue disc,P1,,png/open/Telegram.info
+Open apps and AmiCradle,GFOpenUp,The GFOpenUp drawer,Blue cabinet with the GFOpenUp badge,P1,,png/open/GFOpenUp.info
+Open apps and AmiCradle,Install-GFOpenUp,Installs GFOpenUp,Arrow over a box,P1,Gorilla: Utilities/Installer,png/open/Install-GFOpenUp.info
+Open apps and AmiCradle,Uninstall-GFOpenUp,Puts the system back,Arrow out of a box,P1,,png/open/Uninstall-GFOpenUp.info
+Open apps and AmiCradle,GFOpenFiles,Two-pane file manager,"Two panes, a file chosen",P1,Gorilla: System/WorkBook,png/open/GFOpenFiles.info
+Open apps and AmiCradle,GFOpenView,Picture and document viewer,Picture with a magnifier,P1,Gorilla: Utilities/MultiView,png/open/GFOpenView.info
+Open apps and AmiCradle,GFOpenEdit,Text editor with tabs,Pad and pencil,P1,Gorilla: Tools/Editor,png/open/GFOpenEdit.info
+Open apps and AmiCradle,GFOpenWrite,Word processor,Page with a quill,P1,,png/open/GFOpenWrite.info
+Open apps and AmiCradle,GFOpenPlay,Media player,Film with a play button,P1,,png/open/GFOpenPlay.info
+Open apps and AmiCradle,OpenBrowser,Web browser,Globe in a ring,P1,,png/open/OpenBrowser.info
+Open apps and AmiCradle,GFOpenMail,Email,Envelope,P1,,png/open/GFOpenMail.info
+Open apps and AmiCradle,GFOpenCompress,Archives and disk images,Box with an arrow out,P1,,png/open/GFOpenCompress.info
+Open apps and AmiCradle,GFOpenPrint queue,Print queue,Page in the tray,P1,Gorilla: Prefs/Printer,png/open/GFOpenPrint queue.info
+Open apps and AmiCradle,GFOpenSocket,Network through the PC,Network plug and PC,P1,,png/open/GFOpenSocket.info
+Open apps and AmiCradle,GFOpenService,Board services,Board with a bell,P2,,png/open/GFOpenService.info
+Open apps and AmiCradle,GFOpenSpeaker,Speaker on the bar,Speaker,P1,,png/open/GFOpenSpeaker.info
+Open apps and AmiCradle,ZuneTest,Zune gadget gallery,Window of gadgets,P3,,png/open/ZuneTest.info
+Open apps and AmiCradle,GFOpenMUI,MUI from Zune,MUI window,P2,,png/open/GFOpenMUI.info
+Open apps and AmiCradle,Theme Builder,Makes GFOpenLook themes,Swatches and a ruler,P2,Gorilla: Prefs/Theme,png/open/Theme Builder.info
+Open apps and AmiCradle,ACKitchen,Developer tools for AmiCradle,Chef's knife and code,P2,,png/open/ACKitchen.info
+Open apps and AmiCradle,GFOpenRTG,Graphics without Picasso96,Graphics card,P1,,png/open/GFOpenRTG.info
+Open apps and AmiCradle,GFOpenGames,Game launcher,Joystick with a play button,P2,,png/open/GFOpenGames.info
+Open apps and AmiCradle,ACDrop,Drop files to the PC,Arrow into a PC,P1,,png/open/ACDrop.info
+Open apps and AmiCradle,ACClip,Shared clipboard,Clipboard with arrows,P1,,png/open/ACClip.info
+Open apps and AmiCradle,Send Out,AmiCradle's drop icon on the backdrop,Computer with an arrow,P1,,png/open/Send Out.info
+Open apps and AmiCradle,GFOpenUp update,An update is ready,Box with a star,P2,,png/open/GFOpenUp update.info
+Open apps and AmiCradle,Dock buttons: Start,Phase 2 start pop-up,AmiCradle mark in a circle,P2,,png/open/Dock buttons- Start.info
+Open apps and AmiCradle,Telegram,Unofficial Telegram for Amiga (Open),Paper plane in a blue disc,P1,,png/open/Telegram.info
 File types: documents and text,Text,Plain text (def_ascii),Page with lines,P1,Gorilla: Env-Archive/SYS/def_Text,png/filetypes/Text.info
 File types: documents and text,Document,A generic document,Page with a folded corner,P1,Gorilla: Env-Archive/SYS/def_Document,png/filetypes/Document.info
 File types: documents and text,ReadMe,A read-me file,"Page with ""i""",P1,Gorilla: Env-Archive/SYS/def_ReadMe,png/filetypes/ReadMe.info
@@ -368,8 +368,8 @@ File types: system files,Country,A country file,Flag,P2,Gorilla: Env-Archive/SYS
 File types: system files,Keymap,A keymap,Key,P2,Gorilla: Env-Archive/SYS/def_Keymap,png/filetypes/Keymap.info
 File types: system files,Prefs file,A saved preferences file,Cog on a page,P1,Gorilla: Env-Archive/SYS/def_Pref,png/filetypes/Prefs file.info
 File types: system files,Preset,A saved preset,Bookmark,P2,,png/filetypes/Preset.info
-File types: system files,Theme,An OpenLook .theme,Swatches,P1,,png/filetypes/Theme.info
-File types: system files,Desktop profile,An OpenPrefs .profile,Monitor with a person,P2,,png/filetypes/Desktop profile.info
+File types: system files,Theme,A GFOpenLook .theme,Swatches,P1,,png/filetypes/Theme.info
+File types: system files,Desktop profile,A GFOpenPrefs .profile,Monitor with a person,P2,,png/filetypes/Desktop profile.info
 File types: system files,Monitor driver,Devs/Monitors entry,Monitor,P1,Gorilla: Devs/Monitors,png/filetypes/Monitor driver.info
 File types: system files,Printer driver,Devs/Printers entry,Printer,P2,Gorilla: Devs/Printers,png/filetypes/Printer driver.info
 File types: system files,Mount list,DOSDrivers entry,Drive with a list,P1,Gorilla: Devs/DOSDrivers,png/filetypes/Mount list.info
@@ -409,45 +409,45 @@ States and situations,Mail: none,No new mail,Envelope,P2,,png/states/Mail- none.
 States and situations,Printing,Print job running,Printer with a page moving,P2,,png/states/Printing.info
 States and situations,Print error,"Paper out, offline","Printer with ""!""",P2,,png/states/Print error.info
 States and situations,Clipboard synced,ACClip copied to/from the PC,Clipboard with a tick,P2,,png/states/Clipboard synced.info
-States and situations,Update available,OpenUp has an update,Box with a star,P2,,png/states/Update available.info
+States and situations,Update available,GFOpenUp has an update,Box with a star,P2,,png/states/Update available.info
 States and situations,Running (dock dot),Program running,Small dot,P1,,-
 States and situations,Sound muted,Volume off,Speaker crossed,P1,,png/states/Sound muted.info
 States and situations,Battery,Laptop/handheld battery,Battery,P3,,png/states/Battery.info
 States and situations,Online / offline (dial-up),Miami-style online state,Plug in and out,P3,,png/states/Online.info; png/states/offline (dial-up).info
-"Title bar, dock and gadget glyphs",Close gadget,Window close,Square with a dot,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Depth gadget (to back),Window in front: send back,"Two squares, back one solid",P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Depth gadget (to front),Window behind: bring forward,"Two squares, front one solid",P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Screen depth gadget,Screen to back,Same as window depth,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Iconify gadget,Window to an icon (where programs ask),Square with a bar,P2,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Settings cog,OpenTitle's cog,Cog,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Speaker,OpenSpeaker volume,Speaker with waves,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",LAN,OpenTitle network icon,Three boxes joined,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Wi-Fi,OpenTitle Wi-Fi icon,Fan,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Checkbox tick,OpenLook tick,Tick,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Radio dot,OpenLook radio,Dot,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Cycle glyph,Cycle gadget,Circular arrow,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Scroller arrows,"Up, down, left, right (when shown)",Chevrons,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Dock separator,Line between groups,Thin line,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Menu check,Menu item ticked,Tick,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Menu submenu,Submenu arrow,Chevron,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Amiga key,Menu shortcut key,"Amiga ""A"" key glyph (our own)",P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Busy spinner,Busy pointer's animation frames,Spinner,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs",Requester icons,"Info, warning, error, question","i, !, x, ?",P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs","Toolbar: back, forward, up",OpenFiles/OpenBrowser toolbar,Arrows,P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs","Toolbar: new, open, save, print",Open apps' toolbars,"Page, folder, disk, printer",P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs","Toolbar: cut, copy, paste, undo",Edit toolbars,"Scissors, pages, clipboard, curved arrow",P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs","Toolbar: find, zoom, settings",Viewers and editors,"Magnifier, plus, cog",P1,,(drawn by OpenLook/OpenWindows)
-"Title bar, dock and gadget glyphs","Media: play, pause, stop, next, previous",OpenPlay,Triangles and bars,P1,,(drawn by OpenLook/OpenWindows)
-Pointers,Normal pointer,The arrow,Arrow,P1,Gorilla: Other/Pointer,(drawn by OpenLook/OpenWindows)
-Pointers,Busy pointer,Waiting,Spinner or clock,P1,,(drawn by OpenLook/OpenWindows)
-Pointers,Resize left-right,OpenWindows edge,Double arrow,P1,,(drawn by OpenLook/OpenWindows)
-Pointers,Resize up-down,OpenWindows bottom edge,Double arrow,P1,,(drawn by OpenLook/OpenWindows)
-Pointers,Resize diagonal,OpenWindows bottom corners,"Double arrow, 45°",P1,,(drawn by OpenLook/OpenWindows)
-Pointers,Move,Dragging a window,Four arrows,P2,,(drawn by OpenLook/OpenWindows)
-Pointers,Text,Text cursor,I-beam,P2,,(drawn by OpenLook/OpenWindows)
-Pointers,Link hand,Over a link,Hand,P2,,(drawn by OpenLook/OpenWindows)
-Pointers,Drop here,Dragging onto a target,Arrow with a plus,P2,,(drawn by OpenLook/OpenWindows)
-Pointers,No drop,Can't drop here,Arrow with a no sign,P3,,(drawn by OpenLook/OpenWindows)
+"Title bar, dock and gadget glyphs",Close gadget,Window close,Square with a dot,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Depth gadget (to back),Window in front: send back,"Two squares, back one solid",P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Depth gadget (to front),Window behind: bring forward,"Two squares, front one solid",P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Screen depth gadget,Screen to back,Same as window depth,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Iconify gadget,Window to an icon (where programs ask),Square with a bar,P2,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Settings cog,GFOpenTitle's cog,Cog,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Speaker,GFOpenSpeaker volume,Speaker with waves,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",LAN,GFOpenTitle network icon,Three boxes joined,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Wi-Fi,GFOpenTitle Wi-Fi icon,Fan,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Checkbox tick,GFOpenLook tick,Tick,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Radio dot,GFOpenLook radio,Dot,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Cycle glyph,Cycle gadget,Circular arrow,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Scroller arrows,"Up, down, left, right (when shown)",Chevrons,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Dock separator,Line between groups,Thin line,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Menu check,Menu item ticked,Tick,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Menu submenu,Submenu arrow,Chevron,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Amiga key,Menu shortcut key,"Amiga ""A"" key glyph (our own)",P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Busy spinner,Busy pointer's animation frames,Spinner,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs",Requester icons,"Info, warning, error, question","i, !, x, ?",P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs","Toolbar: back, forward, up",GFOpenFiles/OpenBrowser toolbar,Arrows,P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs","Toolbar: new, open, save, print",Open apps' toolbars,"Page, folder, disk, printer",P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs","Toolbar: cut, copy, paste, undo",Edit toolbars,"Scissors, pages, clipboard, curved arrow",P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs","Toolbar: find, zoom, settings",Viewers and editors,"Magnifier, plus, cog",P1,,(drawn by GFOpenLook/GFOpenWindows)
+"Title bar, dock and gadget glyphs","Media: play, pause, stop, next, previous",GFOpenPlay,Triangles and bars,P1,,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,Normal pointer,The arrow,Arrow,P1,Gorilla: Other/Pointer,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,Busy pointer,Waiting,Spinner or clock,P1,,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,Resize left-right,GFOpenWindows edge,Double arrow,P1,,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,Resize up-down,GFOpenWindows bottom edge,Double arrow,P1,,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,Resize diagonal,GFOpenWindows bottom corners,"Double arrow, 45°",P1,,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,Move,Dragging a window,Four arrows,P2,,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,Text,Text cursor,I-beam,P2,,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,Link hand,Over a link,Hand,P2,,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,Drop here,Dragging onto a target,Arrow with a plus,P2,,(drawn by GFOpenLook/GFOpenWindows)
+Pointers,No drop,Can't drop here,Arrow with a no sign,P3,,(drawn by GFOpenLook/GFOpenWindows)
 Apps: desktop and file managers,Directory Opus 4,File manager,Two panes and a disk,P2,,png/apps/Directory Opus 4.info
 Apps: desktop and file managers,Directory Opus 5 / Magellan,Workbench replacement,Two panes with a lens,P2,,png/apps/Directory Opus 5.info; png/apps/Magellan.info
 Apps: desktop and file managers,DiskMaster,File manager,Two panes,P3,,png/apps/DiskMaster.info
@@ -569,7 +569,7 @@ Apps: development,Sashimi,Debug output catcher,Fish-free tray,P3,Gorilla: Develo
 Apps: development,Hex editor,Edits bytes,Grid of hex,P2,,png/apps/Hex editor.info
 Apps: development,Disassembler,Reads machine code,Code with a lens,P3,,png/apps/Disassembler.info
 Apps: development,Version control,Git and others,Branches,P3,,png/apps/Version control.info
-Apps: development,ACKitchen,AmigaChrome developer tools,Chef's knife and code,P2,,png/apps/ACKitchen.info
+Apps: development,ACKitchen,AmiCradle developer tools,Chef's knife and code,P2,,png/apps/ACKitchen.info
 Apps: system and disk tools,SysInfo,Benchmarks and hardware,Speedometer,P2,,png/apps/SysInfo.info
 Apps: system and disk tools,WHDLoad,Runs games from hard disk,Joystick and a disk,P2,,png/apps/WHDLoad.info
 Apps: system and disk tools,JST,Old WHDLoad-style loader,Joystick,P3,,png/apps/JST.info
@@ -640,4 +640,4 @@ Apps: hardware and drivers,Monitor,Monitor setup,Monitor,P2,Gorilla: Devs/Monito
 Apps: hardware and drivers,Keyboard,Keyboard setup,Keyboard,P2,Gorilla: Prefs/Input,png/apps/Keyboard.info
 Apps: hardware and drivers,Gotek / floppy emulator,USB floppy emulator,Floppy drive with a screen,P3,,png/apps/Gotek.info; png/apps/floppy emulator.info
 Apps: hardware and drivers,IDE / SCSI,Hard disk controller tools,Controller board,P3,,png/apps/IDE.info; png/apps/SCSI.info
-Apps: hardware and drivers,AmigaChrome board,AmigaChrome Team board services,Board with the AmigaChrome mark,P1,,png/apps/AmigaChrome board.info
+Apps: hardware and drivers,AmiCradle board,AmigaChrome Team board services,Board with the AmiCradle mark,P1,,png/apps/AmiCradle board.info

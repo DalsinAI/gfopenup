@@ -1,0 +1,956 @@
+; $VER: Install-GFOpenUp @VERSION@ (@DATE@)
+; GFOpenUp's Installer script (C:Installer / SYS:System/Installer). Run it from
+; its icon in the GFOpenUp drawer. What it does is DESIGN.md section 3: the
+; base OS stays as shipped, every file is listed, and Uninstall-GFOpenUp puts
+; everything back. MIT, Copyright (c) 2026 AmigaChrome Team.
+
+(set #version "@VERSION@")
+(set @app-name "GFOpenUp")
+(set #tool "C/GFOpenUpTool")
+
+(if (< (/ (getversion) 65536) 47)
+    (abort "GFOpenUp needs AmigaOS 3.2 or later. This Amiga has an older version."))
+
+(run (cat #tool " DETECT >NIL:"))
+(set #machine (getenv "GFOpenUp/Machine"))
+(set #summary (getenv "GFOpenUp/Summary"))
+(set #ac (= #machine "AmiCradle"))
+; 0.8.7: the ROM (GFOpenUpTool's DETECT reads GFOpenKickROM's 'OKR1' mark) and where gfopenrtg.library is ("GFOpenUp": the
+; manifest lists the GFOpenRTG part; "LIBS": on the disk; "ROM": in the ROM; "": nowhere)
+(set #openkick (= (getenv "GFOpenUp/ROM") "GFOpenKick"))
+(set #rtgwhere (getenv "GFOpenUp/GFOpenRTG"))
+
+; Short: the 3.2 Installer's welcome window has room for a few lines above
+; its user-level buttons. The rest is a message Intermediate users see.
+(welcome
+    (cat "This installs GFOpenUp " #version ": the GFOpen family of programs, "
+         "set up to work together on AmigaOS 3.2."))
+(message
+    (cat #summary "\n\n"
+         "Nothing of the OS is deleted: a file GFOpenUp replaces is kept in "
+         "SYS:Storage/GFOpenUp-Superseded, and Uninstall-GFOpenUp puts it back."))
+
+; Bits: 1 GFOpenSocket, 2 GFOpenPrint, 4 AmiCradle sharing, 8 GFOpenLook (up to 0.8.1; no longer offered), 16 backgrounds, 32 GFOpenTypes, 64 GFOpenCompress,
+; 128 GFOpenService, 256 GFOpenImage, 512 GFOpenRTG, 1024 GFOpenWindows, 2048 GFOpenDock, 4096 GFOpenUp Setup, 8192 GFOpenMenus,
+; 16384 GFOpenFiles, 32768 GFOpenPlay, 65536 GFOpenMUI, 131072 GFOpenTitle, 262144 Sound, 524288 GFOpenEdit,
+; 1048576 GFOpenWrite, 2097152 GFOpenMail, 4194304 OpenBrowser, 8388608 GFOpenMulticore, 16777216 Icons (GFOpenIcons; Gorilla up to 0.8.3),
+; 33554432 GFOpenGPU, 67108864 Warp3D, 134217728 GFOpenDemos, 268435456 GFOpenCrypto, 536870912 GFOpenPuTTY,
+; 1073741824 Tata (the last bit of this word).
+; The second word, #parts2 (GFOpenUp 0.7.0): 1 GFOpenFTP, 2 Unofficial Telegram, 4 GFOpenGPU developer files,
+; 8 GFOpenInput, 16 GFOpenTLS, 32 GFOpenDrawer, 64 GFOpenBench, 128 GFOpenDateTime (GFOpenUp 0.7.9),
+; 256 OpenAmigaPython (19 October 2026; the ninth choice of the fifth page),
+; 512 OpenBrowser Lite (19 October 2026; the fifth choice of the fourth page, whose bits 0-3 stay #parts' 27-30).
+; Of these GFOpenDateTime is ticked by default on a new install, and OpenBrowser Lite (the standard set) on a
+; 68040 or 68060 with its FPU; an upgrade ticks those already there (below).
+; AmiCradle's defaults: everything but GFOpenRTG, GFOpenMUI, GFOpenMail, OpenBrowser, GFOpenDemos, GFOpenPuTTY
+; and Tata (396295679); elsewhere also without GFOpenSocket, AmiCradle sharing, GFOpenGPU and Warp3D
+; (295632378). Tata stays unticked while it is 0.x (the user, 8 October 2026), and is ticked from 1.0.
+; The first question has eight choices since 0.8.2 (GFOpenLook's went): its answer is spread back over bits 0-2
+; and 4-8, so bit 3 stays GFOpenLook's and is never set.
+; Five questions of at most nine parts: the 3.2 Installer shows nine choices a page,
+; and a longer askoptions comes back with the defaults of its first pages mixed up
+; (8 October 2026, on a scratch instance: 60751359 came back as 30265063). Each
+; group is bits 0-8, 9-17, 18-26 and 27-30 of #parts, so the bits above keep their meaning;
+; the fifth is #parts2, and the sixth (0.8.0) the open libraries, #libs.
+(set #default (if #ac 396295679 295632378))
+; An upgrade brings the parts already on this Amiga up to date, also those a new install leaves
+; unticked (Tata, GFOpenMUI or GFOpenFTP picked before): each is ticked when its main file is there. A
+; Novice user never sees the questions, so before 0.7.5 an upgrade left those parts at their old
+; versions. GFOpenRTG too, since 0.7.9: where it is installed, the part goes in again, so an upgrade brings
+; gfopenrtg.library and keeps the mode chosen since (0.7.9 to 0.8.1: Parts/GFOpenRTG/Upgrade; since 0.8.2 the part
+; itself has no screen mode).
+; Up to 0.7.8 the mode came with the libraries on every install; writing it again undid the user's mode and
+; asked Intuition to reset the Workbench screen while the Installer's window was open, so an upgrade left
+; GFOpenRTG unticked and a Novice upgrade never brought a newer gfopenrtg.library.
+; 0.8.7: also where GFOpenUp's list has the part (LIBS: can name the ROM's copy too), and on the GFOpenKick ROM with an
+; ACRTG board, where Workbench is on GFOpenRTG already: there a Novice upgrade left GFOpenRTG unticked, so
+; Instance-32 stayed at GFOpenRTG 0.17 under GFOpenUp 0.8.6, whose part is 0.19.
+(set #rtgwas (or (and (exists "LIBS:gfopenrtg.library") (exists "ENVARC:GFOpenAmiga/GFOpenUp.manifest")) (= #rtgwhere "GFOpenUp")))
+(if #rtgwas (set #default (bitor #default 512)))
+(if (and #openkick (= (getenv "GFOpenUp/RTG") "ACRTG")) (set #default (bitor #default 512)))
+(if (exists "LIBS:zunemaster.library") (set #default (bitor #default 65536)))
+(if (exists "SYS:Utilities/GFOpenMail/GFOpenMail") (set #default (bitor #default 2097152)))
+(if (exists "SYS:Utilities/OpenBrowser/OpenBrowser") (set #default (bitor #default 4194304)))
+(if (exists "SYS:Utilities/GFOpenDemos/GFOpenDemos") (set #default (bitor #default 134217728)))
+(if (exists "SYS:Utilities/GFOpenPuTTY/GFOpenPuTTY") (set #default (bitor #default 536870912)))
+(if (exists "SYS:C/Tata") (set #default (bitor #default 1073741824)))
+(set #default2 128)
+; OpenBrowser Lite: in the standard set where it runs (a 68040 or 68060 with its FPU), and where it is already
+(if (and (<> (database "fpu") "NOFPU") (or (= (database "cpu") "68040") (= (database "cpu") "68060")))
+    (set #default2 (bitor #default2 512)))
+(if (exists "SYS:Utilities/OpenBrowserLite/OpenBrowserLite") (set #default2 (bitor #default2 512)))
+(if (exists "SYS:Utilities/GFOpenFTP/GFOpenFTP") (set #default2 (bitor #default2 1)))
+(if (exists "SYS:Utilities/UnofficialTelegram") (set #default2 (bitor #default2 2)))
+(if (exists "SYS:Developer/GFOpenGPU-SDK") (set #default2 (bitor #default2 4)))
+(if (exists "LIBS:gfopeninput.library") (set #default2 (bitor #default2 8)))
+(if (exists "LIBS:gfopentls.library") (set #default2 (bitor #default2 16)))
+(if (exists "SYS:Utilities/GFOpenDrawer") (set #default2 (bitor #default2 32)))
+(if (exists "SYS:System/GFOpenBench") (set #default2 (bitor #default2 64)))
+(if (exists "SYS:Tools/OpenAmigaPython") (set #default2 (bitor #default2 256)))
+(set #g1
+    (askoptions
+        (prompt "Which parts should GFOpenUp install? (1 of 6)")
+        (help "GFOpenSocket: the Amiga's network (bsdsocket.library 4.3), through the x86 or ARM64 cores. "
+              "AmiCradle instances only.\n\n"
+              "GFOpenPrint and GFOpenView: print to PDF and to printers on your network, "
+              "and view pictures and documents. GFOpenView takes MultiView's place: whatever "
+              "opened MultiView opens GFOpenView, and the original is kept in "
+              "SYS:Storage/GFOpenUp-Superseded.\n\n"
+              "AmiCradle sharing: the clipboard and files, shared in and out of the Amiga. "
+              "AmiCradle instances only.\n\n"
+              "Backgrounds: a theme's desktop as Workbench's backdrop, drawn for "
+              "your screen's shape. Your old backdrop setting is kept. Everything else of "
+              "Workbench's look is the OS's own (on the GFOpenKick ROM, the ROM's).\n\n"
+              "GFOpenTypes: choose the program that opens each kind of file, in GFOpenPrefs's File Types page "
+              "(SYS:Preferences).\n\n"
+              "GFOpenCompress: open, test and extract archives and disk images (ADF, ADZ, DMS, "
+              "LhA, zip, tar, gzip) from its window in SYS:Utilities, or from the Shell.\n\n"
+              "GFOpenService: services from AmiCradle's boards and from a Cradle you pair "
+              "with (gfopenservice.device, and Nursery to list them). Nothing goes on your "
+              "network until you pair a Cradle.\n\n"
+              "GFOpenImage: datatypes, so MultiView and every program that uses datatypes "
+              "open PNG, Targa (TGA), WebP and WebM, and, through GFOpenService, AVIF and HEIC photos, JPEG XL, "
+              "camera RAW, SVG, FLAC, Ogg, MP3, MIDI, MP4 and other video, Word and other "
+              "office documents. Datatypes you already have are kept.")
+        (choices "GFOpenSocket: networking"
+                 "GFOpenPrint and GFOpenView: printing"
+                 "AmiCradle sharing: clipboard and files"
+                 "Backgrounds: a theme's desktop"
+                 "GFOpenTypes: which program opens what"
+                 "GFOpenCompress: archives and disk images"
+                 "GFOpenService: services from boards and Cradles"
+                 "GFOpenImage: datatypes for today's files")
+        (default (bitor (bitand #default 7) (shiftleft (bitand (shiftright #default 4) 31) 3)))))
+(set #g1 (bitor (bitand #g1 7) (shiftleft (shiftright #g1 3) 4)))
+(set #g2
+    (askoptions
+        (prompt "Which parts should GFOpenUp install? (2 of 6)")
+        (help "GFOpenRTG: Workbench on GFOpenRTG's own 16-bit screen instead of Picasso96's, "
+              "on AmiCradle's graphics board, and its Native modes, which follow the size of "
+              "AmiCradle's window. Picasso96's monitor for that board is put "
+              "aside in SYS:Storage, and Uninstall puts it back. Off unless you pick it, but on the "
+              "GFOpenKick ROM with an ACRTG board, where Workbench is on GFOpenRTG already; an upgrade "
+              "brings it up to date where it is installed. The screen mode stays yours: GFOpenUp writes "
+              "one only when you say Yes to its question.\n\n"
+              "GFOpenWindows: windows snap to edges and to each other, Amiga+Tab switches "
+              "between them, the mouse wheel goes to the window under the pointer, and "
+              "programs' windows open where you last left them. Windows in SYS:Prefs sets it.\n\n"
+              "GFOpenDock: a dock at the bottom of Workbench for your programs. It starts "
+              "with the buttons of ToolManager, AmiDock or AmiStart if you have one. Dock in "
+              "SYS:Prefs sets it.\n\n"
+              "GFOpenUp Setup: a few questions at the next start (theme, what starts with the "
+              "machine), and in SYS:Prefs afterwards.\n\n"
+              "GFOpenMenus: menus in the look of the theme, from the screen bar or at the pointer, "
+              "and a menu for each icon and for the desktop on the right button. MagicMenu's "
+              "settings are taken over; take MagicMenu out of WBStartup if you pick this. "
+              "The bar can sit at any edge of the screen, and the menus work from the "
+              "keyboard too (Right Amiga+Space). Menus in SYS:Prefs sets it.\n\n"
+              "GFOpenFiles: a file manager with two panes and tabs (new), and a row of drive "
+              "buttons under its toolbar: a click opens a disk in the active pane. "
+              "Copies are checked before anything is replaced, deleted files go to a trashcan "
+              "on their own disk, and Undo puts things back. In SYS:Utilities.\n\n"
+              "GFOpenPlay: a media player for everything the datatypes open (new): pictures as "
+              "a slideshow, sounds, tunes and films, with a playlist. In SYS:Utilities.\n\n"
+              "GFOpenMUI: zunemaster.library, MUI built from AROS's Zune for OS 3.x (a preview, "
+              "off unless picked). It sits beside MUI and replaces nothing: where there is no "
+              "muimaster.library it adds one that passes every call to Zune, so MUI programs "
+              "run, and an installed MUI is never touched. ZuneTest in SYS:Tools shows it working.\n\n"
+              "GFOpenTitle: AmiCradle's logo at the title bar's left, the free chip and "
+              "fast memory after Workbench's title, and the day, date and time at the right "
+              "(new). Title bar in SYS:Prefs switches each, and a black border around the screen.")
+        (choices "GFOpenRTG: Workbench without Picasso96"
+                 "GFOpenWindows: snapping, Amiga+Tab, wheel"
+                 "GFOpenDock: a dock for your programs"
+                 "GFOpenUp Setup: the first-start questions"
+                 "GFOpenMenus: menus, and right-click menus"
+                 "GFOpenFiles: a file manager"
+                 "GFOpenPlay: a media player"
+                 "GFOpenMUI: MUI from Zune (preview)"
+                 "GFOpenTitle: logo, memory and clock")
+        (default (bitand (shiftright #default 9) 511))))
+(set #g3
+    (askoptions
+        (prompt "Which parts should GFOpenUp install? (3 of 6)")
+        (help "Sound: one place for the volume, Amiga sound (Paula) and AHI sound, with Test "
+              "buttons, and a speaker on the menu bar: click for the levels, the wheel turns it "
+              "up and down (new), in SYS:Preferences/Sound. The OS's own Sound editor stays where it is.\n\n"
+              "GFOpenEdit: a text editor with tabs, find and replace, and colours for scripts, "
+              "C and guides (new). GFOpenEdit in a Shell, or GFOpenEdit file WAIT for programs "
+              "that wait for their editor.\n\n"
+              "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF "
+              "export, printing and spelling (new, version 2.0.1), in SYS:Utilities/GFOpenWrite; "
+              "OWConvert converts documents from a Shell. Needs a 68020. It comes with the GFOffice "
+              "Suite's shared files: its libraries (owfwrite, owfcalc, owfpub and owfpresent.library), "
+              "z.library and the dictionary, in SYS:Dictionaries.\n\n"
+              "GFOpenMail: a mail reader for IMAP mail over TLS, with Gmail, Outlook and others "
+              "set up from the address (new, a preview: reading only; off unless you pick it). "
+              "It reaches mail servers through GFOpenTLS, which comes with it.\n\n"
+              "OpenBrowser: a web browser built on WebKit (new, a preview; off unless you pick "
+              "it). It needs an FPU and is best on a 68040. It comes in its own archive, "
+              "GFOpenUp-" #version "-OpenBrowser.lha, because it is large.\n\n"
+              "GFOpenMulticore: lets programs hand work to the other cores of AmiCradle's "
+              "cores board, so the main CPU stays free; without a cores board the work runs "
+              "on the main CPU, so it is safe on every Amiga (new).\n\n"
+              "GFOpenGPU: gfopengpu.library, so programs' drawing and SDL 2 games run on the x86 or "
+              "ARM64 cores and GL (Mesa) on the GPU, through AmiCradle's graphics board; where there is "
+              "no board they run on the Amiga's own CPU, as before (new). SDL 2 and GL are in "
+              "LIBS:GFOpenGPU and load only when a program asks. GFOpenGPUCheck in a Shell checks it.\n\n"
+              "Icons: GFOpenIcons, the Team's own icon set, as new pictures for the system's own drawers, "
+              "programs and kinds of file, in the look of the GFOpenKick ROM's own icons (new in 0.8.4, in "
+              "place of Gorilla). Each icon keeps what it does; the old pictures are kept in SYS:Storage, "
+              "and Uninstall-GFOpenUp puts them back.\n\n"
+              "Warp3D and MiniGL: Warp3D.library 5.0 and minigl.library (OpenGL 1.1) for Warp3D "
+              "and MiniGL games and programs, drawn through GFOpenGPU "
+              "(new). It needs a 68040 or 68060 with its FPU. A Warp3D.library already there "
+              "(Wazp3D's, say) is kept in SYS:Storage, and Wazp3D's settings are taken over; "
+              "Warp3DPrefs in a Shell changes them. W3DTest and MGLTest in SYS:Tools show them working.")
+        (choices "Sound: levels and a menu bar speaker"
+                 "GFOpenEdit: a text editor"
+                 "GFOpenWrite: a word processor"
+                 "GFOpenMail: mail (preview)"
+                 "OpenBrowser: a web browser (preview)"
+                 "GFOpenMulticore: work on a cores board"
+                 "Icons: GFOpenIcons' pictures on the system's icons"
+                 "GFOpenGPU: SDL on the cores, GL on the GPU (new)"
+                 "Warp3D and MiniGL: 3D on GFOpenGPU (new, 68040)")
+        (default (bitand (shiftright #default 18) 511))))
+(set #g4
+    (askoptions
+        (prompt "Which parts should GFOpenUp install? (4 of 6)")
+        (help "GFOpenDemos: Boing, Chrome Gears and Copper Tunnel, three small 3D demos in GL "
+              "(new, off unless picked; needs GFOpenGPU and an FPU). In SYS:Utilities/GFOpenDemos.\n\n"
+              "GFOpenCrypto: gfopencrypto.library 2.0, the sums behind secure connections (SSH's key "
+              "exchanges, host keys, SHA-2, AES) for the Open programs (new). On AmiCradle they "
+              "run on the x86 or ARM64 cores, elsewhere on the Amiga's own CPU. GFOpenPuTTY needs it, so it comes "
+              "with GFOpenPuTTY whatever is picked here.\n\n"
+              "GFOpenPuTTY: PuTTY for AmigaOS 3.2, SSH, Telnet and serial terminals, with key "
+              "sign-in (new, version 0.2, off unless picked). It needs a network stack "
+              "(bsdsocket.library: GFOpenSocket, Roadshow or AmiTCP). In SYS:Utilities/GFOpenPuTTY.\n\n"
+              "Tata: before a program runs or a file opens, Tata checks it against a list of "
+              "programs and files known to crash, draw wrongly or fail on AmigaOS 3.2.3 or with "
+              "GFOpenUp, says what is known and what helps, and asks: run it this time, always, "
+              "not this time, or never (new, version 0.x, off unless picked). It never asks while "
+              "the Amiga starts. Its shield sits on the title bar beside the network and sound "
+              "icons; its window is Tata in SYS:Prefs, and Tata OFF in a Shell turns it off.\n\n"
+              "OpenBrowser Lite: a small web browser, about 100 KB and no WebKit (new). Pages are laid "
+              "out with headings, lists, links, pictures (through your datatypes) and their CSS; no "
+              "JavaScript. https:// works through GFOpenTLS, which comes with it. It needs a 68040 or 68060 "
+              "with its FPU and a network stack (GFOpenSocket, Roadshow or AmiTCP). In SYS:Utilities/OpenBrowserLite.")
+        (choices "GFOpenDemos: three 3D demos in GL (new)"
+                 "GFOpenCrypto: SSH and TLS sums (new)"
+                 "GFOpenPuTTY: SSH and Telnet (new)"
+                 "Tata: warns about known problems (new, 0.x)"
+                 "OpenBrowser Lite: a small web browser (new, 68040)")
+        (default (bitor (bitand (shiftright #default 27) 15) (shiftleft (bitand (shiftright #default2 9) 1) 4)))))
+(set #g5
+    (askoptions
+        (prompt "Which parts should GFOpenUp install? (5 of 6)")
+        (help "GFOpenFTP: FTP and FTPS in two panes, with a site manager and the GFOpen family's "
+              "look (new, off unless picked). In SYS:Utilities/GFOpenFTP. Plain FTP works as it is. "
+              "FTPS (encrypted FTP) works through GFOpenTLS (gfopentls.library), which comes with it. "
+              "It needs a network stack (GFOpenSocket, Roadshow or AmiTCP).\n\n"
+              "Unofficial Telegram for Amiga (Open): Telegram chats in a window on the Amiga (new, "
+              "a preview, off unless picked). It isn't made by Telegram. It needs setting up before "
+              "it can reach Telegram: your own Telegram API key (free, from my.telegram.org), and "
+              "Telegram's service on AmiCradle's x86 or ARM64 cores or on a paired Cradle. Until "
+              "then it says what is missing, and its demo shows a made-up account. "
+              "In SYS:Utilities/UnofficialTelegram.\n\n"
+              "GFOpenGPU developer files: SDL 2's, SDL 1.2's, OpenGL's and GLA's headers and link libraries, "
+              "with examples, in SYS:Developer/GFOpenGPU-SDK (assign GFOpenGPU-SDK:). For building "
+              "programs on this Amiga; the programs need the GFOpenGPU part to run. About 7 MB.\n\n"
+              "GFOpenInput: game controllers for every program (gfopeninput.library, new, off unless "
+              "picked). Joysticks and CD32 pads in the Amiga's ports, in one standard layout with "
+              "mappings for common pads, and Gamepads in SYS:Prefs to test them, map them and "
+              "choose which pad drives which port; an opt-in patch there lets older games see a "
+              "modern pad. OIList in a Shell lists them. On AmiCradle it sees the Amiga's ports "
+              "for now: the pads on the x86 or ARM64 cores come with a later AmiCradle.\n\n"
+              "GFOpenTLS: secure connections for the Open programs (gfopentls.library, new): TLS 1.2 "
+              "with the server's certificate checked against Mozilla's list of certificate "
+              "authorities, in S:GFOpenTLS (put your own in ENVARC:GFOpenTLS/certs). GFOpenFTP's FTPS, "
+              "GFOpenMail, OpenAmigaPython and OpenBrowser Lite use it, so it comes with each of them whatever is picked here; it brings GFOpenCrypto, "
+              "which does its sums on the x86 or ARM64 cores on AmiCradle.\n\n"
+              "GFOpenDrawer: drawer windows with an icon line (back, forward, the parent, places, "
+              "search), icons or a list sorted by name, size, date or kind, in the look's theme "
+              "(new, off unless picked). It runs beside Workbench: its icon in SYS:Utilities "
+              "opens SYS:, and drawers dropped on it open in its windows; in a Shell, GFOpenDrawer "
+              "and the drawers to open. Snapshot keeps a window's place, view and order in the "
+              "drawer's icon, as Workbench does.\n\n"
+              "GFOpenBench: the Team's own Workbench, with the dock and the Open preference "
+              "editors built in (new, a preview, off unless picked). It goes in SYS:System. The "
+              "Amiga runs it where its Startup-Sequence starts SYS:System/GFOpenBench in place of "
+              "LoadWB, as AmiCradle's own instances do; GFOpenUp doesn't change the "
+              "Startup-Sequence. On AmiCradle its Resize to Window fits Workbench to the window.\n\n"
+              "GFOpenDateTime: the date, the time and the region in one page of GFOpenPrefs, SYS:Preferences/Date & Time. "
+              "You pick a place, not an offset, and summer time follows by itself.\n\n"
+              "OpenAmigaPython: Python 2.7.18 for AmigaOS 3, OpenAmigaPython 2.7.18-ac3 (new, off "
+              "unless picked), in SYS:Tools/OpenAmigaPython, about 17 MB. Python: is assigned and "
+              "Python is on the Shell's path from the next start. ssl and https work through GFOpenTLS, "
+              "which comes with it; sockets need a network stack (GFOpenSocket, Roadshow or AmiTCP). "
+              "It needs a 68020 or later, and no FPU.")
+        (choices "GFOpenFTP: FTP and FTPS (new)"
+                 "Telegram, unofficial: needs setting up (new)"
+                 "GFOpenGPU developer files (new)"
+                 "GFOpenInput: game controllers (new)"
+                 "GFOpenTLS: secure connections (new)"
+                 "GFOpenDrawer: drawer windows (new)"
+                 "GFOpenBench: the Team's own Workbench (preview)"
+                 "GFOpenDateTime: date, time and region (new)"
+                 "OpenAmigaPython: Python 2.7 (new)")
+        (default #default2)))
+; The sixth page, GFOpenLibs (GFOpenUp 0.8.0): the Team's open libraries, one switch each, in place of OS 3.2's
+; own (amigachrome-guest libraries/OPEN_LIBRARIES.md, section 3). Only libraries whose ABI test against
+; OS 3.2's own is clean are offered, and none is ticked on a new install. Bits of #libs: 1 utility.library,
+; 2 mathieeedoubbas.library, 4 input.device, 8 OpenRexx. A library switched on already is ticked, so an
+; upgrade (a Novice one never shows the question) changes nothing; unticking one puts OS 3.2's own back.
+; OpenRexx is on when LIBS:rexxsyslib.library is 48 or later (OS 3.2's is 47.2).
+; 0.8.7: on the GFOpenKick ROM utility.library and input.device (OS 3.2's LoadModule, from S:Pre-LoadModule-Startup)
+; are never ticked, and one an earlier GFOpenUp switched on is taken out: under GFOpenKick that startup stopped the
+; boot with "device not mounted" (Instance-32, 20 October 2026). Their parts say "needs Kickstart" as well.
+(set #libs0 0)
+(if (exists "LIBS:GFOpenLibs/utility.module") (set #libs0 (bitor #libs0 1)))
+(if (exists "SYS:Storage/GFOpenUp-Superseded/LIBS/mathieeedoubbas.library") (set #libs0 (bitor #libs0 2)))
+(if (exists "LIBS:GFOpenLibs/input.device") (set #libs0 (bitor #libs0 4)))
+(if (exists "LIBS:rexxsyslib.library")
+    (if (>= (getversion "LIBS:rexxsyslib.library") 3145728) (set #libs0 (bitor #libs0 8))))
+(set #libs
+    (askoptions
+        (prompt "Open libraries, in place of OS 3.2's own (6 of 6)")
+        (help "The Team's own rewrites of AmigaOS libraries, each tested call for call against OS 3.2's "
+              "own. Each is off until you tick it, and unticking it puts OS 3.2's own back. A library "
+              "in the ROM (utility.library, input.device) is loaded by OS 3.2's own LoadModule and takes "
+              "the ROM's place from the next start: the Amiga restarts once by itself when it starts. "
+              "Unticked, the ROM's own comes back at the next start.\n\n"
+              "utility.library 47.100: tags, hooks, dates and 64-bit sums, run on the x86 or ARM64 cores "
+              "on AmiCradle. Needs a 68020 or later.\n\n"
+              "mathieeedoubbas.library 47.100: double-precision maths, run on the x86 or ARM64 cores on "
+              "AmiCradle. Needs a 68040 or 68060 with its FPU.\n\n"
+              "input.device 50.2: the keyboard and the mouse, with AmiCradle's pointer placed exactly "
+              "where the host's is, one setting for key repeat and acceleration for relative mice. "
+              "InputProbe INFO in a Shell says which input.device runs. Needs a 68020 or later.\n\n"
+              "OpenRexx 48: ARexx, the Team's own rexxsyslib.library and rexxsupport.library in OS 3.2's "
+              "place in LIBS:. OS 3.2's RexxMast and Rexxc commands work with them; OpenRexx's RexxMast is "
+              "added only where there is none. It takes over at the next start. Needs a 68040 or 68060 "
+              "with its FPU.")
+        (choices "utility.library 47.100 (68020)"
+                 "mathieeedoubbas.library 47.100 (68040 + FPU)"
+                 "input.device 50.2 (68020)"
+                 "OpenRexx 48: ARexx (68040 + FPU)")
+        (default (if #openkick (bitand #libs0 10) #libs0))))
+(set #cpu (database "cpu"))
+(if (and #openkick (bitand (bitor #libs #libs0) 5))
+    (
+        (message "This Amiga runs the GFOpenKick ROM. utility.library and input.device are loaded by OS 3.2's "
+                 "LoadModule, which is for Kickstart ROMs, so they are left out, and S:Pre-LoadModule-Startup "
+                 "is taken out where GFOpenUp put it. The ROM's own are used. Nothing else changed.")
+        (set #libs (bitand #libs 10))))
+; The ROM ones are loaded from S:Pre-LoadModule-Startup. Another program's file there keeps its place, and a
+; second LoadModule with another set would restart the Amiga for ever, so they are left out then.
+(if (and (bitand #libs 5) (exists "S:Pre-LoadModule-Startup")
+         (<> 0 (run "C:Search >NIL: S:Pre-LoadModule-Startup GFOpenLibs-Startup QUIET")))
+    (
+        (message "S:Pre-LoadModule-Startup belongs to another program (it loads modules of its own), so "
+                 "utility.library and input.device were left out. Nothing else changed.")
+        (set #libs (bitand #libs 10))))
+(if (and (bitand #libs 5) (or (= #cpu "68000") (= #cpu "68010")))
+    (
+        (message "utility.library and input.device need a 68020 or later, and this Amiga has a "
+                 #cpu ", so they were left out.")
+        (set #libs (bitand #libs 10))))
+(if (and (bitand #libs 2) (or (= (database "fpu") "NOFPU") (and (<> #cpu "68040") (<> #cpu "68060"))))
+    (
+        (message "mathieeedoubbas.library needs a 68040 or 68060 with its FPU, so it was left out.")
+        (set #libs (bitand #libs 13))))
+(if (and (bitand #libs 8) (or (= (database "fpu") "NOFPU") (and (<> #cpu "68040") (<> #cpu "68060"))))
+    (
+        (message "OpenRexx needs a 68040 or 68060 with its FPU, so it was left out.")
+        (set #libs (bitand #libs 7))))
+(set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft (bitand #g4 15) 27)))
+(set #parts2 #g5)
+; the fourth page's fifth choice is OpenBrowser Lite, #parts2's 512
+(if (bitand #g4 16) (set #parts2 (bitor #parts2 512)))
+; OpenBrowser Lite is built for a 68040 with its FPU: elsewhere it is left out, and doesn't pull in GFOpenTLS
+(if (and (bitand #parts2 512) (or (= (database "fpu") "NOFPU") (and (<> #cpu "68040") (<> #cpu "68060"))))
+    (
+        (message "OpenBrowser Lite needs a 68040 or 68060 with its FPU, which this Amiga doesn't have, "
+                 "so it was left out. Nothing else changed.")
+        (set #parts2 (bitand #parts2 511))))
+; OpenAmigaPython is built for a 68020 or later (no FPU): on a 68000 or 68010 it is left out, so
+; it doesn't pull in GFOpenTLS either
+(if (and (bitand #parts2 256) (or (= #cpu "68000") (= #cpu "68010")))
+    (
+        (message "OpenAmigaPython needs a 68020 or later, and this Amiga has a " #cpu
+                 ", so it was left out. Nothing else changed.")
+        (set #parts2 (bitand #parts2 255))))
+; GFOpenFTP's FTPS, GFOpenMail, OpenAmigaPython's ssl and OpenBrowser Lite's https:// need GFOpenTLS, and GFOpenTLS does its sums with GFOpenCrypto
+(if (bitand #parts2 1) (set #parts2 (bitor #parts2 16)))
+(if (bitand #parts 2097152) (set #parts2 (bitor #parts2 16)))
+(if (bitand #parts2 256) (set #parts2 (bitor #parts2 16)))
+(if (bitand #parts2 512) (set #parts2 (bitor #parts2 16)))
+(if (bitand #parts2 16) (set #parts (bitor #parts 268435456)))
+; GFOpenPuTTY needs GFOpenCrypto
+(if (bitand #parts 536870912) (set #parts (bitor #parts 268435456)))
+
+(set #theme "Open")
+(set #back "Open-light")
+; The theme the Amiga had (ENVARC:GFOpenGadTools/Look's first word, from GFOpenUpTool DETECT, read before
+; OLDLOOK below takes that file out): "" on a new install. Since 0.8.2 the theme only picks the
+; backdrop: Workbench's look is the OS's own (the ROM's on GFOpenKick), and no look is written. A Novice
+; (who never sees the question) keeps the theme in place, so the backdrop stays.
+(set #theme0 (getenv "GFOpenUp/Theme"))
+(set #pick -1)
+(if (= #theme0 "") (set #pick 0))
+(if (= #theme0 "Open") (set #pick 0))
+(if (= #theme0 "Glass") (set #pick 1))
+(if (= #theme0 "Graphite") (set #pick 2))
+(if (= #theme0 "Ember") (set #pick 3))
+(if (= #theme0 "Clear") (set #pick 4))
+(if (= #theme0 "Sky") (set #pick 5))
+(if (= #theme0 "Classic") (set #pick 6))
+(if (<> #theme0 "") (set #theme #theme0))
+(if (and (bitand #parts 16) (>= #pick 0))
+    (set #theme
+        (select
+            (askchoice
+                (prompt "Which backdrop?")
+                (help "Each theme's desktop, drawn for your screen's shape:\n"
+                      "Open: calm and flat, with one blue accent.\n"
+                      "Glass: steel-blue glass.\n"
+                      "Graphite: graphite and steel.\n"
+                      "Ember: warm greys with orange.\n"
+                      "Clear: flat and light.\n"
+                      "Sky: Open's colours with graduated blue.\n"
+                      "Classic: none; the backdrop stays as it is.\n\n"
+                      "Change it later with WBPattern in SYS:Prefs.")
+                (choices "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")
+                (default #pick))
+            "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")))
+; a new install, or another theme picked: its backdrop; the theme in place: the backdrop stays
+(set #newlook (or (= #theme0 "") (<> #theme #theme0)))
+; GFOpenUp's backdrops were there before this run: the backdrop chosen since stays unless the theme changes
+(set #hadback (exists "SYS:Prefs/Presets/Backdrops/GFOpenUp"))
+(set #back (cat #theme "-light"))
+; on AmiCradle, its own backdrop: the theme's colours with chrome sweeps
+(if #ac (set #back (cat #theme "-light-chrome")))
+(if (= #theme "Classic") (set #back ""))
+
+; Each part: GFOpenUpTool INSTALL, its messages in T:GFOpenUp.log.
+(run "Delete >NIL: T:GFOpenUp.log")
+; 0.8.2: the look's files an earlier GFOpenUp wrote (C:GFOpenLook and its startup line, the theme, Font and
+; IControl prefs) are taken out where they are still as it wrote them; the user's own stay (GFOpenUpTool OLDLOOK).
+; 0.8.3: so are the faces the GorillaIcons part gave the default icons (ENVARC:Sys/def_RAM, def_Harddisk,
+; def_Disk, def_Drawer...) and the volumes (SYS:Disk.info, Work:Disk.info), so the ROM's own icons show.
+; 0.8.4: and OS 3.2.3's own default icons (def_cd0, def_rad, def_card, def_kickstart, def_sys, def_work too) and
+; SYS:Disk.info, where they are as the OS installed them; and Gorilla's pictures on the other icons, where they
+; are as GFOpenUp gave them, so the GFOpenIcons part below gives those its own. Originals stay in SYS:Storage.
+(working "Taking out the old look")
+(run (cat #tool " OLDLOOK >>T:GFOpenUp.log"))
+(working "Installing GFOpenUp")
+(if (> (run (cat #tool " INSTALL Parts/GFOpenUp >>T:GFOpenUp.log")) 5)
+    (abort "GFOpenUp's own files didn't install. T:GFOpenUp.log says why; nothing else changed."))
+; GFOpenFont (24 Oct 2026), with every install on a 68040 or 68060 with its FPU (what gfopenfont.library is built for):
+; gfopenfont.library and DejaVu Sans, the font GFOpenBench's theme and the Open programs' look name. Without them their
+; text falls back to the screen's font.
+(if (and (exists "Parts/GFOpenFont/Part") (<> (database "fpu") "NOFPU")
+         (or (= (database "cpu") "68040") (= (database "cpu") "68060")))
+    (
+        (working "Installing GFOpenFont")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenFont >>T:GFOpenUp.log")) 5)
+            (message "GFOpenFont didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+; GFOpenBlanker, with its show Gods and Angels, comes with every install.
+(working "Installing GFOpenBlanker")
+(if (> (run (cat #tool " INSTALL Parts/GFOpenBlanker >>T:GFOpenUp.log")) 5)
+    (message "GFOpenBlanker didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+; GFOpenSnap (24 Oct 2026) comes with every install: Shift+Right Amiga+S takes the front screen, Shift+Right Amiga+W the
+; active window, each a dated PNG in SYS:Snapshots and an IFF picture on the clipboard. Its keys are its icon's tool
+; types, kept on an upgrade.
+(working "Installing GFOpenSnap")
+(if (> (run (cat #tool " INSTALL Parts/GFOpenSnap >>T:GFOpenUp.log")) 5)
+    (message "GFOpenSnap didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+; GFOpenPrefs (W48, 17 Oct 2026), every editor of ours in one window, comes with every install, before the parts
+; below (SYS:Preferences/GFOpenPrefs DOCK SAVE below runs it). Since the no-ROM-volume design (24 Oct 2026) it is in
+; SYS:Preferences, with an icon per page by its plain name; the old names' stubs in SYS:Prefs, SYS:Prefs/OpenPrefs
+; and C:OpenPrefs go to SYS:Storage/GFOpenUp-Superseded. Its GFOpenPrefs APPLY line (Sound's levels, Gamepads' patch,
+; the stack caps at boot) stays where the ROM doesn't apply them itself: not on the open ROM whose prefs task does.
+(working "Installing GFOpenPrefs")
+(if (> (run (cat #tool " INSTALL Parts/GFOpenPrefs >>T:GFOpenUp.log")) 5)
+    (message "GFOpenPrefs didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+; The Shell's font (24 Oct 2026), with every install: DejaVu Sans Mono in FONTS:, 8 to 24 pixels high, so Font prefs
+; offers every size for the System Default Text. The GFOpenKick ROM has the 11 itself and makes it the system default
+; text where no Font prefs name one; GFOpenUp writes no Font prefs (no installer of ours does, 20 Oct 2026).
+(if (exists "Parts/ShellFont/Part")
+    (
+        (working "Installing the Shell's font")
+        (if (> (run (cat #tool " INSTALL Parts/ShellFont >>T:GFOpenUp.log")) 5)
+            (message "The Shell's font didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+; A real AGA Amiga with Picasso96's library left behind and no Picasso96 board
+; running: SDL games hang at their video start. Ask to set it aside (6 Oct 2026).
+(if (= (run (cat #tool " P96LEFTOVER")) 5)
+    (if (askbool
+            (prompt "Picasso96's library is in LIBS:, but no Picasso96 graphics board is running.\n\n"
+                    "Programs that use SDL (many newer games) hang when they start their picture "
+                    "while it is there.\n\nSet LIBS:Picasso96API.library aside? It is kept in "
+                    "SYS:Storage/GFOpenUp-Superseded, and Uninstall-GFOpenUp puts it back.")
+            (help "Choose Yes unless you are about to fit a Picasso96 graphics card. Nothing else "
+                  "of Picasso96 is touched.")
+            (default 1))
+        (run (cat #tool " RETIRE LIBS:Picasso96API.library >>T:GFOpenUp.log"))))
+
+; Tata: early, so its line comes near the top of GFOpenUp's block in S:User-Startup
+(if (bitand #parts 1073741824)
+    (
+        (working "Installing Tata")
+        (if (> (run (cat #tool " INSTALL Parts/Tata >>T:GFOpenUp.log")) 5)
+            (message "Tata didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 1)
+    (
+        (working "Installing GFOpenSocket")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenSocket >>T:GFOpenUp.log")) 5)
+            (message "GFOpenSocket didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+(if (bitand #parts 2)
+    (
+        (working "Installing GFOpenPrint")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenPrint >>T:GFOpenUp.log")) 5)
+            (message "GFOpenPrint didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+        ; GFOpenPrinter: our printer.device in front of GFOpenPrint, the OS's printer drivers, editors and tools archived.
+        ; AmiCradle instances only: elsewhere, or where printer.device is another program's, it says so and
+        ; changes nothing (GFOpenUpTool answers 5, which isn't a failure)
+        (working "Installing GFOpenPrinter")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenPrinter >>T:GFOpenUp.log")) 5)
+            (message "GFOpenPrinter didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+(if (bitand #parts 4)
+    (
+        (working "Installing AmiCradleSharing")
+        (if (> (run (cat #tool " INSTALL Parts/AmiCradleSharing >>T:GFOpenUp.log")) 5)
+            (message "AmiCradleSharing didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+(if (bitand #parts 16)
+    (
+        (working "Installing the backgrounds")
+        (if (> (run (cat #tool " INSTALL Parts/Backdrops >>T:GFOpenUp.log")) 5)
+            (message "The backgrounds didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+        ; the theme's backdrop on a new install, a new theme, or the first time the backgrounds come;
+        ; an upgrade that keeps the look keeps the backdrop the user has too
+        (if (and (<> #back "") (or #newlook (not #hadback)))
+            (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/GFOpenUp/" #back " >>T:GFOpenUp.log")))
+        ; with a backdrop: Workbench as a backdrop (no frame, scroll bars or size gadget on its window), and
+        ; no fill gauge down the left border of drive windows (Workbench's own settings; up to 0.8.1 these
+        ; came with GFOpenLook)
+        (if (<> #back "")
+            (
+                (run (cat #tool " WBBACKDROP >>T:GFOpenUp.log"))
+                (run (cat #tool " WBGAUGE >>T:GFOpenUp.log"))))))
+
+(if (bitand #parts 32)
+    (
+        (working "Installing GFOpenTypes")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenTypes >>T:GFOpenUp.log")) 5)
+            (message "GFOpenTypes didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 64)
+    (
+        (working "Installing GFOpenCompress")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenCompress >>T:GFOpenUp.log")) 5)
+            (message "GFOpenCompress didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 128)
+    (
+        (working "Installing GFOpenService")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenService >>T:GFOpenUp.log")) 5)
+            (message "GFOpenService didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 8388608)
+    (
+        (working "Installing GFOpenMulticore")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenMulticore >>T:GFOpenUp.log")) 5)
+            (message "GFOpenMulticore didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 256)
+    (
+        (working "Installing GFOpenImage")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenImage >>T:GFOpenUp.log")) 5)
+            (message "GFOpenImage didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+        (if (not #ac)
+            (message "On this Amiga, GFOpenImage's datatypes for AVIF, HEIC, MP3, FLAC, video and documents "
+                     "only open files through GFOpenService and a Cradle paired over your network: "
+                     "without one, those files don't open (\"not implemented\"). "
+                     "PNG, WebP and WebM work on the Amiga itself.")
+            (if (not (bitand #parts 128))
+                (message "GFOpenImage's datatypes for AVIF, HEIC, FLAC, video and documents need GFOpenService "
+                         "and a services card or a paired Cradle. WebP and WebM work without them.")))))
+
+(if (bitand #parts 512)
+    (
+        (working "Installing GFOpenRTG")
+        ; 0.8.2: the part has no screen mode. Workbench's mode is the user's: on the GFOpenKick ROM Workbench opens
+        ; on GFOpenRTG's 16-bit screen by itself; on Kickstart 3.2.3 a new install asks, and the mode is written
+        ; only on Yes (Parts/GFOpenRTG/Mode). An upgrade never asks: the mode in place stays.
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenRTG >>T:GFOpenUp.log")) 5)
+            (message "GFOpenRTG didn't install completely. T:GFOpenUp.log says why.")
+            (if (and (not #rtgwas) (not #openkick))
+                (if (askbool
+                        (prompt "Put Workbench on GFOpenRTG's 16-bit screen now?\n\n"
+                                "On the GFOpenKick ROM it is there already: choose No. On Kickstart 3.2.3 "
+                                "choose Yes, or pick a mode later in ScreenMode prefs.")
+                        (help "Yes saves Workbench's screen mode as GFOpenRTG's 16-bit Native mode, the size of "
+                              "AmiCradle's window (ENVARC:Sys/ScreenMode.prefs). No leaves the mode as it is.")
+                        (default 0))
+                    (run (cat #tool " INSTALL Parts/GFOpenRTG/Mode >>T:GFOpenUp.log")))))))
+
+(if (bitand #parts 33554432)
+    (
+        (working "Installing GFOpenGPU")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenGPU >>T:GFOpenUp.log")) 5)
+            (message "GFOpenGPU didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+; Warp3D, as it always has, needs a 68040 or 68060 and its FPU. Wazp3D's
+; settings are taken over once (ENVARC:GFOpenAmiga/Wazp3D-taken says so), and
+; Wazp3D's own files stay where they are. On a real Amiga a graphics card's own
+; Warp3D (its drivers in LIBS:Warp3D/HWdrivers: a Permedia 2, Voodoo or ViRGE)
+; is left alone: away from AmiCradle GFOpenUp's Warp3D draws on the CPU, and
+; it would take that card's place.
+(if (bitand #parts 67108864)
+    (if (or (= (database "fpu") "NOFPU") (and (<> (database "cpu") "68040") (<> (database "cpu") "68060")))
+        (message "Warp3D needs a 68040 or 68060 with its FPU, and this Amiga doesn't have one, "
+                 "so it was left out. Nothing else changed.")
+      (if (and (not #ac) (exists "LIBS:Warp3D/HWdrivers"))
+        (message "This Amiga has a graphics card's own Warp3D (LIBS:Warp3D/HWdrivers). GFOpenUp's Warp3D "
+                 "draws on the CPU here and would take its place, so it was left out. Nothing else changed. "
+                 "(If those drivers are only Wazp3D's, GFOpenUpTool INSTALL Parts/Warp3D in a Shell installs it.)")
+        (
+            (working "Installing Warp3D")
+            (if (> (run (cat #tool " INSTALL Parts/Warp3D >>T:GFOpenUp.log")) 5)
+                (message "Warp3D didn't install completely. T:GFOpenUp.log says why; nothing else changed.")
+                (if (and (or (or (exists "ENVARC:Wazp3D.cfg") (exists "ENV:Wazp3D.cfg")) (exists "LIBS:soft3d.library"))
+                         (not (exists "ENVARC:GFOpenAmiga/Wazp3D-taken")))
+                    (if (< (run "C:Warp3DPrefs FROMWAZP3D SAVE >>T:GFOpenUp.log") 10)
+                        (textfile (dest "ENVARC:GFOpenAmiga/Wazp3D-taken") (append "GFOpenUp took Wazp3D's settings over for Warp3D.\n")))))))))
+
+(if (bitand #parts 134217728)
+    (
+        (working "Installing GFOpenDemos")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenDemos >>T:GFOpenUp.log")) 5)
+            (message "GFOpenDemos didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+        (if (not (exists "LIBS:GFOpenGPU/GL.module"))
+            (message "GFOpenDemos draws with GL, which comes with GFOpenGPU. Run Install-GFOpenUp "
+                     "again and pick GFOpenGPU too."))))
+
+(if (bitand #parts 268435456)
+    (
+        (working "Installing GFOpenCrypto")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenCrypto >>T:GFOpenUp.log")) 5)
+            (message "GFOpenCrypto didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 536870912)
+    (
+        (working "Installing GFOpenPuTTY")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenPuTTY >>T:GFOpenUp.log")) 5)
+            (message "GFOpenPuTTY didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 1024)
+    (
+        (working "Installing GFOpenWindows")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenWindows >>T:GFOpenUp.log")) 5)
+            (message "GFOpenWindows didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 2048)
+    (
+        (working "Installing GFOpenDock")
+        (set #first (not (exists "ENVARC:GFOpenDock/Dock")))
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenDock >>T:GFOpenUp.log")) 5)
+            (message "GFOpenDock didn't install completely. T:GFOpenUp.log says why; nothing else changed.")
+            ; the editor is GFOpenPrefs's Dock page (SYS:Prefs/OpenDock, its name's stub, from 0.7.4 to the
+            ; no-ROM-volume design)
+            (if #first (run "SYS:Preferences/GFOpenPrefs DOCK SAVE >>T:GFOpenUp.log")))))
+
+(if (bitand #parts 4096)
+    (
+        (working "Installing GFOpenUp Setup")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenUpSetup >>T:GFOpenUp.log")) 5)
+            (message "GFOpenUp Setup didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 8192)
+    (
+        (working "Installing GFOpenMenus")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenMenus >>T:GFOpenUp.log")) 5)
+            (message "GFOpenMenus didn't install completely. T:GFOpenUp.log says why; nothing else changed.")
+            (if (and (exists "ENVARC:MagicMenu.prefs") (not (exists "ENVARC:GFOpenMenus/Menus")))
+                (run "SYS:Preferences/GFOpenPrefs MENUS MAGICMENU ENVARC:MagicMenu.prefs SAVE >>T:GFOpenUp.log")))))
+
+(if (bitand #parts 16384)
+    (
+        (working "Installing GFOpenFiles")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenFiles >>T:GFOpenUp.log")) 5)
+            (message "GFOpenFiles didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+; GFOpenFiles 0.3 opens two thirds of the screen wide (@SacredTrees, 12 October
+; 2026). GFOpenWindows' Places would hand it back the full width an older
+; GFOpenFiles opened at, which nobody chose: once, that place is dropped. A
+; size given to the window after this is kept as ever.
+(if (and (bitand #parts 16384) (exists "SYS:Utilities/GFOpenFiles")
+         (>= (getversion "SYS:Utilities/GFOpenFiles") 3)
+         (not (exists "ENVARC:GFOpenAmiga/GFOpenFiles-place-reset")))
+    (
+        (run (cat #tool " UNPLACE GFOpenFiles >>T:GFOpenUp.log"))
+        (textfile (dest "ENVARC:GFOpenAmiga/GFOpenFiles-place-reset")
+                  (append "GFOpenUp dropped the window place an older GFOpenFiles left, once, so 0.3 opens at its own size.\n"))))
+
+(if (bitand #parts 32768)
+    (
+        (working "Installing GFOpenPlay")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenPlay >>T:GFOpenUp.log")) 5)
+            (message "GFOpenPlay didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 65536)
+    (
+        (working "Installing GFOpenMUI")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenMUI >>T:GFOpenUp.log")) 5)
+            (message "GFOpenMUI didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 131072)
+    (
+        (working "Installing GFOpenTitle")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenTitle >>T:GFOpenUp.log")) 5)
+            (message "GFOpenTitle didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 262144)
+    (
+        (working "Installing Sound")
+        ; Since 0.7.4 the Sound part's editor is GFOpenPrefs's (SYS:Preferences/Sound since the no-ROM-volume
+        ; design) and leaves the OS's SYS:Prefs/Sound alone, so
+        ; nothing is copied to SYS:Prefs/Classic any more: that copy was in no list, and Uninstall-GFOpenUp
+        ; left it behind. (GFOpenUpTool RECONCILE moves the OS's editor there, listed, when it is asked to.)
+        (if (> (run (cat #tool " INSTALL Parts/Sound >>T:GFOpenUp.log")) 5)
+            (message "Sound didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 524288)
+    (
+        (working "Installing GFOpenEdit")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenEdit >>T:GFOpenUp.log")) 5)
+            (message "GFOpenEdit didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+; GFOpenWrite needs the GFOffice part, the GFOffice Suite's shared files (owfwrite, owfcalc, owfpub and owfpresent.library,
+; z.library, the dictionary in SYS:Dictionaries, C:OWConvert): GFOpenUpTool leaves GFOpenWrite out without it ("needs part
+; GFOffice"), so it goes first
+(if (bitand #parts 1048576)
+    (
+        (working "Installing GFOffice's shared files")
+        (if (> (run (cat #tool " INSTALL Parts/GFOffice >>T:GFOpenUp.log")) 5)
+            (message "GFOffice's shared files didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+        (working "Installing GFOpenWrite")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenWrite >>T:GFOpenUp.log")) 5)
+            (message "GFOpenWrite didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 2097152)
+    (
+        (working "Installing GFOpenMail")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenMail >>T:GFOpenUp.log")) 5)
+            (message "GFOpenMail didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+
+(if (bitand #parts 4194304)
+    (if (not (exists "Parts/OpenBrowser/Part"))
+        (message "OpenBrowser comes in its own archive because it is large: "
+                 "GFOpenUp-" #version "-OpenBrowser.lha, from the same place as this pack.\n\n"
+                 "Unpack it where you unpacked GFOpenUp (it adds Parts/OpenBrowser to this "
+                 "drawer), then run Install-GFOpenUp again. Nothing else changes.")
+        (if (= (database "fpu") "NOFPU")
+            (message "OpenBrowser needs an FPU (a 68881, 68882, 68040 or 68060), and this "
+                     "Amiga doesn't have one, so it was left out. Nothing else changed.")
+            (
+                (working "Installing OpenBrowser")
+                (if (> (run (cat #tool " INSTALL Parts/OpenBrowser >>T:GFOpenUp.log")) 5)
+                    (message "OpenBrowser didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))))
+
+(if (bitand #parts2 512)
+    (if (exists "Parts/OpenBrowserLite/Part")
+        (
+            (working "Installing OpenBrowser Lite")
+            (if (> (run (cat #tool " INSTALL Parts/OpenBrowserLite >>T:GFOpenUp.log")) 5)
+                (message "OpenBrowser Lite didn't install completely. T:GFOpenUp.log says why; nothing else changed.")))))
+
+; GFOpenTLS before GFOpenFTP, which looks for it
+(if (bitand #parts2 16)
+    (if (exists "Parts/GFOpenTLS/Part")
+        (
+            (working "Installing GFOpenTLS")
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenTLS >>T:GFOpenUp.log")) 5)
+                (message "GFOpenTLS didn't install completely. T:GFOpenUp.log says why; nothing else changed.")))))
+; GFOpenMail (installed above) reaches mail servers only through GFOpenTLS
+(if (and (bitand #parts 2097152) (not (exists "LIBS:gfopentls.library")))
+    (message "GFOpenMail is installed, but it needs GFOpenTLS (gfopentls.library) to reach mail servers, "
+             "and it isn't on this Amiga yet.\n\n"
+             "Install GFOpenUp's GFOpenTLS part, then start GFOpenMail from SYS:Utilities/GFOpenMail."))
+(if (bitand #parts2 1)
+    (if (exists "Parts/GFOpenFTP/Part")
+        (
+            (working "Installing GFOpenFTP")
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenFTP >>T:GFOpenUp.log")) 5)
+                (message "GFOpenFTP didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+            (if (not (exists "LIBS:gfopentls.library"))
+                (message "GFOpenFTP is installed, and plain FTP works now.\n\n"
+                         "For FTPS (encrypted FTP) it needs GFOpenTLS (gfopentls.library), and it isn't "
+                         "on this Amiga yet. Install GFOpenUp's GFOpenTLS part when you want FTPS.")))))
+; OpenAmigaPython, after GFOpenTLS (its ssl module opens gfopentls.library): the Part its release makes,
+; in SYS:Tools/OpenAmigaPython/<version>; STARTUP below writes its Assign Python: and Path lines
+(if (bitand #parts2 256)
+    (if (exists "Parts/OpenAmigaPython/Part")
+        (
+            (working "Installing OpenAmigaPython")
+            (if (> (run (cat #tool " INSTALL Parts/OpenAmigaPython >>T:GFOpenUp.log")) 5)
+                (message "OpenAmigaPython didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+            (if (not (exists "LIBS:gfopentls.library"))
+                (message "OpenAmigaPython is installed. Its ssl module (https) needs GFOpenTLS "
+                         "(gfopentls.library), and it isn't on this Amiga yet: install GFOpenUp's "
+                         "GFOpenTLS part for it. Everything else works now.")))
+        (message "This pack was made without OpenAmigaPython, so it wasn't installed. Nothing else changed.")))
+(if (bitand #parts2 2)
+    (if (exists "Parts/Telegram/Part")
+        (
+            (working "Installing Unofficial Telegram for Amiga (Open)")
+            (if (> (run (cat #tool " INSTALL Parts/Telegram >>T:GFOpenUp.log")) 5)
+                (message "Unofficial Telegram didn't install completely. T:GFOpenUp.log says why; nothing else changed.")
+                (message "Unofficial Telegram for Amiga (Open) is installed, in SYS:Utilities.\n\n"
+                         "It needs setting up before it can reach Telegram: your own Telegram API key "
+                         "(free, from my.telegram.org), and Telegram's service on AmiCradle or a "
+                         "paired Cradle. Until then its window says what is missing.")))))
+(if (bitand #parts2 4)
+    (if (exists "Parts/GFOpenGPUDev/Part")
+        (
+            (working "Installing the GFOpenGPU developer files")
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenGPUDev >>T:GFOpenUp.log")) 5)
+                (message "The GFOpenGPU developer files didn't install completely. T:GFOpenUp.log says why; nothing else changed.")))))
+(if (bitand #parts2 8)
+    (if (exists "Parts/GFOpenInput/Part")
+        (
+            (working "Installing GFOpenInput")
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenInput >>T:GFOpenUp.log")) 5)
+                (message "GFOpenInput didn't install completely. T:GFOpenUp.log says why; nothing else changed.")))))
+(if (bitand #parts2 32)
+    (if (exists "Parts/GFOpenDrawer/Part")
+        (
+            (working "Installing GFOpenDrawer")
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenDrawer >>T:GFOpenUp.log")) 5)
+                (message "GFOpenDrawer didn't install completely. T:GFOpenUp.log says why; nothing else changed.")))))
+(if (bitand #parts2 64)
+    (if (exists "Parts/GFOpenBench/Part")
+        (
+            (working "Installing GFOpenBench")
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenBench >>T:GFOpenUp.log")) 5)
+                (message "GFOpenBench didn't install completely. T:GFOpenUp.log says why; nothing else changed.")))))
+(if (bitand #parts2 128)
+    (if (exists "Parts/GFOpenDateTime/Part")
+        (
+            (working "Installing GFOpenDateTime")
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenDateTime >>T:GFOpenUp.log")) 5)
+                (message "GFOpenDateTime didn't install completely. T:GFOpenUp.log says why; nothing else changed.")))))
+
+; GFOpenLibs (0.8.0): each library ticked is installed (an upgrade brings its newer build), and each one
+; unticked that was switched on is taken out, OS 3.2's own put back (GFOpenUpTool REMOVE). The ROM ones load with
+; OS 3.2's own LoadModule at the next start (S:GFOpenLibs-Startup), which loads the set again when it changes; with
+; the last ROM one unticked, LoadModule REMOVE NOREBOOT lets go of its modules at the next start. The startup
+; comes with the first library and goes with the last. A pack without Parts/GFOpenLibs changes nothing.
+(set #libchange (<> #libs #libs0))
+(if (exists "Parts/GFOpenLibs/Part")
+    (
+        ; the startup (S:GFOpenLibs-Startup and S:Pre-LoadModule-Startup) only with a ROM module: utility or input
+        ; (0.8.7; up to 0.8.6 with any library, so mathieeedoubbas.library or OpenRexx alone armed it too)
+        (if (bitand #libs 5)
+            (
+                (working "Installing GFOpenLibs")
+                (if (> (run (cat #tool " INSTALL Parts/GFOpenLibs >>T:GFOpenUp.log")) 5)
+                    (message "GFOpenLibs didn't install completely. T:GFOpenUp.log says why."))))
+        (if (bitand #libs 1)
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenLibs/utility >>T:GFOpenUp.log")) 5)
+                (message "utility.library didn't install completely. T:GFOpenUp.log says why."))
+            (if (bitand #libs0 1)
+                (run (cat #tool " REMOVE Parts/GFOpenLibs/utility >>T:GFOpenUp.log"))))
+        (if (bitand #libs 2)
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenLibs/mathieeedoubbas >>T:GFOpenUp.log")) 5)
+                (message "mathieeedoubbas.library didn't install completely. T:GFOpenUp.log says why."))
+            (if (bitand #libs0 2)
+                (run (cat #tool " REMOVE Parts/GFOpenLibs/mathieeedoubbas >>T:GFOpenUp.log"))))
+        (if (bitand #libs 4)
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenLibs/input >>T:GFOpenUp.log")) 5)
+                (message "input.device didn't install completely. T:GFOpenUp.log says why."))
+            (if (bitand #libs0 4)
+                (run (cat #tool " REMOVE Parts/GFOpenLibs/input >>T:GFOpenUp.log"))))
+        (if (bitand #libs 8)
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenLibs/rexx >>T:GFOpenUp.log")) 5)
+                (message "OpenRexx didn't install completely. T:GFOpenUp.log says why."))
+            (if (bitand #libs0 8)
+                (run (cat #tool " REMOVE Parts/GFOpenLibs/rexx >>T:GFOpenUp.log"))))
+        (if (and (and (bitand #libs0 5) (not (bitand #libs 5))) (not #openkick))
+            (run "C:LoadModule REMOVE NOREBOOT >>T:GFOpenUp.log"))
+        (if (and (not (bitand #libs 5)) (exists "S:GFOpenLibs-Startup"))
+            (run (cat #tool " REMOVE Parts/GFOpenLibs >>T:GFOpenUp.log")))
+        (if #libchange
+            (message "The open libraries change at the next start. With utility.library or "
+                     "input.device switched on, the Amiga restarts once by itself as it starts, "
+                     "so they take the ROM's place."))))
+
+; GFOpenIcons' pictures after the parts, so the drawers a part makes (SYS:Developer, from the GFOpenGPU developer
+; files) get theirs in the same run. An icon that has its picture already is left as it is (GFOpenUpTool 0.7.5),
+; and so is one the user changed since GFOpenUp last gave it a picture (0.8.4). A pack built with --no-openicons
+; has no Parts/GFOpenIcons: the icons keep their pictures.
+(if (bitand #parts 16777216)
+    (if (exists "Parts/GFOpenIcons/Part")
+        (
+            (working "Giving the system's icons GFOpenIcons' pictures")
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenIcons >>T:GFOpenUp.log")) 5)
+                (message "Some icons kept their old pictures. T:GFOpenUp.log says why; nothing else changed.")))
+        (message "This pack was made without GFOpenIcons, so the system's icons keep their pictures.")))
+
+; The Shell icon (24 Oct 2026), with every install: its WINDOW tool type without the 130, so a Shell from
+; SYS:System/Shell opens 80 x 24 of the system font, as NewShell's own window. After GFOpenIcons, which gives the
+; icon its picture first. Only that tool type changes; GFOpenUpTool REMOVE Parts/ShellIcon puts the 130 back.
+(if (exists "Parts/ShellIcon/Part")
+    (
+        (working "Opening the Shell icon's window 80 x 24")
+        (if (> (run (cat #tool " INSTALL Parts/ShellIcon >>T:GFOpenUp.log")) 5)
+            (message "The Shell icon's window kept its size. T:GFOpenUp.log says why; nothing else changed."))))
+
+; GFOpenUp 0.6.14 to 0.7.0 changed the default tool of about 40 of AmigaOS 3.2.3's own
+; icons (datatype descriptors, pointer presets, DOSDrivers, the Picasso96 guides...) to
+; GFOpenView by mistake. Once, put each one back: from the original GFOpenTypes kept, else
+; from the table of 3.2.3's own icons. Only an icon that opens GFOpenView now and whose
+; original is known is touched. ENVARC:GFOpenAmiga/DefaultTools-repair.log says what.
+(if (and (exists "Parts/GFOpenUp/StockDefaultTools")
+         (not (exists "ENVARC:GFOpenAmiga/DefaultTools-repaired")))
+    (
+        (working "Putting back default tools that GFOpenUp changed by mistake")
+        (if (= 0 (run (cat #tool " FIXTOOLS Parts/GFOpenUp/StockDefaultTools >>T:GFOpenUp.log")))
+            (textfile (dest "ENVARC:GFOpenAmiga/DefaultTools-repaired") (append "GFOpenUp put back the default tools that 0.6.14 to 0.7.0 changed by mistake.\n")))))
+
+; GFOpenView stands in MultiView's place (the GFOpenPrint part puts it at SYS:Utilities/MultiView and keeps
+; the original in SYS:Storage/GFOpenUp-Superseded), so everything that runs MultiView (default tools, Help,
+; programs, scripts) runs GFOpenView, for every kind of file a datatype reads. No icon is changed for that.
+; GFOpenUp 0.7.1 did it the other way, by moving the kinds of file (ENVARC:Sys/def_<kind>) from MultiView
+; to GFOpenView and leaving a marker; on this upgrade those go back to MultiView, which is GFOpenView now.
+(if (and (exists "ENVARC:GFOpenAmiga/GFOpenView-switched") (exists "Parts/GFOpenUp/StockDefaultTools"))
+    (
+        (working "Putting back the kinds of file that 0.7.1 moved to GFOpenView")
+        (if (= 0 (run (cat #tool " FIXTOOLS Parts/GFOpenUp/StockDefaultTools ALL >>T:GFOpenUp.log")))
+            (delete "ENVARC:GFOpenAmiga/GFOpenView-switched"))))
+
+; GFOpenFiles and GFOpenView on the dock, also a dock someone already has; the
+; rest of it is left alone, and a button already there isn't added twice.
+; (GFOpenPrefs's Dock page, SYS:Preferences/GFOpenPrefs DOCK, since the no-ROM-volume design)
+(if (exists "SYS:Preferences/GFOpenPrefs")
+    (run "SYS:Preferences/GFOpenPrefs DOCK ADD SYS:Utilities/GFOpenFiles SYS:Utilities/GFOpenPrint/GFOpenView SAVE >>T:GFOpenUp.log"))
+
+(set #rc (run (cat #tool " STARTUP >>T:GFOpenUp.log")))
+(if (> #rc 5)
+    (message "GFOpenUp couldn't write its lines in S:User-Startup. Is SYS: write-protected?"))
+
+; GFOpenUp's programs and settings in Workbench's Tools menu from now on, not
+; only after the reboot: GFOpenUpMenu starts, or the one already running (an
+; upgrade) shows what was just installed
+(if (exists "SYS:C/GFOpenUpMenu")
+    (run "Run >NIL: SYS:C/GFOpenUpMenu"))
+
+; (quiet): no stock "can be found in your Work: drawer" box after ours
+(exit
+    (cat "GFOpenUp " #version " is installed.\n\n"
+         "Reboot the Amiga to start everything.\n\n"
+         "To take it out again, run Uninstall-GFOpenUp from SYS:Utilities/GFOpenUp, "
+         "or GFOpenUpTool UNINSTALL in a Shell.")
+    (quiet))

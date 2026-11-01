@@ -1,6 +1,6 @@
 #!/bin/sh
-# OpenCalculator (OpenCalc until 25 October 2026) with the os32 stove (m68k-amigaos-gcc, NDK 3.2): the portable engine (src/opencalc.c,
-# OpenUp Desktop Tools 0.1) and its Workbench window (src/calc_amiga.c).
+# GFOpenCalculator (GFOpenCalc until 25 October 2026) with the os32 stove (m68k-amigaos-gcc, NDK 3.2): the portable engine (src/opencalc.c,
+# GFOpenUp Desktop Tools 0.1) and its Workbench window (src/calc_amiga.c).
 #   OGT=/path/to/opengadtools OpenCalculator/build.sh [OUT_DIR] (default build/os3)
 # 68040 with soft float, as every Open app (the specs file keeps libm020); -lm for the engine's sin, cos, log and pow.
 # MIT, Copyright (c) 2026 AmigaChrome Team.
@@ -8,16 +8,16 @@ set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 # soft float: link libnix's libm020, not libm881 (specs/m68k-soft-m68040.specs)
 SPECS="$(cd "$HERE/../../.." && pwd)/specs/m68k-soft-m68040.specs"
-STOVE=${STOVE:-$HOME/AmigaChrome/stoves/os32}
+STOVE=${STOVE:-$HOME/AmiCradle/stoves/os32}
 CC=${CC:-"$STOVE/prefix/bin/m68k-amigaos-gcc"}
 OGT=${OGT:-$HERE/../../../../opengadtools}
 OUT=${1:-$HERE/build/os3}
 [ -f "$OGT/lib/ogt_font.c" ] || { echo "build.sh: set OGT to a checkout of opengadtools (lib/ogt_font.c)" >&2; exit 1; }
 CFLAGS="-noixemul -m68040 -specs=$SPECS -std=gnu99 -Wall -Werror -O2 -fno-delete-null-pointer-checks -fno-common -I$HERE/include -I$OGT/lib"
-# OpenAmigaGCC 16.2.0-open3's late-combine pass can store a copy one place late (GCC PR 123853; OpenUpTool's
+# GFOpenAmigaGCC 16.2.0-open3's late-combine pass can store a copy one place late (GCC PR 123853; GFOpenUpTool's
 # manifest came out so): off until open4 (openamigagcc #29), on a compiler that knows the option (GCC 6.5 doesn't).
 if "$CC" -fno-late-combine-instructions -S -o /dev/null -x c /dev/null 2>/dev/null; then CFLAGS="$CFLAGS -fno-late-combine-instructions"; fi
 mkdir -p "$OUT"
-"$CC" $CFLAGS -o "$OUT/OpenCalculator" "$HERE/src/calc_amiga.c" "$HERE/src/opencalc.c" \
+"$CC" $CFLAGS -o "$OUT/GFOpenCalculator" "$HERE/src/calc_amiga.c" "$HERE/src/opencalc.c" \
     "$OGT/lib/ogt_theme.c" "$OGT/lib/ogt_look.c" "$OGT/lib/ogt_font.c" -lm
-echo "$OUT/OpenCalculator ($(wc -c < "$OUT/OpenCalculator") bytes)"
+echo "$OUT/GFOpenCalculator ($(wc -c < "$OUT/GFOpenCalculator") bytes)"

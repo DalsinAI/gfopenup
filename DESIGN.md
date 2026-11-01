@@ -1,4 +1,4 @@
-# OpenUp: design
+# GFOpenUp: design
 
 We, 4 October 2026:
 - "one 'upgrade' or some cool name for us installing it on a base 3.2.3
@@ -6,7 +6,7 @@ We, 4 October 2026:
 - "so it's: install 3.2.3, run our 'upgrade' or 'unifier' or 'extender' pack"
 - "and it's ready to boot on a PiStorm, our appliance, real Amiga"
 
-This is the Open family as one thing a user installs: the platform of
+This is the GFOpen family as one thing a user installs: the platform of
 `OPEN_SDK_DESIGN.md`, and the mission test, delivered.
 
 ## 1. The promise
@@ -17,83 +17,83 @@ This is the Open family as one thing a user installs: the platform of
    printing, mail, archives and file types, with nothing more to read.
 
 **The same pack** works on a real Amiga (with whatever cards it has), on a
-PiStorm (Emu68), in an AmigaChrome instance, and on the appliance.
+PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
 
 ## 2. What it finds, and what it installs
 
 | Machine | Found by | Display | Network | Also |
 | --- | --- | --- | --- | --- |
-| AmigaChrome instance, the appliance | AmigaChrome Team $DA15 boards in expansion.library's list: ACRTG (product 9, the 16 MiB board, or 15, the 64 MiB one), the OpenSocket card (6), ACStorage | OpenRTG with `ACRTG.card`, `ACRTG.chip` and OpenGPU's `ACRTG.gpu` | OpenSocket's host backend | accontrol: the shared clipboard, files and pace |
-| PiStorm | Emu68's own resources | The PiStorm's RTG through OpenRTG once its driver exists; until then the installed Picasso96 stays. VideoCore later for OpenGPU and OpenMedia | OpenSocketDirect over `wifipi.device` or `genet.device` | |
-| A real Amiga | The boards in expansion.library's list, the CPU and FPU, the chipset | OpenRTG where it has a driver for the card, and AGA through OpenRTG's AGA card; otherwise the installed Picasso96 or CyberGraphX stays | OpenSocketDirect over the card's SANA-II driver, or the installed Roadshow or AmiTCP if the user keeps it | |
+| AmiCradle instance, the appliance | AmigaChrome Team $DA15 boards in expansion.library's list: ACRTG (product 9, the 16 MiB board, or 15, the 64 MiB one), the GFOpenSocket card (6), ACStorage | GFOpenRTG with `ACRTG.card`, `ACRTG.chip` and GFOpenGPU's `ACRTG.gpu` | GFOpenSocket's host backend | accontrol: the shared clipboard, files and pace |
+| PiStorm | Emu68's own resources | The PiStorm's RTG through GFOpenRTG once its driver exists; until then the installed Picasso96 stays. VideoCore later for GFOpenGPU and GFOpenMedia | GFOpenSocketDirect over `wifipi.device` or `genet.device` | |
+| A real Amiga | The boards in expansion.library's list, the CPU and FPU, the chipset | GFOpenRTG where it has a driver for the card, and AGA through GFOpenRTG's AGA card; otherwise the installed Picasso96 or CyberGraphX stays | GFOpenSocketDirect over the card's SANA-II driver, or the installed Roadshow or AmiTCP if the user keeps it | |
 
 **The rest is the same everywhere:**
 - `zunemaster.library`, plus the `muimaster.library` passthrough where no MUI
   is installed;
-- OpenGadTools' classes and the look;
-- OpenPrint and OpenView, OpenTypes, OpenCompress, OpenMail, and OpenBrowser
+- GFOpenGadTools' classes and the look;
+- GFOpenPrint and GFOpenView, GFOpenTypes, GFOpenCompress, GFOpenMail, and OpenBrowser
   when it's ready;
 - the SDL and Mesa runtime libraries;
 - the Shell's font: DejaVu Sans Mono in `FONTS:` as Amiga bitmap fonts, 8
   to 24 pixels high (openamigafont's `fonts/amiga`), for Font prefs' System
-  Default Text (24 October 2026). The OpenKick ROM carries the 11 and makes
-  it the system default text where no Font prefs name one; OpenUp writes no
+  Default Text (24 October 2026). The GFOpenKick ROM carries the 11 and makes
+  it the system default text where no Font prefs name one; GFOpenUp writes no
   Font prefs. [docs/shell-font.png](docs/shell-font.png): the Shell in topaz 8,
   in the 12 from Font prefs, and in the ROM's 11 on its dark background.
 - The Shell icon: `SYS:System/Shell.info`'s tool type
   `WINDOW=CON:0///130/AmigaShell/CLOSE/ICONIFY` loses its 130 (24 October
   2026), so a Shell from the icon opens 80 x 24 of the system font, as
   NewShell's own window does. Only that tool type changes; the icon as it was
-  is kept in `SYS:Storage/OpenUp-Superseded`, and `OpenUpTool REMOVE
+  is kept in `SYS:Storage/GFOpenUp-Superseded`, and `GFOpenUpTool REMOVE
   Parts/ShellIcon` puts the 130 back ([docs/shell-icon.png](docs/shell-icon.png)).
-- OpenFont: openfont.library (openamigafont) in `LIBS:`, and DejaVu Sans as an
+- GFOpenFont: gfopenfont.library (openamigafont) in `LIBS:`, and DejaVu Sans as an
   outline font it draws (`FONTS:DejaVuSans.font`, `.otag` and
   `_ttf/DejaVuSans.ttf`), on a 68040 or 68060 with its FPU (24 October
-  2026). OpenBench's theme names DejaVu Sans 13 and the Open programs' look
+  2026). GFOpenBench's theme names DejaVu Sans 13 and the Open programs' look
   DejaVu Sans 12; without the library their text falls back to the screen's
   font ([docs/openbench-labels.png](docs/openbench-labels.png)).
 
-TLS is OpenTLS's (opentls.library, with OpenCrypto): OpenMail, OpenFTP's
-FTPS, OpenPrint's IPPS and httpget use it, and the pack doesn't look for
+TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
+FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
 or offer AmiSSL.
 
 ## 3. Rules
 
 - **The base OS stays as shipped.** The pack adds. Anything it replaces goes
-  to `SYS:Storage/OpenUp-Superseded`, listed in a log, and one uninstaller
+  to `SYS:Storage/GFOpenUp-Superseded`, listed in a log, and one uninstaller
   puts everything back.
 - **It never overwrites another stack, RTG system or MUI without asking.**
-  These are the rules of OpenSocket, OpenRTG and OpenMUI.
+  These are the rules of GFOpenSocket, GFOpenRTG and GFOpenMUI.
 - **Novice and Expert.** A Novice user gets the recommended answer to every
   question; an Expert sees each choice.
-- **An icon that is already there keeps its default tool.** OpenUp offers
-  OpenView for pictures, text, guides and documents through OpenTypes' kinds
-  of file (the default icons, `ENVARC:Sys/def_<kind>`; `OpenTypes SWITCH`
+- **An icon that is already there keeps its default tool.** GFOpenUp offers
+  GFOpenView for pictures, text, guides and documents through GFOpenTypes' kinds
+  of file (the default icons, `ENVARC:Sys/def_<kind>`; `GFOpenTypes SWITCH`
   without `IN`), never by rewriting the `.info` files of existing files. 0.6.14
-  to 0.7.0 did (`SWITCH ... IN SYS:`, with an OpenTypes bug that changed about
+  to 0.7.0 did (`SWITCH ... IN SYS:`, with a GFOpenTypes bug that changed about
   40 of 3.2.3's own icons: datatype descriptors, pointer presets, DOSDrivers,
-  Picasso96 guides, Help). `OpenUpTool FIXTOOLS <table> [ALL]` puts them back,
+  Picasso96 guides, Help). `GFOpenUpTool FIXTOOLS <table> [ALL]` puts them back,
   once, in 0.7.1's upgrade: an icon is changed only if its default tool is
-  OpenView now and its original is known, from OpenTypes' own record
-  (`ENVARC:OpenTypes/Changes` and the icons it kept in `Backup`) first, else
+  GFOpenView now and its original is known, from GFOpenTypes' own record
+  (`ENVARC:GFOpenTypes/Changes` and the icons it kept in `Backup`) first, else
   from `pack/StockDefaultTools` (names and tool strings of 3.2.3's icons, made
   by `tools/stock_default_tools.py` from a clean install). The kinds of file
-  that named MultiView stay on OpenView (that is the offer); `ALL`, which
-  UNINSTALL gives, puts those back too. `ENVARC:OpenAmiga/DefaultTools-repair.log`
+  that named MultiView stay on GFOpenView (that is the offer); `ALL`, which
+  UNINSTALL gives, puts those back too. `ENVARC:GFOpenAmiga/DefaultTools-repair.log`
   says what changed; `DefaultTools-repaired` marks that it ran.
 - **Startup changes are marked.** They go in a marked block in `S:User-Startup`.
-  The one exception is `C:OpenRTG`, early in `S:Startup-Sequence` on
+  The one exception is `C:GFOpenRTG`, early in `S:Startup-Sequence` on
   machines whose board has no boot ROM. It too is marked, with the old file
   kept.
 - **Re-running a newer pack upgrades in place.** A manifest in
-  `ENVARC:OpenAmiga/` lists what is installed, with versions; ACBuild's
-  AmigaChrome Tools tab can read it. An upgrade keeps what the user chose: a
-  look already saved in `ENVARC:OpenGadTools/Look` keeps its theme, mode,
+  `ENVARC:GFOpenAmiga/` lists what is installed, with versions; ACBuild's
+  AmiCradle Tools tab can read it. An upgrade keeps what the user chose: a
+  look already saved in `ENVARC:GFOpenGadTools/Look` keeps its theme, mode,
   profile and other lines, and its backdrop (the Installer's look question
   starts on that theme; another theme picked changes only the theme, through
-  `OpenUpTool THEME`). Only a new install gets OpenUp's own look. A part's
+  `GFOpenUpTool THEME`). Only a new install gets GFOpenUp's own look. A part's
   `face` lines write an icon only when it hasn't got the picture yet.
-  UNINSTALL takes OpenUp's own marks out of `ENVARC:OpenAmiga`
+  UNINSTALL takes GFOpenUp's own marks out of `ENVARC:GFOpenAmiga`
   (`Reconcile.done`, `Tidy.done`, `Setup.done`, `Backdrop.tone`) and leaves
   the user's settings there (`Sound`, `PrefsView`, `Startup.off`).
 - **Errors say what to do next,** in plain words (the mission test).
@@ -104,7 +104,7 @@ or offer AmiSSL.
 
 - **Aminet:** one LhA archive.
 - **Real machines:** an ADF and an HDF.
-- **AmigaChrome:** the AmigaChrome Team tools drive in instances, and Cradle's recipes
+- **AmiCradle:** the AmigaChrome Team tools drive in instances, and Cradle's recipes
   for new OS 3.2.3 instances. Instances and real machines get the same pack.
 - **The appliance:** its first build carries it, demonstrating every Open
   standard.
@@ -113,19 +113,19 @@ or offer AmiSSL.
 
 | Phase | Delivers | Done when |
 | --- | --- | --- |
-| 1 | The Installer, machine detection, the manifest and the uninstaller; OpenUp Setup with the startup switches (section 6); what is ready now: OpenSocket, OpenPrint and OpenView, and accontrol's tools in AmigaChrome | A fresh OS 3.2.3 scratch copy, plus the pack, prints and reaches the network after one reboot; the uninstaller returns it to clean. **0.1 done, 5 October 2026, for AmigaChrome instances, with OpenLook too (`docs/history/VALIDATION.md`); Setup and the startup switches are next** |
-| 2 | Each Open part as it lands: OpenRTG, `zunemaster.library` and the passthrough, OpenGadTools, OpenTypes, OpenCompress, OpenMail, OpenBrowser | Each works after the pack is re-run |
+| 1 | The Installer, machine detection, the manifest and the uninstaller; GFOpenUp Setup with the startup switches (section 6); what is ready now: GFOpenSocket, GFOpenPrint and GFOpenView, and accontrol's tools in AmiCradle | A fresh OS 3.2.3 scratch copy, plus the pack, prints and reaches the network after one reboot; the uninstaller returns it to clean. **0.1 done, 5 October 2026, for AmiCradle instances, with GFOpenLook too (`docs/history/VALIDATION.md`); Setup and the startup switches are next** |
+| 2 | Each Open part as it lands: GFOpenRTG, `zunemaster.library` and the passthrough, GFOpenGadTools, GFOpenTypes, GFOpenCompress, GFOpenMail, OpenBrowser | Each works after the pack is re-run |
 | 3 | PiStorm and real-Amiga detection, with testers' hardware | The same pack on a PiStorm and on a real A1200 with an RTG card |
-| 4 | Cradle's OS 3.2.3 recipe applies the pack; the appliance ships it | A new instance from Cradle comes up with the Open family |
-| 5 | OpenUp Update (section 6); OpenStart if we say yes. OpenUp Picks is no longer a requirement (the Team, 8 October 2026) | A pack installed today updates itself on request. **Update built (OpenUpTool UPDATE, Cradle's side live, 8 October 2026); the GitHub step is next** |
+| 4 | Cradle's OS 3.2.3 recipe applies the pack; the appliance ships it | A new instance from Cradle comes up with the GFOpen family |
+| 5 | GFOpenUp Update (section 6); OpenStart if we say yes. GFOpenUp Picks is no longer a requirement (the Team, 8 October 2026) | A pack installed today updates itself on request. **Update built (GFOpenUpTool UPDATE, Cradle's side live, 8 October 2026); the GitHub step is next** |
 
-**Name and repository:** OpenUp (We, 4 October 2026: "OpenUp it is"),
+**Name and repository:** GFOpenUp (We, 4 October 2026: "GFOpenUp it is"),
 `DalsinAI/openamigaup`.
 
-## 6. What AmiKit tries to be, in OpenUp
+## 6. What AmiKit tries to be, in GFOpenUp
 
 We, 4 October 2026: "I would like a lot of what AmiKit tries to be, to be
-part of OpenUp".
+part of GFOpenUp".
 
 **What AmiKit is.** Jan Zahurancik's AmiKit (since 2005, now AmiKit X13;
 commercial, by subscription) turns the user's own AmigaOS 3.x into a modern,
@@ -142,24 +142,24 @@ good-looking desktop with over 400 programs installed and set up.
 starts, kept up to date, with nothing to hunt for. That is our mission too,
 and it's the part we take.
 
-| AmiKit | OpenUp | |
+| AmiKit | GFOpenUp | |
 | --- | --- | --- |
 | Everything set up out of the box | One Installer on the user's own OS 3.2.3; a Novice gets the recommended answer to every question | Take |
-| AmiKit Setup, a first-boot app for settings | **OpenUp Setup**, a GadTools app that runs once at first boot. It sets the theme, the screen mode (with OpenRTG's boot to RTG), the network on or off, the printer, and which programs to add. It stays in Prefs to run again | Take |
-| Morpheuz's Startup Manager: each patch on or off | **Startup switches** in OpenUp Setup: every line OpenUp put in its marked startup block, in plain words, each with a switch that cleanly takes it out | Take |
-| Visual themes, Dark mode, a 32-bit desktop, FullHD wallpapers | OpenGadTools' themes (Classic, Open in the OS 4 style, Graphite in the AmiKit style, Retro; Open and Graphite light or dark, with simple gradient backgrounds; its THEME_SPEC.md), and its Theme Builder in Utilities for making your own on a true-colour desktop from boot (OpenRTG `RESIDENT`), with AGA and four-colour forms. Our own art and wallpapers | Take, our way |
-| A dozen overlapping look patches (VisualPrefs, Birdie, MCP, MagicMenu and more) | One look in OpenGadTools, one prefs page, "off is off" | Ours is simpler |
-| Antialiased TrueType (TTEngine, AfA_OS) | OpenGadTools' smooth text (its section 2b), or AAText until that is ready | Take |
+| AmiKit Setup, a first-boot app for settings | **GFOpenUp Setup**, a GadTools app that runs once at first boot. It sets the theme, the screen mode (with GFOpenRTG's boot to RTG), the network on or off, the printer, and which programs to add. It stays in Prefs to run again | Take |
+| Morpheuz's Startup Manager: each patch on or off | **Startup switches** in GFOpenUp Setup: every line GFOpenUp put in its marked startup block, in plain words, each with a switch that cleanly takes it out | Take |
+| Visual themes, Dark mode, a 32-bit desktop, FullHD wallpapers | GFOpenGadTools' themes (Classic, Open in the OS 4 style, Graphite in the AmiKit style, Retro; Open and Graphite light or dark, with simple gradient backgrounds; its THEME_SPEC.md), and its Theme Builder in Utilities for making your own on a true-colour desktop from boot (GFOpenRTG `RESIDENT`), with AGA and four-colour forms. Our own art and wallpapers | Take, our way |
+| A dozen overlapping look patches (VisualPrefs, Birdie, MCP, MagicMenu and more) | One look in GFOpenGadTools, one prefs page, "off is off" | Ours is simpler |
+| Antialiased TrueType (TTEngine, AfA_OS) | GFOpenGadTools' smooth text (its section 2b), or AAText until that is ready | Take |
 | DualPNG icons with their own icon.library | GlowIcons-style colour icons for everything, on OS 3.2's own icon.library | Ours |
-| Directory Opus 5 in place of Workbench | OpenFiles beside Workbench; making it the default for drawers is a switch, off by default | Ours |
+| Directory Opus 5 in place of Workbench | GFOpenFiles beside Workbench; making it the default for drawers is a switch, off by default | Ours |
 | AmiStart start menu (six designs) and a Mini Launcher | To decide: question 1 below | Ask |
-| Registered MUI 5, under AmiKit's own licence | OpenMUI: MUI programs run through Zune with nothing to buy. A user's own MUI is left alone | Ours, free |
-| 400+ programs installed | ~~OpenUp Picks~~: no longer a requirement (the Team, 8 October 2026). OpenUp installs the Open family only; other programs stay the user's choice | Not taken |
+| Registered MUI 5, under AmiKit's own licence | GFOpenMUI: MUI programs run through Zune with nothing to buy. A user's own MUI is left alone | Ours, free |
+| 400+ programs installed | ~~GFOpenUp Picks~~: no longer a requirement (the Team, 8 October 2026). GFOpenUp installs the GFOpen family only; other programs stay the user's choice | Not taken |
 | FPU builds swapped for non-FPU ones | The Installer picks each program's build for the CPU and FPU it finds (section 2) | Take |
-| LiveUpdate, by subscription | **OpenUp Update**, free: it checks for a newer pack and re-runs it in place (section 3's manifest). It never runs on its own, and it shows what will change first | Take, free |
+| LiveUpdate, by subscription | **GFOpenUp Update**, free: it checks for a newer pack and re-runs it in place (section 3's manifest). It never runs on its own, and it shows what will change first | Take, free |
 | KIT, an optional AI helper (AmigaGPT 3) | Guided tours first: show, don't send people to guides. An assistant later, optional and off by default (question 3) | Later |
-| Rabbit Hole (host programs from the Amiga desktop); Dropbox and Google Drive folders | On AmigaChrome, the shared clipboard, files dropped in and the PC's folders already work. Starting host programs from Workbench is a candidate for Cradle | Partly there |
-| Emulators first (WinUAE, Amiberry); its PiStorm edition still being tuned | The same pack on a real Amiga, a PiStorm, AmigaChrome and the appliance | Ours |
+| Rabbit Hole (host programs from the Amiga desktop); Dropbox and Google Drive folders | On AmiCradle, the shared clipboard, files dropped in and the PC's folders already work. Starting host programs from Workbench is a candidate for Cradle | Partly there |
+| Emulators first (WinUAE, Amiberry); its PiStorm edition still being tuned | The same pack on a real Amiga, a PiStorm, AmiCradle and the appliance | Ours |
 | Closed, by subscription | MIT and free; one uninstaller puts the OS back | Ours |
 | Grown from OS 3.9 and AfA_OS; OS 3.2 users can't move straight to X13 | Built on OS 3.2.3 as Hyperion ships it | Ours |
 
@@ -168,58 +168,58 @@ ClassicWB and Coffin). We don't copy its artwork, themes, wallpapers or
 exclusive builds.
 
 **Questions for us:**
-1. ~~A start menu or launcher~~ **Decided (5 October 2026): OpenDock**,
+1. ~~A start menu or launcher~~ **Decided (5 October 2026): GFOpenDock**,
    not a start menu: "an opendock that reads existing dock formats, but is
    closer to the behavior of the mac version". It reads the docks people
    already have (ToolManager docks, AmigaOS 4's AmiDock, DOpus button banks
    among them) and behaves like the Mac's: running programs marked, click to
    start or bring to the front, drag to add or take away, magnification.
-2. ~~**OpenUp Picks:** which programs, and how many ticked by default?~~ **Decided (8 October 2026): Picks is not a requirement.**
+2. ~~**GFOpenUp Picks:** which programs, and how many ticked by default?~~ **Decided (8 October 2026): Picks is not a requirement.**
 3. **An assistant like KIT:** later, or not at all?
 
-## 7. OpenUp in Workbench's Tools menu
+## 7. GFOpenUp in Workbench's Tools menu
 
 The user, 7 October 2026: "introduce menu options under tools for the
 openup applications, an extra menu item called preferences".
 
-`OpenUpMenu` (`src/openupmenu.c`, about 10 KB, installed by the OpenUp part
-to `SYS:C/OpenUpMenu`) puts two sub-menus in Workbench's Tools menu:
+`GFOpenUpMenu` (`src/openupmenu.c`, about 10 KB, installed by the GFOpenUp part
+to `SYS:C/GFOpenUpMenu`) puts two sub-menus in Workbench's Tools menu:
 
 | Tools > | Holds |
 | --- | --- |
-| OpenUp | OpenFiles, OpenEdit, OpenWrite, OpenPlay, OpenView, OpenCompress, OpenMail, OpenBrowser; then "OpenUp Update..." |
-| Preferences | Theme, Dock, Sound, Date & Time, Input, Gamepads, Serial, Printers, Network, File Types, Tata, OpenUp Setup |
+| GFOpenUp | GFOpenFiles, GFOpenEdit, GFOpenWrite, GFOpenPlay, GFOpenView, GFOpenCompress, GFOpenMail, OpenBrowser; then "GFOpenUp Update..." |
+| Preferences | Theme, Dock, Sound, Date & Time, Input, Gamepads, Serial, Printers, Network, File Types, Tata, GFOpenUp Setup |
 
 - **Only what is installed shows.** Each entry is shown when its program is
   where the pack puts it (`tools/build_pack.py`), so a part left out leaves
   no dead entry. Since 10 October 2026 every editor of ours in SYS:Prefs is
-  Open... (OpenLook, OpenDock, OpenSound, OpenDateTime, OpenInput, OpenSerial,
-  OpenTypes, OpenTata, OpenUp-Setup; the user: "either all are Open x or none
-  are"), and the OS's own editors we replace are in SYS:Prefs/Classic. "OpenUp
-  Update..." needs an OpenUpTool with `UPDATE`. OpenBlanker has no editor
+  Open... (GFOpenLook, GFOpenDock, OpenSound, GFOpenDateTime, GFOpenInput, OpenSerial,
+  GFOpenTypes, GFOpenTata, GFOpenUp-Setup; the user: "either all are Open x or none
+  are"), and the OS's own editors we replace are in SYS:Prefs/Classic. "GFOpenUp
+  Update..." needs a GFOpenUpTool with `UPDATE`. GFOpenBlanker has no editor
   yet, so it has no entry. Since 24 October 2026 (the no-ROM-volume design,
-  section 10) OpenPrefs's pages are icons in `SYS:Preferences` by their plain
+  section 10) GFOpenPrefs's pages are icons in `SYS:Preferences` by their plain
   names: an entry for a page opens its icon, else
-  `SYS:Preferences/OpenPrefs <SECTION>`, and shows when either is there.
+  `SYS:Preferences/GFOpenPrefs <SECTION>`, and shows when either is there.
 - **Choosing one is a double-click:** `OpenWorkbenchObjectA`, so the icon's
-  stack and tool types count. Icons selected on Workbench go with an OpenUp
-  program as files to open (not OpenEdit's, which is an IconX script).
-  "OpenUp Update..." runs `OpenUpTool UPDATE` in a window, where it shows
+  stack and tool types count. Icons selected on Workbench go with a GFOpenUp
+  program as files to open (not GFOpenEdit's, which is an IconX script).
+  "GFOpenUp Update..." runs `GFOpenUpTool UPDATE` in a window, where it shows
   what changes and asks first.
-- **Starting.** A `startup Run >NIL: C:OpenUpMenu` line in OpenUp's block in
-  `S:User-Startup`. That runs before `LoadWB`, so OpenUpMenu tries every two
+- **Starting.** A `startup Run >NIL: C:GFOpenUpMenu` line in GFOpenUp's block in
+  `S:User-Startup`. That runs before `LoadWB`, so GFOpenUpMenu tries every two
   seconds until Workbench takes its entries, then only waits on its two
   message ports (no polling). That is sturdier than a WBStartup icon: it
-  needs no icon, is in Setup's startup switches like every OpenUp line, and
+  needs no icon, is in Setup's startup switches like every GFOpenUp line, and
   goes with the block on uninstall. The Installer also starts it at the
   end, so the menus are there before the reboot.
-- **One at a time.** Its public port is `OpenUpMenu`. Run again, it tells the
+- **One at a time.** Its public port is `GFOpenUpMenu`. Run again, it tells the
   running one to build its menus anew (the Installer does this after an
-  upgrade). `OpenUpMenu QUIT`, or Ctrl-C, takes the entries out and ends it;
-  Uninstall-OpenUp runs `QUIT` before `OpenUpTool UNINSTALL`, so the menus
-  go at once. `OpenUpMenu LIST` prints what the menus hold.
+  upgrade). `GFOpenUpMenu QUIT`, or Ctrl-C, takes the entries out and ends it;
+  Uninstall-GFOpenUp runs `QUIT` before `GFOpenUpTool UNINSTALL`, so the menus
+  go at once. `GFOpenUpMenu LIST` prints what the menus hold.
 - **Older Workbenches.** Sub-menus need workbench.library 44.1511. Before
-  that, the entries are flat: "OpenUp: OpenFiles", "Preferences: Look".
+  that, the entries are flat: "GFOpenUp: GFOpenFiles", "Preferences: Look".
 
-![Tools > OpenUp on OS 3.2.3, with OpenMenus and the Open light theme](docs/tools-menu-openup.png)
+![Tools > GFOpenUp on OS 3.2.3, with GFOpenMenus and the Open light theme](docs/tools-menu-openup.png)
 ![Tools > Preferences](docs/tools-menu-preferences.png)

@@ -6,204 +6,204 @@ Version:      0.8.11
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
-OpenUp sets up an AmigaOS 3.2.3 installation in one go. Install AmigaOS 3.2.3,
-run OpenUp, reboot: graphics on every monitor, networking, MUI programs,
+GFOpenUp sets up an AmigaOS 3.2.3 installation in one go. Install AmigaOS 3.2.3,
+run GFOpenUp, reboot: graphics on every monitor, networking, MUI programs,
 printing, mail, archives and file types all work, with nothing more to read.
 
 It finds what it is running on (a real Amiga with its cards, a PiStorm, or
-AmigaChrome) and installs the Open family to match. Anything it replaces is
+AmiCradle) and installs the GFOpen family to match. Anything it replaces is
 kept, and one uninstaller puts everything back.
 
-Version 0.7 is for AmigaChrome instances. Its Installer installs, as you
+Version 0.7 is for AmiCradle instances. Its Installer installs, as you
 choose:
-- OpenSocket: the network, through the x86 or ARM64 cores (bsdsocket.library
+- GFOpenSocket: the network, through the x86 or ARM64 cores (bsdsocket.library
   4.3);
-- OpenPrint and OpenView: printing to PDF and network printers, and viewing; OpenView takes
-  MultiView's place, so whatever opened MultiView opens OpenView (MultiView is kept);
-- AmigaChrome sharing: the clipboard and files, shared in and out of the
+- GFOpenPrint and GFOpenView: printing to PDF and network printers, and viewing; GFOpenView takes
+  MultiView's place, so whatever opened MultiView opens GFOpenView (MultiView is kept);
+- AmiCradle sharing: the clipboard and files, shared in and out of the
   Amiga, and an optional Send Out icon to drop files on;
 - Backgrounds: a theme's desktop as Workbench's backdrop, for your screen
-  (Open, Glass, Graphite, Ember, Clear or Sky). Since 0.8.2 that is all OpenUp
-  changes of Workbench's look: the rest is the OS's own, or the OpenKick ROM's,
-  and an upgrade takes out the look files an earlier OpenUp wrote (OpenLook
+  (Open, Glass, Graphite, Ember, Clear or Sky). Since 0.8.2 that is all GFOpenUp
+  changes of Workbench's look: the rest is the OS's own, or the GFOpenKick ROM's,
+  and an upgrade takes out the look files an earlier GFOpenUp wrote (GFOpenLook
   and its theme) where you haven't changed them. Your Font and IControl prefs
   stay as they are (0.8.7);
-- OpenTypes: which program opens each kind of file (SYS:Preferences/File Types);
-- OpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
+- GFOpenTypes: which program opens each kind of file (SYS:Preferences/File Types);
+- GFOpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
   gzip, from its window in SYS:Utilities or from the Shell;
-- OpenService: services from AmigaChrome's boards and from a Cradle you pair
-  with (DEVS:openservice.device, and C:Nursery to list them); nothing goes on
+- GFOpenService: services from AmiCradle's boards and from a Cradle you pair
+  with (DEVS:gfopenservice.device, and C:Nursery to list them); nothing goes on
   the network until a Cradle is paired.
-- OpenImage: datatypes for PNG and Targa (TGA) pictures (the Team's own decoders),
+- GFOpenImage: datatypes for PNG and Targa (TGA) pictures (the Team's own decoders),
   WebP and WebM on the Amiga itself, and through
-  OpenService for AVIF, HEIC, JPEG XL, camera RAW, SVG, FLAC, Ogg, MP3, MIDI,
+  GFOpenService for AVIF, HEIC, JPEG XL, camera RAW, SVG, FLAC, Ogg, MP3, MIDI,
   MP4 and other video, and office documents, and music modules: MOD, MED,
   Oktalyzer, DigiBooster, XM, S3M, IT, played on the Amiga itself through
   AHI, with the mixing on another core when there is one;
   datatypes already there stay;
-- OpenWindows: windows snap to edges and to each other, Amiga+Tab switches
+- GFOpenWindows: windows snap to edges and to each other, Amiga+Tab switches
   between them, a double-click in a title bar brings the window to the
   front, the wheel scrolls the window under the pointer, and programs'
   windows open where they were last left, Workbench drawers too if you like
   (Windows in SYS:Preferences);
-- OpenDock: a dock for your programs, starting with ToolManager's, AmiDock's
+- GFOpenDock: a dock for your programs, starting with ToolManager's, AmiDock's
   or AmiStart's buttons when you have one (Dock in SYS:Preferences);
-- OpenUp Setup: a few questions at the next start, and the startup switches;
-- OpenMenus: menus in the theme's look, from the screen bar or at the
+- GFOpenUp Setup: a few questions at the next start, and the startup switches;
+- GFOpenMenus: menus in the theme's look, from the screen bar or at the
   pointer, and a menu for each icon and for the desktop on the right button,
   with MagicMenu's settings taken over; the bar can sit at any edge of the
   screen, and the menus work from the keyboard;
-- OpenFiles (new): a file manager with two panes and
+- GFOpenFiles (new): a file manager with two panes and
   tabs, a bar of drive buttons, safe copies, a trashcan on each disk and undo
   (SYS:Utilities);
-- OpenPlay (new): a media player for everything the datatypes open, with a
+- GFOpenPlay (new): a media player for everything the datatypes open, with a
   playlist and a slideshow (SYS:Utilities);
-- OpenTitle (new): AmigaChrome's logo, the free chip and fast memory, a
+- GFOpenTitle (new): AmiCradle's logo, the free chip and fast memory, a
   clock, and a cog at the right end that opens any settings editor, on the
   title bar, set in SYS:Preferences/Title Bar; beside the cog, the taskspace holds
   other programs' icons (Tata's first);
 - Sound (new): the volume, Amiga sound (Paula) and AHI sound in one editor,
   and a speaker on the menu bar (SYS:Preferences/Sound; the OS's own Sound
-  editor stays where it is); it also carries OpenAHI, the Team's own AHI for AmigaChrome's
+  editor stays where it is); it also carries GFOpenAHI, the Team's own AHI for AmiCradle's
   ACAHI sound board: ahi.device, the board's driver acaudio.audio and its modes
   in DEVS:, and AHI's settings on the Host mix mode (kept if you have your own).
-  OpenAHI is MIT licensed and has no Aminet code in it, and it goes only onto
-  AmigaChrome machines, never onto a real Amiga or a PiStorm;
-- OpenEdit (new): a text editor with tabs, find and replace, and colours
-  for scripts and code (C:OpenEdit);
-- OpenBlanker (new, always installed): the screen blanker; after five minutes
-  without a key or the mouse it plays Gods and Angels, AmigaChrome's homage
+  GFOpenAHI is MIT licensed and has no Aminet code in it, and it goes only onto
+  AmiCradle machines, never onto a real Amiga or a PiStorm;
+- GFOpenEdit (new): a text editor with tabs, find and replace, and colours
+  for scripts and code (C:GFOpenEdit);
+- GFOpenBlanker (new, always installed): the screen blanker; after five minutes
+  without a key or the mouse it plays Gods and Angels, AmiCradle's homage
   to the people who made the Amiga and kept it alive
-  (SYS:Tools/Commodities/OpenBlanker; ENV:OpenPrefs/Blanker sets the seconds);
+  (SYS:Tools/Commodities/GFOpenBlanker; ENV:GFOpenPrefs/Blanker sets the seconds);
 - The Shell's font (new, always installed): DejaVu Sans Mono in FONTS:, 8
   to 24 pixels high, fixed width, for Font in SYS:Prefs ("System default
-  text"); the OpenKick ROM's own Shell font is its 11, and OpenUp changes no
+  text"); the GFOpenKick ROM's own Shell font is its 11, and GFOpenUp changes no
   Font prefs;
 - The Shell icon (new, always): a Shell from SYS:System/Shell opens 80
   columns by 24 rows, as NewShell's own window, not 130 pixels high (its
-  WINDOW tool type loses the 130; OpenUpTool REMOVE Parts/ShellIcon puts it
+  WINDOW tool type loses the 130; GFOpenUpTool REMOVE Parts/ShellIcon puts it
   back);
-- OpenFont (new, always installed on a 68040 or 68060 with its FPU):
-  openfont.library and DejaVu Sans, the font OpenBench's labels and the Open
+- GFOpenFont (new, always installed on a 68040 or 68060 with its FPU):
+  gfopenfont.library and DejaVu Sans, the font GFOpenBench's labels and the Open
   programs draw their text in (without them, the screen's font);
-- OpenWrite (new): a word processor for DOCX, ODT and Amiga documents,
+- GFOpenWrite (new): a word processor for DOCX, ODT and Amiga documents,
   with PDF export, printing, spelling and an ARexx port
-  (SYS:Utilities/OpenWrite). It comes with GFOffice, the GFOffice Suite's
+  (SYS:Utilities/GFOpenWrite). It comes with GFOffice, the GFOffice Suite's
   shared files: its four libraries (owfwrite, owfcalc, owfpub and
   owfpresent.library, which replace owf.library), z.library, the dictionary
   in SYS:Dictionaries and C:OWConvert for scripts;
-- OpenMail (new, a preview, off unless picked): a mail reader for IMAP mail
+- GFOpenMail (new, a preview, off unless picked): a mail reader for IMAP mail
   over TLS, set up from the address for Gmail, Outlook and others
-  (SYS:Utilities/OpenMail); it reaches mail servers through OpenTLS,
+  (SYS:Utilities/GFOpenMail); it reaches mail servers through GFOpenTLS,
   which comes with it;
 - OpenBrowser Lite 0.4.1 (new): a small web browser, about 100 KB and no
   WebKit (SYS:Utilities/OpenBrowserLite): pages laid out with headings,
   lists, links, pictures through datatypes and their CSS, no JavaScript;
-  https:// through OpenTLS, which comes with it. Ticked on a 68040 or 68060
+  https:// through GFOpenTLS, which comes with it. Ticked on a 68040 or 68060
   with its FPU, which it needs;
 - OpenBrowser (new, a preview, off unless picked): a web browser built on
-  WebKit, in its own archive, OpenUp-<version>-OpenBrowser.lha, unpacked
+  WebKit, in its own archive, GFOpenUp-<version>-OpenBrowser.lha, unpacked
   beside the pack; it needs an FPU and is best on a 68040;
-- OpenMulticore (new): openmulticore.library, so programs can hand work to
-  the other cores of AmigaChrome's cores board (music modules in OpenPlay
+- GFOpenMulticore (new): gfopenmulticore.library, so programs can hand work to
+  the other cores of AmiCradle's cores board (music modules in GFOpenPlay
   do), or to the main CPU where there is no board; OMCTest checks it and
   OMCBench measures it (SYS:Tools);
-- OpenMUI (preview, off unless picked): zunemaster.library, MUI built from
+- GFOpenMUI (preview, off unless picked): zunemaster.library, MUI built from
   AROS's Zune for OS 3.x, beside MUI, with ZuneTest (SYS:Tools). Where
   LIBS:muimaster.library is absent it also installs a muimaster.library
   (version 19, MUI 3.8's) that passes every call to Zune, so MUI programs
   run; a MUI you installed is never touched, and the uninstaller removes the
   face;
-- OpenRTG (new, off unless picked; ticked on the OpenKick ROM with an ACRTG
-  board, since 0.8.7): Workbench on OpenRTG's own 16-bit screen
-  on AmigaChrome's graphics board, without Picasso96, whose monitor for that
+- GFOpenRTG (new, off unless picked; ticked on the GFOpenKick ROM with an ACRTG
+  board, since 0.8.7): Workbench on GFOpenRTG's own 16-bit screen
+  on AmiCradle's graphics board, without Picasso96, whose monitor for that
   board is put aside and comes back with the uninstaller. It brings
-  openrtg.library 0.19.1, whose Native modes follow the size of AmigaChrome's
-  window, with opengpu.library 0.16 and the board's driver; an upgrade brings
+  gfopenrtg.library 0.19.1, whose Native modes follow the size of AmiCradle's
+  window, with gfopengpu.library 0.16 and the board's driver; an upgrade brings
   it up to date where it is installed and keeps the screen mode you chose.
-  Since 0.8.2 OpenUp writes a screen mode only when a new install asks and you
-  say Yes (on the OpenKick ROM Workbench is on that screen by itself);
-- OpenGPU (new): opengpu.library 0.15, so programs' drawing and SDL 2 games
+  Since 0.8.2 GFOpenUp writes a screen mode only when a new install asks and you
+  say Yes (on the GFOpenKick ROM Workbench is on that screen by itself);
+- GFOpenGPU (new): gfopengpu.library 0.15, so programs' drawing and SDL 2 games
   run on the x86 or ARM64 cores and GL (Mesa) on the GPU, through
-  AmigaChrome's graphics board, and on the Amiga's own CPU where there is no
-  board; OpenGfx, the faster graphics.library drawing, is inside it now
-  (opengfx.library 1.2 stays for programs that open it); SDL 2 (with
-  SDL2_image and SDL2_mixer) and GL are modules in LIBS:OpenGPU, loaded
+  AmiCradle's graphics board, and on the Amiga's own CPU where there is no
+  board; GFOpenGfx, the faster graphics.library drawing, is inside it now
+  (gfopengfx.library 1.2 stays for programs that open it); SDL 2 (with
+  SDL2_image and SDL2_mixer) and GL are modules in LIBS:GFOpenGPU, loaded
   once, kept resident and shared by every program that asks; TinyGL
-  programs run on GL too (LIBS:tinygl.library), and C:OpenGPUCheck checks
+  programs run on GL too (LIBS:tinygl.library), and C:GFOpenGPUCheck checks
   it;
 - Warp3D and MiniGL (new): Warp3D.library 5.0 and minigl.library 29
-  (OpenGL 1.1) on OpenGPU, for Warp3D and MiniGL games and programs; they
+  (OpenGL 1.1) on GFOpenGPU, for Warp3D and MiniGL games and programs; they
   need a 68040 or 68060 with its FPU; a Warp3D.library already there
   (Wazp3D's) is kept, and Wazp3D's settings are taken over (C:Warp3DPrefs
   changes them; W3DTest and MGLTest in SYS:Tools show them working); on a
   real Amiga with a graphics card's own Warp3D (LIBS:Warp3D/HWdrivers) the
   part is left out, so the card keeps drawing;
-- Icons: OpenIcons, the Team's own icon set (look B, the look of the OpenKick
+- Icons: GFOpenIcons, the Team's own icon set (look B, the look of the GFOpenKick
   ROM's own icons), as new pictures for the system's own drawers, programs
-  and file types' icons (0.8.4, in place of Gorilla), and OpenUp's own
-  drawers drawn the same way (OpenIcons 0.2); the old pictures are
+  and file types' icons (0.8.4, in place of Gorilla), and GFOpenUp's own
+  drawers drawn the same way (GFOpenIcons 0.2); the old pictures are
   kept and come back with the uninstaller. Not the default icons (RAM, hard
   disk, floppy, drawer, tool, project, trashcan...) or SYS:'s own disk icon:
   those are the ROM's own, and an upgrade takes out OS 3.2.3's and the ones
-  an earlier OpenUp gave, unless you changed them;
-- OpenCrypto (new): opencrypto.library 2.0, the sums behind secure
+  an earlier GFOpenUp gave, unless you changed them;
+- GFOpenCrypto (new): gfopencrypto.library 2.0, the sums behind secure
   connections (SSH's key exchanges, host keys, SHA-2, AES), on the x86 or
-  ARM64 cores on AmigaChrome and on the Amiga's own CPU elsewhere;
-- OpenTLS (new, off unless picked; it comes with OpenFTP, OpenMail and
-  OpenAmigaPython): opentls.library,
-  secure connections (TLS 1.2) for the Open programs, OpenFTP's FTPS first,
-  with its sums through OpenCrypto; the server's certificate is checked
-  against Mozilla's list of certificate authorities (S:OpenTLS, MPL-2.0,
-  its licence beside it; your own go in ENVARC:OpenTLS/certs);
-- OpenPuTTY (new, off unless picked): PuTTY 0.85 for AmigaOS 3.2 on
-  OpenCrypto, with SSH, Telnet and serial terminals and key sign-in
-  (SYS:Utilities/OpenPuTTY); it brings OpenCrypto with it and needs a
+  ARM64 cores on AmiCradle and on the Amiga's own CPU elsewhere;
+- GFOpenTLS (new, off unless picked; it comes with GFOpenFTP, GFOpenMail and
+  OpenAmigaPython): gfopentls.library,
+  secure connections (TLS 1.2) for the Open programs, GFOpenFTP's FTPS first,
+  with its sums through GFOpenCrypto; the server's certificate is checked
+  against Mozilla's list of certificate authorities (S:GFOpenTLS, MPL-2.0,
+  its licence beside it; your own go in ENVARC:GFOpenTLS/certs);
+- GFOpenPuTTY (new, off unless picked): PuTTY 0.85 for AmigaOS 3.2 on
+  GFOpenCrypto, with SSH, Telnet and serial terminals and key sign-in
+  (SYS:Utilities/GFOpenPuTTY); it brings GFOpenCrypto with it and needs a
   network stack;
-- OpenDemos (new, off unless picked): Boing, Chrome Gears and Copper Tunnel,
-  three small 3D demos in GL on OpenGPU (SYS:Utilities/OpenDemos);
+- GFOpenDemos (new, off unless picked): Boing, Chrome Gears and Copper Tunnel,
+  three small 3D demos in GL on GFOpenGPU (SYS:Utilities/GFOpenDemos);
 - Tata (new, off unless picked while it is 0.x): before a program runs or
   a file opens, Tata checks it against a list of programs and files known
-  to crash, draw wrongly or fail on AmigaOS 3.2.3 or with OpenUp
+  to crash, draw wrongly or fail on AmigaOS 3.2.3 or with GFOpenUp
   (S:Tata.known), and asks first; its window is SYS:Prefs/Tata, its icon
   sits on the title bar, and "Tata OFF" in a Shell turns it off;
-- OpenFTP (new, off unless picked): FTP and FTPS in two panes, with a site
-  manager (SYS:Utilities/OpenFTP); plain FTP works as it is; FTPS works
-  through OpenTLS (opentls.library), which comes with it;
+- GFOpenFTP (new, off unless picked): FTP and FTPS in two panes, with a site
+  manager (SYS:Utilities/GFOpenFTP); plain FTP works as it is; FTPS works
+  through GFOpenTLS (gfopentls.library), which comes with it;
 - Unofficial Telegram for Amiga (Open) (new, a preview, off unless picked):
   Telegram chats in a window (SYS:Utilities/UnofficialTelegram); it isn't
   made by Telegram, and it needs setting up first: your own Telegram API key
-  (free, from my.telegram.org) and Telegram's service on AmigaChrome's x86 or
+  (free, from my.telegram.org) and Telegram's service on AmiCradle's x86 or
   ARM64 cores or a paired Cradle; until then its window says what is missing;
-- OpenGPU developer files (new, off unless picked): SDL 2's, SDL 1.2's,
+- GFOpenGPU developer files (new, off unless picked): SDL 2's, SDL 1.2's,
   OpenGL's and GLA's headers and link libraries, with examples, in
-  SYS:Developer/OpenGPU-SDK (assign OpenGPU-SDK:), for building programs on
+  SYS:Developer/GFOpenGPU-SDK (assign GFOpenGPU-SDK:), for building programs on
   the Amiga;
-- OpenInput (new, off unless picked): openinput.library, game controllers
+- GFOpenInput (new, off unless picked): gfopeninput.library, game controllers
   for every program in one standard layout, with C:OIList, and Gamepads in
   SYS:Prefs to test and map pads and choose which drives which port (an
-  opt-in patch there lets older games see a modern pad); on AmigaChrome it
+  opt-in patch there lets older games see a modern pad); on AmiCradle it
   sees the Amiga's ports for now;
-- OpenDrawer (new, off unless picked): drawer windows with an icon line,
+- GFOpenDrawer (new, off unless picked): drawer windows with an icon line,
   icons or a list sorted by name, size, date or kind, search and Snapshot,
-  in the look's theme, beside Workbench (SYS:Utilities/OpenDrawer; drawers
+  in the look's theme, beside Workbench (SYS:Utilities/GFOpenDrawer; drawers
   dropped on its icon open in its windows);
-- OpenBench (new, a preview, off unless picked): the Team's own Workbench,
+- GFOpenBench (new, a preview, off unless picked): the Team's own Workbench,
   with the dock and the Open preference editors built in, in SYS:System; it
-  runs where the Startup-Sequence starts SYS:System/OpenBench in place of
-  LoadWB, as AmigaChrome's own instances do (OpenUp doesn't change the
-  Startup-Sequence); on AmigaChrome it follows the window, and Resize to
+  runs where the Startup-Sequence starts SYS:System/GFOpenBench in place of
+  LoadWB, as AmiCradle's own instances do (GFOpenUp doesn't change the
+  Startup-Sequence); on AmiCradle it follows the window, and Resize to
   Window fits Workbench to it;
-- OpenDateTime (new): the date, the time and the region in one editor
+- GFOpenDateTime (new): the date, the time and the region in one editor
   (SYS:Preferences/Date & Time); you pick a place, not an offset, and summer time
   follows by itself;
 - OpenAmigaPython (new, off unless picked): Python 2.7.18 for AmigaOS 3,
   OpenAmigaPython 2.7.18-ac3, in SYS:Tools/OpenAmigaPython, with Python:
   assigned and on the Shell's path from the next start; ssl and https work
-  through OpenTLS, which comes with it, and sockets need a network stack
-  (OpenSocket, Roadshow or AmiTCP); any Amiga with a 68020 or later, no FPU
+  through GFOpenTLS, which comes with it, and sockets need a network stack
+  (GFOpenSocket, Roadshow or AmiTCP); any Amiga with a 68020 or later, no FPU
   needed;
-- OpenLibs (new, each off unless picked): the Team's own rewrites of
+- GFOpenLibs (new, each off unless picked): the Team's own rewrites of
   AmigaOS libraries in place of OS 3.2's, one switch each on the Installer's
   sixth page, offered only once each one's test against OS 3.2's own, call
   for call, is clean: utility.library 47.100 (a 68020 or later),
@@ -212,24 +212,24 @@ choose:
   rexxsyslib.library and rexxsupport.library (a 68040 or 68060 with its
   FPU; OS 3.2's RexxMast and Rexxc commands work with them). The ROM ones are loaded by OS 3.2's
   own LoadModule, so the Amiga restarts once by itself as it starts;
-  unticking one puts OS 3.2's own back. On the OpenKick ROM, which has its
+  unticking one puts OS 3.2's own back. On the GFOpenKick ROM, which has its
   own, those two are left out (0.8.7), and an S:Pre-LoadModule-Startup an
-  earlier OpenUp wrote there is taken out.
-OpenPrefs, every settings editor of ours in one window, has a drawer of its
+  earlier GFOpenUp wrote there is taken out.
+GFOpenPrefs, every settings editor of ours in one window, has a drawer of its
 own, SYS:Preferences: the program, and an icon for each page by its plain
 name (Theme, Screen Mode, Fonts, Sound, Date & Time, File Types...). The
-drawer is on the Shell's path, so "OpenPrefs SOUND" works there. The old
+drawer is on the Shell's path, so "GFOpenPrefs SOUND" works there. The old
 editors' names in SYS:Prefs, SYS:Prefs/OpenPrefs and C:OpenPrefs go to
-SYS:Storage/OpenUp-Superseded. SYS:Prefs keeps the OS's own (Env-Archive,
-Presets, Classic), OpenTata and OpenUp-Setup. On the open ROM, which applies
+SYS:Storage/GFOpenUp-Superseded. SYS:Prefs keeps the OS's own (Env-Archive,
+Presets, Classic), GFOpenTata and GFOpenUp-Setup. On the open ROM, which applies
 Sound's levels, the gamepads and the stack caps itself at boot, User-Startup
-no longer runs OpenPrefs APPLY; under OS 3.2.3's own ROM it does.
-Workbench's Tools menu gets two sub-menus (new): OpenUp, with the Open
-programs that are installed (and OpenUp Update...), and Preferences, with
+no longer runs GFOpenPrefs APPLY; under OS 3.2.3's own ROM it does.
+Workbench's Tools menu gets two sub-menus (new): GFOpenUp, with the Open
+programs that are installed (and GFOpenUp Update...), and Preferences, with
 their settings editors (Theme, Dock, Sound, Date & Time, Input, Gamepads,
-Serial, Printers, Network, File Types, Tata, OpenUp Setup). SYS:C/OpenUpMenu keeps them there; "OpenUpMenu
+Serial, Printers, Network, File Types, Tata, GFOpenUp Setup). SYS:C/GFOpenUpMenu keeps them there; "GFOpenUpMenu
 QUIT" takes them out.
-OpenSnap (new, always installed; SYS:Tools/Commodities/OpenSnap, started at
+GFOpenSnap (new, always installed; SYS:Tools/Commodities/GFOpenSnap, started at
 boot) takes pictures of the screen. Shift + Right Amiga + S takes the whole
 front screen, Shift + Right Amiga + W the active window (its frame too).
 Each goes to SYS:Snapshots as a dated PNG (Snapshot-2026-10-24-15.42.07.png,
@@ -237,32 +237,32 @@ a window's with its title after the time) and onto the clipboard as an IFF
 picture, so Right Amiga + V pastes it into a paint program. A short message
 on the title bar says where it went. RTG screens of any depth and the
 Amiga's own screens (AGA, HAM and Extra Half-Brite too) all work. The PNG
-needs OpenImage (openpng.datatype 47.4 and z.library); without it the
+needs GFOpenImage (openpng.datatype 47.4 and z.library); without it the
 picture is saved as IFF. The keys, the drawer and the clipboard are its
 icon's tool types (SCREENKEY, WINDOWKEY, DRAWER, CLIPBOARD), and Exchange
 lists it.
-From a PC, in an AmigaChrome instance's window: the right Windows key and
+From a PC, in an AmiCradle instance's window: the right Windows key and
 the Menu key are both Right Amiga. On Windows, Win + Shift + S is the
 Snipping Tool's, and on Ubuntu (GNOME), Super + Shift + S is the screenshot
 tool's, so Windows or GNOME takes that one before the browser sees it: use
 the Menu key there (Shift + Menu + S, Shift + Menu + W). On a PC without a
 Menu key, give a key the Right Amiga in Cradle's keyboard mapper, or give
-OpenSnap other keys in its icon's tool types. On a Mac, Cmd + Shift + W
+GFOpenSnap other keys in its icon's tool types. On a Mac, Cmd + Shift + W
 closes the browser window, so set WINDOWKEY to another key there.
-OpenMonitor (new, SYS:Utilities) shows the tasks, the CPU and the cores,
+GFOpenMonitor (new, SYS:Utilities) shows the tasks, the CPU and the cores,
 memory and the GPU in the theme's font, and ends a program from its
-right-click menu. On the open ROM it is the ROM's and OpenUp puts only its
+right-click menu. On the open ROM it is the ROM's and GFOpenUp puts only its
 icon there.
-LIBS:softfpu.library (new, with OpenUp itself): the FPU in software for a
-68LC040 or 68EC040 under the OpenKick ROM, which opens it at boot; with an
+LIBS:softfpu.library (new, with GFOpenUp itself): the FPU in software for a
+68LC040 or 68EC040 under the GFOpenKick ROM, which opens it at boot; with an
 FPU, or under OS 3.2's own ROM, nothing opens it.
-Every file it adds or replaces is listed in ENVARC:OpenAmiga/OpenUp.manifest;
-replaced files are kept in SYS:Storage/OpenUp-Superseded; its startup lines
-sit in one marked block in S:User-Startup. Uninstall-OpenUp (in
-SYS:Utilities/OpenUp) takes it all out again.
+Every file it adds or replaces is listed in ENVARC:GFOpenAmiga/GFOpenUp.manifest;
+replaced files are kept in SYS:Storage/GFOpenUp-Superseded; its startup lines
+sit in one marked block in S:User-Startup. Uninstall-GFOpenUp (in
+SYS:Utilities/GFOpenUp) takes it all out again.
 
 Licence: MIT, Copyright (c) 2026 AmigaChrome Team, for its own files; third-party
 code keeps its own. If you build on it, the Team asks that you credit the AmigaChrome Team
-and AmigaChrome.
+and AmiCradle.
 
 Source: https://github.com/DalsinAI/openamigaup

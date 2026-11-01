@@ -2,7 +2,7 @@
 """The icon library in the Gorilla style: every icon in icons/LIST.csv that
 is an icon (not a title bar glyph or a pointer), drawn from the things in
 tools/gvocab.py, both frames, and written as an icon collection for
-AmigaChrome's icon library (PNG icons, the OS 4 format, which the new icon
+AmiCradle's icon library (PNG icons, the OS 4 format, which the new icon
 set turns into GlowIcons for OS 3.x). MIT, Copyright (c) 2026 AmigaChrome Team.
 
     python3 tools/icon_library_art.py OUT [--sheet] [--only TEXT]
@@ -76,7 +76,7 @@ SFS partition = harddisk + tag(label=SFS,tint=green)
 Network share = harddisk + netplug
 NFS share = harddisk + tag(label=NFS,tint=teal)
 FTP mount = harddisk + globe
-This PC (AmigaChrome) = pctower + mark
+This PC (AmiCradle) = pctower + mark
 Emulator folder = drawer + chip
 Parallel link = network
 Other computer = pctower
@@ -187,24 +187,24 @@ DefIcons = iconpic + tag
 Presets = bookmark
 Trackdisk = floppydrive
 
-[Prefs editors: OpenUp and AmigaChrome]
+[Prefs editors: GFOpenUp and AmiCradle]
 Look = file(Look)
 Windows = file(Windows)
 Dock = file(Dock)
 Menus = file(Menus)
 Title bar = file(TitleBar)
-Sound (OpenUp) = file(Sound)
-OpenTypes = file(OpenTypes)
-OpenUp Setup = file(OpenUp-Setup)
-OpenPrint = printer + page
-OpenSocket = netplug
+Sound (GFOpenUp) = file(Sound)
+GFOpenTypes = file(GFOpenTypes)
+GFOpenUp Setup = file(GFOpenUp-Setup)
+GFOpenPrint = printer + page
+GFOpenSocket = netplug
 Classic = window(tint=orange)
-OpenBlanker = monitor(dark=1) + star@face
-OpenTata = file(OpenTata)
-OpenRTG = monitor + card
+GFOpenBlanker = monitor(dark=1) + star@face
+GFOpenTata = file(GFOpenTata)
+GFOpenRTG = monitor + card
 All Prefs = cog + drawer
 Wi-Fi = wifi
-AmigaChrome Sharing = clipboard + arrows
+AmiCradle Sharing = clipboard + arrows
 
 [Prefs editors: other people's]
 MUI = gadgets + cog
@@ -270,39 +270,39 @@ MouseBlanker = pointer(faded=1)
 NoCapsLock = key(letter=Caps) + cross
 DepthMenu = windows + menu
 ASCIITable = letters
-OpenWindows = windows + magnet
-OpenSocketControl = netplug + switch
+GFOpenWindows = windows + magnet
+GFOpenSocketControl = netplug + switch
 ACNetControl = netplug + pctower
 ToolsDaemon = menu + hammer
 Yak = yak
 
-[Open apps and AmigaChrome]
-OpenUp = cabinet + openup
-Install-OpenUp = file(Install-OpenUp)
-Uninstall-OpenUp = file(Uninstall-OpenUp)
-OpenFiles = file(OpenFiles)
-OpenView = file(OpenView)
-OpenEdit = file(OpenEdit)
-OpenWrite = file(OpenWrite)
-OpenPlay = file(OpenPlay)
+[Open apps and AmiCradle]
+GFOpenUp = cabinet + openup
+Install-GFOpenUp = file(Install-GFOpenUp)
+Uninstall-GFOpenUp = file(Uninstall-GFOpenUp)
+GFOpenFiles = file(GFOpenFiles)
+GFOpenView = file(GFOpenView)
+GFOpenEdit = file(GFOpenEdit)
+GFOpenWrite = file(GFOpenWrite)
+GFOpenPlay = file(GFOpenPlay)
 OpenBrowser = file(OpenBrowser)
-OpenMail = envelope
+GFOpenMail = envelope
 Telegram = file(Telegram)
-OpenCompress = file(OpenCompress)
-OpenPrint queue = file(Printers and Queue)
-OpenSocket = netplug + pctower
-OpenService = board + bell
-OpenSpeaker = speaker
+GFOpenCompress = file(GFOpenCompress)
+GFOpenPrint queue = file(Printers and Queue)
+GFOpenSocket = netplug + pctower
+GFOpenService = board + bell
+GFOpenSpeaker = speaker
 ZuneTest = file(ZuneTest)
-OpenMUI = gadgets
+GFOpenMUI = gadgets
 Theme Builder = swatches + ruler
 ACKitchen = code + knife
-OpenRTG = card(kind=graphics)
-OpenGames = joystick + play
+GFOpenRTG = card(kind=graphics)
+GFOpenGames = joystick + play
 ACDrop = pctower + arrow(dir=down)
 ACClip = clipboard + arrows
 Send Out = pctower + arrow(dir=right)
-OpenUp update = box + star
+GFOpenUp update = box + star
 Dock buttons: Start = mark
 
 [File types: documents and text]
@@ -700,10 +700,10 @@ Monitor = monitor
 Keyboard = keyboard
 Gotek / floppy emulator = floppydrive(screen=1)
 IDE / SCSI = board + harddisk
-AmigaChrome board = board + mark
+AmiCradle board = board + mark
 """
 
-SKIP = {"Title bar, dock and gadget glyphs", "Pointers"}       # drawn by OpenLook and OpenWindows, not icons
+SKIP = {"Title bar, dock and gadget glyphs", "Pointers"}       # drawn by GFOpenLook and GFOpenWindows, not icons
 PREFS = ("Prefs editors",)
 
 # where each section's icons go in the collection, and their Workbench type
@@ -861,7 +861,7 @@ def main(argv=None) -> int:
             made[path] = recipe
             by_folder.setdefault(folder, []).append((name, fr))
     (a.out / "collection.json").write_text(json.dumps({
-        "name": "OpenUp (Gorilla style)",
+        "name": "GFOpenUp (Gorilla style)",
         "source": "openamigaup tools/icon_library_art.py, drawn from icons/LIST.csv with tools/gvocab.py",
         "licence": "MIT",
         "notes": "Copyright (c) 2026 AmigaChrome Team. Our own drawing in the Gorilla style (bold outlines, light from the top left, "

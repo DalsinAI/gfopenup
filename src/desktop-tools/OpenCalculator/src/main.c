@@ -1,15 +1,15 @@
 /*
- * OpenCalc UI front-end.
+ * GFOpenCalc UI front-end.
  *
  * The calculator engine in opencalc.c is toolkit-independent.
- * This file intentionally keeps the UI adapter thin so the OpenUp tree can
+ * This file intentionally keeps the UI adapter thin so the GFOpenUp tree can
  * bind it to the project's preferred MUI/OpenGUI wrapper without touching
  * the maths engine.
  *
  * Intended layout:
  *
  * +--------------------------------------------------+
- * | [ DEG ]                         OpenCalc          |
+ * | [ DEG ]                         GFOpenCalc          |
  * |--------------------------------------------------|
  * |  12 + sqrt(81)                                    |
  * |                                      = 21        |
@@ -52,8 +52,8 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    puts("OpenCalc 0.1 - console development front-end");
-    puts("The OpenUp GUI adapter should call the same OC_Eval() engine.");
+    puts("GFOpenCalc 0.1 - console development front-end");
+    puts("The GFOpenUp GUI adapter should call the same OC_Eval() engine.");
     puts("Type q to quit.");
 
     char line[512];
