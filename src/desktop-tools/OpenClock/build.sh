@@ -3,7 +3,7 @@
 #   OpenClock/build.sh [OUT_DIR]      (default build/os3)
 # OGT is a checkout of DalsinAI/opengadtools (its lib/).
 # 68040, no FPU and no maths library: the hands come from a table of sines.
-# MIT, Copyright (c) 2026 AmigaChrome Team.
+# MIT, Copyright (c) 2026 AmiCradle Team.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 # soft float: link libnix's libm020, not libm881 (specs/m68k-soft-m68040.specs)

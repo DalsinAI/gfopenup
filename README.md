@@ -28,13 +28,13 @@ to set up, and to build and port for.
 
 ## Licence
 
-MIT, Copyright (c) 2026 AmigaChrome Team (`LICENSE`), for our own files.
+MIT, Copyright (c) 2026 AmiCradle Team (`LICENSE`), for our own files.
 Third-party code keeps its own licence (see `DESIGN.md`).
 
 If you use or build on this work, we ask (we do not require) that you credit
-the AmigaChrome Team, for example "based on GFOpenUp by the AmigaChrome
+the AmiCradle Team, for example "based on GFOpenUp by the AmiCradle
 Team".
 
 ## Contributors
 
-GFOpenUp is created and maintained by [SacredTrees](https://github.com/SacredTrees) with The AmigaChrome Team, copyright AmigaChrome Team. Everyone whose work it includes is credited in [`CONTRIBUTORS.md`](CONTRIBUTORS.md).
+GFOpenUp is created and maintained by [SacredTrees](https://github.com/SacredTrees) with The AmiCradle Team, copyright AmiCradle Team. Everyone whose work it includes is credited in [`CONTRIBUTORS.md`](CONTRIBUTORS.md).

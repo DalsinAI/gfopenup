@@ -7,7 +7,7 @@
  *
  * Read every 5 seconds while shown, under Disable (exec changes the chains under Disable), into a copy.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/execbase.h>

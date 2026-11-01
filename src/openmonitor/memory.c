@@ -10,10 +10,10 @@
  * adding up to what the region says is free).
  *
  * The video memory: gfopenrtg.library doesn't yet say how much of the card is in use, so its total comes from
- * the card's AutoConfig board (ACRTG, AmigaChrome Team $DA15 product 9, 15 or 16, less its ROM and register
+ * the card's AutoConfig board (ACRTG, AmiCradle Team $DA15 product 9, 15 or 16, less its ROM and register
  * pages), as GFOpenMeters reads it.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/memory.h>

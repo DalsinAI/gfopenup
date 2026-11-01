@@ -4,7 +4,7 @@
  * Built resident (libnix -resident): each run its own variables, reached through a4. Code that another task
  * or an interrupt runs (the VBlank sampler) takes what it needs from its own data, never from a global.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 #ifndef OPENMONITOR_OM_H
 #define OPENMONITOR_OM_H
 

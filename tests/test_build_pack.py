@@ -13,7 +13,7 @@ prefs.resource 47.100, and one with 47.101 (the ROM that applies the boot's sett
 checkout beside this one (or OPENAMIGAPREFS=dir), each page's SECTION word is checked against GFOpenPrefs's.
 No pack is built and no stove is needed.
 
-MIT, Copyright (c) 2026 AmigaChrome Team."""
+MIT, Copyright (c) 2026 AmiCradle Team."""
 from __future__ import annotations
 
 import os
@@ -94,8 +94,8 @@ def iff(data: bytes) -> dict:
 def openprinter_checks() -> None:
     """The GFOpenPrinter part (retiring the legacy printing, 24 October 2026)."""
     with tempfile.TemporaryDirectory() as tmp:
-        dev = b"\0" * 64 + b"printer.device 47.100 (13.10.2026) GFOpenPrinter, AmigaChrome Team\r\n\0" \
-            + b"\0$VER: printer.device 47.100 (13.10.2026) GFOpenPrinter, AmigaChrome Team\0"
+        dev = b"\0" * 64 + b"printer.device 47.100 (13.10.2026) GFOpenPrinter, AmiCradle Team\r\n\0" \
+            + b"\0$VER: printer.device 47.100 (13.10.2026) GFOpenPrinter, AmiCradle Team\0"
         op = bp.openprinter_part(Path(tmp), dev)
         op.write()
         lines = (op.dir / "Part").read_text(encoding="latin-1").splitlines()
@@ -103,7 +103,8 @@ def openprinter_checks() -> None:
         check("GFOpenPrinter: AmiCradle instances only (the user's decision)", "needs AmiCradle" in lines)
         keep = [l for l in lines if l.startswith("keep ")]
         check("GFOpenPrinter: refused where DEVS:printer.device is neither OS 3.2's nor ours",
-              keep == ['keep "SYS:Devs/printer.device" "printer.device 47." "GFOpenPrinter, AmigaChrome Team"'], str(keep))
+              keep == ['keep "SYS:Devs/printer.device" "printer.device 47." "GFOpenPrinter, AmiCradle Team" '
+                       '"GFOpenPrinter, AmigaChrome Team"'], str(keep))
         check("GFOpenPrinter: the OS 3.2.3 printer.device's id and ours each carry a marker",
               any(m in "printer.device 47.3 (23.5.2020)" for m in bp.OPENPRINTER_MARKERS)
               and any(m.encode() in dev for m in bp.OPENPRINTER_MARKERS))
@@ -175,7 +176,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     src = tmp / "gfoffice"
     onlib = src / bp.GFO_LIBRARY
     files = {
-        onlib / f"library/{name}.library": f"\0{name}.library 3.0 (25.10.2026) libowf 1.4.0, AmigaChrome Team\r\n\0"
+        onlib / f"library/{name}.library": f"\0{name}.library 3.0 (25.10.2026) libowf 1.4.0, AmiCradle Team\r\n\0"
                                            f"$VER: {name}.library 3.0 (25.10.2026) MIT\0".encode() + name.encode()
         for name in bp.GFO_LIBS
     }
@@ -184,7 +185,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
         onlib / "OWConvert": b"OWConvert on the four libraries\0",
         onlib / "GFOpenCalc": b"\0$VER: GFOpenCalc 0.1 (25.10.2026) GFOpenCalc, the spreadsheet of the GFOffice Suite\0",
         src / "Dictionaries/en_GB.words": b"aardvark\nabacus\n",
-        src / "LICENSE": b"MIT License\n\nCopyright (c) 2026 AmigaChrome Team\n",
+        src / "LICENSE": b"MIT License\n\nCopyright (c) 2026 AmiCradle Team\n",
         src / "THIRD_PARTY.md": b"# Third-party parts\n",
         src / "RELEASE_NOTES_1.0.md": b"1.0\n", src / "RELEASE_NOTES_1.0.2.md": b"1.0.2\n",
         src / "licenses/SCOWL-ASPELL-English.txt": b"SCOWL notice\n",
@@ -192,7 +193,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     for f, data in files.items():
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_bytes(data)
-    zlib = b"\0$VER: z.library 53.12 (13.10.2026) GFOpenZlib, AmigaChrome Team\0"
+    zlib = b"\0$VER: z.library 53.12 (13.10.2026) GFOpenZlib, AmiCradle Team\0"
     icons = FakeIcons()
     top = tmp / "GF/GFOpenUp"
     gf, wr, oc = bp.gfoffice_parts(top, src, zlib, b"guest MIT licence\n", icons)

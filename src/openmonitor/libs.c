@@ -17,7 +17,7 @@
  *
  * Read every 5 seconds while shown, under Forbid, into a copy that is then drawn.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/execbase.h>
