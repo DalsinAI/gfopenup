@@ -1,5 +1,5 @@
 ; AmigaOS 3.2.3's own project icons and their default tools (names and tool strings only).
-; OpenUpTool FIXTOOLS puts these back where OpenUp 0.6.14 to 0.7.0 changed one to OpenView.
+; GFOpenUpTool FIXTOOLS puts these back where GFOpenUp 0.6.14 to 0.7.0 changed one to GFOpenView.
 ; Made by tools/stock_default_tools.py from a clean 3.2.3 install.
 ; <icon without .info> TAB <default tool>
 SYS:Devs/DataTypes/8SVX	C:AddDataTypes

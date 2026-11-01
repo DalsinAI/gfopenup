@@ -1,14 +1,14 @@
-/* OpenUpMenu: OpenUp's programs and settings in Workbench's Tools menu
+/* GFOpenUpMenu: GFOpenUp's programs and settings in Workbench's Tools menu
  * (DESIGN.md section 7).
  *
- *   OpenUpMenu          adds two sub-menus to Tools, "OpenUp" and
+ *   GFOpenUpMenu          adds two sub-menus to Tools, "GFOpenUp" and
  *                       "Preferences", and waits for them to be chosen.
- *                       Started from OpenUp's block in S:User-Startup.
- *   OpenUpMenu          run again: the running one builds its menus anew
+ *                       Started from GFOpenUp's block in S:User-Startup.
+ *   GFOpenUpMenu          run again: the running one builds its menus anew
  *                       (after an install, say), and the new one ends
- *   OpenUpMenu QUIT     the running one takes its menus out and ends;
+ *   GFOpenUpMenu QUIT     the running one takes its menus out and ends;
  *                       Ctrl-C (Break in the Shell) does the same
- *   OpenUpMenu LIST     what the menus hold on this Amiga, in the Shell, and
+ *   GFOpenUpMenu LIST     what the menus hold on this Amiga, in the Shell, and
  *                       (0.1.6) whether the running one has them in
  *                       Workbench's Tools menu or waits for a Workbench
  *                       that takes them
@@ -16,29 +16,29 @@
  * Each menu shows only what is installed: an entry whose program isn't
  * there isn't shown. Choosing one starts the program as a double-click
  * does (OpenWorkbenchObjectA, so its icon's stack and tool types count);
- * an OpenPrefs page opens its icon in SYS:Preferences, else
- * SYS:Preferences/OpenPrefs at that page (0.1.5, the no-ROM-volume design,
+ * a GFOpenPrefs page opens its icon in SYS:Preferences, else
+ * SYS:Preferences/GFOpenPrefs at that page (0.1.5, the no-ROM-volume design,
  * section 10);
  * icons selected on Workbench at the time go with it as files to open
- * (OpenUp menu only, not OpenEdit's script). "OpenUp Update..." runs OpenUpTool UPDATE in a
+ * (GFOpenUp menu only, not GFOpenEdit's script). "GFOpenUp Update..." runs GFOpenUpTool UPDATE in a
  * window, where it shows what changes and asks first.
  *
  * Workbench's sub-menus need workbench.library 44.1511 (OS 3.5 and later;
- * OS 3.2 has them). Older ones get flat entries, "OpenUp: OpenFiles".
+ * OS 3.2 has them). Older ones get flat entries, "GFOpenUp: GFOpenFiles".
  *
  * What is installed is looked for once (0.1.6): at the start, and again
- * only when OpenUp's list of installed files changes (a notification on
- * ENVARC:OpenAmiga/OpenUp.manifest, which every install and uninstall
- * writes, where the disk's file system sends one: AmigaChrome's host
- * drives don't) or when OpenUpMenu is run again, as the Installer does
+ * only when GFOpenUp's list of installed files changes (a notification on
+ * ENVARC:GFOpenAmiga/GFOpenUp.manifest, which every install and uninstall
+ * writes, where the disk's file system sends one: AmiCradle's host
+ * drives don't) or when GFOpenUpMenu is run again, as the Installer does
  * at its end. S:User-Startup runs before
- * LoadWB, so until Workbench takes the entries OpenUpMenu offers them
+ * LoadWB, so until Workbench takes the entries GFOpenUpMenu offers them
  * again, every two seconds for the first minute, then every minute; that
  * touches no file. Up to 0.1.5
  * every try looked for every entry's file again: on the open ROM, whose
- * desktop (OpenBench) takes no menu entries yet, that was 36 Locks and a
- * read of OpenUpTool every two seconds for as long as the Amiga ran. Once
- * Workbench has the entries, OpenUpMenu only waits on its ports.
+ * desktop (GFOpenBench) takes no menu entries yet, that was 36 Locks and a
+ * read of GFOpenUpTool every two seconds for as long as the Amiga ran. Once
+ * Workbench has the entries, GFOpenUpMenu only waits on its ports.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
 #include <exec/types.h>
@@ -58,13 +58,13 @@
 
 #include <string.h>
 
-static const char version[] __attribute__((used)) = "$VER: OpenUpMenu 0.1.6 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpMenu 0.1.6 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
 
 struct Library *WorkbenchBase, *IconBase;
 
-#define PORT_NAME "OpenUpMenu"
-#define OPENPREFS "SYS:Preferences/OpenPrefs"
-#define MANIFEST "ENVARC:OpenAmiga/OpenUp.manifest"   /* OpenUpTool writes it at every install and uninstall */
+#define PORT_NAME "GFOpenUpMenu"
+#define OPENPREFS "SYS:Preferences/GFOpenPrefs"
+#define MANIFEST "ENVARC:GFOpenAmiga/GFOpenUp.manifest"   /* GFOpenUpTool writes it at every install and uninstall */
 
 enum { M_OPENUP, M_PREFS, NMENUS };
 enum { HOW_WB, HOW_CON, HOW_SEP, HOW_PAGE };
@@ -72,33 +72,33 @@ enum { HOW_WB, HOW_CON, HOW_SEP, HOW_PAGE };
 /* path: what Workbench opens; cli: the Shell command for a window, or for a
  * Workbench too old for OpenWorkbenchObjectA; needs: what must be there for
  * the entry to show (path when NULL); marker: a string that file must hold.
- * HOW_PAGE, an OpenPrefs page (0.1.5): path is its project icon in
- * SYS:Preferences (the icon alone, no file), cli its OpenPrefs SECTION word;
- * it shows when the icon or SYS:Preferences/OpenPrefs is there. */
+ * HOW_PAGE, a GFOpenPrefs page (0.1.5): path is its project icon in
+ * SYS:Preferences (the icon alone, no file), cli its GFOpenPrefs SECTION word;
+ * it shows when the icon or SYS:Preferences/GFOpenPrefs is there. */
 struct entry {
     UBYTE menu, how;
     const char *label, *path, *cli, *needs, *marker;
 };
 
-static const char *const titles[NMENUS] = { "OpenUp", "Preferences" };
+static const char *const titles[NMENUS] = { "GFOpenUp", "Preferences" };
 
 static const struct entry entries[] = {
-    { M_OPENUP, HOW_WB,  "OpenFiles",    "SYS:Utilities/OpenFiles",              NULL, NULL, NULL },
-    { M_OPENUP, HOW_WB,  "OpenEdit",     "SYS:Tools/OpenEdit",                   "C:OpenEdit", "SYS:C/OpenEdit", NULL },
-    { M_OPENUP, HOW_WB,  "OpenWrite",    "SYS:Utilities/OpenWrite/OpenWrite",    NULL, NULL, NULL },
-    { M_OPENUP, HOW_WB,  "OpenPlay",     "SYS:Utilities/OpenPlay",               NULL, NULL, NULL },
-    { M_OPENUP, HOW_WB,  "OpenView",     "SYS:Utilities/OpenPrint/OpenView",     NULL, NULL, NULL },
-    { M_OPENUP, HOW_WB,  "OpenCompress", "SYS:Utilities/OpenCompress",           NULL, NULL, NULL },
-    { M_OPENUP, HOW_WB,  "OpenMail",     "SYS:Utilities/OpenMail/OpenMail",      NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "GFOpenFiles",    "SYS:Utilities/GFOpenFiles",              NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "GFOpenEdit",     "SYS:Tools/GFOpenEdit",                   "C:GFOpenEdit", "SYS:C/GFOpenEdit", NULL },
+    { M_OPENUP, HOW_WB,  "GFOpenWrite",    "SYS:Utilities/GFOpenWrite/GFOpenWrite",    NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "GFOpenPlay",     "SYS:Utilities/GFOpenPlay",               NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "GFOpenView",     "SYS:Utilities/GFOpenPrint/GFOpenView",     NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "GFOpenCompress", "SYS:Utilities/GFOpenCompress",           NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "GFOpenMail",     "SYS:Utilities/GFOpenMail/GFOpenMail",      NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "OpenBrowser",  "SYS:Utilities/OpenBrowser/OpenBrowser", NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "OpenBrowser Lite", "SYS:Utilities/OpenBrowserLite/OpenBrowserLite", NULL, NULL, NULL },
-    { M_OPENUP, HOW_WB,  "OpenFTP",      "SYS:Utilities/OpenFTP/OpenFTP",        NULL, NULL, NULL },
+    { M_OPENUP, HOW_WB,  "GFOpenFTP",      "SYS:Utilities/GFOpenFTP/GFOpenFTP",        NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "Telegram (unofficial)", "SYS:Utilities/UnofficialTelegram", NULL, NULL, NULL },
     { M_OPENUP, HOW_SEP, "---",          NULL, NULL, NULL, NULL },
-    /* only with an OpenUpTool that has UPDATE (OpenUp Update, DESIGN.md section 5) */
-    { M_OPENUP, HOW_CON, "OpenUp Update...", NULL, "SYS:C/OpenUpTool UPDATE", "SYS:C/OpenUpTool", "UPDATE [CHECK" },
-    /* 0.1.5: OpenPrefs's pages by their plain names, in SYS:Preferences (the no-ROM-volume design, section 8): the
-     * old editors' names in SYS:Prefs (OpenLook, OpenDock, OpenSound...) were stubs of OpenPrefs, and OpenUp
+    /* only with a GFOpenUpTool that has UPDATE (GFOpenUp Update, DESIGN.md section 5) */
+    { M_OPENUP, HOW_CON, "GFOpenUp Update...", NULL, "SYS:C/GFOpenUpTool UPDATE", "SYS:C/GFOpenUpTool", "UPDATE [CHECK" },
+    /* 0.1.5: GFOpenPrefs's pages by their plain names, in SYS:Preferences (the no-ROM-volume design, section 8): the
+     * old editors' names in SYS:Prefs (GFOpenLook, GFOpenDock, OpenSound...) were stubs of GFOpenPrefs, and GFOpenUp
      * archives them */
     { M_PREFS,  HOW_PAGE, "Theme",       "SYS:Preferences/Theme",                "THEME", NULL, NULL },
     { M_PREFS,  HOW_PAGE, "Dock",        "SYS:Preferences/Dock",                 "DOCK", NULL, NULL },
@@ -107,11 +107,11 @@ static const struct entry entries[] = {
     { M_PREFS,  HOW_PAGE, "Input",       "SYS:Preferences/Input",                "INPUT", NULL, NULL },
     { M_PREFS,  HOW_PAGE, "Gamepads",    "SYS:Preferences/Gamepads",             "GAMEPADS", NULL, NULL },
     { M_PREFS,  HOW_PAGE, "Serial",      "SYS:Preferences/Serial",               "SERIAL", NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Printers",     "SYS:Utilities/OpenPrint/Printers and Queue", NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Network",      "SYS:Tools/Commodities/OpenSocketControl", NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Printers",     "SYS:Utilities/GFOpenPrint/Printers and Queue", NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Network",      "SYS:Tools/Commodities/GFOpenSocketControl", NULL, NULL, NULL },
     { M_PREFS,  HOW_PAGE, "File Types",  "SYS:Preferences/File Types",           "TYPES", NULL, NULL },
-    { M_PREFS,  HOW_WB,  "Tata",         "SYS:Prefs/OpenTata",                   NULL, NULL, NULL },
-    { M_PREFS,  HOW_WB,  "OpenUp Setup", "SYS:Prefs/OpenUp-Setup",               NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "Tata",         "SYS:Prefs/GFOpenTata",                   NULL, NULL, NULL },
+    { M_PREFS,  HOW_WB,  "GFOpenUp Setup", "SYS:Prefs/GFOpenUp-Setup",               NULL, NULL, NULL },
 };
 #define NENTRIES (sizeof entries / sizeof entries[0])
 #define MAXARGS 16
@@ -157,7 +157,7 @@ static int holds(const char *path, const char *marker)
     return found;
 }
 
-/* An OpenPrefs page's project icon is there (path.info). */
+/* A GFOpenPrefs page's project icon is there (path.info). */
 static int page_icon(const struct entry *e)
 {
     char info[80];
@@ -167,7 +167,7 @@ static int page_icon(const struct entry *e)
 }
 
 /* Which entries show: the installed ones, and a line only between two. It looks at the disk (each entry's file,
- * OpenUpTool's UPDATE): build() calls it once, and again only when the list of installed files changes. */
+ * GFOpenUpTool's UPDATE): build() calls it once, and again only when the list of installed files changes. */
 static int find_shown(void)
 {
     int i, j, any = 0, openprefs = exists(OPENPREFS);
@@ -277,14 +277,14 @@ static void start_cli(const struct entry *e)
     const char *path = e->path ? e->path : e->needs;
     LONG stack = icon_stack(path);
     if (e->how == HOW_CON) {
-        in = Open((STRPTR)"CON:40/30/600/220/OpenUp Update/AUTO/CLOSE/WAIT", MODE_OLDFILE);
+        in = Open((STRPTR)"CON:40/30/600/220/GFOpenUp Update/AUTO/CLOSE/WAIT", MODE_OLDFILE);
         out = 0;                            /* the same window (dos.doc, SystemTagList) */
     } else {
         in = Open((STRPTR)"NIL:", MODE_OLDFILE);
         out = Open((STRPTR)"NIL:", MODE_NEWFILE);
     }
     if (!in) { if (out) Close(out); return; }
-    if (e->how == HOW_PAGE) {               /* OpenPrefs at its page: OpenPrefs SOUND */
+    if (e->how == HOW_PAGE) {               /* GFOpenPrefs at its page: GFOpenPrefs SOUND */
         path = OPENPREFS;
         stack = icon_stack(path);
         strcpy(cmd, OPENPREFS " ");
@@ -310,7 +310,7 @@ static void start_cli(const struct entry *e)
     if (lock) { CurrentDir(old); UnLock(lock); }
 }
 
-/* Starts entry i, with the icons that were selected (OpenUp menu only). */
+/* Starts entry i, with the icons that were selected (GFOpenUp menu only). */
 static void start(int i, BPTR *locks, char **names, int nargs)
 {
     const struct entry *e = &entries[i];
@@ -325,8 +325,8 @@ static void start(int i, BPTR *locks, char **names, int nargs)
         if (OpenWorkbenchObjectA((STRPTR)e->path, tags))
             return;
     }
-    /* an OpenPrefs page: its project icon, as a double-click on it; else (no icon, or a Workbench that didn't
-     * open it) OpenPrefs at that page */
+    /* a GFOpenPrefs page: its project icon, as a double-click on it; else (no icon, or a Workbench that didn't
+     * open it) GFOpenPrefs at that page */
     if (e->how == HOW_PAGE && WorkbenchBase->lib_Version >= 44 && page_icon(e)
         && OpenWorkbenchObjectA((STRPTR)e->path, NULL))
         return;
@@ -341,7 +341,7 @@ static void chosen(struct AppMessage *am)
     BPTR locks[MAXARGS];
     char *names[MAXARGS];
     int i, n = 0, id = am->am_Type == AMTYPE_APPMENUITEM ? (int)am->am_ID : -1;
-    /* OpenEdit's entry opens a script (IconX), which takes no files */
+    /* GFOpenEdit's entry opens a script (IconX), which takes no files */
     if (id >= 0 && id < (int)NENTRIES && entries[id].menu == M_OPENUP && entries[id].how == HOW_WB && !entries[id].cli)
         for (i = 0; i < am->am_NumArgs && n < MAXARGS; i++) {
             struct WBArg *a = &am->am_ArgList[i];
@@ -358,9 +358,9 @@ static void chosen(struct AppMessage *am)
     for (i = 0; i < n; i++) { UnLock(locks[i]); FreeVec(names[i]); }
 }
 
-/* ---- one OpenUpMenu at a time ---------------------------------------------------------- */
+/* ---- one GFOpenUpMenu at a time ---------------------------------------------------------- */
 
-/* Tells a running OpenUpMenu what to do. 1 told, 0 none is running. */
+/* Tells a running GFOpenUpMenu what to do. 1 told, 0 none is running. */
 static LONG told_answer;                /* the running one's answer to tell() */
 
 static int tell(LONG what)
@@ -388,7 +388,7 @@ static void list(void)
 {
     int m, i;
     if (!find_shown()) {
-        PutStr((STRPTR)"OpenUpMenu: no OpenUp programs or settings editors are installed here.\n");
+        PutStr((STRPTR)"GFOpenUpMenu: no GFOpenUp programs or settings editors are installed here.\n");
         return;
     }
     for (m = 0; m < NMENUS; m++)
@@ -396,12 +396,12 @@ static void list(void)
             if (entries[i].menu == m && shown[i])
                 Printf((STRPTR)"Tools > %s > %s\n", (LONG)titles[m], (LONG)entries[i].label);
     if (!tell(3))
-        PutStr((STRPTR)"OpenUpMenu isn't running.\n");
+        PutStr((STRPTR)"GFOpenUpMenu isn't running.\n");
     else if (told_answer) {
-        PutStr((STRPTR)((told_answer & 3) == 1 ? "The running OpenUpMenu has them in Workbench's Tools menu.\n"
-                        : "The running OpenUpMenu waits for a Workbench that takes menu entries (OpenBench doesn't yet).\n"));
-        PutStr((STRPTR)(told_answer & 4 ? "It looks again when OpenUp's list of installed files changes, or when OpenUpMenu runs again.\n"
-                        : "It looks again when OpenUpMenu runs again (this disk sends no notification when OpenUp's list changes).\n"));
+        PutStr((STRPTR)((told_answer & 3) == 1 ? "The running GFOpenUpMenu has them in Workbench's Tools menu.\n"
+                        : "The running GFOpenUpMenu waits for a Workbench that takes menu entries (GFOpenBench doesn't yet).\n"));
+        PutStr((STRPTR)(told_answer & 4 ? "It looks again when GFOpenUp's list of installed files changes, or when GFOpenUpMenu runs again.\n"
+                        : "It looks again when GFOpenUpMenu runs again (this disk sends no notification when GFOpenUp's list changes).\n"));
     }
 }
 
@@ -416,10 +416,10 @@ static void timer_start(struct timerequest *tr, ULONG ticks)
 }
 
 /* The running one: menus in, then wait. 0.1.6: no polling of the disk. What is installed is looked for once
- * (build), and again only when OpenUp's list changes (a notification on MANIFEST) or OpenUpMenu is run again.
+ * (build), and again only when GFOpenUp's list changes (a notification on MANIFEST) or GFOpenUpMenu is run again.
  * Until Workbench takes the entries they are offered again on a timer that touches no file: every two seconds
  * for the first minute (the boot: S:User-Startup runs before LoadWB), then every minute. On the open ROM,
- * OpenBench is the desktop and takes no menu entries yet (amigachrome-guest libraries/openworkbench): there a
+ * GFOpenBench is the desktop and takes no menu entries yet (amigachrome-guest libraries/openworkbench): there a
  * minute's timer is all that runs. */
 static int serve(int from_shell)
 {
@@ -458,7 +458,7 @@ static int serve(int from_shell)
         if (tr) DeleteIORequest((struct IORequest *)tr);
         tr = NULL;
     }
-    /* OpenUp's list of installed files: written at every install and uninstall, so a change means the menus may */
+    /* GFOpenUp's list of installed files: written at every install and uninstall, so a change means the menus may */
     memset(&nr, 0, sizeof nr);
     if ((nbit = AllocSignal(-1)) >= 0) {
         nr.nr_Name = (STRPTR)MANIFEST;
@@ -525,7 +525,7 @@ int main(int argc, char **argv)
     int rc;
     (void)argv;
     if (argc > 0 && !(rda = ReadArgs((STRPTR)"QUIT/S,LIST/S", args, NULL))) {
-        PutStr((STRPTR)"Usage: OpenUpMenu [QUIT] [LIST]\n");
+        PutStr((STRPTR)"Usage: GFOpenUpMenu [QUIT] [LIST]\n");
         return RETURN_FAIL;
     }
     if (!(WorkbenchBase = OpenLibrary((STRPTR)"workbench.library", 37))) {
@@ -536,7 +536,7 @@ int main(int argc, char **argv)
     if (args[1])
         list(), rc = RETURN_OK;
     else if (args[0])
-        rc = tell(2) ? RETURN_OK : (PutStr((STRPTR)"OpenUpMenu isn't running.\n"), RETURN_WARN);
+        rc = tell(2) ? RETURN_OK : (PutStr((STRPTR)"GFOpenUpMenu isn't running.\n"), RETURN_WARN);
     else if (tell(1))
         rc = RETURN_OK;                     /* the running one builds its menus anew */
     else

@@ -1,13 +1,13 @@
 #!/bin/sh
-# OpenMonitor 1.0, the disk's (OpenUp's SYS:Utilities/OpenMonitor) and the open ROM's (amigachrome-guest's
-# trial-1m romprefs.sh builds the ROM's C/OpenMonitor with this script), with the os32-gcc16 stove:
-#   OGT=<opengadtools checkout> GUEST=<amigachrome-guest checkout> sh src/openmonitor/build.sh [OUT]   (default build/os3/OpenMonitor)
-# The compiler: the os32-gcc16 stove at OS32_GCC16 (default ~/AmigaChrome/stoves/os32-gcc16), GCC 16 or
+# GFOpenMonitor 1.0, the disk's (GFOpenUp's SYS:Utilities/GFOpenMonitor) and the open ROM's (amigachrome-guest's
+# trial-1m romprefs.sh builds the ROM's C/GFOpenMonitor with this script), with the os32-gcc16 stove:
+#   OGT=<opengadtools checkout> GUEST=<amigachrome-guest checkout> sh src/openmonitor/build.sh [OUT]   (default build/os3/GFOpenMonitor)
+# The compiler: the os32-gcc16 stove at OS32_GCC16 (default ~/AmiCradle/stoves/os32-gcc16), GCC 16 or
 # later. Built resident (libnix -resident: each run its own variables), 68040 code, soft float as
 # opengadtools is (no FPU needed), -Os. A cell or a status line cut to its room is meant:
 # -Wno-format-truncation.
 # GUEST: an amigachrome-guest checkout, for sysprobe (common/sysprobe: the Hardware and Speed views read the
-# machine as ShowConfig and ACInfo do), accontrol.device's header and taskclock.h (OpenExec's task clock).
+# machine as ShowConfig and ACInfo do), accontrol.device's header and taskclock.h (GFOpenExec's task clock).
 # MIT, Copyright (c) 2026 AmigaChrome Team.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -16,11 +16,11 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 SP="$GUEST/common/sysprobe"
 [ -f "$SP/sysprobe.c" ] || { echo "$GUEST has no common/sysprobe: amigachrome-guest main from the P3 merge on"; exit 2; }
 [ -f "$GUEST/common/include/taskclock.h" ] || { echo "$GUEST has no common/include/taskclock.h: amigachrome-guest main from the P4 merge on"; exit 2; }
-STOVE=${OS32_GCC16:-$HOME/AmigaChrome/stoves/os32-gcc16}
+STOVE=${OS32_GCC16:-$HOME/AmiCradle/stoves/os32-gcc16}
 CC="$STOVE/prefix/bin/m68k-amigaos-gcc"
 GCCV=$("$CC" -dumpversion 2>/dev/null || echo 0)
-[ "${GCCV%%.*}" -ge 16 ] 2>/dev/null || { echo "$CC is GCC $GCCV: OpenMonitor needs GCC 16 (the os32-gcc16 stove; set OS32_GCC16)"; exit 2; }
-OUT=${1:-$HERE/../../build/os3/OpenMonitor}
+[ "${GCCV%%.*}" -ge 16 ] 2>/dev/null || { echo "$CC is GCC $GCCV: GFOpenMonitor needs GCC 16 (the os32-gcc16 stove; set OS32_GCC16)"; exit 2; }
+OUT=${1:-$HERE/../../build/os3/GFOpenMonitor}
 mkdir -p "$(dirname "$OUT")"
 G="$OGT/lib"
 "$CC" -noixemul -m68040 -specs="$OGT/specs/m68k-soft-m68040.specs" -resident -std=gnu99 -Wall -Werror -Wno-format-truncation -Os \

@@ -1,4 +1,4 @@
-/* Host test of src/opensnap/opensnap_pic.h, OpenSnap's ILBM writer, HAM and Extra Half-Brite colours and file names.
+/* Host test of src/opensnap/opensnap_pic.h, GFOpenSnap's ILBM writer, HAM and Extra Half-Brite colours and file names.
  *
  *   cc -std=c99 -Wall -Werror -Isrc/opensnap tests/test_opensnap_pic.c -o test_opensnap_pic && ./test_opensnap_pic
  *

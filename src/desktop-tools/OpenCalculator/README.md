@@ -1,14 +1,14 @@
-# OpenCalc 0.1
+# GFOpenCalc 0.1
 
-OpenCalc is the OpenUp calculator component.
+GFOpenCalc is the GFOpenUp calculator component.
 
 It is deliberately split into a small, portable expression engine and a thin
-OpenUp GUI adapter. The engine can therefore be unit-tested on the build host
-and reused from Shell, scripting, or other OpenUp applications.
+GFOpenUp GUI adapter. The engine can therefore be unit-tested on the build host
+and reused from Shell, scripting, or other GFOpenUp applications.
 
 ## UI direction
 
-OpenCalc should feel like an Amiga utility, not a phone calculator enlarged
+GFOpenCalc should feel like an Amiga utility, not a phone calculator enlarged
 onto Workbench.
 
 The default window has:
@@ -41,9 +41,9 @@ fashion. At small sizes the scientific column can collapse behind a
 
 ## Suggested repository location
 
-    OpenUp/
+    GFOpenUp/
       apps/
-        OpenCalc/
+        GFOpenCalc/
 
 ## Build-host smoke test
 

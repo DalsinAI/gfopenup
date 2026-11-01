@@ -1,6 +1,6 @@
-/* OpenMonitor: today's three graphs, the last minute of each: CPU (and the cores board's cores), memory
- * (chip and fast together), and the GPU (how much of the drawing OpenGPU did, with the pixels a second, from
- * openrtg.library's ORTG_DrawStats, 0.11 on). On a small screen they are one line of meters instead.
+/* GFOpenMonitor: today's three graphs, the last minute of each: CPU (and the cores board's cores), memory
+ * (chip and fast together), and the GPU (how much of the drawing GFOpenGPU did, with the pixels a second, from
+ * gfopenrtg.library's ORTG_DrawStats, 0.11 on). On a small screen they are one line of meters instead.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
 
@@ -31,8 +31,8 @@ static void push(int g, ULONG v)
     hist[g][HIST - 1] = (UWORD)(v > 1000 ? 1000 : v);
 }
 
-/* openrtg.library's ORTG_DrawStats (-108): counts[kind * 4 + 0..3] = pieces OpenGPU drew, pieces the CPU
- * drew, the pixels of each. Called by its offset: OpenMonitor needs none of OpenRTG's headers. */
+/* gfopenrtg.library's ORTG_DrawStats (-108): counts[kind * 4 + 0..3] = pieces GFOpenGPU drew, pieces the CPU
+ * drew, the pixels of each. Called by its offset: GFOpenMonitor needs none of GFOpenRTG's headers. */
 static ULONG draw_stats(ULONG *counts, ULONG kinds, ULONG flags)
 {
     register ULONG d0 __asm("d0") = kinds;
@@ -67,7 +67,7 @@ static ULONG board_cores(void)
 
 static ULONG omc_cores(void)
 {
-    struct Library *omc = OpenLibrary((STRPTR)"openmulticore.library", 0);
+    struct Library *omc = OpenLibrary((STRPTR)"gfopenmulticore.library", 0);
     ULONG n = 0;
     if (omc) {
         register ULONG d0 __asm("d0");
@@ -82,7 +82,7 @@ static ULONG omc_cores(void)
 void om_graphs_init(void)
 {
     memset(hist, 0, sizeof hist);
-    OpenRTGBase = OpenLibrary((STRPTR)"openrtg.library", 0);
+    OpenRTGBase = OpenLibrary((STRPTR)"gfopenrtg.library", 0);
     if (OpenRTGBase && OpenRTGBase->lib_Version == 0 && OpenRTGBase->lib_Revision < 11) { CloseLibrary(OpenRTGBase); OpenRTGBase = NULL; }
     if (OpenRTGBase) draw_stats(NULL, 0, 1);    /* counting from now */
     ncores = board_cores();
@@ -166,7 +166,7 @@ void om_graphs_draw(int x, int y, int w, int h)
     snprintf(t, sizeof t, "Memory %lu%%   chip %lu KB, fast %lu MB free", (unsigned long)(mem_used_tenths + 5) / 10,
              (unsigned long)chip_free_k, (unsigned long)(fast_free_k >> 10));
     draw_graph(GR_MEM, x + gw + 8, y, gw, h, t);
-    if (!OpenRTGBase) snprintf(t, sizeof t, "GPU   (no openrtg.library)");
+    if (!OpenRTGBase) snprintf(t, sizeof t, "GPU   (no gfopenrtg.library)");
     else if (!gpu_known) snprintf(t, sizeof t, "GPU");
     else snprintf(t, sizeof t, "GPU %lu%% of the drawing   %lu.%lu Mpx/s", (unsigned long)(gpu_share_tenths + 5) / 10,
                   (unsigned long)(gpu_kpx / 1000), (unsigned long)(gpu_kpx % 1000 / 100));

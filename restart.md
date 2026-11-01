@@ -1,23 +1,23 @@
-# Restart: OpenUp
+# Restart: GFOpenUp
 
 _Written 6 October 2026 at about 23:55 UTC and brought up to date on 7 October 2026. Read this first when work resumes; the newest capsule and the live PR list win if they disagree._
 
 ## What this repo is
 
-OpenUp: install AmigaOS 3.2.3, run one pack, and it's ready, on a real Amiga, a PiStorm or the AmigaChrome appliance. It bundles every Open app as a part.
+GFOpenUp: install AmigaOS 3.2.3, run one pack, and it's ready, on a real Amiga, a PiStorm or the AmiCradle appliance. It bundles every Open app as a part.
 
 ## Where it stands
 
-_Updated 8 October 2026._ OpenUp 0.6.17 is on GitHub (tag v0.6.17). The next release is 0.7.0 (the user, 8 October 2026: 0.6.18 grew into it), built from this branch and not yet published: OpenGPU 0.9 (opengpu.library 0.9: OpenGfx owns every graphics.library drawing call, 22 of them; GL.module and SDL2.module stay resident) with OpenRTG 0.13 and OpenLook 0.6, which must ship together, so only OpenGfx patches the drawing calls; OpenTitle 0.6 with the taskspace; Tata 0.3 unticked while 0.x (bit 1073741824, the first parts word's last bit); a second parts word and a fifth question for OpenFTP (1; FTPS needs AmiSSL 5, not included), Unofficial Telegram (2; needs the user's own API key and the telegram.td/1 service) and the OpenGPU developer files (4), none ticked; AmigaChromeSharing 1.4 (ACDrop 1.3, Send Out); SDL2.module 3; the installer's wording; every 68k part built with -fno-delete-null-pointer-checks; and the OS 3.2-style icons, which 0.6.17 left out (#55).
+_Updated 8 October 2026._ GFOpenUp 0.6.17 is on GitHub (tag v0.6.17). The next release is 0.7.0 (the user, 8 October 2026: 0.6.18 grew into it), built from this branch and not yet published: GFOpenGPU 0.9 (gfopengpu.library 0.9: GFOpenGfx owns every graphics.library drawing call, 22 of them; GL.module and SDL2.module stay resident) with GFOpenRTG 0.13 and GFOpenLook 0.6, which must ship together, so only GFOpenGfx patches the drawing calls; GFOpenTitle 0.6 with the taskspace; Tata 0.3 unticked while 0.x (bit 1073741824, the first parts word's last bit); a second parts word and a fifth question for GFOpenFTP (1; FTPS needs AmiSSL 5, not included), Unofficial Telegram (2; needs the user's own API key and the telegram.td/1 service) and the GFOpenGPU developer files (4), none ticked; AmiCradleSharing 1.4 (ACDrop 1.3, Send Out); SDL2.module 3; the installer's wording; every 68k part built with -fno-delete-null-pointer-checks; and the OS 3.2-style icons, which 0.6.17 left out (#55).
 
-Phases (DESIGN.md section 5): 1 done for AmigaChrome (Setup 0.1 and the startup switches included); 2 under way (OpenBrowser and OpenMail next, as parts left unticked); 3 (PiStorm, real A1200) waits; 4 (Cradle's OS 3.2.3 recipes apply the pack) is live in Cradle (8 October 2026, with 0.6.14 registered); 5's OpenUp Update is built (Cradle first; the GitHub step next). OpenUp Picks is no longer a requirement.
+Phases (DESIGN.md section 5): 1 done for AmiCradle (Setup 0.1 and the startup switches included); 2 under way (OpenBrowser and GFOpenMail next, as parts left unticked); 3 (PiStorm, real A1200) waits; 4 (Cradle's OS 3.2.3 recipes apply the pack) is live in Cradle (8 October 2026, with 0.6.14 registered); 5's GFOpenUp Update is built (Cradle first; the GitHub step next). GFOpenUp Picks is no longer a requirement.
 
 ## Merged lately
 
-- #36 (3ffbba5, 2026-10-07): OpenWrite 1.0.2 in OpenUp
-- #35 (1544854, 2026-10-07): OpenBlanker, installed with every OpenUp
-- #34 (ec5d7cd, 2026-10-07): OpenWrite 1.0 as a part
-- #33 (9686a36, 2026-10-06): OpenDock part 0.2: Workbench as a backdrop by default
+- #36 (3ffbba5, 2026-10-07): GFOpenWrite 1.0.2 in GFOpenUp
+- #35 (1544854, 2026-10-07): GFOpenBlanker, installed with every GFOpenUp
+- #34 (ec5d7cd, 2026-10-07): GFOpenWrite 1.0 as a part
+- #33 (9686a36, 2026-10-06): GFOpenDock part 0.2: Workbench as a backdrop by default
 - #32 (00bdf83, 2026-10-06): The Open apps' own animated GlowIcons, their drawers laid out, and the icon standard
 
 ## Open pull requests
@@ -28,7 +28,7 @@ Phases (DESIGN.md section 5): 1 done for AmigaChrome (Setup 0.1 and the startup 
 
 1. Phase 2 is merged (#39): OpenBrowser's companion archive goes beside the next release.
 2. Phase 4: try the first-start install on a new OS 3.2.3 instance made by Cradle.
-3. Phase 5: OpenUp Update's GitHub step (a newer release found over the network, where the Amiga has TLS).
+3. Phase 5: GFOpenUp Update's GitHub step (a newer release found over the network, where the Amiga has TLS).
 
 ## Waiting on @SacredTrees
 

@@ -1,4 +1,4 @@
-/* OpenMonitor 1.0: the task manager (the design of 24 October 2026, "OpenMonitor-Task-Manager-Design").
+/* GFOpenMonitor 1.0: the task manager (the design of 24 October 2026, "GFOpenMonitor-Task-Manager-Design").
  * What the parts share: the window, the fonts and pens, the table every view draws, the views.
  *
  * Built resident (libnix -resident): each run its own variables, reached through a4. Code that another task
@@ -160,7 +160,7 @@ const char *om_where(APTR code);                  /* "ROM" or "RAM": the ROM ima
 void om_redraw_page(void);                        /* the open view again, whole */
 void om_rebuild_gadgets(void);                    /* after a view changes its gadgets */
 int om_clip_text(const char *s);                  /* text onto the clipboard (unit 0, FTXT) */
-const char *om_pref(const char *key);             /* ENV:OpenMonitor/Settings, read at the start */
+const char *om_pref(const char *key);             /* ENV:GFOpenMonitor/Settings, read at the start */
 void om_set_pref(const char *key, const char *value);
 int om_timer_due(void);                           /* inside a modal loop: the second's tick when it's due */
 ULONG om_timer_sig(void);                         /* the tick's signal, for a modal loop's Wait() */
@@ -181,8 +181,8 @@ void om_tasks_free(void);                         /* resumes every frozen task *
 void om_tasks_take(void);                         /* the second's look, every second, shown or not (the graph) */
 void om_tasks_choose(struct Task *t);             /* "Show the owner": that task chosen in the Tasks view */
 void om_task_name(struct Task *t, char *out, int size);   /* as the Tasks view names it; under Forbid */
-int om_irq_per_second(int bit);                   /* from OpenExec's task clock; -1 when not known */
-/* Exec's task clock (OpenExec's taskclock.resource) read while a view wants it, else the sampler: the Tasks
+int om_irq_per_second(int bit);                   /* from GFOpenExec's task clock; -1 when not known */
+/* Exec's task clock (GFOpenExec's taskclock.resource) read while a view wants it, else the sampler: the Tasks
  * view and the Interrupts view each say when they are shown */
 enum { OM_EXACT_TASKS = 1, OM_EXACT_INTS = 2 };
 void om_tasks_exact(int who, int on);

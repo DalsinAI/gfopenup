@@ -195,7 +195,7 @@ def openmonitor(sel):
 
 
 def frosted_glass(x0, y0, x1, y1):
-    """A fill for frosted glass, as the dock's shelf and OpenMeters' panel are drawn: a cool light gradient
+    """A fill for frosted glass, as the dock's shelf and GFOpenMeters' panel are drawn: a cool light gradient
     with the desktop's colours showing through it blurred, and a soft sheen across it from the top left."""
     glass = np.asarray(linear((x0, y0), (x0, y1), rgb('#F2F6FB'), rgb('#B9C5D6')), np.float32)
     behind = Image.new('RGB', (W, W), (0, 0, 0))
@@ -214,7 +214,7 @@ def frosted_glass(x0, y0, x1, y1):
 
 
 def openmeters(sel):
-    """OpenMeters, the desktop widget (openamigabench meters/): a small frosted panel with the date and time
+    """GFOpenMeters, the desktop widget (openamigabench meters/): a small frosted panel with the date and time
     at the top and three bars, partly filled, the middle one in the accent; chosen, a reading later: the bars
     move on, the accent one fills further, the last passes 90 per cent and turns the warning colour, and the
     clock's hand moves on."""
@@ -395,7 +395,7 @@ def printer(sel):
 
 
 def install(sel):
-    """The OpenUp box with an arrow over it; chosen, the arrow sinks into the box."""
+    """The GFOpenUp box with an arrow over it; chosen, the arrow sinks into the box."""
     ic = Icon()
     box(ic, 12, 34, 40, 24)
     y = 30 if sel else 22
@@ -404,7 +404,7 @@ def install(sel):
 
 
 def uninstall(sel):
-    """The OpenUp box with an arrow lifting out of it; chosen, it is out."""
+    """The GFOpenUp box with an arrow lifting out of it; chosen, it is out."""
     ic = Icon()
     box(ic, 12, 34, 40, 24)
     y = 4 if sel else 12
@@ -413,7 +413,7 @@ def uninstall(sel):
 
 
 def setup(sel):
-    """The OpenUp box and a wand; chosen, the star flares and sparkles."""
+    """The GFOpenUp box and a wand; chosen, the star flares and sparkles."""
     ic = Icon()
     box(ic, 18, 36, 38, 22)
     ic.add(stroke([(14, 44), (36, 18)], 3.4), linear((14, 44), (36, 18), rgb('#5A616B'), rgb('#1F2329')))
@@ -719,7 +719,7 @@ def telegram(sel):
         paper_plane(ic, 45, 20, 1.05)
     return ic
 
-# ---- OpenPrefs and its sections (Dale, 21 October 2026: an icon per section) ---------------------
+# ---- GFOpenPrefs and its sections (Dale, 21 October 2026: an icon per section) ---------------------
 
 
 def monitor(ic, x0, y0, x1, y1, screen=None):
@@ -968,7 +968,7 @@ def icontrol(sel):
 
 
 def icons_page(sel):
-    """Icons laid on a grid, each with its label under it; chosen, the labels go beside them (OpenPrefs' Icons page)."""
+    """Icons laid on a grid, each with its label under it; chosen, the labels go beside them (GFOpenPrefs' Icons page)."""
     ic = Icon()
     cols = [(BLUE, BLUE_LO), (GREEN, GREEN_LO), (ORANGE, ORANGE_LO), (GOLD, GOLD_LO)]
     for i, (c, lo) in enumerate(cols):
@@ -984,7 +984,7 @@ def icons_page(sel):
 
 
 def printing_page(sel):
-    """A sheet of paper with its margins and lines; chosen, it turns on its side (OpenPrefs' Printing page)."""
+    """A sheet of paper with its margins and lines; chosen, it turns on its side (GFOpenPrefs' Printing page)."""
     ic = Icon()
     x0, y0, x1, y1 = (14, 4, 54, 56) if not sel else (6, 12, 60, 48)
     ic.add(rect(x0 + 2.5, y0 + 2.5, x1 + 2.5, y1 + 2.5), rgb('#8E96A2'))
@@ -999,18 +999,18 @@ def printing_page(sel):
     return ic
 
 ICONS = {
-    "OpenFiles": openfiles, "OpenView": openview, "OpenEdit": openedit, "OpenWrite": openwrite,
-    "OpenPlay": openplay, "OpenBrowser": openbrowser, "OpenCompress": opencompress,
-    "Printers and Queue": printer, "Install-OpenUp": install, "Uninstall-OpenUp": uninstall,
-    "OpenUp-Setup": setup, "ZuneTest": zunetest, "OpenMonitor": openmonitor, "OpenMeters": openmeters,
-    "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "OpenTypes": types,
-    "Gamepads": gamepads, "KindsGallery": kindsgallery, "OpenTata": opentata, "Telegram": telegram,
-    "OpenPrefs": openprefs, "ScreenMode": screenmode, "Pointer": pointer, "Fonts": fonts, "Colours": colours,
+    "GFOpenFiles": openfiles, "GFOpenView": openview, "GFOpenEdit": openedit, "GFOpenWrite": openwrite,
+    "GFOpenPlay": openplay, "OpenBrowser": openbrowser, "GFOpenCompress": opencompress,
+    "Printers and Queue": printer, "Install-GFOpenUp": install, "Uninstall-GFOpenUp": uninstall,
+    "GFOpenUp-Setup": setup, "ZuneTest": zunetest, "GFOpenMonitor": openmonitor, "GFOpenMeters": openmeters,
+    "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "GFOpenTypes": types,
+    "Gamepads": gamepads, "KindsGallery": kindsgallery, "GFOpenTata": opentata, "Telegram": telegram,
+    "GFOpenPrefs": openprefs, "ScreenMode": screenmode, "Pointer": pointer, "Fonts": fonts, "Colours": colours,
     "Backdrops": backdrops, "Workbench": workbench, "FileRequesters": filerequesters, "MouseKeys": mousekeys,
     "DateTime": datetime_, "Serial": serial, "System": system, "Blanker": blanker, "IControl": icontrol,
     "Icons": icons_page, "Printing": printing_page,
 }
-BADGES = {"OpenUp": badge_openup, "OpenPrint": badge_print, "OpenBrowser": badge_browser, "OpenWrite": badge_write,
+BADGES = {"GFOpenUp": badge_openup, "GFOpenPrint": badge_print, "OpenBrowser": badge_browser, "GFOpenWrite": badge_write,
           "Expansion": badge_expansion}
 
 

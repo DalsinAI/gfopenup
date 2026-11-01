@@ -1,6 +1,6 @@
-/* Gorilla's pictures as OpenUp 0.6.17 to 0.8.3 gave them (GorillaIcons part: its Icons and Retired, every pack
- * kept on the build machine), as OpenUpTool ICONSIG <drawer> prints them: the picture's signature. OLDLOOK tells
- * OpenUp's old faces by them (0.8.4). Numbers only: no picture is here. */
+/* Gorilla's pictures as GFOpenUp 0.6.17 to 0.8.3 gave them (GorillaIcons part: its Icons and Retired, every pack
+ * kept on the build machine), as GFOpenUpTool ICONSIG <drawer> prints them: the picture's signature. OLDLOOK tells
+ * GFOpenUp's old faces by them (0.8.4). Numbers only: no picture is here. */
 { 0x012C369C, 0x1A561825 },
 { 0x03BA75E4, 0x2E4E5BCA },
 { 0x07B28DBD, 0x181CD55A },

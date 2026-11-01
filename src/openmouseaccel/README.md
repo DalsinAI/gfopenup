@@ -1,6 +1,6 @@
-# OpenMouseAccel
+# GFOpenMouseAccel
 
-OpenMouseAccel is the OpenUp/OpenInput variable pointer-acceleration component.
+GFOpenMouseAccel is the GFOpenUp/GFOpenInput variable pointer-acceleration component.
 
 ## Behaviour
 
@@ -13,26 +13,26 @@ OpenMouseAccel is the OpenUp/OpenInput variable pointer-acceleration component.
 - Fractional output is accumulated instead of discarded.
 - If disabled or unavailable, raw pointer movement passes through unchanged.
 
-## OpenInput position
+## GFOpenInput position
 
 Install the filter after raw relative-device normalisation and before pointer-position clamping/application delivery:
 
 ```
-raw device -> OpenInput normalisation -> OpenMouseAccel -> pointer clamp -> application/desktop
+raw device -> GFOpenInput normalisation -> GFOpenMouseAccel -> pointer clamp -> application/desktop
 ```
 
-`src/oma_filter.c` is intentionally a small shim because the final OpenInput filter ABI is owned by the OpenUp tree. It must be wired into the real filter registration API rather than creating a second input API here.
+`src/oma_filter.c` is intentionally a small shim because the final GFOpenInput filter ABI is owned by the GFOpenUp tree. It must be wired into the real filter registration API rather than creating a second input API here.
 
 ## Preferences
 
-The intended Amiga preferences program is `OpenMouseAccelPrefs` using MUI. Build `prefs/OpenMouseAccelPrefs.c` with `OMA_USE_MUI` under the OpenUp Amiga/AROS SDK.
+The intended Amiga preferences program is `GFOpenMouseAccelPrefs` using MUI. Build `prefs/OpenMouseAccelPrefs.c` with `OMA_USE_MUI` under the GFOpenUp Amiga/AROS SDK.
 
 Preferences should be stored in:
 
-- `ENV:OpenUp/OpenMouseAccel.prefs`
-- `ENVARC:OpenUp/OpenMouseAccel.prefs`
+- `ENV:GFOpenUp/GFOpenMouseAccel.prefs`
+- `ENVARC:GFOpenUp/GFOpenMouseAccel.prefs`
 
-The running OpenInput service should reload or be messaged when settings change so changes can be felt immediately without rebooting.
+The running GFOpenInput service should reload or be messaged when settings change so changes can be felt immediately without rebooting.
 
 ## Host validation
 
@@ -41,13 +41,13 @@ make test
 make prefs-host
 ```
 
-These checks validate the portable acceleration engine only; they do not qualify the Amiga OpenInput integration or MUI UI.
+These checks validate the portable acceleration engine only; they do not qualify the Amiga GFOpenInput integration or MUI UI.
 
-## Suggested first OpenUp integration
+## Suggested first GFOpenUp integration
 
-1. Add the public header to the OpenUp SDK.
-2. Add the core/filter objects to OpenInput.
-3. Register OpenMouseAccel at the relative-pointer filter stage.
+1. Add the public header to the GFOpenUp SDK.
+2. Add the core/filter objects to GFOpenInput.
+3. Register GFOpenMouseAccel at the relative-pointer filter stage.
 4. Add live config reload/message plumbing.
-5. Build `OpenMouseAccelPrefs` with MUI.
+5. Build `GFOpenMouseAccelPrefs` with MUI.
 6. Test with raw 1-pixel movements, rapid flicks, reversals, high-DPI devices and pointer-capture transitions.

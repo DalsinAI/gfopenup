@@ -1,7 +1,7 @@
 # Copyright (c) 2026 AmigaChrome Team. MIT licence.
-# OpenUp's host checks: the parts tools/build_pack.py writes for the no-ROM-volume design (OpenPrefs in
-# SYS:Preferences, the old homes archived, the lines by ROM), read through OpenUpTool's own condition code
-# (tests/test_build_pack.py, tests/test_openup_lines.c), with openamigaprefs' OpenPrefs for the SECTION words.
+# GFOpenUp's host checks: the parts tools/build_pack.py writes for the no-ROM-volume design (GFOpenPrefs in
+# SYS:Preferences, the old homes archived, the lines by ROM), read through GFOpenUpTool's own condition code
+# (tests/test_build_pack.py, tests/test_openup_lines.c), with openamigaprefs' GFOpenPrefs for the SECTION words.
 name: Host checks
 on:
   push:
@@ -21,5 +21,5 @@ jobs:
           path: openamigaprefs
       - name: PIL, for the backdrops' tones (picture_tone)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends python3-pil
-      - name: build_pack.py's parts and OpenUpTool's conditions
+      - name: build_pack.py's parts and GFOpenUpTool's conditions
         run: OPENAMIGAPREFS=openamigaprefs python3 tests/test_build_pack.py

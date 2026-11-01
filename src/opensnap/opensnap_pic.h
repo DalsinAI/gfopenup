@@ -1,4 +1,4 @@
-/* OpenSnap's pictures in memory: the IFF ILBM it puts on the clipboard (and saves when there is no PNG
+/* GFOpenSnap's pictures in memory: the IFF ILBM it puts on the clipboard (and saves when there is no PNG
  * writer), HAM and Extra Half-Brite colours, and the file's name. Plain C with no OS calls, so
  * tests/test_opensnap_pic.c runs it on the build PC.
  *

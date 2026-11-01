@@ -1,4 +1,4 @@
-/* OpenMonitor: the Interrupts view (the design, section 4.6).
+/* GFOpenMonitor: the Interrupts view (the design, section 4.6).
  *
  * Exec's 16 interrupt vectors by level: a handler's name, priority, code and data, and for each of the five
  * that share (PORTS, COPER, VERTB, EXTER, NMI) every server on its chain. Where: the code is in the ROM (its
@@ -134,7 +134,7 @@ static void raw_cell(int row, int col, char *buf, int size, LONG *pen)
     case C_CODE: if (!r->empty) snprintf(buf, size, "$%08lx", (unsigned long)r->code); else snprintf(buf, size, "-"); *pen = U.pen_muted; break;
     case C_DATA: if (!r->empty) snprintf(buf, size, "$%08lx", (unsigned long)r->data); else snprintf(buf, size, "-"); *pen = U.pen_muted; break;
     case C_WHERE: snprintf(buf, size, "%s", r->where); if (!strcmp(r->where, "RAM")) *pen = U.pen_amber; break;
-    case C_RATE:                        /* exec's counts (OpenExec's task clock), else the VBlank's rate only */
+    case C_RATE:                        /* exec's counts (GFOpenExec's task clock), else the VBlank's rate only */
         if (r->empty) break;
         if (om_irq_per_second(r->vec) >= 0) snprintf(buf, size, "%d", om_irq_per_second(r->vec));
         else if (r->vec == INTB_VERTB) snprintf(buf, size, "%u", SysBase->VBlankFrequency ? SysBase->VBlankFrequency : 50);
@@ -166,8 +166,8 @@ static void draw_note(void)
     SetFont(rp, U.font);
     ogt_text(rp, U.pen_muted, U.px + 8, note_y + 4, s, U.pw - 16);
     ogt_text(rp, U.pen_muted, U.px + 8, note_y + 6 + U.fh, om_irq_per_second(INTB_VERTB) >= 0 ?
-             "Per second: exec's own counts, each vector's (OpenExec's task clock); a server's is its vector's." :
-             "Per second: the vertical blank's rate only; the others need OpenExec's task clock (the open ROM).", U.pw - 16);
+             "Per second: exec's own counts, each vector's (GFOpenExec's task clock); a server's is its vector's." :
+             "Per second: the vertical blank's rate only; the others need GFOpenExec's task clock (the open ROM).", U.pw - 16);
 }
 
 static void layout(int x, int y, int w, int h)

@@ -14,9 +14,9 @@ build/test_core: $(CORE) tests/test_core.c
 	mkdir -p build
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(CORE) tests/test_core.c $(LDLIBS)
 
-prefs-host: build/OpenMouseAccelPrefs-host
+prefs-host: build/GFOpenMouseAccelPrefs-host
 
-build/OpenMouseAccelPrefs-host: $(CORE) prefs/OpenMouseAccelPrefs.c
+build/GFOpenMouseAccelPrefs-host: $(CORE) prefs/OpenMouseAccelPrefs.c
 	mkdir -p build
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(CORE) prefs/OpenMouseAccelPrefs.c $(LDLIBS)
 

@@ -1,15 +1,15 @@
-/* OpenMonitor: the Tasks view (the design, section 4.2).
+/* GFOpenMonitor: the Tasks view (the design, section 4.2).
  *
  * Every task and process, the held ones first (red), then by the column chosen (CPU by default): name, CPU in
- * the last second, CPU time since OpenMonitor started, priority, state, core, stack used and size, the signals
+ * the last second, CPU time since GFOpenMonitor started, priority, state, core, stack used and size, the signals
  * it waits for, owner and address. Address, Waits for and Core start hidden (the column chooser, a right-click
  * on the header, shows them; the user, 24 October 2026, 15:05).
  *
- * How busy a task is: on OpenExec (the open ROM), exactly, from taskclock.resource (amigachrome-guest
+ * How busy a task is: on GFOpenExec (the open ROM), exactly, from taskclock.resource (amigachrome-guest
  * common/include/taskclock.h, the design's P4): exec charges each task its time at every switch while
- * OpenMonitor reads. OpenMonitor reads it only while the Tasks or the Interrupts view is shown (the user,
+ * GFOpenMonitor reads. GFOpenMonitor reads it only while the Tasks or the Interrupts view is shown (the user,
  * 24 October 2026: P4 "as long as it doesn't kill performance"; the switches cost more while exec keeps
- * time). Then, and elsewhere (AmigaOS keeps no time per task), OpenMonitor looks 50 (or 60) times a second,
+ * time). Then, and elsewhere (AmigaOS keeps no time per task), GFOpenMonitor looks 50 (or 60) times a second,
  * in a vertical blank interrupt server, at which task is running, and counts; a task waiting, the machine
  * idle, counts as idle. CPU time adds up both: exec's time while it kept it, the samples otherwise.
  *
@@ -22,10 +22,10 @@
  * tc_SigRecvd). Resume gives them back and signals it with what it received meanwhile, so it wakes as it would
  * have. No list of exec's is changed (taking the task out of TaskWait into a list of our own hung the lab at
  * the resume, 24 October 2026). A program that is running or ready just then isn't frozen: it is tried again a
- * few times, then the user is told. Never for a plain task, a file system, a system process or OpenMonitor
- * itself; every frozen task is resumed when OpenMonitor quits.
+ * few times, then the user is told. Never for a plain task, a file system, a system process or GFOpenMonitor
+ * itself; every frozen task is resumed when GFOpenMonitor quits.
  *
- * A task the task guard holds (amigachrome docs/architecture/TASK_GUARD.md): it waits on no signals and its
+ * A task the task guard holds (amicradle docs/architecture/TASK_GUARD.md): it waits on no signals and its
  * stack carries 'TGRD' 56 bytes below tc_SPUpper: the vector, the PC, the address. Shown as "held", in red.
  *
  * MIT, Copyright (c) 2026 AmigaChrome Team. */
@@ -57,10 +57,10 @@
 static ULONG cpu_tenths, switches, disp_before;
 static int clock_changed;               /* exec's clock taken up or put down since the last look */
 
-/* ---- the task clock: OpenExec's (taskclock.resource), when there is one ------------------------------- */
+/* ---- the task clock: GFOpenExec's (taskclock.resource), when there is one ------------------------------- */
 
 static struct taskclock_resource *tcres;
-static struct taskclock *tcl;           /* the table OpenMonitor reads (its own, or another monitor's) */
+static struct taskclock *tcl;           /* the table GFOpenMonitor reads (its own, or another monitor's) */
 static unsigned long long *tc_prev;     /* each place's time at the last second, then the idle's */
 static ULONG *tc_delta, tc_ints[16];    /* each place's time in the last second; the interrupts then */
 static unsigned long long tc_total;     /* the last second's time, every task's and the idle's */
@@ -187,7 +187,7 @@ static ULONG vb_server(REG(a1, struct samp *s))
 
 enum { OWN_PROGRAM, OWN_SHELL, OWN_FS, OWN_SYSTEM };
 static const char *const own_names[] = { "Workbench", "ramlib", "IPrefs", "ConClip", "input.device", "OpenBar",
-                                         "OpenInput", "OpenRTG cards", "OpenUSB bus", "exec boot", NULL };
+                                         "GFOpenInput", "GFOpenRTG cards", "GFOpenUSB bus", "exec boot", NULL };
 enum { ST_ADDED = 1, ST_RUN, ST_READY, ST_WAIT, ST_EXCEPT, ST_REMOVED, ST_HELD = 10, ST_FROZEN };
 static const char *const state_names[] = { "invalid", "added", "running", "ready", "waiting", "exception", "removed",
                                            "?", "?", "?", "held", "frozen" };
@@ -203,7 +203,7 @@ struct trow {
     ULONG guard_pc, guard_addr;
     ULONG stack, used, sigalloc, sigwait, sigrecvd;
     ULONG tenths;                       /* CPU in the last second, tenths of a per cent */
-    ULONG ms;                           /* CPU time since OpenMonitor started, in milliseconds */
+    ULONG ms;                           /* CPU time since GFOpenMonitor started, in milliseconds */
 };
 
 /* allocated at the start: built resident, the variables (a4's 64 KB) can't hold them */
@@ -326,7 +326,7 @@ static void add_task(struct Task *t)
     r->pri = t->tc_Node.ln_Pri;
     r->stack = (ULONG)t->tc_SPUpper - (ULONG)t->tc_SPLower;
     if (t == SysBase->ThisTask) {
-        /* running: its stack pointer is in the CPU, not in tc_SPReg (it is OpenMonitor itself, here) */
+        /* running: its stack pointer is in the CPU, not in tc_SPReg (it is GFOpenMonitor itself, here) */
         ULONG sp;
         __asm volatile ("move.l %%sp,%0" : "=r" (sp));
         r->used = sp <= (ULONG)t->tc_SPUpper && sp >= (ULONG)t->tc_SPLower ? (ULONG)t->tc_SPUpper - sp : 0;
@@ -633,7 +633,7 @@ static void describe(struct trow *r, char *out, int size)
     else if (r->kind == OWN_SYSTEM) snprintf(who, sizeof who, "part of the system");
     else snprintf(who, sizeof who, "started by Workbench or another program");
     snprintf(out, size, "a %s %s, priority %ld%s", r->process ? "process" : "task", who, (long)r->pri,
-             r->state == ST_FROZEN ? ", frozen by OpenMonitor" : "");
+             r->state == ST_FROZEN ? ", frozen by GFOpenMonitor" : "");
 }
 
 static void draw_details(void)
@@ -696,7 +696,7 @@ static int same_task(struct Task *t, STRPTR lnname, APTR spl)
 static int chosen_ok(int not_self)
 {
     if (!chosen) { om_status(0, "Choose a task in the list first."); return 0; }
-    if (not_self && chosen == FindTask(NULL)) { om_status(0, "That is OpenMonitor: close its window to end it."); return 0; }
+    if (not_self && chosen == FindTask(NULL)) { om_status(0, "That is GFOpenMonitor: close its window to end it."); return 0; }
     return 1;
 }
 
@@ -930,13 +930,13 @@ static void freeze_chosen(void)
     }
     if (r->state == ST_HELD) { om_status(0, "%s is held by the task guard already.", r->name); return; }
     if (!r->process || r->kind == OWN_SYSTEM || r->kind == OWN_FS) {
-        om_status(0, "%s is part of the system: OpenMonitor doesn't freeze it.", r->name);
+        om_status(0, "%s is part of the system: GFOpenMonitor doesn't freeze it.", r->name);
         return;
     }
     if (nfrz >= MAXFRZ) { om_status(0, "%d tasks are frozen already: resume one first.", MAXFRZ); return; }
-    yes = om_ask("OpenMonitor", "Freeze|Cancel",
+    yes = om_ask("GFOpenMonitor", "Freeze|Cancel",
                  "Freeze %s?\n\n"
-                 "It stops running until you resume it, or until OpenMonitor quits.\n"
+                 "It stops running until you resume it, or until GFOpenMonitor quits.\n"
                  "It keeps whatever it holds while it is frozen: a semaphore,\n"
                  "a lock or a window it has may then stop other programs.", r->name);
     if (yes != 1) { om_status(0, "Left running."); return; }
@@ -1043,7 +1043,7 @@ static int confirm_force(const struct ident *id, int after_break)
     LONG r;
     if (id->shell) snprintf(shell, sizeof shell, "\n\nIt runs in Shell %ld: Force quit removes that Shell too.", (long)id->shell);
     else shell[0] = 0;
-    r = om_ask("OpenMonitor", after_break ? "Force quit|Wait longer|Cancel" : "Force quit|Cancel",
+    r = om_ask("GFOpenMonitor", after_break ? "Force quit|Wait longer|Cancel" : "Force quit|Cancel",
                "%s%s\n\n"
                "Force quit removes it at once. It cannot tidy up:\n"
                "its memory, files and windows stay open until you\n"
@@ -1053,7 +1053,7 @@ static int confirm_force(const struct ident *id, int after_break)
     if (after_break && r == 2) { ending_secs = 0; om_status(0, "Waiting a little longer..."); return 0; }
     if (r != 1) { if (ending.t == id->t) ending.t = NULL; om_status(0, "Left running."); return 0; }
     if (is_system(id->t)) {
-        if (om_ask("OpenMonitor", "Remove it anyway|Cancel",
+        if (om_ask("GFOpenMonitor", "Remove it anyway|Cancel",
                    "%s is part of the system (a device, a file system\n"
                    "or one of the OS's own tasks).\n\n"
                    "Removing it will very likely stop the Amiga, and a\n"
@@ -1072,7 +1072,7 @@ static void end_held(struct trow *r)
     struct ident id;
     LONG a;
     char s[200];
-    a = om_ask("OpenMonitor", "Leave it held|Copy the details|Remove it",
+    a = om_ask("GFOpenMonitor", "Leave it held|Copy the details|Remove it",
                "%s is held by the task guard: it stopped on\n"
                "%s at PC $%08lx ($%08lx),\n"
                "and the other tasks ran on.\n\n"
@@ -1091,7 +1091,7 @@ static void end_held(struct trow *r)
     if (!same_task(chosen, chosen_lnname, chosen_spl)) { Permit(); om_status(0, "That task has ended."); return; }
     take_ident(&id, chosen, r->name);
     Permit();
-    if (is_system(id.t) && om_ask("OpenMonitor", "Remove it anyway|Cancel",
+    if (is_system(id.t) && om_ask("GFOpenMonitor", "Remove it anyway|Cancel",
                                   "%s is part of the system.\n\nRemoving it will very likely stop the Amiga.", id.name) != 1) {
         om_status(0, "Left held.");
         return;
@@ -1169,7 +1169,7 @@ static void show_details(void)
     else if (r->cmd[0] && r->kind == OWN_SHELL)
         snprintf(extra, sizeof extra, "\n\nProgram file: %s", r->cmd);
     in_modal = 1;
-    om_ask("OpenMonitor", "OK",
+    om_ask("GFOpenMonitor", "OK",
            "%s\n%s\n\n"
            "A %s at $%08lx, owner: %s\n"
            "State: %s    Priority: %ld    CPU: %lu.%lu%%    CPU time: %s\n"
@@ -1371,7 +1371,7 @@ static void status(void)
     else if (held) om_status(1, "%d tasks, %d held by the task guard", nrows, held);
     else if (nfrz) om_status(1, "%d tasks, %d frozen", nrows, nfrz);
     else om_status(1, "%d tasks", nrows);
-    if (tcl) om_status(2, "CPU: exact (OpenExec's task clock)");
+    if (tcl) om_status(2, "CPU: exact (GFOpenExec's task clock)");
     else om_status(2, "CPU: sampled %u times a second", SysBase->VBlankFrequency ? SysBase->VBlankFrequency : 50);
 }
 
@@ -1511,7 +1511,7 @@ int om_tasks_init(void)
     memset(&S, 0, sizeof S);
     vbi.is_Node.ln_Type = NT_INTERRUPT;
     vbi.is_Node.ln_Pri = -60;
-    vbi.is_Node.ln_Name = (char *)"OpenMonitor";
+    vbi.is_Node.ln_Name = (char *)"GFOpenMonitor";
     vbi.is_Data = &S;
     vbi.is_Code = (void (*)())vb_server;
     exact_wanted = 0;

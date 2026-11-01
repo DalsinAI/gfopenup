@@ -1,7 +1,7 @@
 /*
- * OpenShell UI integration notes / skeleton.
+ * GFOpenShell UI integration notes / skeleton.
  *
- * The concrete GUI should use the OpenUp project's standard MUI/OpenGUI
+ * The concrete GUI should use the GFOpenUp project's standard MUI/OpenGUI
  * wrapper. Keep these logical widgets:
  *
  * Window

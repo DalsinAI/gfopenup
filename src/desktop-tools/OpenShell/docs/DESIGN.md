@@ -1,9 +1,9 @@
-# OpenShell 0.1 - OpenUp Shell Window
+# GFOpenShell 0.1 - GFOpenUp Shell Window
 
-OpenShell is not a replacement command language. It is a modern Workbench
+GFOpenShell is not a replacement command language. It is a modern Workbench
 front-end for the Amiga Shell.
 
-The command interpreter remains the system Shell. OpenShell improves the
+The command interpreter remains the system Shell. GFOpenShell improves the
 window, input, history, navigation, output handling and session management
 around it.
 
@@ -17,9 +17,9 @@ commands remain Amiga semantics.
 ## Window layout
 
     +------------------------------------------------------------------+
-    | [DH0:System] [DH1:Projects] [+]                     OpenShell     |
+    | [DH0:System] [DH1:Projects] [+]                     GFOpenShell     |
     +------------------------------------------------------------------+
-    | DH1:Projects/OpenUp                                                |
+    | DH1:Projects/GFOpenUp                                                |
     |------------------------------------------------------------------|
     | 07:41  > list src                                                  |
     |         opencalc.c        4217                                     |
@@ -30,7 +30,7 @@ commands remain Amiga semantics.
     |         0 errors                                                   |
     |                                                                    |
     |------------------------------------------------------------------|
-    | DH1:Projects/OpenUp > _                                            |
+    | DH1:Projects/GFOpenUp > _                                            |
     +------------------------------------------------------------------+
     | Ready | RC 0 | 18 commands | UTF-8 display | 80 x 34             |
     +------------------------------------------------------------------+
@@ -104,7 +104,7 @@ Required operations:
 - copy an individual command and its output;
 - visible error/return-code markers without recolouring command output.
 
-The Shell output bytes remain authoritative. OpenShell may provide a Unicode
+The Shell output bytes remain authoritative. GFOpenShell may provide a Unicode
 presentation layer, but it must not mutate command data sent to or received
 from the Shell.
 
@@ -116,7 +116,7 @@ A lightweight side panel, hidden by default:
     Today
       07:41 make
       07:40 list src
-      07:39 cd DH1:Projects/OpenUp
+      07:39 cd DH1:Projects/GFOpenUp
 
 Selecting an item places it in the command editor. Double activation can run
 it, but a single selection must never unexpectedly execute a command.
@@ -205,7 +205,7 @@ View:
 ## Workbench integration
 
 - Drop files/directories to insert properly quoted Amiga paths.
-- "Open Shell Here" from a drawer should open a new OpenShell tab at that
+- "Open Shell Here" from a drawer should open a new GFOpenShell tab at that
   exact Amiga path.
 - A path-bar action can open the current directory in Workbench.
 - Window geometry is snapshot-compatible.
@@ -231,7 +231,7 @@ crash.
     Workbench window / MUI UI
               |
               v
-       OpenShell controller
+       GFOpenShell controller
         /       |        \
        /        |         \
  command     transcript    tabs
@@ -261,6 +261,6 @@ Those can be separate components later.
 
 ## Suggested repository location
 
-    OpenUp/
+    GFOpenUp/
       apps/
-        OpenShell/
+        GFOpenShell/
