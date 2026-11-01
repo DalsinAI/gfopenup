@@ -8,7 +8,7 @@
  * Board details... shows a board's AutoConfig record; Drives... the mounted devices and their sizes; Save a
  * report runs ShowConfig REPORT (ShowConfig's own layout, by ShowConfig itself).
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/execbase.h>
@@ -446,7 +446,7 @@ static void status(void)
 {
     int i, ours = 0;
     for (i = 0; i < nboards; i++) if (boards[i].maker == 0xDA15 || boards[i].maker == 2011) ours++;
-    om_status(1, "%d boards, %d of them the AmigaChrome Team's", nboards, ours);
+    om_status(1, "%d boards, %d of them the AmiCradle Team's", nboards, ours);
     om_status(2, "Read once; F5 reads again");
 }
 

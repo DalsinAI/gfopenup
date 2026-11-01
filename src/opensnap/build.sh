@@ -5,7 +5,7 @@
 # Datatypes/include. 68040 code, soft float (specs/m68k-soft-m68040.specs), as GFOpenUp's other programs. The
 # compiler: the os32 stove at STOVE (default ~/AmiCradle/stoves/os32). OSDEBUG=1 makes a lab build that
 # writes each step's time to T:GFOpenSnap.log.
-# MIT, Copyright (c) 2026 AmigaChrome Team.
+# MIT, Copyright (c) 2026 AmiCradle Team.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 : "${ODT:?set ODT to an opendatatypes checkout}"

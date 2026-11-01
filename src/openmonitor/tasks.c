@@ -28,7 +28,7 @@
  * A task the task guard holds (amicradle docs/architecture/TASK_GUARD.md): it waits on no signals and its
  * stack carries 'TGRD' 56 bytes below tc_SPUpper: the vector, the PC, the address. Shown as "held", in red.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/execbase.h>

@@ -93,7 +93,7 @@
  *                                        settings, prefs.resource 47.101 or later; src/openup_lines.h)
  * Words with spaces are quoted.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 #include <exec/types.h>
 #include <exec/memory.h>
 #include <exec/resident.h>
@@ -125,7 +125,7 @@
 
 #include "openup_lines.h"
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.11 (26.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.11 (26.10.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
