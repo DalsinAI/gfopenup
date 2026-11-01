@@ -33,7 +33,7 @@
  *   CLIPBOARD=YES                  NO: files only
  *   CX_PRIORITY=0                  the broker's priority
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/memory.h>
@@ -75,7 +75,7 @@
 
 #include "opensnap_pic.h"
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenSnap 1.0 (24.10.2026) MIT, Copyright (c) 2026 AmigaChrome Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenSnap 1.0 (24.10.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 unsigned long __stack = 32768;      /* libnix swaps to this when Run gives the Shell's 4 KB */
 
 struct IntuitionBase *IntuitionBase;

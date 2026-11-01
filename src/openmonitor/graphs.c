@@ -2,7 +2,7 @@
  * (chip and fast together), and the GPU (how much of the drawing GFOpenGPU did, with the pixels a second, from
  * gfopenrtg.library's ORTG_DrawStats, 0.11 on). On a small screen they are one line of meters instead.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/memory.h>
@@ -43,7 +43,7 @@ static ULONG draw_stats(ULONG *counts, ULONG kinds, ULONG flags)
     return d0;
 }
 
-/* The cores the CPU cores board presents through AutoConfig: an AmigaChrome Team ($DA15) product 7 board
+/* The cores the CPU cores board presents through AutoConfig: an AmiCradle Team ($DA15) product 7 board
  * carrying the ACSV block, CLASS ($20) 2, UNITS ($24) its cores. 0 without the board. */
 static ULONG board_cores(void)
 {

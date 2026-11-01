@@ -41,7 +41,7 @@ OUT_DIR/Icons AmiCradle's own (GFOpenCalc, GFOpenClock...), with no face line:
 GFOpenUpTool ICONS, and OLDLOOK for a Gorilla picture GFOpenUp's list doesn't name,
 give an icon its picture by name, else the one of its kind.
 
-MIT, Copyright (c) 2026 AmigaChrome Team.
+MIT, Copyright (c) 2026 AmiCradle Team.
 """
 from __future__ import annotations
 

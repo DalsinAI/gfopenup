@@ -3,7 +3,7 @@
 # GFOpenUp Desktop Tools 0.1) and its Workbench window (src/calc_amiga.c).
 #   OGT=/path/to/opengadtools OpenCalculator/build.sh [OUT_DIR] (default build/os3)
 # 68040 with soft float, as every Open app (the specs file keeps libm020); -lm for the engine's sin, cos, log and pow.
-# MIT, Copyright (c) 2026 AmigaChrome Team.
+# MIT, Copyright (c) 2026 AmiCradle Team.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 # soft float: link libnix's libm020, not libm881 (specs/m68k-soft-m68040.specs)

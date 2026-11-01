@@ -20,7 +20,7 @@
  *                                z.library, the dictionary, OWConvert), so the shared files have one owner.
  * A GFOpenUpTool before this ignores the line ("needs" with a word it doesn't know).
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 #ifndef OPENUP_LINES_H
 #define OPENUP_LINES_H
 

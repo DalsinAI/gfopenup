@@ -17,7 +17,7 @@
  *                                          needs this one; else the manifest as REMOVE leaves it, and 0
  * tests/test_build_pack.py runs these forms over the parts build_pack.py writes.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

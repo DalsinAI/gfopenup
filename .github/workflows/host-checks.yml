@@ -1,4 +1,4 @@
-# Copyright (c) 2026 AmigaChrome Team. MIT licence.
+# Copyright (c) 2026 AmiCradle Team. MIT licence.
 # GFOpenUp's host checks: the parts tools/build_pack.py writes for the no-ROM-volume design (GFOpenPrefs in
 # SYS:Preferences, the old homes archived, the lines by ROM), read through GFOpenUpTool's own condition code
 # (tests/test_build_pack.py, tests/test_openup_lines.c), with openamigaprefs' GFOpenPrefs for the SECTION words.

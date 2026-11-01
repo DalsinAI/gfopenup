@@ -2,7 +2,7 @@
 """Icons for the Open apps, drawn in the Gorilla style (ICONS.md section 3):
 bold black outlines, soft light from the top left, a gentle gloss and a soft
 shadow down and to the right. Our own drawing, with tools/gstyle.py; nothing
-is traced from Gorilla. MIT, Copyright (c) 2026 AmigaChrome Team.
+is traced from Gorilla. MIT, Copyright (c) 2026 AmiCradle Team.
 
     python3 tools/open_icons_art.py icons/open    # needs Pillow and numpy
 

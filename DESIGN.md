@@ -23,7 +23,7 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
 
 | Machine | Found by | Display | Network | Also |
 | --- | --- | --- | --- | --- |
-| AmiCradle instance, the appliance | AmigaChrome Team $DA15 boards in expansion.library's list: ACRTG (product 9, the 16 MiB board, or 15, the 64 MiB one), the GFOpenSocket card (6), ACStorage | GFOpenRTG with `ACRTG.card`, `ACRTG.chip` and GFOpenGPU's `ACRTG.gpu` | GFOpenSocket's host backend | accontrol: the shared clipboard, files and pace |
+| AmiCradle instance, the appliance | AmiCradle Team $DA15 boards in expansion.library's list: ACRTG (product 9, the 16 MiB board, or 15, the 64 MiB one), the GFOpenSocket card (6), ACStorage | GFOpenRTG with `ACRTG.card`, `ACRTG.chip` and GFOpenGPU's `ACRTG.gpu` | GFOpenSocket's host backend | accontrol: the shared clipboard, files and pace |
 | PiStorm | Emu68's own resources | The PiStorm's RTG through GFOpenRTG once its driver exists; until then the installed Picasso96 stays. VideoCore later for GFOpenGPU and GFOpenMedia | GFOpenSocketDirect over `wifipi.device` or `genet.device` | |
 | A real Amiga | The boards in expansion.library's list, the CPU and FPU, the chipset | GFOpenRTG where it has a driver for the card, and AGA through GFOpenRTG's AGA card; otherwise the installed Picasso96 or CyberGraphX stays | GFOpenSocketDirect over the card's SANA-II driver, or the installed Roadshow or AmiTCP if the user keeps it | |
 
@@ -104,7 +104,7 @@ or offer AmiSSL.
 
 - **Aminet:** one LhA archive.
 - **Real machines:** an ADF and an HDF.
-- **AmiCradle:** the AmigaChrome Team tools drive in instances, and Cradle's recipes
+- **AmiCradle:** the AmiCradle Team tools drive in instances, and Cradle's recipes
   for new OS 3.2.3 instances. Instances and real machines get the same pack.
 - **The appliance:** its first build carries it, demonstrating every Open
   standard.

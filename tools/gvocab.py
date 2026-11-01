@@ -12,7 +12,7 @@ Every object is obj(pen, sel=False, **options) and returns its slots:
 "face" (on the thing itself: a page's text, a monitor's screen) and "badge"
 (at its foot, on the right, overlapping), each (x, y, scale) in the
 object's frame. sel is the chosen frame: something moves (ICONS.md).
-MIT, Copyright (c) 2026 AmigaChrome Team. Our own drawing; nothing traced.
+MIT, Copyright (c) 2026 AmiCradle Team. Our own drawing; nothing traced.
 """
 from __future__ import annotations
 

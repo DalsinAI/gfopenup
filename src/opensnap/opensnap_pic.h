@@ -10,7 +10,7 @@
  *     red's eight bits first (bit 0 to bit 7), then green's, then blue's, and no CMAP;
  *   - BODY packed with ByteRun1, a row of each plane at a time.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 #ifndef OPENSNAP_PIC_H
 #define OPENSNAP_PIC_H
 

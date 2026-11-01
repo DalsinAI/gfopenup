@@ -20,7 +20,7 @@
  * The log keeps everything; the view filters (the groups, failures only, a task's or a name's text, GFOpenMonitor
  * itself) when it shows it, once a second. Pause stops the view, not the log.
  *
- * MIT, Copyright (c) 2026 AmigaChrome Team. */
+ * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
 #include <exec/execbase.h>

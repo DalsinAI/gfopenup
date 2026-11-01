@@ -2,7 +2,7 @@
 ; GFOpenUp's Installer script (C:Installer / SYS:System/Installer). Run it from
 ; its icon in the GFOpenUp drawer. What it does is DESIGN.md section 3: the
 ; base OS stays as shipped, every file is listed, and Uninstall-GFOpenUp puts
-; everything back. MIT, Copyright (c) 2026 AmigaChrome Team.
+; everything back. MIT, Copyright (c) 2026 AmiCradle Team.
 
 (set #version "@VERSION@")
 (set @app-name "GFOpenUp")

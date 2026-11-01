@@ -178,7 +178,7 @@ a Part file that C/GFOpenUpTool reads:
                         and sha256: OPENBROWSER below)
 
 Icons are OS 3.2-style, made with openamigaprint's icon writer (ACBuild's
-amiga-icon.js). MIT, Copyright (c) 2026 AmigaChrome Team.
+amiga-icon.js). MIT, Copyright (c) 2026 AmiCradle Team.
 """
 from __future__ import annotations
 
@@ -216,7 +216,9 @@ OPENSOCKET_MARKERS = ["GFOpenSocket (AmiCradle)", "ACNet (AmiCradle)", "AmiCradl
 # GraphicDump, InitPrinter and PrintFiles, and their help and catalogs are archived (retire: SYS:Storage/
 # GFOpenUp-Superseded; REMOVE and UNINSTALL put them back). The part leaves a printer.device that is neither OS 3.2's
 # nor ours (TurboPrint's, say) and changes nothing then.
-OPENPRINTER_MARKERS = ["printer.device 47.", "GFOpenPrinter, AmigaChrome Team"]
+# The last marker is the name a printer.device built before 1 November 2026 carries (the Team was the
+# AmigaChrome Team until then), so an update still knows ours.
+OPENPRINTER_MARKERS = ["printer.device 47.", "GFOpenPrinter, AmiCradle Team", "GFOpenPrinter, AmigaChrome Team"]
 LEGACY_PRINTER_DRIVERS = ("EpsonQ", "EpsonX", "EpsonXOld", "Generic", "HP_DeskJet", "HP_DeskJet_340", "HP_DeskJet_400",
                           "HP_DeskJet_600", "HP_DeskJet_895C", "HP_LaserJet", "HP_LaserJet_2100", "HP_LaserJet_4",
                           "HP_LaserJet_III", "NEC_Pinwriter", "PostScript")
@@ -905,7 +907,7 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
            b"are the GFOffice Suite's (DalsinAI/gfoffice):\n\n"
            + (src / "LICENSE").read_bytes(), "SYS:" + lic + "GFOffice.txt")
     zver = binary_version(zlib, "z.library")
-    gf.add(lic + "z.library.txt", f"LIBS:z.library{' ' + zver if zver else ''} is GFOpenZlib, the AmigaChrome Team's own "
+    gf.add(lic + "z.library.txt", f"LIBS:z.library{' ' + zver if zver else ''} is GFOpenZlib, the AmiCradle Team's own "
            "(DalsinAI/amigachrome-guest libraries/openzlib):\n\n".encode() + guest_licence, "SYS:" + lic + "z.library.txt")
     if words:
         scowl = src / "licenses/SCOWL-ASPELL-English.txt"
@@ -1330,7 +1332,7 @@ OPENLIBS_STARTUP = """\
 ; $VER: GFOpenLibs-Startup 1.0 (13.10.2026)
 ; GFOpenUp's open ROM libraries (Install-GFOpenUp, page 6): each module in LIBS:GFOpenLibs, loaded in one call of
 ; OS 3.2's own LoadModule, which restarts the Amiga once when they aren't in memory yet. Taking a file out of
-; LIBS:GFOpenLibs puts the ROM's own back at the next start. MIT, Copyright (c) 2026 AmigaChrome Team.
+; LIBS:GFOpenLibs puts the ROM's own back at the next start. MIT, Copyright (c) 2026 AmiCradle Team.
 FailAt 21
 If EXISTS LIBS:GFOpenLibs/utility.module
   If EXISTS LIBS:GFOpenLibs/input.device

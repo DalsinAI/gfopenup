@@ -8,7 +8,7 @@
 # -Wno-format-truncation.
 # GUEST: an amigachrome-guest checkout, for sysprobe (common/sysprobe: the Hardware and Speed views read the
 # machine as ShowConfig and ACInfo do), accontrol.device's header and taskclock.h (GFOpenExec's task clock).
-# MIT, Copyright (c) 2026 AmigaChrome Team.
+# MIT, Copyright (c) 2026 AmiCradle Team.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 : "${OGT:?set OGT to an opengadtools checkout}"
