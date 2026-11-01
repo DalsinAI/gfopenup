@@ -3,7 +3,7 @@
  * Start monitoring wedges 22 calls (SetFunction, under Forbid): exec's OpenLibrary, OpenDevice, OpenResource,
  * FindPort, FindTask (by name only), FindSemaphore and FindResident; dos's Open, Lock, DeleteFile, CreateDir,
  * Rename, MakeLink, SetProtection, LoadSeg, NewLoadSeg, Execute, SystemTagList, GetVar, SetVar and DeleteVar;
- * graphics' GFOpenFont. Each call goes on as before, then is logged: the time, the task, the call, its name, its
+ * graphics' OpenFont. Each call goes on as before, then is logged: the time, the task, the call, its name, its
  * second argument, the result and IoErr() when it failed, into a ring of 2,048 entries.
  *
  * Each wedge is a stub of 72 bytes in memory of its own, not GFOpenMonitor's code: it counts the call in, loads
@@ -50,7 +50,7 @@ enum { F_OPENLIB, F_OPENDEV, F_OPENRES, F_FINDPORT, F_FINDTASK, F_FINDSEM, F_FIN
 enum { G_LIBS, G_FILES, G_PROGS, G_VARS, G_PORTS, G_N };      /* the groups, as the view's checkboxes */
 static const char *const fn_name[F_N] = { "OpenLibrary", "OpenDevice", "OpenResource", "FindPort", "FindTask",
     "FindSemaphore", "FindResident", "Open", "Lock", "DeleteFile", "CreateDir", "Rename", "MakeLink",
-    "SetProtection", "LoadSeg", "NewLoadSeg", "Execute", "SystemTagList", "GetVar", "SetVar", "DeleteVar", "GFOpenFont" };
+    "SetProtection", "LoadSeg", "NewLoadSeg", "Execute", "SystemTagList", "GetVar", "SetVar", "DeleteVar", "OpenFont" };
 static const UBYTE fn_group[F_N] = { G_LIBS, G_LIBS, G_LIBS, G_PORTS, G_PORTS, G_PORTS, G_PORTS,
     G_FILES, G_FILES, G_FILES, G_FILES, G_FILES, G_FILES, G_FILES, G_PROGS, G_PROGS, G_PROGS, G_PROGS,
     G_VARS, G_VARS, G_VARS, G_LIBS };
