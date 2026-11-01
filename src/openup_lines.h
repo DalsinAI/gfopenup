@@ -238,4 +238,36 @@ static void oul_settle(oul_entry *e, int n, int first, const char *part, int ok)
     }
 }
 
+/* ---- The manifest's first and last lines (1 November 2026) ----
+ * OpenUpTool writes the manifest whole or not at all (a new copy that takes the old one's name), and ends it with
+ * OUL_MANIFEST_END, so a manifest cut short (by an older OpenUpTool on a full disk, say) shows it and is never saved
+ * over: a short list would lose the originals it names ("replaced" lines), which UNINSTALL puts back. The first
+ * line says which kind it is: OUL_MANIFEST_HEAD has the end line; OUL_MANIFEST_OLD (OpenUpTool up to 0.8.11) has
+ * none, and is whole when its last line ends, as every line it wrote did. */
+#define OUL_MANIFEST_HEAD "OpenUp\t0.2"
+#define OUL_MANIFEST_OLD "OpenUp\t0.1"
+#define OUL_MANIFEST_END "OpenUp\tend"
+
+/* 1 when the text from s to e (a line without its newline, a '\r' before it allowed) is w. */
+static int oul_line_is(const char *s, const char *e, const char *w)
+{
+    if (e > s && e[-1] == '\r') e--;
+    while (s < e && *w && *s == *w) s++, w++;
+    return s == e && !*w;
+}
+
+/* 1 when the manifest's text (len bytes) is whole, as above. */
+static int oul_manifest_whole(const char *text, long len)
+{
+    const char *end, *head = text, *last;
+    if (len <= 0 || text[len - 1] != '\n') return 0;
+    end = text + len - 1;
+    while (*head != '\n') head++;
+    if (oul_line_is(text, head, OUL_MANIFEST_OLD)) return 1;
+    if (head - text < 7 || !oul_line_is(text, text + 7, "OpenUp\t")) return 0;   /* not a manifest's first line */
+    for (last = end; last > text && last[-1] != '\n'; last--)
+        ;
+    return last > head && oul_line_is(last, end, OUL_MANIFEST_END);
+}
+
 #endif
