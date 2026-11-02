@@ -2,7 +2,7 @@
 
 **Received:** 10 October 2026, from the user, as `OpenMouseAccel_0.1_Source.zip` (25,495 bytes, sha256 `27c7fb817fd0eba10f6e699c53c5be1837691725fca3da1a5e71547440d894d7`).
 **State:** source only, kept as received. It is **not** built into the GFOpenUp pack: `tools/build_pack.py` does not know it, and no part installs it. It is here so the Team can analyse it and build it later.
-**Design:** the goal it implements is `Design-Pointer-Acceleration.md` in DalsinAI/openamigainput (GFOpenInput's design, section 13), from the user's specification of the same day.
+**Design:** the goal it implements is `Design-Pointer-Acceleration.md` in DalsinAI/gfopeninput (GFOpenInput's design, section 13), from the user's specification of the same day.
 
 ## What is here
 

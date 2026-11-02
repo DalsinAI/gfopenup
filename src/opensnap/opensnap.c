@@ -16,7 +16,7 @@
  * waits in ReadPixels, as the compositor's asynchronous ring will); video RAM is never read by address. A
  * planar screen's planes are read after WaitBlit.
  *
- * The PNG is written by openpng.datatype (GFOpenImage, opendatatypes 47.4: OIM_ENCODEPNG, deflate by
+ * The PNG is written by openpng.datatype (GFOpenImage, gfopendatatypes 47.4: OIM_ENCODEPNG, deflate by
  * z.library). Without them the picture is saved as the IFF ILBM instead (Snapshot-....iff) and the message
  * says so.
  *

@@ -823,9 +823,9 @@ def main(argv=None) -> int:
     ap.add_argument("out", type=Path)
     ap.add_argument("--sheet", action="store_true", help="contact sheets, light and dark, per folder")
     ap.add_argument("--only", default="", help="only icons whose name holds this text")
-    ap.add_argument("--amigachrome", type=Path, help="an amigachrome checkout (for amiga_icon); default ../amigachrome")
+    ap.add_argument("--amigachrome", type=Path, help="an amicradle checkout (for amiga_icon); default ../amicradle")
     a = ap.parse_args(argv)
-    ac = a.amigachrome or ROOT.parent / "amigachrome"
+    ac = a.amigachrome or ROOT.parent / "amicradle"
     sys.path.insert(0, str(ac / "scripts"))
     import amiga_icon
 
@@ -862,7 +862,7 @@ def main(argv=None) -> int:
             by_folder.setdefault(folder, []).append((name, fr))
     (a.out / "collection.json").write_text(json.dumps({
         "name": "GFOpenUp (Gorilla style)",
-        "source": "openamigaup tools/icon_library_art.py, drawn from icons/LIST.csv with tools/gvocab.py",
+        "source": "gfopenup tools/icon_library_art.py, drawn from icons/LIST.csv with tools/gvocab.py",
         "licence": "MIT",
         "notes": "Copyright (c) 2026 AmiCradle Team. Our own drawing in the Gorilla style (bold outlines, light from the top left, "
                  "a soft shadow), nothing traced. png/: PNG icons, 64 pixels, two frames (the second moves something).",

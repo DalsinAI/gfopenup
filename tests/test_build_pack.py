@@ -9,7 +9,7 @@ INSTALL and REMOVE in both orders read through GFOpenUpTool's own code (gfoffice
 
 The Part lines are read through GFOpenUpTool's own condition code (src/openup_lines.h, built here from
 tests/test_openup_lines.c with the host's cc) for each kind of machine: OS 3.2.3's ROM, an open ROM with
-prefs.resource 47.100, and one with 47.101 (the ROM that applies the boot's settings). With an openamigaprefs
+prefs.resource 47.100, and one with 47.101 (the ROM that applies the boot's settings). With a gfopenprefs
 checkout beside this one (or OPENAMIGAPREFS=dir), each page's SECTION word is checked against GFOpenPrefs's.
 No pack is built and no stove is needed.
 
@@ -31,7 +31,7 @@ import build_pack as bp  # noqa: E402
 # The pages by the user's plain names (the design's section 8, Q9), in GFOpenPrefs's order
 PAGES = ["Theme", "Screen Mode", "Pointer", "Fonts", "Colours", "Backdrops", "Workbench", "Icons", "File Requesters",
          "Windows", "Title Bar", "Menus", "IControl", "Dock", "Sound", "Input", "Gamepads", "Date & Time", "Serial",
-         "Printing", "File Types", "System", "Blanker"]   # GFOpenPrefs 2.4's list order (openamigaprefs opframe.c lt_order)
+         "Printing", "File Types", "System", "Blanker"]   # GFOpenPrefs 2.4's list order (gfopenprefs opframe.c lt_order)
 # The stubs archived: the 13 old ones and the 9 GFOpenUp added on 21 October (section 10)
 OLD13 = ["Look", "OpenLook", "Windows", "TitleBar", "Menus", "OpenDock", "OpenSound", "OpenInput", "OpenGamepads",
          "OpenDateTime", "OpenSerial", "OpenTypes", "OpenSystem"]
@@ -48,7 +48,7 @@ def check(what: str, ok: bool, more: str = "") -> None:
 
 
 class FakeIcons:
-    """openamigaprint's icon writer as far as the parts call it: each icon's bytes say what it was asked for."""
+    """gfopenprint's icon writer as far as the parts call it: each icon's bytes say what it was asked for."""
     WBDISK, WBDRAWER, WBTOOL, WBPROJECT = 1, 2, 3, 4
 
     def icon(self, kind, art, default_tool=None, tool_types=None, stack=4096, window=(400, 200)):
@@ -433,7 +433,7 @@ def main() -> int:
         check("GFOpenMonitor.info: a tool icon with 32 KB of stack (GFOpenBench runs the ROM's resident from it)",
               mon[0] == FakeIcons.WBTOOL and mon[4] == 32768)
 
-        # ACROMFix (amigachrome-guest tools/acromfix), SetPatch for the open ROM: the file and its QUIET startup line on
+        # ACROMFix (amicradle-guest tools/acromfix), SetPatch for the open ROM: the file and its QUIET startup line on
         # every ROM, as it changes nothing where there is nothing to fix and an install can move to another ROM
         core = bp.Part(top, "GFOpenUp", "0.9", "test")
         bp.acromfix_lines(core, b"ACROMFix body")
@@ -445,10 +445,10 @@ def main() -> int:
         check("ACROMFix's file as built", (core.dir / "C/ACROMFix").read_bytes() == b"ACROMFix body")
 
         # Backdrops: GFOpenUp's own desktops, each with its .tone; the AmiCradle Background Pack's art (which
-        # opengadtools' make_backdrops.py also exports) is an optional install, not GFOpenUp's (24 October 2026)
+        # gfopengadtools' make_backdrops.py also exports) is an optional install, not GFOpenUp's (24 October 2026)
         bdir = tmp / "backdrops"
         bdir.mkdir()
-        ogt = tmp / "opengadtools"
+        ogt = tmp / "gfopengadtools"
         (ogt / "tools").mkdir(parents=True)
         (ogt / "tools/make_art_backdrops.py").write_text(
             "from PIL import Image\nSIZES = [(640, 480), (1920, 1200)]\n"
@@ -545,8 +545,8 @@ def main() -> int:
     check("GFOpenPrefs's part version is read from SYS:Preferences/GFOpenPrefs",
           bp.PART_MAIN["GFOpenPrefs"] == ("Preferences/GFOpenPrefs", "GFOpenPrefs"))
 
-    # the SECTION words are GFOpenPrefs's (openamigaprefs OpenPrefs/src/openprefs.c)
-    oap = Path(os.environ.get("OPENAMIGAPREFS", ROOT.parent / "openamigaprefs"))
+    # the SECTION words are GFOpenPrefs's (gfopenprefs OpenPrefs/src/openprefs.c)
+    oap = Path(os.environ.get("OPENAMIGAPREFS", ROOT.parent / "gfopenprefs"))
     op = oap / "OpenPrefs/src/openprefs.c"
     if op.is_file():
         known = set(re.findall(r'\{ "([A-Z]+)", LT_[A-Z]+ \}', op.read_text(encoding="latin-1")))
