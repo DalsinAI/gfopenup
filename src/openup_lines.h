@@ -35,7 +35,7 @@ static int oul_prefs_task(int okr, unsigned version, unsigned revision)
     return okr && (version > 47u || (version == 47u && revision >= 101u));
 }
 
-/* The ACRTG graphics board's Zorro products (amigachrome-guest common/protocol/acrtg.h, ACRTG_PRODUCT*): 9 the
+/* The ACRTG graphics board's Zorro products (amicradle-guest common/protocol/acrtg.h, ACRTG_PRODUCT*): 9 the
  * 16 MiB board, 15 the 64 MiB one ("rtgVramMiB": 64, acrtg.card 2.6), 16 the 256 MiB one ("rtgVramMiB": 256,
  * acrtg.card 2.8). DETECT's "RTG:" line, ENV:GFOpenUp/RTG and a Part file's "needs ACRTG" take any of them. Up to
  * GFOpenUpTool 0.7.5 only 9 counted; up to 0.8.11 16 didn't, so Instance-32 (256 MiB) had "RTG: none" and its

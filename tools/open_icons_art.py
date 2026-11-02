@@ -214,7 +214,7 @@ def frosted_glass(x0, y0, x1, y1):
 
 
 def openmeters(sel):
-    """GFOpenMeters, the desktop widget (openamigabench meters/): a small frosted panel with the date and time
+    """GFOpenMeters, the desktop widget (gfopenbench meters/): a small frosted panel with the date and time
     at the top and three bars, partly filled, the middle one in the accent; chosen, a reading later: the bars
     move on, the accent one fills further, the last passes 90 per cent and turns the warning colour, and the
     clock's hand moves on."""

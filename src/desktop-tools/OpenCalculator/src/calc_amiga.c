@@ -217,7 +217,7 @@ static int gui(void)
     struct RastPort mrp;            /* measures in the font the gadgets are drawn in */
     if (!vi) { if (scr) UnlockPubScreen(NULL, scr); return RETURN_FAIL; }
     memset(gad, 0, sizeof gad);
-    /* the theme's font, as every Open app draws in (opengadtools' OPEN_APPS.md); the title bar keeps the screen's */
+    /* the theme's font, as every Open app draws in (gfopengadtools' OPEN_APPS.md); the title bar keeps the screen's */
     ogt_look_load(&theme, &mode);
     font = ogt_open_font(&theme, scr, &ta);
     ogt_theme_free(&theme);

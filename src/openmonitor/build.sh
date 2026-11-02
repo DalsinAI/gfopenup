@@ -1,21 +1,21 @@
 #!/bin/sh
-# GFOpenMonitor 1.0, the disk's (GFOpenUp's SYS:Utilities/GFOpenMonitor) and the open ROM's (amigachrome-guest's
+# GFOpenMonitor 1.0, the disk's (GFOpenUp's SYS:Utilities/GFOpenMonitor) and the open ROM's (amicradle-guest's
 # trial-1m romprefs.sh builds the ROM's C/GFOpenMonitor with this script), with the os32-gcc16 stove:
-#   OGT=<opengadtools checkout> GUEST=<amigachrome-guest checkout> sh src/openmonitor/build.sh [OUT]   (default build/os3/GFOpenMonitor)
+#   OGT=<gfopengadtools checkout> GUEST=<amicradle-guest checkout> sh src/openmonitor/build.sh [OUT]   (default build/os3/GFOpenMonitor)
 # The compiler: the os32-gcc16 stove at OS32_GCC16 (default ~/AmiCradle/stoves/os32-gcc16), GCC 16 or
 # later. Built resident (libnix -resident: each run its own variables), 68040 code, soft float as
-# opengadtools is (no FPU needed), -Os. A cell or a status line cut to its room is meant:
+# gfopengadtools is (no FPU needed), -Os. A cell or a status line cut to its room is meant:
 # -Wno-format-truncation.
-# GUEST: an amigachrome-guest checkout, for sysprobe (common/sysprobe: the Hardware and Speed views read the
+# GUEST: an amicradle-guest checkout, for sysprobe (common/sysprobe: the Hardware and Speed views read the
 # machine as ShowConfig and ACInfo do), accontrol.device's header and taskclock.h (GFOpenExec's task clock).
 # MIT, Copyright (c) 2026 AmiCradle Team.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
-: "${OGT:?set OGT to an opengadtools checkout}"
-: "${GUEST:?set GUEST to an amigachrome-guest checkout (common/sysprobe)}"
+: "${OGT:?set OGT to a gfopengadtools checkout}"
+: "${GUEST:?set GUEST to an amicradle-guest checkout (common/sysprobe)}"
 SP="$GUEST/common/sysprobe"
-[ -f "$SP/sysprobe.c" ] || { echo "$GUEST has no common/sysprobe: amigachrome-guest main from the P3 merge on"; exit 2; }
-[ -f "$GUEST/common/include/taskclock.h" ] || { echo "$GUEST has no common/include/taskclock.h: amigachrome-guest main from the P4 merge on"; exit 2; }
+[ -f "$SP/sysprobe.c" ] || { echo "$GUEST has no common/sysprobe: amicradle-guest main from the P3 merge on"; exit 2; }
+[ -f "$GUEST/common/include/taskclock.h" ] || { echo "$GUEST has no common/include/taskclock.h: amicradle-guest main from the P4 merge on"; exit 2; }
 STOVE=${OS32_GCC16:-$HOME/AmiCradle/stoves/os32-gcc16}
 CC="$STOVE/prefix/bin/m68k-amigaos-gcc"
 GCCV=$("$CC" -dumpversion 2>/dev/null || echo 0)
