@@ -203,7 +203,7 @@ static int is_file(const char *path)
 }
 
 /* 0.7.8: a synchronous SystemTags never gets a NULL input or output (12 Oct 2026), as GFOpenDock 0.6.4 and
- * GFOpenMenus 0.4.4 give their programs (openamigaprefs #94). quiet: both are NIL:. Otherwise the command gets
+ * GFOpenMenus 0.4.4 give their programs (gfopenprefs #94). quiet: both are NIL:. Otherwise the command gets
  * GFOpenUpTool's own input and output when it has them (a Shell, or GFOpenUp Update's window, where the messages
  * belong) and NIL: in place of either it hasn't got (started from Workbench). A synchronous call leaves the
  * handles to the caller, so the NIL: ones opened here are closed here. -1 when NIL: can't be opened. */
@@ -687,7 +687,7 @@ static int acrtg_board(void)
 }
 
 /* The GFOpenKick ROM (0.8.7): GFOpenKickROM's header mark, the long 'OKR1' at the main ROM's start + $14, $F80014
- * (amigachrome-guest libraries/openexec/exec_boot.h, OEXB_OKR1), or its system-startup module's ID string, which
+ * (amicradle-guest libraries/openexec/exec_boot.h, OEXB_OKR1), or its system-startup module's ID string, which
  * says "GFOpenKick". A Kickstart 3.2.3 ROM has neither. OS 3.2's LoadModule and S:Pre-LoadModule-Startup are for
  * Kickstart ROMs: on Instance-32 (GFOpenKick) the GFOpenLibs startup stopped the boot with "device not mounted". */
 static int openkick_rom(void)
@@ -3204,7 +3204,7 @@ static int picture_tone(const char *name)
 }
 
 /* The backdrop's tone: 1 dark, 0 light, -1 not known. GFOpenUp's backdrops are named <Theme>-<mode>[-chrome]-...
- * (opengadtools' make_backdrops.py); the theme's desktop colours for that mode give the tone: the mean of
+ * (gfopengadtools' make_backdrops.py); the theme's desktop colours for that mode give the tone: the mean of
  * their luminance below 45 per cent is dark. Another picture is dark when its name says so. */
 static int backdrop_tone(void)
 {
@@ -3751,7 +3751,7 @@ static int list(void)
 
 #define CRADLE_DRAWER "DH1:GFOpenUp"
 #define CRADLE_PACK "DH1:GFOpenUp/Cradle-Pack"
-#define RELEASES "https://github.com/DalsinAI/openamigaup/releases"
+#define RELEASES "https://github.com/DalsinAI/gfopenup/releases"
 
 /* Versions compare as numbers, dot by dot: 0.6.14 is newer than 0.6.9. */
 static int version_cmp(const char *a, const char *b)

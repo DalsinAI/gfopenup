@@ -5,7 +5,7 @@
  * This file: the start (one window, leaving the Shell), the window and its look, the tabs, the status bar,
  * the second's tick, and the settings. Each view is its own file.
  *
- * The same file is the open ROM's C/GFOpenMonitor (amigachrome-guest's romprefs.sh, the design's P6) and the
+ * The same file is the open ROM's C/GFOpenMonitor (amicradle-guest's romprefs.sh, the design's P6) and the
  * disk's SYS:Utilities/GFOpenMonitor, which GFOpenUp installs on every ROM.
  *
  * MIT, Copyright (c) 2026 AmiCradle Team. */
@@ -396,7 +396,7 @@ void om_open_view(int v)
 
 static struct TextFont *disk_font(struct TextAttr *ta);
 
-/* DejaVu Sans Mono 11, the system default text since amigachrome-guest #472: from the font list (the open
+/* DejaVu Sans Mono 11, the system default text since amicradle-guest #472: from the font list (the open
  * ROM adds it), else gfopenfont.library or diskfont.library (FONTS:, GFOpenUp's ShellFont), else the system
  * default text itself. */
 static struct TextFont *open_table_font(void)

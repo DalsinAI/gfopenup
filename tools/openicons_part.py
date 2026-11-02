@@ -3,14 +3,14 @@
 
     python3 tools/openicons_part.py OUT_DIR --guest DIR
 
-GFOpenIcons is the Team's own icon set (amigachrome-guest icons/openicons): every
+GFOpenIcons is the Team's own icon set (amicradle-guest icons/openicons): every
 picture drawn new from vector sources by its generator, under the MIT licence.
-Look B is the look the GFOpenKick ROM's own default icons have (amigachrome-guest
+Look B is the look the GFOpenKick ROM's own default icons have (amicradle-guest
 #336), so the system's drawers, programs and file types match the ROM's disks,
 drawers and tools.
 
 The .info files are the generator's build output and are committed nowhere, so
-the pack makes them here, at build time, from the amigachrome-guest checkout the
+the pack makes them here, at build time, from the amicradle-guest checkout the
 pack is built with (build_pack.py --guest): the same commit's look, manifest and
 writer, nothing fetched from outside our repositories, and a pack that names the
 set's source by its commit.
@@ -56,7 +56,7 @@ LOOK = "B"
 DEFAULTS = {f"ENVARC:Sys/def_{k}".lower() for k in (
     "RAM", "harddisk", "disk", "drawer", "tool", "project", "trashcan", "cd0", "rad", "card", "kickstart", "sys", "work")}
 
-# Where OS 3.2.3 keeps what the manifest names by another place (amigachrome's os32_host_install lays the
+# Where OS 3.2.3 keeps what the manifest names by another place (amicradle's os32_host_install lays the
 # disk out as the Installer does: Commodities in SYS:Tools, the Storage drawers' twins in SYS:Devs).
 MOVED = {
     "SYS:Commodities": ["SYS:Tools/Commodities"],
@@ -86,7 +86,7 @@ KINDS = {"Disk": "def_disk", "Drawer": "def_drawer", "Tool": "def_tool", "Projec
 
 # Drawers the manifest names that a machine also has elsewhere (W78, 18 October 2026: "we need to fix those
 # older icons to our new style"): OS 3.2.3's own in a second place, and AmiCradle's on either volume (the
-# amigachrome recipe makes Work:Apps and Work:Games). Each gets a face line; a machine without it is left alone.
+# amicradle recipe makes Work:Apps and Work:Games). Each gets a face line; a machine without it is left alone.
 ELSEWHERE = {
     "SYS:Prefs/Presets/Backdrops": "Backdrops", "SYS:Prefs/Presets/Pointers": "Pointers",
     "SYS:Storage/WBStartup": "WBStartup", "SYS:Prefs/Classic": "Prefs",
@@ -189,10 +189,10 @@ def short_names(paths: list[str], suffix: str) -> dict[str, str]:
 
 
 def generator(guest: Path):
-    """amigachrome-guest's GFOpenIcons generator: (load_manifest, spec_of, load_looks, render_icon, write_entry)."""
+    """amicradle-guest's GFOpenIcons generator: (load_manifest, spec_of, load_looks, render_icon, write_entry)."""
     root = guest / "icons" / "openicons"
     if not (root / "oi.py").is_file():
-        raise SystemExit(f"{guest}: no icons/openicons/oi.py (GFOpenIcons is in amigachrome-guest from #329)")
+        raise SystemExit(f"{guest}: no icons/openicons/oi.py (GFOpenIcons is in amicradle-guest from #329)")
     sys.path.insert(0, str(root))
     import oi
     from openicons.build import load_looks, render_icon, write_entry
@@ -259,7 +259,7 @@ def build(out: Path, guest: Path) -> list[str]:
             rendered[key] = render_icon(spec_of(e), look)
         return rendered[key]
 
-    lines = [f"; GFOpenIcons look {LOOK}, our own icons (amigachrome-guest {commit}, MIT): new faces for the system's icons"]
+    lines = [f"; GFOpenIcons look {LOOK}, our own icons (amicradle-guest {commit}, MIT): new faces for the system's icons"]
     todo = faces(rows)
     names = short_names([dest for dest, _ in todo], ".info")
     for dest, e in todo:
@@ -283,7 +283,7 @@ def build(out: Path, guest: Path) -> list[str]:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("out", type=Path)
-    ap.add_argument("--guest", type=Path, required=True, help="the amigachrome-guest checkout (icons/openicons)")
+    ap.add_argument("--guest", type=Path, required=True, help="the amicradle-guest checkout (icons/openicons)")
     a = ap.parse_args(argv)
     lines = build(a.out, a.guest)
     (a.out / "Part").write_text("part GFOpenIcons 0.2\n" + "\n".join(lines) + "\n")

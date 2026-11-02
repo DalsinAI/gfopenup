@@ -1,7 +1,7 @@
 # OpenUp 0.1: validation on an AmigaChrome instance
 
 5 October 2026. We: "we should start openup 0.1 so we can validate it for
-amigachrome instances".
+amicradle instances".
 
 ## What was tested
 

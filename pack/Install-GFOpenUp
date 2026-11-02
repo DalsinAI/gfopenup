@@ -298,7 +298,7 @@
                  "OpenAmigaPython: Python 2.7 (new)")
         (default #default2)))
 ; The sixth page, GFOpenLibs (GFOpenUp 0.8.0): the Team's open libraries, one switch each, in place of OS 3.2's
-; own (amigachrome-guest libraries/OPEN_LIBRARIES.md, section 3). Only libraries whose ABI test against
+; own (amicradle-guest libraries/OPEN_LIBRARIES.md, section 3). Only libraries whose ABI test against
 ; OS 3.2's own is clean are offered, and none is ticked on a new install. Bits of #libs: 1 utility.library,
 ; 2 mathieeedoubbas.library, 4 input.device, 8 OpenRexx. A library switched on already is ticked, so an
 ; upgrade (a Novice one never shows the question) changes nothing; unticking one puts OS 3.2's own back.

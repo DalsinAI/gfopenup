@@ -5,7 +5,7 @@
  * it waits for, owner and address. Address, Waits for and Core start hidden (the column chooser, a right-click
  * on the header, shows them; the user, 24 October 2026, 15:05).
  *
- * How busy a task is: on GFOpenExec (the open ROM), exactly, from taskclock.resource (amigachrome-guest
+ * How busy a task is: on GFOpenExec (the open ROM), exactly, from taskclock.resource (amicradle-guest
  * common/include/taskclock.h, the design's P4): exec charges each task its time at every switch while
  * GFOpenMonitor reads. GFOpenMonitor reads it only while the Tasks or the Interrupts view is shown (the user,
  * 24 October 2026: P4 "as long as it doesn't kill performance"; the switches cost more while exec keeps

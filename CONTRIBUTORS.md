@@ -21,10 +21,10 @@ MIT licence (`LICENSE`).
 ## From our other repositories
 
 `tools/build_pack.py` builds each part of the pack with its own repository's
-scripts: DalsinAI/amigachrome (GFOpenSocket, ACBuild's icon writer),
-amigachrome-guest, openamigaprint, opengadtools, openamigaprefs,
-openamigacompress, openamigaservice, opendatatypes, openamigartg,
-openamigafilemanager, openamigamediaplayer and openamigamui. Each of those
+scripts: DalsinAI/amicradle (GFOpenSocket, ACBuild's icon writer),
+amicradle-guest, gfopenprint, gfopengadtools, gfopenprefs,
+gfopencompress, gfopenservice, gfopendatatypes, gfopenrtg,
+gfopenfilemanager, gfopenmediaplayer and gfopenmui. Each of those
 credits its own third-party work.
 
 ## Added at build time, not committed
