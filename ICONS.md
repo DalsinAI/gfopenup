@@ -48,13 +48,13 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 | GFOpenUp-Setup | Box and wand | Star flares and sparkles |
 | ZuneTest | A window of gadgets | A gadget pressed |
 | GFOpenMonitor | Monitor: the CPU's and GPU's graphs over the cores' bars, a meter at its foot | The load climbs: graphs up, cores full, the needle in the red |
-| KindsGallery (opengadtools) | Three tiles: a slider, a button, check boxes (one ticked) | Knob slides on, button pressed, the other box ticked |
-| GFOpenMeters (openamigabench) | A frosted panel: the date and time over three bars, partly filled, the middle one in the accent | A reading later: the bars move on, the last past 90 per cent in the warning colour, the clock's hand on |
+| KindsGallery (gfopengadtools) | Three tiles: a slider, a button, check boxes (one ticked) | Knob slides on, button pressed, the other box ticked |
+| GFOpenMeters (gfopenbench) | A frosted panel: the date and time over three bars, partly filled, the middle one in the accent | A reading later: the bars move on, the last past 90 per cent in the warning colour, the clock's hand on |
 
 ## 2. Format
 
 - **OS 3.5 GlowIcon** (FORM ICON with FACE and two IMAG chunks), written by
-  amigachrome's `scripts/amiga_icon.py` (`write_os35`). The file also carries
+  amicradle's `scripts/amiga_icon.py` (`write_os35`). The file also carries
   the classic DiskObject with a 4-colour picture, so OS 3.1 still shows
   something.
 - **Drawn at 64 x 64 pixels** (a drawer at 82 x 60, Gorilla's drawer's
@@ -123,7 +123,7 @@ modern icon set (amicradle's Boxie and OS4 pack):
 | The pictures | `icons/open/NAME.png` and `icons/open/NAME-selected.png`, 64 x 64 RGBA, committed |
 | Drawers | `icons/open/badge-NAME.png` (the badge alone, in the drawer's 82 x 60 frame) and `drawer-NAME.png` (on a drawer of our own drawing), both frames |
 | The pack's use of them | `tools/build_pack.py`, `open_icons()`: its jobs list maps each icon file a part makes to a picture name |
-| The icon codec and layout | amigachrome `scripts/amiga_icon.py` and `scripts/icon_theme.py` (passed in with `--amicradle`) |
+| The icon codec and layout | amicradle `scripts/amiga_icon.py` and `scripts/icon_theme.py` (passed in with `--amicradle`) |
 
 Redraw everything with:
 
@@ -131,18 +131,18 @@ Redraw everything with:
 python3 tools/open_icons_art.py icons/open    # needs Pillow and numpy
 ```
 
-OpenBrowser draws its own the same way in openamigabrowser's
+OpenBrowser draws its own the same way in gfopenbrowser's
 `tools/make-icons.py` (art in `icons/art/`, with `-selected` frames).
 
 KindsGallery, GFOpenGadTools' showcase, is drawn here (`kindsgallery` in the
-drawing script) and its two pictures are copied to opengadtools'
+drawing script) and its two pictures are copied to gfopengadtools'
 `art/icons`; its `lib/build.sh` writes `KindsGallery.info` beside the program
 with `tools/make_icon.py`, the same way the pack writes ours (85 per cent,
 hard alpha, dithered, the glow on the chosen frame).
 
 GFOpenMeters, GFOpenBench's desktop widget, is drawn here too (`openmeters`, on
 the frosted glass of `frosted_glass`, as the dock's shelf looks). Its two
-pictures are copied to openamigabench's `meters/art`; its `meters/build.sh`
+pictures are copied to gfopenbench's `meters/art`; its `meters/build.sh`
 writes `GFOpenMeters.info` beside the program (`meters/make_icon.py`) with the
 tooltypes the program's own MAKEICON writes. When the pack ships GFOpenBench,
 its `SYS:WBStartup/GFOpenMeters.info` is a job in `open_icons()` with the
@@ -186,17 +186,17 @@ picture name `GFOpenMeters`, so it keeps the part's tooltypes and stack.
 
 ## 8. GFOpenIcons: the system's icons, and what is still to draw
 
-**GFOpenIcons** is the Team's own icon set (amigachrome-guest `icons/openicons`,
+**GFOpenIcons** is the Team's own icon set (amicradle-guest `icons/openicons`,
 MIT): 1,988 icons drawn new from vector sources by its generator. Look B
 (up to 32 colours, soft gradient, bevel and shine) is the look the GFOpenKick
-ROM's own default icons have (amigachrome-guest #336). Since GFOpenUp 0.8.4 it
+ROM's own default icons have (amicradle-guest #336). Since GFOpenUp 0.8.4 it
 gives the system's icons their pictures (Dale, 16 October 2026: "we should
 remove them and use ours"), in place of AROS's Gorilla set, which GFOpenUp
 0.6.17 to 0.8.3 fetched at build time. No AROS picture is in the pack.
 
 - **Made at build time, never committed.** The set's `.info` files are its
   generator's build output. `tools/openicons_part.py` runs the generator
-  from the amigachrome-guest checkout the pack is built with
+  from the amicradle-guest checkout the pack is built with
   (`build_pack.py --guest`, `--no-openicons` to leave it out): that commit's
   manifest, look and `.info` writer, nothing fetched from outside our
   repositories. The Part file names the commit.

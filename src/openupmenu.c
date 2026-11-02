@@ -419,7 +419,7 @@ static void timer_start(struct timerequest *tr, ULONG ticks)
  * (build), and again only when GFOpenUp's list changes (a notification on MANIFEST) or GFOpenUpMenu is run again.
  * Until Workbench takes the entries they are offered again on a timer that touches no file: every two seconds
  * for the first minute (the boot: S:User-Startup runs before LoadWB), then every minute. On the open ROM,
- * GFOpenBench is the desktop and takes no menu entries yet (amigachrome-guest libraries/openworkbench): there a
+ * GFOpenBench is the desktop and takes no menu entries yet (amicradle-guest libraries/openworkbench): there a
  * minute's timer is all that runs. */
 static int serve(int from_shell)
 {

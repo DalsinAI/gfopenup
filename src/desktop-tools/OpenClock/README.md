@@ -26,4 +26,4 @@ only when the time shown has changed.
 
 ## Build
 
-    OGT=/path/to/opengadtools src/desktop-tools/OpenClock/build.sh
+    OGT=/path/to/gfopengadtools src/desktop-tools/OpenClock/build.sh

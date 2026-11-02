@@ -2,7 +2,7 @@
  *
  * Processor, Chips, Software, the AmiCradle machine and Memory in boxes, then the expansion boards (name,
  * maker and product, bus, address, size, driver, ROM). What the machine is made of comes from sysprobe
- * (amigachrome-guest common/sysprobe), which ShowConfig and ACInfo read too, so the three say the same thing.
+ * (amicradle-guest common/sysprobe), which ShowConfig and ACInfo read too, so the three say the same thing.
  * Read once when the view is first shown; F5 reads it again.
  *
  * Board details... shows a board's AutoConfig record; Drives... the mounted devices and their sizes; Save a

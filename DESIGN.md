@@ -35,7 +35,7 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   when it's ready;
 - the SDL and Mesa runtime libraries;
 - the Shell's font: DejaVu Sans Mono in `FONTS:` as Amiga bitmap fonts, 8
-  to 24 pixels high (openamigafont's `fonts/amiga`), for Font prefs' System
+  to 24 pixels high (gfopenfont's `fonts/amiga`), for Font prefs' System
   Default Text (24 October 2026). The GFOpenKick ROM carries the 11 and makes
   it the system default text where no Font prefs name one; GFOpenUp writes no
   Font prefs. [docs/shell-font.png](docs/shell-font.png): the Shell in topaz 8,
@@ -46,7 +46,7 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   NewShell's own window does. Only that tool type changes; the icon as it was
   is kept in `SYS:Storage/GFOpenUp-Superseded`, and `GFOpenUpTool REMOVE
   Parts/ShellIcon` puts the 130 back ([docs/shell-icon.png](docs/shell-icon.png)).
-- GFOpenFont: gfopenfont.library (openamigafont) in `LIBS:`, and DejaVu Sans as an
+- GFOpenFont: gfopenfont.library (gfopenfont) in `LIBS:`, and DejaVu Sans as an
   outline font it draws (`FONTS:DejaVuSans.font`, `.otag` and
   `_ttf/DejaVuSans.ttf`), on a 68040 or 68060 with its FPU (24 October
   2026). GFOpenBench's theme names DejaVu Sans 13 and the Open programs' look
@@ -120,7 +120,7 @@ or offer AmiSSL.
 | 5 | GFOpenUp Update (section 6); OpenStart if we say yes. GFOpenUp Picks is no longer a requirement (the Team, 8 October 2026) | A pack installed today updates itself on request. **Update built (GFOpenUpTool UPDATE, Cradle's side live, 8 October 2026); the GitHub step is next** |
 
 **Name and repository:** GFOpenUp (We, 4 October 2026: "GFOpenUp it is"),
-`DalsinAI/openamigaup`.
+`DalsinAI/gfopenup`.
 
 ## 6. What AmiKit tries to be, in GFOpenUp
 
