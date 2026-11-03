@@ -2067,6 +2067,8 @@ def main() -> int:
         tt.add("Prefs/GFOpenTata", (tb_os3 / "Tata-Prefs").read_bytes(), "SYS:Prefs/GFOpenTata")
         tt.add("Prefs/GFOpenTata.info", (tt_src / "icons/Tata.info").read_bytes(), "SYS:Prefs/GFOpenTata.info")
         tt.add("S/Tata.known", (tt_src / "data/Tata.known").read_bytes(), "S:Tata.known")
+        if (tt_src / "data/Tata.ads").exists():   # Tata 0.6.0: the ad and tracker list GFOpenBrowser reads
+            tt.add("S/Tata.ads", (tt_src / "data/Tata.ads").read_bytes(), "S:Tata.ads")
         tt.line("startup Run >NIL: C:Tata START")
         tt.write()
 
