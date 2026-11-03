@@ -166,12 +166,12 @@ a Part file that C/GFOpenUpTool reads:
                         PosixLib aren't on the stoves): the Part its release makes, from the
                         release's OpenAmigaPython-<version>-GFOpenUp.lha, pinned by its sha256
                         (OPENAMIGAPYTHON below; --openamigapython FILE)
-  OpenBrowserLite/      OpenBrowser Lite 0.4.1, the small web browser (GadTools, no WebKit, about
-                        100 KB), in SYS:Utilities/OpenBrowserLite: pages laid out by its weblayout
+  GFOpenBrowserLite/    GFOpenBrowser Lite 0.4.2, the small web browser (GadTools, no WebKit, about
+                        100 KB), in SYS:Utilities/GFOpenBrowserLite: pages laid out by its weblayout
                         engine on GFOpenLayout (built in), pictures through datatypes, CSS; https://
                         through GFOpenTLS. In the standard set: ticked on a new install on a 68040
                         or 68060 with its FPU. Not built here: the program from gfopenbrowser's
-                        release OpenBrowserLite-<version>.lha, fetched by its address and pinned by
+                        release GFOpenBrowserLite-<version>.lha, fetched by its address and pinned by
                         its sha256 (OPENBROWSERLITE below; --openbrowserlite FILE)
   OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
                         GFOpenUp-<version>-OpenBrowser.lha (--openbrowser; gfopenbrowser, pinned by commit
@@ -207,7 +207,10 @@ SOFT_SPECS = Path(__file__).resolve().parent.parent / "specs/m68k-soft-m68040.sp
 NULL_OK = "-fno-delete-null-pointer-checks"
 
 # GFOpenSocket's files that must be ours, or absent: never another stack's (DESIGN.md section 3).
-OPENSOCKET_MARKERS = ["GFOpenSocket (AmiCradle)", "ACNet (AmiCradle)", "AmiCradle ACNet"]
+# The names before the renames are ours too (0.8.13): OpenUp 0.8.11's and Cradle's own installer's stack says
+# "OpenSocket (AmigaChrome)", and the rename's sed had turned the ACNet ones into names no stack ever had.
+OPENSOCKET_MARKERS = ["GFOpenSocket (AmiCradle)", "OpenSocket (AmiCradle)", "OpenSocket (AmigaChrome)",
+                      "ACNet (AmiCradle)", "AmiCradle ACNet", "ACNet (AmigaChrome)", "AmigaChrome ACNet"]
 
 # GFOpenPrinter (24 October 2026, the plan "Retiring the legacy printing, in favour of GFOpenPrint"): on AmiCradle
 # instances what programs print the old way (printer.device, PRT:) goes to GFOpenPrint. Our printer.device
@@ -1003,7 +1006,7 @@ PART_MAIN = {
     "GFOpenCalc": ("Utilities/GFOpenCalc/GFOpenCalc", "GFOpenCalc"),
     "GFOpenMail": ("Utilities/GFOpenMail/GFOpenMail", "GFOpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
-    "OpenBrowserLite": ("Utilities/OpenBrowserLite/OpenBrowserLite", "OpenBrowserLite"),
+    "GFOpenBrowserLite": ("Utilities/GFOpenBrowserLite/GFOpenBrowserLite", "GFOpenBrowserLite"),
 }
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read. GFOpenPrint 0.4 is GFOpenPrint (0.3) with
@@ -1099,12 +1102,16 @@ def openamigapython_part(top: Path, archive: Path) -> Path:
 # release is published the sha256 is a placeholder, and the pack stops (it never leaves the
 # part out): publish gfopenbrowser's v0.4.1 (its docs/RELEASE_0.4.1.md), then put the
 # sha256 its CI printed (OpenBrowserLite-0.4.1.lha.sha256 beside the asset) here.
+# 0.4.2 (GFOpenUp 0.8.13): gfopenbrowser #155, merged to main (41f0c3a), is 0.4.1's source with the GF names, built
+# on open5; the files in its release archive are byte for byte those of main's CI build (GFOpenBrowser Lite run
+# 41736811330). Since the GF rename the archive's drawer and program are GFOpenBrowserLite ("name").
 OPENBROWSERLITE = {
-    "version": "0.4.1",
-    "asset": "OpenBrowserLite-0.4.1.lha",
-    "url": "https://github.com/DalsinAI/gfopenbrowser/releases/download/v0.4.1/OpenBrowserLite-0.4.1.lha",
-    "sha256": "16e1dfed30743d1d1b00087a724f9454b341f132622adefc3622369211c380f3",
-    "release": "https://github.com/DalsinAI/gfopenbrowser/releases/tag/v0.4.1",
+    "version": "0.4.2",
+    "name": "GFOpenBrowserLite",
+    "asset": "GFOpenBrowserLite-0.4.2.lha",
+    "url": "https://github.com/DalsinAI/gfopenbrowser/releases/download/v0.4.2/GFOpenBrowserLite-0.4.2.lha",
+    "sha256": "d1331e662421ae04d80f8cb11aec986f3ef350c0dbfe06572e0027ecbe095ffc",
+    "release": "https://github.com/DalsinAI/gfopenbrowser/releases/tag/v0.4.2",
 }
 
 
@@ -1149,19 +1156,20 @@ def openbrowserlite_files(archive: Path | None) -> dict:
     tmp = Path(tempfile.mkdtemp(prefix="openbrowserlite-"))
     try:
         run([shutil.which("jlha") or "lha", "xq", archive.resolve()], cwd=tmp)
-        drawer = tmp / "OpenBrowserLite"
+        nm = pin.get("name", "OpenBrowserLite")
+        drawer = tmp / nm
         files = {}
-        for name in ("OpenBrowserLite", "OpenBrowserLite.readme", "LICENSE"):
+        for name in (nm, f"{nm}.readme", "LICENSE"):
             if not (drawer / name).is_file():
-                raise SystemExit(f"OpenBrowserLite: {where} has no OpenBrowserLite/{name}")
+                raise SystemExit(f"OpenBrowserLite: {where} has no {nm}/{name}")
             files[name] = (drawer / name).read_bytes()
-        vl = re.search(rb"\$VER: OpenBrowserLite ([0-9.]+)", files["OpenBrowserLite"])
+        vl = re.search(rb"\$VER: " + nm.encode() + rb" ([0-9.]+)", files[nm])
         if not vl or vl.group(1).decode() != pin["version"]:
             raise SystemExit(f"OpenBrowserLite: {where}'s program is "
                              f"{vl.group(1).decode() if vl else 'of no version'}, not {pin['version']}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    print(f"  OpenBrowser Lite {pin['version']}: {pin['asset']}, sha256 checked")
+    print(f"  {pin.get('name', 'OpenBrowserLite')} {pin['version']}: {pin['asset']}, sha256 checked")
     return files
 
 
@@ -2362,15 +2370,16 @@ def main() -> int:
     # picks with it. It needs a 68040 (or 68060) with its FPU; the Installer leaves it out
     # elsewhere. Ticked on a new install, so the pack always has it: no archive, no pack.
     lf = openbrowserlite_files(a.openbrowserlite)
-    bl = Part(top, "OpenBrowserLite", OPENBROWSERLITE["version"],
-              "OpenBrowser Lite: a small web browser (no WebKit); https:// through GFOpenTLS")
-    d = "Utilities/OpenBrowserLite"
-    bl.add(f"{d}/OpenBrowserLite", lf["OpenBrowserLite"], f"SYS:{d}/OpenBrowserLite")
-    bl.add(f"{d}/OpenBrowserLite.info", icons.icon(icons.WBTOOL, "page", stack=16384), f"SYS:{d}/OpenBrowserLite.info")
-    for name in ("OpenBrowserLite.readme", "LICENSE"):
+    nm = OPENBROWSERLITE["name"]
+    bl = Part(top, nm, OPENBROWSERLITE["version"],
+              "GFOpenBrowser Lite: a small web browser (no WebKit); https:// through GFOpenTLS")
+    d = f"Utilities/{nm}"
+    bl.add(f"{d}/{nm}", lf[nm], f"SYS:{d}/{nm}")
+    bl.add(f"{d}/{nm}.info", icons.icon(icons.WBTOOL, "page", stack=16384), f"SYS:{d}/{nm}.info")
+    for name in (f"{nm}.readme", "LICENSE"):
         bl.add(f"{d}/{name}", lf[name], f"SYS:{d}/{name}")
-    bl.add("Utilities/OpenBrowserLite.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)),
-           "SYS:Utilities/OpenBrowserLite.info", own=True)
+    bl.add(f"Utilities/{nm}.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)),
+           f"SYS:Utilities/{nm}.info", own=True)
     bl.write()
 
     # OpenBrowser: too big for the pack (its engine is about 100 MB), so it

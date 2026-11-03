@@ -11,6 +11,25 @@
 (if (< (/ (getversion) 65536) 47)
     (abort "GFOpenUp needs AmigaOS 3.2 or later. This Amiga has an older version."))
 
+; Each step's messages go to T:GFOpenUp.log, from here on.
+(run "Delete >NIL: T:GFOpenUp.log")
+; 0.8.13: an OpenUp from before the GF rename (0.8.11 and earlier: ENVARC:OpenAmiga/OpenUp.manifest, C:OpenUpTool,
+; C:OpenDock...). GFOpenUp's own list is another file, so up to 0.8.13's first build the old OpenUp stayed installed
+; beside GFOpenUp, and both S:User-Startup blocks started their programs (OpenDock and GFOpenDock; lab t5-openup0813,
+; 3 Nov 2026). Now, before anything else, GFOpenUpTool OLDNAMES keeps a copy of the old list and S:User-Startup
+; (SYS:Storage/GFOpenUp-Superseded/OpenUp-before-GF) and copies the old settings to their GF names (ENVARC:OpenDock ->
+; ENVARC:GFOpenDock, ENVARC:OpenSocket -> ENVARC:GFOpenSocket..., ENV: too), so DETECT below finds the theme and the
+; parts find their settings. After the questions, the old OpenUp is taken out with its own OpenUpTool UNINSTALL,
+; which puts back what it replaced (below, before GFOpenUp's own part).
+(set #oldup (exists "ENVARC:OpenAmiga/OpenUp.manifest"))
+(if #oldup
+    (
+        (if (not (exists "SYS:C/OpenUpTool"))
+            (abort "This Amiga has OpenUp from before the GF names (ENVARC:OpenAmiga/OpenUp.manifest), but not its "
+                   "SYS:C/OpenUpTool, which takes it out. GFOpenUp wasn't installed beside it, so the two don't both "
+                   "start. Nothing was changed."))
+        (if (> (run (cat #tool " OLDNAMES >>T:GFOpenUp.log")) 5)
+            (abort "GFOpenUp couldn't keep a copy of the OpenUp that is here. T:GFOpenUp.log says why; nothing was changed."))))
 (run (cat #tool " DETECT >NIL:"))
 (set #machine (getenv "GFOpenUp/Machine"))
 (set #summary (getenv "GFOpenUp/Summary"))
@@ -78,6 +97,7 @@
 ; OpenBrowser Lite: in the standard set where it runs (a 68040 or 68060 with its FPU), and where it is already
 (if (and (<> (database "fpu") "NOFPU") (or (= (database "cpu") "68040") (= (database "cpu") "68060")))
     (set #default2 (bitor #default2 512)))
+(if (exists "SYS:Utilities/GFOpenBrowserLite/GFOpenBrowserLite") (set #default2 (bitor #default2 512)))
 (if (exists "SYS:Utilities/OpenBrowserLite/OpenBrowserLite") (set #default2 (bitor #default2 512)))
 (if (exists "SYS:Utilities/GFOpenFTP/GFOpenFTP") (set #default2 (bitor #default2 1)))
 (if (exists "SYS:Utilities/UnofficialTelegram") (set #default2 (bitor #default2 2)))
@@ -87,6 +107,20 @@
 (if (exists "SYS:Utilities/GFOpenDrawer") (set #default2 (bitor #default2 32)))
 (if (exists "SYS:System/GFOpenBench") (set #default2 (bitor #default2 64)))
 (if (exists "SYS:Tools/OpenAmigaPython") (set #default2 (bitor #default2 256)))
+; 0.8.13: the parts an OpenUp from before the GF names has, by their old names, are ticked as well (it is taken out
+; below, and GFOpenUp's parts take their places)
+(if #oldup
+    (
+        (if (exists "LIBS:openrtg.library") (set #default (bitor #default 512)))
+        (if (exists "SYS:Utilities/OpenMail/OpenMail") (set #default (bitor #default 2097152)))
+        (if (exists "SYS:Utilities/OpenDemos/OpenDemos") (set #default (bitor #default 134217728)))
+        (if (exists "SYS:Utilities/OpenPuTTY/OpenPuTTY") (set #default (bitor #default 536870912)))
+        (if (exists "SYS:Utilities/OpenFTP/OpenFTP") (set #default2 (bitor #default2 1)))
+        (if (exists "SYS:Developer/OpenGPU-SDK") (set #default2 (bitor #default2 4)))
+        (if (exists "LIBS:openinput.library") (set #default2 (bitor #default2 8)))
+        (if (exists "LIBS:opentls.library") (set #default2 (bitor #default2 16)))
+        (if (exists "SYS:Utilities/OpenDrawer") (set #default2 (bitor #default2 32)))
+        (if (exists "SYS:System/OpenBench") (set #default2 (bitor #default2 64)))))
 (set #g1
     (askoptions
         (prompt "Which parts should GFOpenUp install? (1 of 6)")
@@ -235,7 +269,7 @@
               "OpenBrowser Lite: a small web browser, about 100 KB and no WebKit (new). Pages are laid "
               "out with headings, lists, links, pictures (through your datatypes) and their CSS; no "
               "JavaScript. https:// works through GFOpenTLS, which comes with it. It needs a 68040 or 68060 "
-              "with its FPU and a network stack (GFOpenSocket, Roadshow or AmiTCP). In SYS:Utilities/OpenBrowserLite.")
+              "with its FPU and a network stack (GFOpenSocket, Roadshow or AmiTCP). In SYS:Utilities/GFOpenBrowserLite.")
         (choices "GFOpenDemos: three 3D demos in GL (new)"
                  "GFOpenCrypto: SSH and TLS sums (new)"
                  "GFOpenPuTTY: SSH and Telnet (new)"
@@ -310,6 +344,12 @@
 (if (exists "LIBS:GFOpenLibs/utility.module") (set #libs0 (bitor #libs0 1)))
 (if (exists "SYS:Storage/GFOpenUp-Superseded/LIBS/mathieeedoubbas.library") (set #libs0 (bitor #libs0 2)))
 (if (exists "LIBS:GFOpenLibs/input.device") (set #libs0 (bitor #libs0 4)))
+; and an OpenUp from before the GF names (0.8.13), by its old names
+(if #oldup
+    (
+        (if (exists "LIBS:OpenLibs/utility.module") (set #libs0 (bitor #libs0 1)))
+        (if (exists "SYS:Storage/OpenUp-Superseded/LIBS/mathieeedoubbas.library") (set #libs0 (bitor #libs0 2)))
+        (if (exists "LIBS:OpenLibs/input.device") (set #libs0 (bitor #libs0 4)))))
 (if (exists "LIBS:rexxsyslib.library")
     (if (>= (getversion "LIBS:rexxsyslib.library") 3145728) (set #libs0 (bitor #libs0 8))))
 (set #libs
@@ -433,8 +473,34 @@
 (if #ac (set #back (cat #theme "-light-chrome")))
 (if (= #theme "Classic") (set #back ""))
 
+; 0.8.13: the OpenUp from before the GF names goes now, as its own Uninstall-OpenUp took it out, with its own
+; OpenUpTool: every file it added goes, every file it replaced comes back from SYS:Storage/OpenUp-Superseded, and its
+; block leaves S:User-Startup, so only GFOpenUp's programs start from the next boot. Its settings stay in ENVARC: (and
+; were copied to the GF names above). Not its LoadModule REMOVE: GFOpenLibs below does that when the open ROM
+; libraries are unticked (#libs0 has the old ones). Its dock file stays too: GFOpenDock reads the copy.
+(if #oldup
+    (
+        (working "Taking out OpenUp, from before the GF names")
+        ; the icons OpenTypes changed go back while OpenTypes is still there (OpenPrefs's File Types page)
+        (if (exists "SYS:Preferences/OpenPrefs")
+            (run "SYS:Preferences/OpenPrefs TYPES UNDO >>T:GFOpenUp.log")
+            (if (exists "SYS:Prefs/OpenTypes")
+                (run "SYS:Prefs/OpenTypes UNDO >>T:GFOpenUp.log")))
+        ; OpenUp's entries leave the Tools menu now, before their programs go
+        (if (exists "SYS:C/OpenUpMenu")
+            (run "SYS:C/OpenUpMenu >NIL: QUIT"))
+        (set #oldrc (run "SYS:C/OpenUpTool UNINSTALL >>T:GFOpenUp.log"))
+        ; never both: with the old block still in S:User-Startup, GFOpenUp isn't installed
+        (if (= 0 (run "C:Search >NIL: S:User-Startup \";BEGIN OpenUp\" QUIET"))
+            (abort "OpenUp's lines couldn't be taken out of S:User-Startup, so GFOpenUp wasn't installed beside it. "
+                   "T:GFOpenUp.log says why. A copy of OpenUp's list and S:User-Startup is in "
+                   "SYS:Storage/GFOpenUp-Superseded/OpenUp-before-GF."))
+        (if (> #oldrc 5)
+            (message "Some of OpenUp's files couldn't be taken out yet (T:GFOpenUp.log says which; a file in use is "
+                     "let go at a reboot). Its lines are out of S:User-Startup, so it doesn't start again. Run "
+                     "Install-GFOpenUp again after the reboot to finish."))))
+
 ; Each part: GFOpenUpTool INSTALL, its messages in T:GFOpenUp.log.
-(run "Delete >NIL: T:GFOpenUp.log")
 ; 0.8.2: the look's files an earlier GFOpenUp wrote (C:GFOpenLook and its startup line, the theme, Font and
 ; IControl prefs) are taken out where they are still as it wrote them; the user's own stay (GFOpenUpTool OLDLOOK).
 ; 0.8.3: so are the faces the GorillaIcons part gave the default icons (ENVARC:Sys/def_RAM, def_Harddisk,
@@ -761,10 +827,10 @@
                     (message "OpenBrowser didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))))
 
 (if (bitand #parts2 512)
-    (if (exists "Parts/OpenBrowserLite/Part")
+    (if (exists "Parts/GFOpenBrowserLite/Part")
         (
             (working "Installing OpenBrowser Lite")
-            (if (> (run (cat #tool " INSTALL Parts/OpenBrowserLite >>T:GFOpenUp.log")) 5)
+            (if (> (run (cat #tool " INSTALL Parts/GFOpenBrowserLite >>T:GFOpenUp.log")) 5)
                 (message "OpenBrowser Lite didn't install completely. T:GFOpenUp.log says why; nothing else changed.")))))
 
 ; GFOpenTLS before GFOpenFTP, which looks for it
@@ -934,6 +1000,10 @@
 ; GFOpenFiles and GFOpenView on the dock, also a dock someone already has; the
 ; rest of it is left alone, and a button already there isn't added twice.
 ; (GFOpenPrefs's Dock page, SYS:Preferences/GFOpenPrefs DOCK, since the no-ROM-volume design)
+; 0.8.13: over an OpenUp from before the GF names, the dock's buttons for its programs (SYS:Utilities/OpenFiles) start
+; the GF ones that took their places (SYS:Utilities/GFOpenFiles) first, so none is added twice below
+(if #oldup
+    (run (cat #tool " OLDNAMES DOCK >>T:GFOpenUp.log")))
 (if (exists "SYS:Preferences/GFOpenPrefs")
     (run "SYS:Preferences/GFOpenPrefs DOCK ADD SYS:Utilities/GFOpenFiles SYS:Utilities/GFOpenPrint/GFOpenView SAVE >>T:GFOpenUp.log"))
 
