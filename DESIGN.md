@@ -220,6 +220,21 @@ to `SYS:C/GFOpenUpMenu`) puts two sub-menus in Workbench's Tools menu:
   go at once. `GFOpenUpMenu LIST` prints what the menus hold.
 - **Older Workbenches.** Sub-menus need workbench.library 44.1511. Before
   that, the entries are flat: "GFOpenUp: GFOpenFiles", "Preferences: Look".
+- **The GFOpenMonitor hotkeys (0.1.7).** Dale, 3 November 2026: "an OS wide
+  option to bring up monitor by pressing ctrl alt help on an amiga and ctrl
+  alt f12 on a pc keyboard". GFOpenUpMenu runs from the boot on every
+  install, whatever the desktop, so it holds them: a commodity, "GFOpenUp
+  Hotkeys", with two filters. Ctrl+Alt+Help is raw key 0x5F; a PC's F12 is
+  raw key 0x6F (AROS, OS 4 and the keyboard adapters use that code), which
+  AmiCradle sends for Ctrl+Alt+F12. Either Alt counts; Shift, an Amiga key or
+  a repeat does not. GFOpenMonitor comes to the front through its own port
+  when it runs; else it is started (`SYS:Utilities/GFOpenMonitor WAIT`, the
+  ROM's by name without it) with the default public screen brought to the
+  front. The switch is `ENV:GFOpenPrefs/Hotkeys` (`monitor off`; on by
+  default), set in GFOpenPrefs' Input page, which sends Ctrl-F to have it
+  read again. Exchange can disable it; its Remove takes the hotkeys out and
+  leaves the menus. The keys and words are `src/openup_hotkeys.h`, tested by
+  `tests/test_openup_hotkeys.c`.
 
 ![Tools > GFOpenUp on OS 3.2.3, with GFOpenMenus and the Open light theme](docs/tools-menu-openup.png)
 ![Tools > Preferences](docs/tools-menu-preferences.png)
