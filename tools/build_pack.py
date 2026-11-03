@@ -502,6 +502,17 @@ def archive_art() -> bytes:
     return img.tobytes()
 
 
+def gf_socket_name(path: str) -> str:
+    """path with its file name in gfopensocket's GF form: opensocket.library -> gfopensocket.library,
+    OpenSocketControl -> GFOpenSocketControl, C/OpenSocket -> C/GFOpenSocket; other names as they are."""
+    head, _, name = path.rpartition("/")
+    if name.startswith("opensocket"):
+        name = "gf" + name
+    elif name.startswith("OpenSocket"):
+        name = "GF" + name
+    return f"{head}/{name}" if head else name
+
+
 def late_combine_off(cc) -> list[str]:
     """["-fno-late-combine-instructions"] when cc knows the option, else []. GFOpenAmigaGCC 16.2.0-open3's late-combine
     pass can store a copy one place late (GCC PR 123853): built with it, openuptool.c's manifest_save copied the
@@ -918,7 +929,7 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
                "SYS:" + lic + "GFOffice-Dictionaries.txt")
 
     # GFOpenWrite: the word processor, as its 1.0 release laid it out, on owf.library
-    wr = Part(top, "GFOpenWrite", "2.0.22", "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr = Part(top, "GFOpenWrite", "2.0.23", "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.needs_part("GFOffice")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite", (onlib / "GFOpenWrite").read_bytes(), "SYS:Utilities/GFOpenWrite/GFOpenWrite")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/GFOpenWrite/GFOpenWrite.info")
@@ -1016,12 +1027,12 @@ PART_OWN_VERSION = {"GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "Backdrops"
 # VBCC and PosixLib aren't on the stoves. The release's archive is pinned by its sha256, so a
 # new release is a new pin here. Fetch it with
 #   gh release download v2.7.18-ac3 -R SacredTrees/openamigapython \
-#       -p OpenAmigaPython-2.7.18-ac3-GFOpenUp.lha -D build
+#       -p OpenAmigaPython-2.7.18-ac3-OpenUp.lha -D build
 # (build/ is where --openamigapython looks first). The Part has no "needs" line: it goes on any
 # Amiga. The Installer checks for a 68020 and installs GFOpenTLS (with GFOpenCrypto) with it.
 OPENAMIGAPYTHON = {
     "version": "2.7.18-ac3",
-    "asset": "OpenAmigaPython-2.7.18-ac3-GFOpenUp.lha",
+    "asset": "OpenAmigaPython-2.7.18-ac3-OpenUp.lha",
     "sha256": "61cb642d3855d2ea1f6948923e3cb15efb116f7ec4dc938873e55e5e2ae7a626",
     "release": "https://github.com/SacredTrees/openamigapython/releases/tag/v2.7.18-ac3",
 }
@@ -1043,7 +1054,9 @@ def openamigapython_part(top: Path, archive: Path) -> Path:
     tmp = Path(tempfile.mkdtemp(prefix="openamigapython-"))
     try:
         run([shutil.which("jlha") or "lha", "xq", archive.resolve()], cwd=tmp)
-        src = tmp / "GFOpenUp/Parts/OpenAmigaPython"
+        # the release archive (pinned above) unpacks to OpenUp/Parts/OpenAmigaPython: it predates the GF names
+        src = next((d for d in (tmp / "GFOpenUp/Parts/OpenAmigaPython", tmp / "OpenUp/Parts/OpenAmigaPython") if d.is_dir()),
+                   tmp / "GFOpenUp/Parts/OpenAmigaPython")
         payload = src / "Payload"
         lines = (src / "Part").read_text(encoding="latin-1").splitlines()
         wrong = []
@@ -1645,12 +1658,19 @@ def main() -> int:
     sock.line('keep "SYS:Libs/bsdsocket.library" ' + " ".join(f'"{x}"' for x in OPENSOCKET_MARKERS))
     for f in m["files"]:
         if f.get("installPath"):
-            src = so_out / Path(f["path"]).name if so_out else payload / f["path"]
+            path, place = f["path"], f["installPath"]
+            if so_out:
+                # gfopensocket's own build has the GF names since its rename (gfopensocket.library, .device,
+                # GFOpenSocketControl, C:GFOpenSocket), and its programs open those; the vendored manifest still
+                # lists the old ones, so the build's files go in under the GF names in the manifest's drawers
+                path, place = gf_socket_name(path), gf_socket_name(place)
+            src = so_out / Path(path).name if so_out else payload / path
             if not src.is_file():
-                raise SystemExit(f"GFOpenSocket: {f['path']} wasn't built ({src})")
-            sock.add(f["path"], src.read_bytes(), "SYS:" + f["installPath"])
+                raise SystemExit(f"GFOpenSocket: {path} wasn't built ({src})")
+            sock.add(path, src.read_bytes(), "SYS:" + place)
     sock.write()
-    osc = (sock.dir / "Tools/Commodities/GFOpenSocketControl").read_bytes()
+    osc = next(c for c in (sock.dir / "Tools/Commodities/GFOpenSocketControl",
+                           sock.dir / "Tools/Commodities/OpenSocketControl") if c.is_file()).read_bytes()
     print(f"  GFOpenSocket: {'built from ' + str(a.openamigasocket) if so_out else 'the vendored payload (gfopensocket ' + m.get('source', {}).get('commit', '?') + ')'}; "
           f"GFOpenSocketControl {binary_version(osc, 'GFOpenSocketControl') or '(no version)'}")
 
@@ -1866,14 +1886,14 @@ def main() -> int:
 
     # GFOpenMenus: the engine, started at boot, and its editor (gfopenprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "GFOpenMenus", "0.4.6", "GFOpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
+    menus = Part(top, "GFOpenMenus", "0.4.7", "GFOpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/GFOpenMenus", (a.openamigaprefs / "Menus/build/os3/GFOpenMenus").read_bytes(), "SYS:C/GFOpenMenus")
     menus.line("startup Run >NIL: C:GFOpenMenus")
     menus.write()
 
     # GFOpenUp Setup: the first-start wizard (gfopenprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:GFOpenAmiga/Setup.done.
-    setup = Part(top, "GFOpenUpSetup", "0.1.6", "GFOpenUp Setup: the first-start wizard, with the startup switches")
+    setup = Part(top, "GFOpenUpSetup", "0.1.7", "GFOpenUp Setup: the first-start wizard, with the startup switches")
     setup.add("Prefs/GFOpenUp-Setup", (a.openamigaprefs / "Setup/build/os3/GFOpenUp-Setup").read_bytes(), "SYS:Prefs/GFOpenUp-Setup")
     setup.add("Prefs/GFOpenUp-Setup.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/GFOpenUp-Setup.info")
     setup.add("WBStartup/GFOpenUp-Setup", b"", "SYS:WBStartup/GFOpenUp-Setup")
@@ -1933,7 +1953,7 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the GFOpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "GFOpenGPU", "0.20", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp = Part(top, "GFOpenGPU", "0.25", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
     gp.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
     gp.add("Libs/GFOpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:GFOpenGPU/SDL2.module")
@@ -1943,7 +1963,9 @@ def main() -> int:
     for n in sats:
         gp.add(f"Libs/GFOpenGPU/{n}.module", (rtg / f"{n}.module").read_bytes(), f"LIBS:GFOpenGPU/{n}.module")
     gp.add("Libs/GFOpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:GFOpenGPU/GL.module")
-    gp.add("C/GFOpenGPUCheck", (rtg / "GFOpenGPUCheck").read_bytes(), "C:GFOpenGPUCheck")
+    # gfopenrtg's tools/build.sh still writes it as OpenGPUCheck (not yet renamed there): either name
+    gpu_check = next((c for c in (rtg / "GFOpenGPUCheck", rtg / "OpenGPUCheck") if c.is_file()), rtg / "GFOpenGPUCheck")
+    gp.add("C/GFOpenGPUCheck", gpu_check.read_bytes(), "C:GFOpenGPUCheck")
     # tinygl.library 53 (gfopenrtg library/tinygl, from #50): the stand-in TinyGL programs
     # open; their calls are in the program (libtinygl.a) and run on GL.module
     if (rtg / "tinygl.library").is_file():
@@ -2169,7 +2191,7 @@ def main() -> int:
 
     # GFOpenFiles: the file manager (gfopenfilemanager). Double-click opens
     # files with their icon's program, else GFOpenView (the GFOpenPrint part).
-    of = Part(top, "GFOpenFiles", "0.4.1", "GFOpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
+    of = Part(top, "GFOpenFiles", "0.4.2", "GFOpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
     of.add("Utilities/GFOpenFiles", (a.openamigafilemanager / "build/os3/GFOpenFiles").read_bytes(), "SYS:Utilities/GFOpenFiles")
     of.add("Utilities/GFOpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenFiles.info")
     of.write()
