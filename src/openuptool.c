@@ -41,6 +41,9 @@
  *   GFOpenUpTool ICONSIG <icon|drawer>  each icon's picture and whole signatures (see OLDLOOK)
  *   GFOpenUpTool RETIRE <file>          moves a file to SYS:Storage/GFOpenUp-Superseded, to
  *                                     come back with UNINSTALL
+ *   GFOpenUpTool OLDNAMES [DOCK]        an OpenUp from before the GF rename (0.8.11 and earlier, 0.8.13): a copy of
+ *                                     its list and S:User-Startup kept, and its settings copied to the GF names
+ *                                     (ENV: and ENVARC:); DOCK: the dock's buttons for its programs on the GF ones
  *   GFOpenUpTool UNPLACE <program>      drops the program's windows from GFOpenWindows' Places
  *                                     (ENV: and ENVARC:GFOpenPrefs/WindowPlaces), so they open
  *                                     at the program's own first size again
@@ -3879,6 +3882,210 @@ static int update(const char *how)
     }
 }
 
+/* ---- an OpenUp from before the GF rename (GFOpenUp 0.8.13) -----------------------------------------------------
+ * GFOpenUp 0.8.11 and earlier were OpenUp: their list is ENVARC:OpenAmiga/OpenUp.manifest, their programs and
+ * settings the names without GF (C:OpenDock, ENVARC:OpenDock). The Installer takes that OpenUp out with its own
+ * OpenUpTool UNINSTALL, which puts back what it replaced and leaves the settings in ENVARC:, so the two never start
+ * side by side. Before that, OLDNAMES keeps a copy of its list and S:User-Startup, and copies each setting to the
+ * GF name GFOpenUp's programs read, where that has none yet; OLDNAMES DOCK, after the parts are in, points the
+ * dock's buttons at the GF programs that took the old ones' places. Nothing old is deleted here. */
+#define OLD_MANIFEST "ENVARC:OpenAmiga/OpenUp.manifest"
+#define OLD_KEPT "SYS:Storage/GFOpenUp-Superseded/OpenUp-before-GF"
+
+/* the settings' names after ENV: and ENVARC: that the GF programs read as "GF" + the old name */
+static const char *const old_settings[] = {
+    "OpenApps", "OpenBench", "OpenBlanker", "OpenCalc", "OpenClock", "OpenDock", "OpenDrawer", "OpenEdit",
+    "OpenFTP", "OpenFiles", "OpenFont", "OpenGadTools", "OpenImage", "OpenInput", "OpenIntuition", "OpenLocale",
+    "OpenMail", "OpenMenus", "OpenMeters.place", "OpenMonitor", "OpenMulticore", "OpenPlay", "OpenPrefs",
+    "OpenPrint", "OpenPuTTY", "OpenService", "OpenSnap", "OpenSocket", "OpenTLS", "OpenTitle", "OpenTypes",
+    "OpenWeb", "OpenWindows", "OpenWrite", NULL
+};
+/* OpenUp's own marks in ENVARC:OpenAmiga that are the user's choices or say a step is done */
+static const char *const old_marks[][2] = {
+    { "Setup.done", "Setup.done" }, { "Startup.off", "Startup.off" }, { "Backdrop.tone", "Backdrop.tone" },
+    { "Wazp3D-taken", "Wazp3D-taken" }, { "DefaultTools-repaired", "DefaultTools-repaired" },
+    { "OpenFiles-place-reset", "GFOpenFiles-place-reset" }, { "Sound", "Sound" }, { NULL, NULL }
+};
+
+/* 1 when a name of a program or drawer took "GF" in front at the rename: Open..., but not the ones that kept
+ * their names (OpenBrowser, the WebKit one, and OpenAmigaPython). OpenBrowserLite is GFOpenBrowserLite. */
+static int gf_renamed(const char *p, size_t n)
+{
+    if (n < 5 || strncmp(p, "Open", 4) || !(p[4] >= 'A' && p[4] <= 'Z')) return 0;
+    if (n == 11 && !strncmp(p, "OpenBrowser", 11)) return 0;
+    if (n >= 15 && !strncmp(p, "OpenAmigaPython", 15)) return 0;
+    return 1;
+}
+
+/* path with "GF" before each part of it that took it at the rename (SYS:Utilities/OpenPrint/OpenView ->
+ * SYS:Utilities/GFOpenPrint/GFOpenView) into out; 0 when nothing changed or it doesn't fit. */
+static int gf_path(const char *path, char *out, size_t size)
+{
+    const char *p = path;
+    size_t o = 0;
+    int changed = 0;
+    while (*p) {
+        const char *e = p;
+        while (*e && *e != '/' && *e != ':') e++;
+        if (gf_renamed(p, e - p)) {
+            if (o + 2 >= size) return 0;
+            out[o++] = 'G'; out[o++] = 'F';
+            changed = 1;
+        }
+        while (p < e) { if (o + 1 >= size) return 0; out[o++] = *p++; }
+        if (*p) { if (o + 1 >= size) return 0; out[o++] = *p++; }
+    }
+    out[o] = 0;
+    return changed;
+}
+
+/* Copy from to, all of it (a drawer with what is in it), as the Shell's Copy does; 1 when it worked. */
+static int copy_all(const char *from, const char *to)
+{
+    char cmd[600];
+    strlcpy(cmd, "C:Copy >NIL: \"", sizeof cmd);
+    str_cat(cmd, from, sizeof cmd); str_cat(cmd, "\" \"", sizeof cmd); str_cat(cmd, to, sizeof cmd);
+    str_cat(cmd, is_file(from) ? "\" CLONE QUIET" : "\" ALL CLONE QUIET", sizeof cmd);
+    return run_sync(cmd, 1) == 0;
+}
+
+/* Startup.off's lines with the GF names (C:OpenDock -> C:GFOpenDock), as GFOpenUp's startup lines have them */
+static char *gf_lines(const char *text)
+{
+    size_t n = strlen(text);
+    char *out = AllocVec(n * 3 + 16, MEMF_ANY), *o = out;
+    const char *p = text;
+    if (!out) return NULL;
+    while (*p) {
+        const char *e = p;
+        char word[260], gf[300];
+        while (*e && *e != ' ' && *e != '\t' && *e != '\n' && *e != '"') e++;
+        if (e > p && (size_t)(e - p) < sizeof word) {
+            memcpy(word, p, e - p); word[e - p] = 0;
+            if (strchr(word, ':') && gf_path(word, gf, sizeof gf)) { strcpy(o, gf); o += strlen(gf); }
+            else { memcpy(o, p, e - p); o += e - p; }
+        } else { memcpy(o, p, e - p); o += e - p; }
+        if (*e) *o++ = *e++;
+        p = e;
+    }
+    *o = 0;
+    return out;
+}
+
+static int old_settings_copy(void)
+{
+    static const char *const vols[2] = { "ENVARC:", "ENV:" };
+    char from[200], to[200], ver[32] = "";
+    int v, i, copied = 0, failed = 0;
+    LONG len;
+    char *m;
+    if (!exists(OLD_MANIFEST)) {
+        say("GFOpenUp: there is no OpenUp from before the GF names here (no " OLD_MANIFEST ").", NULL, NULL);
+        return RETURN_WARN;
+    }
+    if ((m = read_file(OLD_MANIFEST, &len))) {         /* its version, from "part<tab>OpenUp<tab>0.8.11" */
+        char *p = strstr(m, "\npart\tOpenUp\t");
+        if (p) { p += 13; for (i = 0; i < 31 && p[i] && p[i] != '\n' && p[i] != '\r'; i++) ver[i] = p[i]; ver[i] = 0; }
+        FreeVec(m);
+    }
+    say("GFOpenUp: OpenUp ", ver[0] ? ver : "(its version unknown)", " is here, from before the GF names.");
+    /* a copy of its list, its own marks and S:User-Startup, beside what GFOpenUp keeps */
+    if (!exists(OLD_KEPT "/OpenAmiga")) {
+        ensure_dir(OLD_KEPT, 0);
+        if (copy_all("ENVARC:OpenAmiga", OLD_KEPT "/OpenAmiga") && copy_all(USER_STARTUP, OLD_KEPT "/User-Startup"))
+            say("GFOpenUp: kept a copy of OpenUp's list (ENVARC:OpenAmiga) and S:User-Startup in ", OLD_KEPT, NULL);
+        else {
+            say("GFOpenUp: couldn't keep a copy of OpenUp's list in ", OLD_KEPT, ". Is SYS: full? Nothing was changed.");
+            return RETURN_ERROR;
+        }
+    }
+    for (v = 0; v < 2; v++)
+        for (i = 0; old_settings[i]; i++) {
+            strlcpy(from, vols[v], sizeof from); str_cat(from, old_settings[i], sizeof from);
+            strlcpy(to, vols[v], sizeof to); str_cat(to, "GF", sizeof to); str_cat(to, old_settings[i], sizeof to);
+            if (!exists(from) || exists(to)) continue;
+            if (copy_all(from, to)) { copied++; say("GFOpenUp: settings ", from, v ? "" : " copied to their GF name"); }
+            else { failed++; say("GFOpenUp: couldn't copy ", from, " to its GF name"); }
+        }
+    ensure_dir("ENVARC:GFOpenAmiga", 0);
+    for (i = 0; old_marks[i][0]; i++) {
+        strlcpy(from, "ENVARC:OpenAmiga/", sizeof from); str_cat(from, old_marks[i][0], sizeof from);
+        strlcpy(to, "ENVARC:GFOpenAmiga/", sizeof to); str_cat(to, old_marks[i][1], sizeof to);
+        if (!exists(from) || exists(to)) continue;
+        if (!strcmp(old_marks[i][0], "Startup.off")) {      /* its lines name the programs: their GF names */
+            char *t = read_file(from, &len), *g = t ? gf_lines(t) : NULL;
+            if (g && write_file(to, g, strlen(g))) { copied++; say("GFOpenUp: ", from, " copied, with the GF names"); }
+            else { failed++; say("GFOpenUp: couldn't copy ", from, NULL); }
+            if (t) FreeVec(t);
+            if (g) FreeVec(g);
+        } else if (copy_all(from, to)) { copied++; say("GFOpenUp: ", from, " copied"); }
+        else { failed++; say("GFOpenUp: couldn't copy ", from, NULL); }
+    }
+    if (!copied && !failed) say("GFOpenUp: OpenUp's settings have their GF names already.", NULL, NULL);
+    return failed ? RETURN_WARN : RETURN_OK;
+}
+
+/* The dock's buttons that start a program by its old name, where that is gone and the GF one is there: the GF one,
+ * and its label too when the label was the old name. ENVARC: and ENV:. */
+static int old_dock(void)
+{
+    static const char *const files[2] = { "ENVARC:GFOpenDock/Dock", "ENV:GFOpenDock/Dock" };
+    int f, fixed = 0;
+    for (f = 0; f < 2; f++) {
+        LONG len;
+        char *text = read_file(files[f], &len), *out, *o;
+        const char *p;
+        int here = 0;
+        if (!text) continue;
+        if (!(out = AllocVec(len * 2 + 64, MEMF_ANY))) { FreeVec(text); return RETURN_ERROR; }
+        o = out;
+        for (p = text; *p; ) {
+            const char *e = p, *q1, *q2;
+            while (*e && *e != '\n') e++;
+            /* button <kind> "<path>" [label "<label>"] */
+            if (!strncmp(p, "button ", 7) && (q1 = memchr(p, '"', e - p)) && (q2 = memchr(q1 + 1, '"', e - q1 - 1))) {
+                char path[260], gf[300];
+                size_t n = q2 - q1 - 1;
+                if (n < sizeof path) {
+                    memcpy(path, q1 + 1, n); path[n] = 0;
+                    if (!exists(path) && gf_path(path, gf, sizeof gf) && exists(gf)) {
+                        const char *r = q2 + 1, *l1, *l2;
+                        memcpy(o, p, q1 + 1 - p); o += q1 + 1 - p;
+                        strcpy(o, gf); o += strlen(gf);
+                        /* the rest of the line, the label with GF where it was the old program's name */
+                        if ((l1 = memchr(r, '"', e - r)) && (l2 = memchr(l1 + 1, '"', e - l1 - 1)) &&
+                            gf_renamed(l1 + 1, l2 - l1 - 1) && memchr(l1 + 1, ' ', l2 - l1 - 1) == NULL) {
+                            memcpy(o, r, l1 + 1 - r); o += l1 + 1 - r;
+                            *o++ = 'G'; *o++ = 'F';
+                            r = l1 + 1;
+                        }
+                        memcpy(o, r, e - r); o += e - r;
+                        if (*e) *o++ = '\n';
+                        say("GFOpenUp: the dock's button for ", path, " starts its GF program now");
+                        here++;
+                        p = *e ? e + 1 : e;
+                        continue;
+                    }
+                }
+            }
+            memcpy(o, p, e - p); o += e - p;
+            if (*e) *o++ = '\n';
+            p = *e ? e + 1 : e;
+        }
+        *o = 0;
+        if (here && !write_file(files[f], out, o - out)) {
+            say("GFOpenUp: couldn't write ", files[f], NULL);
+            FreeVec(out); FreeVec(text);
+            return RETURN_ERROR;
+        }
+        fixed += here;
+        FreeVec(out);
+        FreeVec(text);
+    }
+    if (!fixed) say("GFOpenUp: no button of the dock names a program by its old name.", NULL, NULL);
+    return RETURN_OK;
+}
+
 static int real_main(void);
 
 /* GFOpenUpTool needs a big stack: FIXTOOLS reads and writes icons through icon.library, which takes far more
@@ -3919,7 +4126,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n");
+        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -3980,7 +4187,8 @@ static int real_main(void)
         if (rc == RETURN_OK && !manifest_save()) rc = RETURN_ERROR;
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
-    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program>\n"); rc = RETURN_FAIL; }
+    else if (same_word(cmd, "OLDNAMES")) rc = args[1] && same_word((const char *)args[1], "DOCK") ? old_dock() : old_settings_copy();
+    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
