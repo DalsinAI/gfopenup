@@ -14,8 +14,9 @@
  *   GFOpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-strip-<H>.png for the
  *                                     screen's height, tiled, when there is one; else <prefix>-<W>x<H>.png, the
  *                                     one nearest the screen's shape, scaled to fit; KEEP (an upgrade from
- *                                     an OpenUp before the GF names): the backdrop the user has stays when its
- *                                     picture is there, or moves to the same picture in GFOpenUp's drawer
+ *                                     an OpenUp before the GF names): the backdrop the user had (as OLDNAMES
+ *                                     found it) stays when its picture is there, or moves to the same picture
+ *                                     in GFOpenUp's drawer
  *   GFOpenUpTool FONT <font> <size>     the desktop's text: the screens' font and the icons'
  *                                     text (Font prefs, "Screen text" and "Workbench icon text")
  *   GFOpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
@@ -2017,10 +2018,10 @@ static void put32(UBYTE *p, ULONG v) { p[0] = v >> 24; p[1] = v >> 16; p[2] = v 
  * patterns are kept as they are. The old file is kept, as every file GFOpenUp
  * replaces is. */
 /* The picture WBPattern.prefs' ROOT pattern names, and its flags: 1 when there is one. */
-static int root_picture(char *out, int outlen, UWORD *flags)
+static int root_picture(const char *file, char *out, int outlen, UWORD *flags)
 {
     LONG len = 0, k = 12;
-    UBYTE *p = (UBYTE *)read_file(WBPATTERN, &len);
+    UBYTE *p = (UBYTE *)read_file(file, &len);
     int found = 0;
     if (!p) return 0;
     if (len > 12 && !memcmp(p, "FORM", 4) && !memcmp(p + 8, "PREF", 4)) {
@@ -2045,17 +2046,19 @@ static int root_picture(char *out, int outlen, UWORD *flags)
 }
 
 /* BACKDROP <prefix> KEEP (0.8.14: an upgrade from an OpenUp before the GF names, which has just been taken out):
- * the backdrop the user had stays when its picture is still there (one of their own, such as Cradle's), and one
- * from OpenUp's old drawer (SYS:Prefs/Presets/Backdrops/OpenUp, gone with that OpenUp) becomes the same picture
- * in GFOpenUp's drawer. Only when neither is there does the theme's backdrop come. */
+ * the backdrop the user had (WBPattern.prefs as OLDNAMES found it, T:GFOpenUp-WBPattern.prefs, before the old
+ * OpenUp's UNINSTALL put back the one from before it) stays when its picture is still there (one of their own,
+ * such as Cradle's), and one from OpenUp's old drawer (SYS:Prefs/Presets/Backdrops/OpenUp, gone with that
+ * OpenUp) becomes the same picture in GFOpenUp's drawer. Only when neither is there does the theme's come. */
 #define OLD_BACKDROP_DRAWER "SYS:Prefs/Presets/Backdrops/OpenUp/"
+#define WBPATTERN_BEFORE "T:GFOpenUp-WBPattern.prefs"
 static int keep_backdrop(char *pic, UWORD *flags)
 {
     char cur[220];
     int i, n = sizeof OLD_BACKDROP_DRAWER - 1;
-    if (!root_picture(cur, sizeof cur, flags)) return 0;
+    if (!root_picture(exists(WBPATTERN_BEFORE) ? WBPATTERN_BEFORE : WBPATTERN, cur, sizeof cur, flags)) return 0;
     if (exists(cur)) {
-        say("GFOpenUp: Workbench's backdrop stays ", cur, "");
+        strcpy(pic, cur);
         return 1;
     }
     for (i = 0; i < n; i++)
@@ -2084,8 +2087,7 @@ static int backdrop(const char *prefix, int keep)
     if (keep) {
         UWORD kf = flags;
         int k = keep_backdrop(pic, &kf);
-        if (k == 1) return RETURN_OK;
-        if (k == 2) { flags = kf; best = 0; goto write; }
+        if (k) { flags = kf; best = 0; goto write; }
     }
     scr = LockPubScreen((STRPTR)"Workbench");
     sw = scr ? scr->Width : 640; sh = scr ? scr->Height : 480;
@@ -4066,6 +4068,9 @@ static int old_settings_copy(void)
             return RETURN_ERROR;
         }
     }
+    /* 0.8.14: the backdrop the user has now, for BACKDROP KEEP after the old OpenUp's UNINSTALL puts back the
+     * WBPattern.prefs from before it (lab t5-up0814-32, a copy of Instance-32) */
+    if (exists(WBPATTERN)) copy_all(WBPATTERN, WBPATTERN_BEFORE);
     for (v = 0; v < 2; v++)
         for (i = 0; old_settings[i]; i++) {
             strlcpy(from, vols[v], sizeof from); str_cat(from, old_settings[i], sizeof from);
