@@ -116,7 +116,8 @@ a Part file that C/GFOpenUpTool reads:
   Tata/                 Tata, the file inspector: C:Tata (the hooks, the question and the
                         Shell command, started from S:User-Startup), its window
                         SYS:Prefs/Tata, and the list, S:Tata.known (the window's "Update
-                        the list" reads Parts/Tata/S/Tata.known); off by default while
+                        the list" reads Parts/Tata/S/Tata.known), and the known fixes,
+                        S:Tata.fixes (Tata 0.7.0); off by default while
                         Tata is 0.x (--openamigatata)
   GFOpenFTP/              GFOpenFTP, FTP and FTPS in SYS:Utilities/GFOpenFTP, off by default;
                         FTPS works through GFOpenTLS (--openamigaftp)
@@ -2141,6 +2142,10 @@ def main() -> int:
     # 8 October 2026: S:, not LIBS:), replaced by each GFOpenUp, the old one
     # kept in SYS:Storage; the user's own ENVARC:Tata/Known and decisions are
     # never touched. The Installer leaves it unticked while Tata is 0.x.
+    # Tata 0.7.0's known fixes: S:Tata.fixes, the Team's database of fix-ups
+    # applied in memory after LoadSeg (Lupus Reditus' copper list first), replaced
+    # by each GFOpenUp as S:Tata.known is; the user's own are ENVARC:Tata/KnownFixes,
+    # and the switches are in ENVARC:Tata/Settings, both never touched.
     tt = None
     if a.openamigatata:
         tt_src = a.openamigatata
@@ -2154,6 +2159,8 @@ def main() -> int:
         tt.add("S/Tata.known", (tt_src / "data/Tata.known").read_bytes(), "S:Tata.known")
         if (tt_src / "data/Tata.ads").exists():   # Tata 0.6.0: the ad and tracker list GFOpenBrowser reads
             tt.add("S/Tata.ads", (tt_src / "data/Tata.ads").read_bytes(), "S:Tata.ads")
+        if (tt_src / "data/Tata.fixes").exists():   # Tata 0.7.0: the known fixes (offsets and bytes, never a program)
+            tt.add("S/Tata.fixes", (tt_src / "data/Tata.fixes").read_bytes(), "S:Tata.fixes")
         tt.line("startup Run >NIL: C:Tata START")
         tt.write()
 
