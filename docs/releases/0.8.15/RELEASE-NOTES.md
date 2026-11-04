@@ -36,4 +36,4 @@ Fresh lab copies, the pack placed in DH1:GFOpenUp as Cradle places it, its own I
   their Part files.
 
 With centring on, places GFOpenWindows remembered without a snapshot (Remember places) are no longer used: a window
-opens centred until it is snapped. Instance-32 has 77 such places from before.
+opens centred until it is snapped. Instance-32 has 72 such places from before.
