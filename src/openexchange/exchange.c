@@ -34,6 +34,7 @@
 #include <proto/gadtools.h>
 #include <proto/commodities.h>
 #include <proto/icon.h>
+#include <proto/utility.h>
 #include <clib/alib_protos.h>
 #include <string.h>
 
@@ -46,6 +47,7 @@ static const char version[] __attribute__((used)) = "$VER: GFOpenExchange 1.0 (4
 unsigned long __stack = 32768;
 
 struct Library *CxBase, *IconBase;
+struct Library *UtilityBase;
 
 #ifndef COF_ACTIVE
 #define COF_ACTIVE 2            /* a BrokerCopy's bc_Flags: the broker is on */
@@ -432,7 +434,8 @@ int main(int argc, char **argv)
 
     CxBase = OpenLibrary((STRPTR)"commodities.library", 37);
     IconBase = OpenLibrary((STRPTR)"icon.library", 37);
-    if (!CxBase) goto out;
+    UtilityBase = (void *)OpenLibrary((STRPTR)"utility.library", 37);
+    if (!CxBase || !UtilityBase) goto out;
     settings(argc, argv);
 
     if (!(port = CreateMsgPort())) goto out;
@@ -525,6 +528,7 @@ out:
     if (broker) DeleteCxObjAll(broker);
     if (port) { struct Message *msg; while ((msg = GetMsg(port))) ReplyMsg(msg); DeleteMsgPort(port); }
     if (cxs) FreeVec(cxs);
+    if (UtilityBase) CloseLibrary(UtilityBase);
     if (IconBase) CloseLibrary(IconBase);
     if (CxBase) CloseLibrary(CxBase);
     return rc;
