@@ -1017,7 +1017,9 @@
 ; (GFOpenPrefs's Dock page, SYS:Preferences/GFOpenPrefs DOCK, since the no-ROM-volume design)
 ; 0.8.13: over an OpenUp from before the GF names, the dock's buttons for its programs (SYS:Utilities/OpenFiles) start
 ; the GF ones that took their places (SYS:Utilities/GFOpenFiles) first, so none is added twice below
-(if #oldup
+; 0.8.16: on every install with a dock, as a button whose program has gone (GFOpenLook's SYS:Prefs/OpenLook) points at
+; what took its place (SYS:Preferences/Theme); only buttons whose program isn't there change
+(if (or #oldup (exists "ENVARC:GFOpenDock/Dock"))
     (run (cat #tool " OLDNAMES DOCK >>T:GFOpenUp.log")))
 (if (exists "SYS:Preferences/GFOpenPrefs")
     (run "SYS:Preferences/GFOpenPrefs DOCK ADD SYS:Utilities/GFOpenFiles SYS:Utilities/GFOpenPrint/GFOpenView SAVE >>T:GFOpenUp.log"))

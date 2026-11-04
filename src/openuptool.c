@@ -131,7 +131,7 @@
 
 #include "openup_lines.h"
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.15 (4.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.16 (4.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -2893,6 +2893,25 @@ static int part_face_for(const char *dest, char *from, int size)
     return found;
 }
 
+/* 0.8.16: GFOpenIcons' picture for an icon by its name, into from: Icons/<name>, else, for a name from before the GF
+ * rename, Icons/GF<name>. Instance-32's SYS:Utilities/OpenClock and OpenCalc keep their old names, and GFOpenIcons
+ * has GFOpenClock.info and GFOpenCalc.info: they got the plain tool picture (a gear) instead. 1 when there is one. */
+static int gf_renamed(const char *p, size_t n);
+static int icon_by_name(const char *name, char *from, int size)
+{
+    strlcpy(from, OI_PART "/Icons/", size);
+    str_cat(from, name, size);
+    if (exists(from)) return 1;
+    if (gf_renamed(name, strlen(name))) {
+        strlcpy(from, OI_PART "/Icons/GF", size);
+        str_cat(from, name, size);
+        if (exists(from)) return 1;
+        strlcpy(from, OI_PART "/Icons/", size);
+        str_cat(from, name, size);
+    }
+    return 0;
+}
+
 static void gorilla_sweep(const char *dir, int depth)
 {
     BPTR lock = Lock((STRPTR)dir, ACCESS_READ);
@@ -2919,10 +2938,8 @@ static void gorilla_sweep(const char *dir, int depth)
                     ((e = find_entry(NULL, sub)) && strcmp(e->kind, "new")) ||   /* GFOpenUp's own file is ours to face */
                     !file_sig(sub, &p, NULL) || !sig_in(&p, gorilla_pics, NGORILLA))
                     continue;
-                if (!part_face_for(sub, from, sizeof from)) {   /* the part's face for it, else by name */
-                    strlcpy(from, OI_PART "/Icons/", sizeof from);
-                    str_cat(from, n, sizeof from);
-                }
+                if (!part_face_for(sub, from, sizeof from))     /* the part's face for it, else by name */
+                    icon_by_name(n, from, sizeof from);
                 if (!exists(from)) {
                     static const char *const kinds[] = { NULL, "Disk", "Drawer", "Tool", "Project", "Trashcan", NULL, NULL };
                     old_icon(sub, &type);
@@ -2943,6 +2960,45 @@ static void gorilla_sweep(const char *dir, int depth)
     UnLock(lock);
 }
 
+/* 0.8.16: an icon GFOpenUp gave the plain picture of its kind (GFOpenIcons' Kinds: a tool's is a gear) because no
+ * picture by its name was found, and that has one now (icon_by_name: the GF name of a program from before the
+ * rename), gets it. Instance-32 after 0.8.14 and 0.8.15: SYS:Utilities/OpenClock and OpenCalc showed the tool
+ * picture, on Workbench and on the dock, where GFOpenIcons has GFOpenClock's and GFOpenCalc's. Only icons GFOpenUp
+ * faced (listed replaced) that still show exactly a Kinds picture change: one the user changed since stays.
+ * Returns how many. */
+static int kind_faces_back(void)
+{
+    static const char *const kinds[] = { "Disk", "Drawer", "Tool", "Project", "Trashcan" };
+    isig ks[5], p;
+    int nk = 0, i, k, n = 0;
+    char path[256];
+    for (k = 0; k < 5; k++) {
+        strlcpy(path, OI_PART "/Kinds/", sizeof path);
+        str_cat(path, kinds[k], sizeof path);
+        str_cat(path, ".info", sizeof path);
+        if (exists(path) && file_sig(path, &ks[nk], NULL)) nk++;
+    }
+    if (!nk) return 0;
+    for (i = 0; i < nents; i++) {
+        entry *e = &ents[i];
+        int l, kind_pic = 0, r;
+        if (strcmp(e->kind, "replaced") || !e->a || (l = strlen(e->a)) <= 5 || !same_word(e->a + l - 5, ".info")) continue;
+        if (is_default_icon_name(e->a) || !exists(e->a) || !file_sig(e->a, &p, NULL)) continue;
+        for (k = 0; k < nk; k++) if (ks[k].a == p.a && ks[k].b == p.b) kind_pic = 1;
+        if (!kind_pic) continue;
+        if (!part_face_for(e->a, path, sizeof path) && !icon_by_name((const char *)FilePart((STRPTR)e->a), path, sizeof path))
+            continue;
+        strcpy(e->kind, "same");                     /* GFOpenUp's own face: face_icon's "changed since" rule is for the user's */
+        r = face_icon(path, e->a);
+        strcpy(e->kind, "replaced");                 /* its original in SYS:Storage stays the one UNINSTALL puts back */
+        if (r > 0) {
+            say("GFOpenUp: ", e->a, ": GFOpenIcons' picture by its name, in place of the plain one of its kind");
+            n++;
+        }
+    }
+    return n;
+}
+
 static int old_faces_out(void)
 {
     int i, n = 0;
@@ -2953,8 +3009,9 @@ static int old_faces_out(void)
         sweep_n = 0;
         oi_part_text = read_file(OI_PART "/Part", NULL);
         gorilla_sweep("SYS:", 0);
-        if (oi_part_text) { FreeVec(oi_part_text); oi_part_text = NULL; }
         n += sweep_n;
+        n += kind_faces_back();                     /* 0.8.16 */
+        if (oi_part_text) { FreeVec(oi_part_text); oi_part_text = NULL; }
     }
     /* what the GorillaIcons part copied (its PNGs and licence texts in SYS:Storage/Icons/Gorilla, its licence note)
      * and its part line: GFOpenUp's own, listed as new */
@@ -3764,6 +3821,10 @@ static void icons_walk(const char *dir, int depth)
                 /* the replacement: by name from GFOpenIcons' set, else by kind */
                 strlcpy(lib, ICON_LIB "/", sizeof lib);
                 str_cat(lib, n, sizeof lib);
+                if (!exists(lib) && gf_renamed(n, l - 5)) {   /* 0.8.16: a program from before the GF rename */
+                    strlcpy(lib, ICON_LIB "/GF", sizeof lib);
+                    str_cat(lib, n, sizeof lib);
+                }
                 if (!exists(lib)) {
                     const char *k = kind_default(type);
                     if (!k || !exists(k)) continue;
@@ -4099,6 +4160,23 @@ static int old_settings_copy(void)
 
 /* The dock's buttons that start a program by its old name, where that is gone and the GF one is there: the GF one,
  * and its label too when the label was the old name. ENVARC: and ENV:. */
+/* 0.8.16: an old program with no GF program of its own name any more: GFOpenLook (SYS:Prefs/OpenLook, SYS:Prefs/
+ * GFOpenLook; gone since GFOpenUp 0.8.2) is GFOpenPrefs' Theme page, SYS:Preferences/Theme (its project icon opens the
+ * page). Instance-32's dock had "SYS:Prefs/OpenLook" (label "Look"), which showed the plain tool picture. 1 mapped. */
+static int old_dock_moved(const char *path, char *out, size_t size)
+{
+    static const char *const map[][3] = { { "SYS:Prefs/OpenLook", "SYS:Preferences/Theme", "SYS:Preferences/Theme.info" },
+                                          { "SYS:Prefs/GFOpenLook", "SYS:Preferences/Theme", "SYS:Preferences/Theme.info" },
+                                          { NULL, NULL, NULL } };
+    int i;
+    for (i = 0; map[i][0]; i++)                     /* the page's icon is a project with no file of its own */
+        if (same_word(path, map[i][0]) && exists(map[i][2]) && strlen(map[i][1]) < size) {
+            strcpy(out, map[i][1]);
+            return 1;
+        }
+    return 0;
+}
+
 static int old_dock(void)
 {
     static const char *const files[2] = { "ENVARC:GFOpenDock/Dock", "ENV:GFOpenDock/Dock" };
@@ -4120,7 +4198,7 @@ static int old_dock(void)
                 size_t n = q2 - q1 - 1;
                 if (n < sizeof path) {
                     memcpy(path, q1 + 1, n); path[n] = 0;
-                    if (!exists(path) && gf_path(path, gf, sizeof gf) && exists(gf)) {
+                    if (!exists(path) && ((gf_path(path, gf, sizeof gf) && exists(gf)) || old_dock_moved(path, gf, sizeof gf))) {
                         const char *r = q2 + 1, *l1, *l2;
                         memcpy(o, p, q1 + 1 - p); o += q1 + 1 - p;
                         strcpy(o, gf); o += strlen(gf);
