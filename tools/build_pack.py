@@ -166,7 +166,7 @@ a Part file that C/GFOpenUpTool reads:
                         PosixLib aren't on the stoves): the Part its release makes, from the
                         release's OpenAmigaPython-<version>-GFOpenUp.lha, pinned by its sha256
                         (OPENAMIGAPYTHON below; --openamigapython FILE)
-  GFOpenBrowserLite/    GFOpenBrowser Lite 0.4.2, the small web browser (GadTools, no WebKit, about
+  GFOpenBrowserLite/    GFOpenBrowser Lite 0.4.3, the small web browser (GadTools, no WebKit, about
                         100 KB), in SYS:Utilities/GFOpenBrowserLite: pages laid out by its weblayout
                         engine on GFOpenLayout (built in), pictures through datatypes, CSS; https://
                         through GFOpenTLS. In the standard set: ticked on a new install on a 68040
@@ -1102,16 +1102,18 @@ def openamigapython_part(top: Path, archive: Path) -> Path:
 # release is published the sha256 is a placeholder, and the pack stops (it never leaves the
 # part out): publish gfopenbrowser's v0.4.1 (its docs/RELEASE_0.4.1.md), then put the
 # sha256 its CI printed (OpenBrowserLite-0.4.1.lha.sha256 beside the asset) here.
-# 0.4.2 (GFOpenUp 0.8.13): gfopenbrowser #155, merged to main (41f0c3a), is 0.4.1's source with the GF names, built
-# on open5; the files in its release archive are byte for byte those of main's CI build (GFOpenBrowser Lite run
-# 41736811330). Since the GF rename the archive's drawer and program are GFOpenBrowserLite ("name").
+# 0.4.3 (GFOpenUp 0.8.13): gfopenbrowser #155's 0.4.2 (0.4.1's source with the GF names, built on open5) opened
+# GFOpenTLS as opentls.library, its name before the rename, so on a GFOpenUp 0.8.13 without 0.8.11's leftovers every page
+# said "No network" (lab t5-up0813-fresh, 4 Nov 2026). 0.4.3 (gfopenbrowser #169) opens gfopentls.library. Its archive
+# is on the v0.4.3 draft release until Team 5 publishes it; until then give it with --openbrowserlite.
+# Since the GF rename the archive's drawer and program are GFOpenBrowserLite ("name").
 OPENBROWSERLITE = {
-    "version": "0.4.2",
+    "version": "0.4.3",
     "name": "GFOpenBrowserLite",
-    "asset": "GFOpenBrowserLite-0.4.2.lha",
-    "url": "https://github.com/DalsinAI/gfopenbrowser/releases/download/v0.4.2/GFOpenBrowserLite-0.4.2.lha",
-    "sha256": "d1331e662421ae04d80f8cb11aec986f3ef350c0dbfe06572e0027ecbe095ffc",
-    "release": "https://github.com/DalsinAI/gfopenbrowser/releases/tag/v0.4.2",
+    "asset": "GFOpenBrowserLite-0.4.3.lha",
+    "url": "https://github.com/DalsinAI/gfopenbrowser/releases/download/v0.4.3/GFOpenBrowserLite-0.4.3.lha",
+    "sha256": "dacfcb8324bfb2eb40cffde651f94b4d0c1663484f90352efe5e037d35dc9a8c",
+    "release": "https://github.com/DalsinAI/gfopenbrowser/releases/tag/v0.4.3",
 }
 
 
@@ -2240,6 +2242,12 @@ def main() -> int:
         bench = Part(top, "GFOpenBench", binary_version(obb, "GFOpenBench") or "0.1",
                      "GFOpenBench: the Team's own Workbench, with the dock and the Open editors built in (preview)")
         bench.add("System/GFOpenBench", obb, "SYS:System/GFOpenBench")
+        # 0.8.13: and under its name before the GF rename, SYS:System/OpenBench, which is what Cradle's instances'
+        # Startup-Sequence and the GFOpenKick ROM's workbench.library start (amicradle scripts/openkick_rom.py,
+        # tests/test_boot_screen_line.py). Without it an Amiga upgraded from 0.8.11 booted the OpenBench the old
+        # OpenUp had replaced (put back by its UNINSTALL), and a new install never started GFOpenBench (lab
+        # t5-up0813-upgrade, 4 Nov 2026). The copy it replaces is kept in SYS:Storage, as ever.
+        bench.add("System/OpenBench", obb, "SYS:System/OpenBench")
         bench.write()
 
     # Sound: GFOpenPrefs Sound (the volume, Paula's and AHI's levels, the beep)

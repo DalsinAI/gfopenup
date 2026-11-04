@@ -489,7 +489,17 @@
         ; OpenUp's entries leave the Tools menu now, before their programs go
         (if (exists "SYS:C/OpenUpMenu")
             (run "SYS:C/OpenUpMenu >NIL: QUIT"))
+        ; Workbench's screen mode is the user's: OpenUp's UNINSTALL puts back the one from before OpenUp (where its
+        ; OpenRTG part wrote GFOpenRTG's mode, a chipset mode: lab t5-up0813-upgrade, 4 Nov 2026), and an upgrade never
+        ; asks for the mode again, so the one in place now comes back after it
+        (if (exists "ENVARC:Sys/ScreenMode.prefs")
+            (run "C:Copy >NIL: ENVARC:Sys/ScreenMode.prefs T:GFOpenUp-ScreenMode.prefs CLONE"))
         (set #oldrc (run "SYS:C/OpenUpTool UNINSTALL >>T:GFOpenUp.log"))
+        (if (exists "T:GFOpenUp-ScreenMode.prefs")
+            (
+                (run "C:Copy >NIL: T:GFOpenUp-ScreenMode.prefs ENVARC:Sys/ScreenMode.prefs CLONE")
+                (run "C:Copy >NIL: T:GFOpenUp-ScreenMode.prefs ENV:Sys/ScreenMode.prefs CLONE")
+                (run "C:Delete >NIL: T:GFOpenUp-ScreenMode.prefs")))
         ; never both: with the old block still in S:User-Startup, GFOpenUp isn't installed
         (if (= 0 (run "C:Search >NIL: S:User-Startup \";BEGIN OpenUp\" QUIET"))
             (abort "OpenUp's lines couldn't be taken out of S:User-Startup, so GFOpenUp wasn't installed beside it. "

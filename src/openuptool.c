@@ -3904,7 +3904,8 @@ static const char *const old_settings[] = {
 static const char *const old_marks[][2] = {
     { "Setup.done", "Setup.done" }, { "Startup.off", "Startup.off" }, { "Backdrop.tone", "Backdrop.tone" },
     { "Wazp3D-taken", "Wazp3D-taken" }, { "DefaultTools-repaired", "DefaultTools-repaired" },
-    { "OpenFiles-place-reset", "GFOpenFiles-place-reset" }, { "Sound", "Sound" }, { NULL, NULL }
+    { "OpenFiles-place-reset", "GFOpenFiles-place-reset" }, { "Sound", "Sound" }, { "PrefsView", "PrefsView" },
+    { NULL, NULL }
 };
 
 /* 1 when a name of a program or drawer took "GF" in front at the rename: Open..., but not the ones that kept
@@ -4052,6 +4053,7 @@ static int old_dock(void)
                         const char *r = q2 + 1, *l1, *l2;
                         memcpy(o, p, q1 + 1 - p); o += q1 + 1 - p;
                         strcpy(o, gf); o += strlen(gf);
+                        *o++ = '"';                         /* the path's closing quote, q2 */
                         /* the rest of the line, the label with GF where it was the old program's name */
                         if ((l1 = memchr(r, '"', e - r)) && (l2 = memchr(l1 + 1, '"', e - l1 - 1)) &&
                             gf_renamed(l1 + 1, l2 - l1 - 1) && memchr(l1 + 1, ' ', l2 - l1 - 1) == NULL) {
