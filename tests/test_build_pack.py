@@ -181,7 +181,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
         for name in bp.GFO_LIBS
     }
     files.update({
-        onlib / "GFOpenWrite": b"GFOpenWrite on owfwrite.library\0$VER: GFOpenWrite 2.0.22 (25.10.2026)\0",
+        onlib / "GFOpenWrite": b"GFOpenWrite on owfwrite.library\0$VER: GFOpenWrite 2.0.23 (25.10.2026)\0",
         onlib / "OWConvert": b"OWConvert on the four libraries\0",
         onlib / "GFOpenCalc": b"\0$VER: GFOpenCalc 0.1 (25.10.2026) GFOpenCalc, the spreadsheet of the GFOffice Suite\0",
         src / "Dictionaries/en_GB.words": b"aardvark\nabacus\n",
@@ -229,7 +229,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
           and (gf.dir / lic / "GFOffice-Dictionaries.txt").read_bytes().endswith(b"SCOWL notice\n"))
 
     # GFOpenWrite: on owfwrite.library, needing GFOffice, with none of the shared files
-    check("GFOpenWrite: 2.0.22, and it needs the GFOffice part", wl[0] == "part GFOpenWrite 2.0.22" and "needs part GFOffice" in wl,
+    check("GFOpenWrite: 2.0.23, and it needs the GFOffice part", wl[0] == "part GFOpenWrite 2.0.23" and "needs part GFOffice" in wl,
           str(wl[:3]))
     check("GFOpenWrite: the program built on its library (OWF=library)",
           (wr.dir / "Utilities/GFOpenWrite/GFOpenWrite").read_bytes() == files[onlib / "GFOpenWrite"])
@@ -290,7 +290,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
           and OUL_NEEDPART not in m1, f"{rc} {m1!r}")
     rc, m2 = manifest_run(filt, "install", wp, m1, tmp)
     check("INSTALL GFOpenWrite after GFOffice: installed, its need noted in the manifest",
-          rc == 0 and "part\tGFOpenWrite\t2.0.22" in m2.splitlines() and f"{OUL_NEEDPART}\tGFOpenWrite\tGFOffice" in m2.splitlines(),
+          rc == 0 and "part\tGFOpenWrite\t2.0.23" in m2.splitlines() and f"{OUL_NEEDPART}\tGFOpenWrite\tGFOffice" in m2.splitlines(),
           f"{rc} {m2!r}")
     rc, again = manifest_run(filt, "install", wp, m2, tmp)
     check("INSTALL GFOpenWrite again (an update): its need noted once", rc == 0 and again.count(f"{OUL_NEEDPART}\tGFOpenWrite\t") == 1,
@@ -562,9 +562,16 @@ def main() -> int:
     for f in ("pack/Install-GFOpenUp", "pack/Uninstall-GFOpenUp"):
         t = (ROOT / f).read_text(encoding="latin-1")
         guarded = re.findall(rf'\(run "SYS:Prefs/({stubs})\b', t)
-        # an old stub is run only as the fallback where SYS:Preferences/GFOpenPrefs isn't there (Uninstall's GFOpenTypes)
+        # an old stub is run only as the fallback where SYS:Preferences/GFOpenPrefs isn't there (Uninstall's GFOpenTypes),
+        # and in the Installer only OpenUp's own OpenTypes, before the GF names, as its own uninstaller ran it (0.8.13)
         check(f"{f}: runs GFOpenPrefs from SYS:Preferences, an old name only as a fallback",
-              len(guarded) <= (1 if "Uninstall" in f else 0), str(guarded))
+              guarded == [] or guarded == ["OpenTypes"], str(guarded))
+    t = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+    check("pack/Install-GFOpenUp: an OpenUp from before the GF names is taken out with its own OpenUpTool, "
+          "its settings copied first (OLDNAMES), its dock after (OLDNAMES DOCK), never both blocks in S:User-Startup",
+          t.index('" OLDNAMES >>') < t.index('" DETECT >NIL:"') < t.index('"SYS:C/OpenUpTool UNINSTALL')
+          < t.index('" INSTALL Parts/GFOpenUp >>') < t.index('" OLDNAMES DOCK >>')
+          and '";BEGIN OpenUp\\"' in t)
     menu = (ROOT / "src/openupmenu.c").read_text(encoding="latin-1")
     check("GFOpenUpMenu: no entry runs an old stub", not re.search(rf'"SYS:Prefs/({stubs})"', menu))
     entries = re.findall(r'HOW_PAGE, "([^"]+)", +"SYS:Preferences/([^"]+)", +"([A-Z]+)"', menu)

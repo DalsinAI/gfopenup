@@ -166,12 +166,12 @@ a Part file that C/GFOpenUpTool reads:
                         PosixLib aren't on the stoves): the Part its release makes, from the
                         release's OpenAmigaPython-<version>-GFOpenUp.lha, pinned by its sha256
                         (OPENAMIGAPYTHON below; --openamigapython FILE)
-  OpenBrowserLite/      OpenBrowser Lite 0.4.1, the small web browser (GadTools, no WebKit, about
-                        100 KB), in SYS:Utilities/OpenBrowserLite: pages laid out by its weblayout
+  GFOpenBrowserLite/    GFOpenBrowser Lite 0.4.3, the small web browser (GadTools, no WebKit, about
+                        100 KB), in SYS:Utilities/GFOpenBrowserLite: pages laid out by its weblayout
                         engine on GFOpenLayout (built in), pictures through datatypes, CSS; https://
                         through GFOpenTLS. In the standard set: ticked on a new install on a 68040
                         or 68060 with its FPU. Not built here: the program from gfopenbrowser's
-                        release OpenBrowserLite-<version>.lha, fetched by its address and pinned by
+                        release GFOpenBrowserLite-<version>.lha, fetched by its address and pinned by
                         its sha256 (OPENBROWSERLITE below; --openbrowserlite FILE)
   OpenBrowser/          OpenBrowser, the web browser, in its own archive beside the pack,
                         GFOpenUp-<version>-OpenBrowser.lha (--openbrowser; gfopenbrowser, pinned by commit
@@ -207,7 +207,10 @@ SOFT_SPECS = Path(__file__).resolve().parent.parent / "specs/m68k-soft-m68040.sp
 NULL_OK = "-fno-delete-null-pointer-checks"
 
 # GFOpenSocket's files that must be ours, or absent: never another stack's (DESIGN.md section 3).
-OPENSOCKET_MARKERS = ["GFOpenSocket (AmiCradle)", "ACNet (AmiCradle)", "AmiCradle ACNet"]
+# The names before the renames are ours too (0.8.13): OpenUp 0.8.11's and Cradle's own installer's stack says
+# "OpenSocket (AmigaChrome)", and the rename's sed had turned the ACNet ones into names no stack ever had.
+OPENSOCKET_MARKERS = ["GFOpenSocket (AmiCradle)", "OpenSocket (AmiCradle)", "OpenSocket (AmigaChrome)",
+                      "ACNet (AmiCradle)", "AmiCradle ACNet", "ACNet (AmigaChrome)", "AmigaChrome ACNet"]
 
 # GFOpenPrinter (24 October 2026, the plan "Retiring the legacy printing, in favour of GFOpenPrint"): on AmiCradle
 # instances what programs print the old way (printer.device, PRT:) goes to GFOpenPrint. Our printer.device
@@ -500,6 +503,17 @@ def archive_art() -> bytes:
             rr, g, b, a = px[x, y]
             px[x, y] = (rr, g, b, 255) if a >= 128 else (0, 0, 0, 0)
     return img.tobytes()
+
+
+def gf_socket_name(path: str) -> str:
+    """path with its file name in gfopensocket's GF form: opensocket.library -> gfopensocket.library,
+    OpenSocketControl -> GFOpenSocketControl, C/OpenSocket -> C/GFOpenSocket; other names as they are."""
+    head, _, name = path.rpartition("/")
+    if name.startswith("opensocket"):
+        name = "gf" + name
+    elif name.startswith("OpenSocket"):
+        name = "GF" + name
+    return f"{head}/{name}" if head else name
 
 
 def late_combine_off(cc) -> list[str]:
@@ -918,7 +932,7 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
                "SYS:" + lic + "GFOffice-Dictionaries.txt")
 
     # GFOpenWrite: the word processor, as its 1.0 release laid it out, on owf.library
-    wr = Part(top, "GFOpenWrite", "2.0.22", "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr = Part(top, "GFOpenWrite", "2.0.23", "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.needs_part("GFOffice")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite", (onlib / "GFOpenWrite").read_bytes(), "SYS:Utilities/GFOpenWrite/GFOpenWrite")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/GFOpenWrite/GFOpenWrite.info")
@@ -992,7 +1006,7 @@ PART_MAIN = {
     "GFOpenCalc": ("Utilities/GFOpenCalc/GFOpenCalc", "GFOpenCalc"),
     "GFOpenMail": ("Utilities/GFOpenMail/GFOpenMail", "GFOpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
-    "OpenBrowserLite": ("Utilities/OpenBrowserLite/OpenBrowserLite", "OpenBrowserLite"),
+    "GFOpenBrowserLite": ("Utilities/GFOpenBrowserLite/GFOpenBrowserLite", "GFOpenBrowserLite"),
 }
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read. GFOpenPrint 0.4 is GFOpenPrint (0.3) with
@@ -1016,12 +1030,12 @@ PART_OWN_VERSION = {"GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "Backdrops"
 # VBCC and PosixLib aren't on the stoves. The release's archive is pinned by its sha256, so a
 # new release is a new pin here. Fetch it with
 #   gh release download v2.7.18-ac3 -R SacredTrees/openamigapython \
-#       -p OpenAmigaPython-2.7.18-ac3-GFOpenUp.lha -D build
+#       -p OpenAmigaPython-2.7.18-ac3-OpenUp.lha -D build
 # (build/ is where --openamigapython looks first). The Part has no "needs" line: it goes on any
 # Amiga. The Installer checks for a 68020 and installs GFOpenTLS (with GFOpenCrypto) with it.
 OPENAMIGAPYTHON = {
     "version": "2.7.18-ac3",
-    "asset": "OpenAmigaPython-2.7.18-ac3-GFOpenUp.lha",
+    "asset": "OpenAmigaPython-2.7.18-ac3-OpenUp.lha",
     "sha256": "61cb642d3855d2ea1f6948923e3cb15efb116f7ec4dc938873e55e5e2ae7a626",
     "release": "https://github.com/SacredTrees/openamigapython/releases/tag/v2.7.18-ac3",
 }
@@ -1043,7 +1057,9 @@ def openamigapython_part(top: Path, archive: Path) -> Path:
     tmp = Path(tempfile.mkdtemp(prefix="openamigapython-"))
     try:
         run([shutil.which("jlha") or "lha", "xq", archive.resolve()], cwd=tmp)
-        src = tmp / "GFOpenUp/Parts/OpenAmigaPython"
+        # the release archive (pinned above) unpacks to OpenUp/Parts/OpenAmigaPython: it predates the GF names
+        src = next((d for d in (tmp / "GFOpenUp/Parts/OpenAmigaPython", tmp / "OpenUp/Parts/OpenAmigaPython") if d.is_dir()),
+                   tmp / "GFOpenUp/Parts/OpenAmigaPython")
         payload = src / "Payload"
         lines = (src / "Part").read_text(encoding="latin-1").splitlines()
         wrong = []
@@ -1086,12 +1102,18 @@ def openamigapython_part(top: Path, archive: Path) -> Path:
 # release is published the sha256 is a placeholder, and the pack stops (it never leaves the
 # part out): publish gfopenbrowser's v0.4.1 (its docs/RELEASE_0.4.1.md), then put the
 # sha256 its CI printed (OpenBrowserLite-0.4.1.lha.sha256 beside the asset) here.
+# 0.4.3 (GFOpenUp 0.8.13): gfopenbrowser #155's 0.4.2 (0.4.1's source with the GF names, built on open5) opened
+# GFOpenTLS as opentls.library, its name before the rename, so on a GFOpenUp 0.8.13 without 0.8.11's leftovers every page
+# said "No network" (lab t5-up0813-fresh, 4 Nov 2026). 0.4.3 (gfopenbrowser #169) opens gfopentls.library. Its archive
+# is on the v0.4.3 draft release until Team 5 publishes it; until then give it with --openbrowserlite.
+# Since the GF rename the archive's drawer and program are GFOpenBrowserLite ("name").
 OPENBROWSERLITE = {
-    "version": "0.4.1",
-    "asset": "OpenBrowserLite-0.4.1.lha",
-    "url": "https://github.com/DalsinAI/gfopenbrowser/releases/download/v0.4.1/OpenBrowserLite-0.4.1.lha",
-    "sha256": "16e1dfed30743d1d1b00087a724f9454b341f132622adefc3622369211c380f3",
-    "release": "https://github.com/DalsinAI/gfopenbrowser/releases/tag/v0.4.1",
+    "version": "0.4.3",
+    "name": "GFOpenBrowserLite",
+    "asset": "GFOpenBrowserLite-0.4.3.lha",
+    "url": "https://github.com/DalsinAI/gfopenbrowser/releases/download/v0.4.3/GFOpenBrowserLite-0.4.3.lha",
+    "sha256": "dacfcb8324bfb2eb40cffde651f94b4d0c1663484f90352efe5e037d35dc9a8c",
+    "release": "https://github.com/DalsinAI/gfopenbrowser/releases/tag/v0.4.3",
 }
 
 
@@ -1136,19 +1158,20 @@ def openbrowserlite_files(archive: Path | None) -> dict:
     tmp = Path(tempfile.mkdtemp(prefix="openbrowserlite-"))
     try:
         run([shutil.which("jlha") or "lha", "xq", archive.resolve()], cwd=tmp)
-        drawer = tmp / "OpenBrowserLite"
+        nm = pin.get("name", "OpenBrowserLite")
+        drawer = tmp / nm
         files = {}
-        for name in ("OpenBrowserLite", "OpenBrowserLite.readme", "LICENSE"):
+        for name in (nm, f"{nm}.readme", "LICENSE"):
             if not (drawer / name).is_file():
-                raise SystemExit(f"OpenBrowserLite: {where} has no OpenBrowserLite/{name}")
+                raise SystemExit(f"OpenBrowserLite: {where} has no {nm}/{name}")
             files[name] = (drawer / name).read_bytes()
-        vl = re.search(rb"\$VER: OpenBrowserLite ([0-9.]+)", files["OpenBrowserLite"])
+        vl = re.search(rb"\$VER: " + nm.encode() + rb" ([0-9.]+)", files[nm])
         if not vl or vl.group(1).decode() != pin["version"]:
             raise SystemExit(f"OpenBrowserLite: {where}'s program is "
                              f"{vl.group(1).decode() if vl else 'of no version'}, not {pin['version']}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    print(f"  OpenBrowser Lite {pin['version']}: {pin['asset']}, sha256 checked")
+    print(f"  {pin.get('name', 'OpenBrowserLite')} {pin['version']}: {pin['asset']}, sha256 checked")
     return files
 
 
@@ -1645,12 +1668,19 @@ def main() -> int:
     sock.line('keep "SYS:Libs/bsdsocket.library" ' + " ".join(f'"{x}"' for x in OPENSOCKET_MARKERS))
     for f in m["files"]:
         if f.get("installPath"):
-            src = so_out / Path(f["path"]).name if so_out else payload / f["path"]
+            path, place = f["path"], f["installPath"]
+            if so_out:
+                # gfopensocket's own build has the GF names since its rename (gfopensocket.library, .device,
+                # GFOpenSocketControl, C:GFOpenSocket), and its programs open those; the vendored manifest still
+                # lists the old ones, so the build's files go in under the GF names in the manifest's drawers
+                path, place = gf_socket_name(path), gf_socket_name(place)
+            src = so_out / Path(path).name if so_out else payload / path
             if not src.is_file():
-                raise SystemExit(f"GFOpenSocket: {f['path']} wasn't built ({src})")
-            sock.add(f["path"], src.read_bytes(), "SYS:" + f["installPath"])
+                raise SystemExit(f"GFOpenSocket: {path} wasn't built ({src})")
+            sock.add(path, src.read_bytes(), "SYS:" + place)
     sock.write()
-    osc = (sock.dir / "Tools/Commodities/GFOpenSocketControl").read_bytes()
+    osc = next(c for c in (sock.dir / "Tools/Commodities/GFOpenSocketControl",
+                           sock.dir / "Tools/Commodities/OpenSocketControl") if c.is_file()).read_bytes()
     print(f"  GFOpenSocket: {'built from ' + str(a.openamigasocket) if so_out else 'the vendored payload (gfopensocket ' + m.get('source', {}).get('commit', '?') + ')'}; "
           f"GFOpenSocketControl {binary_version(osc, 'GFOpenSocketControl') or '(no version)'}")
 
@@ -1866,14 +1896,14 @@ def main() -> int:
 
     # GFOpenMenus: the engine, started at boot, and its editor (gfopenprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "GFOpenMenus", "0.4.6", "GFOpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
+    menus = Part(top, "GFOpenMenus", "0.4.7", "GFOpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/GFOpenMenus", (a.openamigaprefs / "Menus/build/os3/GFOpenMenus").read_bytes(), "SYS:C/GFOpenMenus")
     menus.line("startup Run >NIL: C:GFOpenMenus")
     menus.write()
 
     # GFOpenUp Setup: the first-start wizard (gfopenprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:GFOpenAmiga/Setup.done.
-    setup = Part(top, "GFOpenUpSetup", "0.1.6", "GFOpenUp Setup: the first-start wizard, with the startup switches")
+    setup = Part(top, "GFOpenUpSetup", "0.1.7", "GFOpenUp Setup: the first-start wizard, with the startup switches")
     setup.add("Prefs/GFOpenUp-Setup", (a.openamigaprefs / "Setup/build/os3/GFOpenUp-Setup").read_bytes(), "SYS:Prefs/GFOpenUp-Setup")
     setup.add("Prefs/GFOpenUp-Setup.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/GFOpenUp-Setup.info")
     setup.add("WBStartup/GFOpenUp-Setup", b"", "SYS:WBStartup/GFOpenUp-Setup")
@@ -1933,7 +1963,7 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the GFOpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "GFOpenGPU", "0.20", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    gp = Part(top, "GFOpenGPU", "0.25", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
     gp.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
     gp.add("Libs/GFOpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:GFOpenGPU/SDL2.module")
@@ -1943,7 +1973,9 @@ def main() -> int:
     for n in sats:
         gp.add(f"Libs/GFOpenGPU/{n}.module", (rtg / f"{n}.module").read_bytes(), f"LIBS:GFOpenGPU/{n}.module")
     gp.add("Libs/GFOpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:GFOpenGPU/GL.module")
-    gp.add("C/GFOpenGPUCheck", (rtg / "GFOpenGPUCheck").read_bytes(), "C:GFOpenGPUCheck")
+    # gfopenrtg's tools/build.sh still writes it as OpenGPUCheck (not yet renamed there): either name
+    gpu_check = next((c for c in (rtg / "GFOpenGPUCheck", rtg / "OpenGPUCheck") if c.is_file()), rtg / "GFOpenGPUCheck")
+    gp.add("C/GFOpenGPUCheck", gpu_check.read_bytes(), "C:GFOpenGPUCheck")
     # tinygl.library 53 (gfopenrtg library/tinygl, from #50): the stand-in TinyGL programs
     # open; their calls are in the program (libtinygl.a) and run on GL.module
     if (rtg / "tinygl.library").is_file():
@@ -2169,7 +2201,7 @@ def main() -> int:
 
     # GFOpenFiles: the file manager (gfopenfilemanager). Double-click opens
     # files with their icon's program, else GFOpenView (the GFOpenPrint part).
-    of = Part(top, "GFOpenFiles", "0.4.1", "GFOpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
+    of = Part(top, "GFOpenFiles", "0.4.2", "GFOpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
     of.add("Utilities/GFOpenFiles", (a.openamigafilemanager / "build/os3/GFOpenFiles").read_bytes(), "SYS:Utilities/GFOpenFiles")
     of.add("Utilities/GFOpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenFiles.info")
     of.write()
@@ -2210,6 +2242,12 @@ def main() -> int:
         bench = Part(top, "GFOpenBench", binary_version(obb, "GFOpenBench") or "0.1",
                      "GFOpenBench: the Team's own Workbench, with the dock and the Open editors built in (preview)")
         bench.add("System/GFOpenBench", obb, "SYS:System/GFOpenBench")
+        # 0.8.13: and under its name before the GF rename, SYS:System/OpenBench, which is what Cradle's instances'
+        # Startup-Sequence and the GFOpenKick ROM's workbench.library start (amicradle scripts/openkick_rom.py,
+        # tests/test_boot_screen_line.py). Without it an Amiga upgraded from 0.8.11 booted the OpenBench the old
+        # OpenUp had replaced (put back by its UNINSTALL), and a new install never started GFOpenBench (lab
+        # t5-up0813-upgrade, 4 Nov 2026). The copy it replaces is kept in SYS:Storage, as ever.
+        bench.add("System/OpenBench", obb, "SYS:System/OpenBench")
         bench.write()
 
     # Sound: GFOpenPrefs Sound (the volume, Paula's and AHI's levels, the beep)
@@ -2340,15 +2378,16 @@ def main() -> int:
     # picks with it. It needs a 68040 (or 68060) with its FPU; the Installer leaves it out
     # elsewhere. Ticked on a new install, so the pack always has it: no archive, no pack.
     lf = openbrowserlite_files(a.openbrowserlite)
-    bl = Part(top, "OpenBrowserLite", OPENBROWSERLITE["version"],
-              "OpenBrowser Lite: a small web browser (no WebKit); https:// through GFOpenTLS")
-    d = "Utilities/OpenBrowserLite"
-    bl.add(f"{d}/OpenBrowserLite", lf["OpenBrowserLite"], f"SYS:{d}/OpenBrowserLite")
-    bl.add(f"{d}/OpenBrowserLite.info", icons.icon(icons.WBTOOL, "page", stack=16384), f"SYS:{d}/OpenBrowserLite.info")
-    for name in ("OpenBrowserLite.readme", "LICENSE"):
+    nm = OPENBROWSERLITE["name"]
+    bl = Part(top, nm, OPENBROWSERLITE["version"],
+              "GFOpenBrowser Lite: a small web browser (no WebKit); https:// through GFOpenTLS")
+    d = f"Utilities/{nm}"
+    bl.add(f"{d}/{nm}", lf[nm], f"SYS:{d}/{nm}")
+    bl.add(f"{d}/{nm}.info", icons.icon(icons.WBTOOL, "page", stack=16384), f"SYS:{d}/{nm}.info")
+    for name in (f"{nm}.readme", "LICENSE"):
         bl.add(f"{d}/{name}", lf[name], f"SYS:{d}/{name}")
-    bl.add("Utilities/OpenBrowserLite.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)),
-           "SYS:Utilities/OpenBrowserLite.info", own=True)
+    bl.add(f"Utilities/{nm}.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)),
+           f"SYS:Utilities/{nm}.info", own=True)
     bl.write()
 
     # OpenBrowser: too big for the pack (its engine is about 100 MB), so it
