@@ -350,12 +350,20 @@ def main() -> int:
 
         icons = FakeIcons()
         top = tmp / "GFOpenUp"
-        opp = bp.openprefs_part(top, b"GFOpenPrefs body", icons, "2.3")
+        opp = bp.openprefs_part(top, b"GFOpenPrefs body", icons, "2.3", [("Open.theme", b"theme Open")],
+                                [("Modern.profile", b"profile Modern")])
         opp.write()
         pf = opp.dir / "Part"
         text = pf.read_text(encoding="latin-1")
         lines = text.splitlines()
         check("the part is GFOpenPrefs at its program's version", lines[0] == "part GFOpenPrefs 2.3", lines[0])
+        # the pieces its pages list (Instance-40, 4 November 2026: none on a new install, the Theme page's lists empty)
+        check("the themes in SYS:Prefs/Presets/Themes, kept up to date, a user's own beside them",
+              'add "Themes/Open.theme" "SYS:Prefs/Presets/Themes/Open.theme"' in lines
+              and (opp.dir / "Themes/Open.theme").read_bytes() == b"theme Open")
+        check("the desktop profiles in SYS:Prefs/Presets/GFOpenPrefs",
+              'add "Profiles/Modern.profile" "SYS:Prefs/Presets/GFOpenPrefs/Modern.profile"' in lines
+              and (opp.dir / "Profiles/Modern.profile").read_bytes() == b"profile Modern")
 
         # SYS:Preferences: the drawer, the program and its icon, an icon per page
         check("SYS:Preferences.info, a drawer icon GFOpenUp keeps up to date",
@@ -383,8 +391,8 @@ def main() -> int:
               all(words.values()))
         check("no page has a file of its own (Q8: icons, no stubs)",
               not [p for p in PAGES if (opp.dir / f"Preferences/{p}").exists()])
-        check("nothing goes into SYS:Prefs or C: any more",
-              not re.search(r'^(copy|add|default) "[^"]*" "(SYS:Prefs/|SYS:C/|C:)', text, re.M))
+        check("nothing goes into SYS:Prefs or C: any more, but the presets SYS:Prefs keeps (Q13)",
+              not re.search(r'^(copy|add|default) "[^"]*" "(SYS:Prefs/(?!Presets/)|SYS:C/|C:)', text, re.M))
 
         # the old homes, archived
         for n in OLD13 + NEW9:
@@ -443,6 +451,29 @@ def main() -> int:
             check(f"{machine}: C:ACROMFix and its startup line, QUIET",
                   eff[2:] == ['copy "C/ACROMFix" "SYS:C/ACROMFix"', "startup C:ACROMFix QUIET"], str(eff))
         check("ACROMFix's file as built", (core.dir / "C/ACROMFix").read_bytes() == b"ACROMFix body")
+
+        # What the GFOpenKick ROM leaves to a disk (Instance-40, 4 November 2026: no iffparse.library, and nine of
+        # GFOpenPrefs's pages ended): on the open ROM, each where none is; under OS 3.2.3's ROM nothing (its disk has them)
+        built = tmp / "openkickdisk"
+        for name, (_, out, _) in bp.OPENKICK_DISK.items():
+            (built / name / out).parent.mkdir(parents=True, exist_ok=True)
+            (built / name / out).write_bytes(f"{name} body".encode())
+        core = bp.Part(top, "GFOpenUp", "0.9", "test")
+        bp.openkick_disk_lines(core, built)
+        core.write()
+        want = sorted(f'default "OpenKick/{out}" "{dest}"' for _, out, dest in bp.OPENKICK_DISK.values())
+        for machine in ("openkick100-ac", "openkick101-ac", "openkick101"):
+            eff = lines_on(core.dir / "Part", machine, filt)
+            if machine != "openkick100-ac":
+                check(f"{machine}: the disk libraries and devices, each where none is", sorted(eff[2:]) == want, str(eff))
+        eff = lines_on(core.dir / "Part", "os323", filt)
+        check("os323: none of them (OS 3.2.3's disk has its own)", eff[2:] == [], str(eff))
+        check("iffparse, diskfont, commodities, lowlevel, clipboard, serial and parallel among them",
+              {"LIBS:iffparse.library", "LIBS:diskfont.library", "LIBS:commodities.library", "LIBS:lowlevel.library",
+               "DEVS:clipboard.device", "DEVS:serial.device", "DEVS:parallel.device"}
+              <= {d for _, _, d in bp.OPENKICK_DISK.values()})
+        check("each file as built", all((core.dir / "OpenKick" / out).read_bytes() == f"{n} body".encode()
+                                         for n, (_, out, _) in bp.OPENKICK_DISK.items()))
 
         # Backdrops: GFOpenUp's own desktops, each with its .tone; the AmiCradle Background Pack's art (which
         # gfopengadtools' make_backdrops.py also exports) is an optional install, not GFOpenUp's (24 October 2026)

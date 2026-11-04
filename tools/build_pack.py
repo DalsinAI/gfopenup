@@ -30,7 +30,10 @@ a Part file that C/GFOpenUpTool reads:
                         ROM (the open ROM has the same 1.0 from P6 on; an open ROM from before has
                         0.3.3 or 0.3.4, and the newer version wins);
                         LIBS:softfpu.library, the FPU in software for a 68LC040 or
-                        68EC040 under the open ROM (amicradle-guest libraries/opensoftfpu)
+                        68EC040 under the open ROM (amicradle-guest libraries/opensoftfpu); on the GFOpenKick
+                        ROM, where none is, what it leaves to a disk: iffparse, diskfont, commodities and
+                        lowlevel.library, clipboard, serial and parallel.device (OPENKICK_DISK, the OpenKick
+                        boot disk's files)
   GFOpenSocket/           bsdsocket.library 4.3 and its tools, built from gfopensocket
                         (--openamigasocket) and laid out by the manifest of amicradle's
                         vendored payload (vendor/opensocket-os32); without the checkout,
@@ -77,7 +80,8 @@ a Part file that C/GFOpenUpTool reads:
                         C:OpenPrefs are archived. The boot's GFOpenPrefs APPLY line stays only
                         where the ROM doesn't apply the settings itself ("unless GFOpenKick").
                         Always installed (gfopenprefs; the no-ROM-volume design of 24 October
-                        2026, sections 8 and 10)
+                        2026, sections 8 and 10). With the themes in SYS:Prefs/Presets/Themes and the
+                        desktop profiles in SYS:Prefs/Presets/GFOpenPrefs, which its Theme page lists
   GFOpenWindows/          snapping, Amiga+Tab, double-click to front, the wheel under the
                         pointer and window places; its editor is GFOpenPrefs's Windows (gfopenprefs)
   GFOpenDock/             a dock, which takes over ToolManager's, AmiDock's or AmiStart's
@@ -671,6 +675,10 @@ def build_parts(a):
     run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
     # softfpu.library (amicradle-guest libraries/opensoftfpu, its default os32-gcc16 stove): the GFOpenUp part's
     run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
+    # The disk libraries and devices the open ROM leaves to a disk (the OpenKick boot disk's, gfopenkick
+    # disks/openkick-boot/manifest.json): the GFOpenUp part's, on the GFOpenKick ROM, where none is (OPENKICK_DISK)
+    for name, (src, _out, _dest) in OPENKICK_DISK.items():
+        run(["sh", a.guest / src / "build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openkickdisk" / name)))
     # ACROMFix (amicradle-guest tools/acromfix, the os32 stove as its build.sh): the GFOpenUp part's
     run(["sh", a.guest / "tools/acromfix/build-amiga.sh"], env=dict(genv, STOVE=str(STOVE), OUT=str(ROOT / "build/acromfix")))
     # printer.device (amicradle-guest devices/openprinter.device, its default os32-gcc16 stove): the GFOpenPrinter part's
@@ -792,7 +800,7 @@ PREFERENCES_PAGES = (("Theme", "THEME", "Look"), ("Screen Mode", "SCREENMODE", "
                      ("Blanker", "BLANKER", "Blanker"))
 
 
-def openprefs_part(top: Path, opapp: bytes, icons, version: str) -> "Part":
+def openprefs_part(top: Path, opapp: bytes, icons, version: str, themes=(), profiles=()) -> "Part":
     """The GFOpenPrefs part (the no-ROM-volume design of 24 October 2026, sections 8 and 10).
 
     GFOpenPrefs (W48, the user, 17 Oct 2026: "We should just combine them into a single app, prefs editors that is")
@@ -809,7 +817,13 @@ def openprefs_part(top: Path, opapp: bytes, icons, version: str) -> "Part":
     The boot's GFOpenPrefs APPLY (Sound's levels, Gamepads' patch, the stack caps) stays only where the ROM doesn't
     apply them itself: on the open ROM whose prefs task does (prefs.resource 47.101, "GFOpenKick" to GFOpenUpTool
     0.8.9) the line goes; elsewhere (OS 3.2.3's ROM, Q12, and an older open ROM) it runs the program by its
-    full path."""
+    full path.
+
+    The pieces its pages list (4 November 2026, Instance-40: a new install on the open ROM had none, and the Theme
+    page's lists were empty): the themes (gfopengadtools themes/*.theme) in SYS:Prefs/Presets/Themes and the desktop
+    profiles (gfopenprefs Look/profiles) in SYS:Prefs/Presets/GFOpenPrefs. GFOpenUp 0.8.2 dropped them with the
+    GFOpenLook part; they are only the choices the Theme page offers, and nothing is applied until the user picks
+    one, so Workbench keeps the OS's own look. "add": a user's own theme beside them stays."""
     opp = Part(top, "GFOpenPrefs", version, "GFOpenPrefs: every Open editor in one window, in SYS:Preferences with an icon per page")
     opp.add("Preferences.info", icons.icon(icons.WBDRAWER, "drawer", window=(520, 300)), "SYS:Preferences.info", own=True)
     opp.add("Preferences/GFOpenPrefs", opapp, OPENPREFS_HOME)
@@ -823,6 +837,10 @@ def openprefs_part(top: Path, opapp: bytes, icons, version: str) -> "Part":
     opp.line('retire "SYS:Prefs/OpenPrefs"')
     opp.line('retire "SYS:Prefs/OpenPrefs.info"')
     opp.line('retire "SYS:C/OpenPrefs"')
+    for name, data in themes:
+        opp.add(f"Themes/{name}", data, f"SYS:Prefs/Presets/Themes/{name}", own=True)
+    for name, data in profiles:
+        opp.add(f"Profiles/{name}", data, f"SYS:Prefs/Presets/GFOpenPrefs/{name}", own=True)
     opp.line("startup Path >NIL: SYS:Preferences ADD")
     opp.line(f"unless GFOpenKick startup {OPENPREFS_HOME} APPLY")
     return opp
@@ -857,6 +875,35 @@ def acromfix_lines(core: "Part", acromfix: bytes) -> None:
     another ROM. QUIET: no boot window; its STATUS says what it did."""
     core.add("C/ACROMFix", acromfix, "SYS:C/ACROMFix")
     core.line("startup C:ACROMFix QUIET")
+
+
+# What the GFOpenKick ROM leaves to a disk and our programs open (4 November 2026: Instance-40, the open ROM with no OS
+# disk, had none of these, and GFOpenPrefs's Screen Mode, Pointer, Fonts, Colours, Backdrops, Workbench, File
+# Requesters, IControl and Printing ended for want of iffparse.library; GFOpenEdit, GFOpenBench, GFOpenFiles and
+# GFOpenMonitor open diskfont.library, GFOpenMenus, GFOpenSpeaker, GFOpenBlanker and GFOpenWindows commodities.library,
+# SDL2.module lowlevel.library, ACClip clipboard.device, printer.device serial and parallel.device). The same files as
+# the OpenKick boot disk's (gfopenkick disks/openkick-boot/manifest.json), from amicradle-guest:
+#   name: (source drawer, the file in its build's OUT, where it goes)
+OPENKICK_DISK = {
+    "iffparse": ("libraries/openiffparse", "libs/iffparse.library", "LIBS:iffparse.library"),
+    "diskfont": ("libraries/opendiskfont", "libs/diskfont.library", "LIBS:diskfont.library"),
+    "commodities": ("libraries/opencommodities", "libs/commodities.library", "LIBS:commodities.library"),
+    "lowlevel": ("libraries/openlowlevel", "libs/lowlevel.library", "LIBS:lowlevel.library"),
+    "clipboard": ("devices/openclipboard.device", "devs/clipboard.device", "DEVS:clipboard.device"),
+    "serial": ("devices/openserial.device", "devs/serial.device", "DEVS:serial.device"),
+    "parallel": ("devices/openparallel.device", "devs/parallel.device", "DEVS:parallel.device"),
+}
+
+
+def openkick_disk_lines(core: "Part", built: Path) -> None:
+    """The GFOpenUp part, on the GFOpenKick ROM: the disk libraries and devices the ROM leaves to a disk
+    (OPENKICK_DISK), each only where none is ("default"), so OS 3.2.3's own on an OS 3.2.3 disk, and a newer one
+    the OpenKick boot disk's Install-OpenKick put there, stay. Under OS 3.2.3's own ROM its disk has them."""
+    for name, (src, out, dest) in OPENKICK_DISK.items():
+        f = built / name / out
+        if not f.is_file():
+            raise SystemExit(f"{f} wasn't built (amicradle-guest {src}/build-amiga.sh)")
+        core.add(f"OpenKick/{out}", f.read_bytes(), dest, default=True, cond="when GFOpenKick")
 
 
 def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
@@ -1654,6 +1701,7 @@ def main() -> int:
     if not sfl.is_file():
         raise SystemExit(f"{sfl} wasn't built (amicradle-guest libraries/opensoftfpu/build-amiga.sh)")
     core.add("Libs/softfpu.library", sfl.read_bytes(), "LIBS:softfpu.library")
+    openkick_disk_lines(core, ROOT / "build/openkickdisk")
     core.write()
 
     # GFOpenSocket: the files and places amicradle's vendored payload's manifest lists (the same list Cradle's own
@@ -1748,7 +1796,11 @@ def main() -> int:
     opb = a.openamigaprefs / "OpenPrefs/build/os3"
     opapp = (opb / "GFOpenPrefs").read_bytes()
     opver = binary_version(opapp, "GFOpenPrefs") or "2.0"
-    opp = openprefs_part(top, opapp, icons, opver)
+    themes = [(t.name, t.read_bytes()) for t in sorted((a.opengadtools / "themes").glob("*.theme"))]
+    profiles = [(f.name, f.read_bytes()) for f in sorted((a.openamigaprefs / "Look/profiles").glob("*.profile"))]
+    if not themes or not profiles:
+        sys.exit(f"build_pack: no themes in {a.opengadtools}/themes or no profiles in {a.openamigaprefs}/Look/profiles")
+    opp = openprefs_part(top, opapp, icons, opver, themes, profiles)
     opp.write()
 
     # GFOpenTypes: which program opens each kind of file (gfopenprefs); since W48 a page of GFOpenPrefs, and since the
