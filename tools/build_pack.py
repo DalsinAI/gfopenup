@@ -57,7 +57,9 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenImage/            datatypes: PNG, Targa (TGA), WebP, WebM and music modules (MOD,
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through GFOpenService (gfopendatatypes)
-  GFOpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (gfopenprefs)
+  GFOpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (gfopenprefs), with
+                        DejaVu Sans and Serif for its credits where OS 3.2's CGTriumvirate and CGTimes
+                        aren't (FONTS:GFOpenBlanker; --dejavu-serif)
   GFOpenSnap/             GFOpenSnap, the snapshot commodity: Shift+Right Amiga+S takes the front screen and
                         Shift+Right Amiga+W the active window, as dated PNGs in SYS:Snapshots (through GFOpenImage's
                         openpng.datatype; IFF without it) and as an IFF ILBM on the clipboard; its keys are its
@@ -85,7 +87,8 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenWindows/          snapping, Amiga+Tab, double-click to front, the wheel under the
                         pointer and window places; its editor is GFOpenPrefs's Windows (gfopenprefs)
   GFOpenDock/             a dock, which takes over ToolManager's, AmiDock's or AmiStart's
-                        buttons; its editor is GFOpenPrefs's Dock (gfopenprefs)
+                        buttons; its editor is GFOpenPrefs's Dock (gfopenprefs); GFOpenIcons' Shell picture
+                        for a Shell button where there is no SYS:System/Shell
   GFOpenMenus/            GFOpenMenus, the Team's own menus (pull-down or pop-up); their editor is
                         GFOpenPrefs's Menus (gfopenprefs)
   GFOpenUpSetup/          GFOpenUp Setup: the first-start wizard and the startup switches
@@ -1267,6 +1270,8 @@ def check_openbrowser_pin(archive: Path) -> None:
 # DejaVu Sans for the GFOpenFont part: DejaVu fonts 2.37's DejaVuSans.ttf (Ubuntu's fonts-dejavu-core 2.37-8build1;
 # OpenBrowser's LIBS:WebBrowser/Fonts copy is the same file). A new DejaVu is a new pin here.
 DEJAVU_SANS_SHA256 = "b4c632e3cdf9acc7f28758fb5a323c8524d7fc6660d46904d9b6cbe2809c419c"
+# DejaVu Serif for the GFOpenBlanker part (0.8.16): the same DejaVu fonts 2.37 package's DejaVuSerif.ttf.
+DEJAVU_SERIF_SHA256 = "a52c2a69dfc93d0b511b98c1019a57eb3d6a62d328bdf1387f00851b02e3a315"
 
 
 def ttf_name(data: bytes, nid: int) -> str | None:
@@ -1282,19 +1287,38 @@ def ttf_name(data: bytes, nid: int) -> str | None:
     return None
 
 
-def outline_otag(ttf: str) -> bytes:
+def outline_otag(ttf: str, ysize_factor: tuple[int, int] | None = None) -> bytes:
     """An .otag for a TrueType font that GFOpenFont draws (amicradle-guest libraries/openbullet's README): OT_FileIdent
     (the file's length), OT_Engine "bullet" and OT_Spec1 | OT_Indirect, the font file's name (one without a device
-    is taken in the .otag's own drawer); the two strings follow the list, as offsets from its start."""
+    is taken in the .otag's own drawer); the two strings follow the list, as offsets from its start.
+    ysize_factor (0.8.16): OT_YSizeFactor, (point height term, black height term): pointSize = ysize * the first /
+    the second (diskfonttag.h), so the font's ascent and descent fit the YSize (gfopenfont.library 1.7 reads it)."""
     ot_fileident, ot_engine, ot_spec1 = 0x80001001, 0x80009002, 0x80009101   # TAG_USER, OT_Level1, OT_Indirect
-    head, data, offs = 8 * 4, b"", []
+    ot_ysizefactor = 0x80001011                                               # OT_Level1 | 0x11
+    tags = 4 if ysize_factor else 3
+    head, data, offs = (tags + 1) * 8, b"", []
     for s in (b"bullet\0", ttf.encode("latin-1") + b"\0"):
         offs.append(head + len(data))
         data += s + b"\0" * (len(s) % 2)
     total = head + len(data)
     total += -total % 4
-    b = struct.pack(">8I", ot_fileident, total, ot_engine, offs[0], ot_spec1, offs[1], 0, 0) + data
+    b = struct.pack(">6I", ot_fileident, total, ot_engine, offs[0], ot_spec1, offs[1])
+    if ysize_factor:
+        b += struct.pack(">II", ot_ysizefactor, (ysize_factor[0] << 16) | ysize_factor[1])
+    b += struct.pack(">2I", 0, 0) + data
     return b + bytes(total - len(b))
+
+
+def ttf_ysize_factor(data: bytes) -> tuple[int, int]:
+    """OT_YSizeFactor for a TrueType font: its em (head's unitsPerEm) to its hhea ascent plus descent, the tallest
+    and lowest of DejaVu's Latin-1 glyphs."""
+    tab = {}
+    for i in range(struct.unpack(">H", data[4:6])[0]):
+        tag, _, off, _ = struct.unpack(">4sIII", data[12 + 16 * i:28 + 16 * i])
+        tab[tag] = off
+    upm = struct.unpack(">H", data[tab[b"head"] + 18:tab[b"head"] + 20])[0]
+    asc, desc = struct.unpack(">hh", data[tab[b"hhea"] + 4:tab[b"hhea"] + 8])
+    return upm, asc - desc
 
 
 def openfont_part(top: Path, font_src: Path | None, ttf: Path):
@@ -1339,6 +1363,40 @@ def openfont_part(top: Path, font_src: Path | None, ttf: Path):
     p.write()
     print(f"  GFOpenFont {p.lines[0].split()[-1]}: gfopenfont.library, DejaVu Sans (sha256 checked)")
     return p
+
+
+def blanker_fonts(bl: "Part", sans_ttf: Path, serif_ttf: Path) -> None:
+    """GFOpenBlanker's fonts on a disk without OS 3.2's CGTriumvirate and CGTimes (the open ROM's, Instance-40,
+    4 November 2026): DejaVu Sans and DejaVu Serif (DejaVu fonts 2.37, free) as outline fonts gfopenfont.library
+    draws, in FONTS:GFOpenBlanker/ (a drawer Font prefs doesn't list), with OT_YSizeFactor so their ascent and
+    descent fit the size (gfopenfont.library 1.7); the GFOpenFont part's DejaVuSans.otag has none, as the Open
+    programs' look is sized by it. The .otags name FONTS:_ttf/DejaVuSans.ttf (the GFOpenFont part's) and
+    FONTS:_ttf/DejaVuSerif.ttf (this part's, with its licence). CGTriumvirate and CGTimes are OS 3.2's and never in
+    the pack."""
+    import hashlib
+    fonts = []
+    for name, ttf, pin in (("DejaVuSans", sans_ttf, DEJAVU_SANS_SHA256), ("DejaVuSerif", serif_ttf, DEJAVU_SERIF_SHA256)):
+        if not ttf.is_file():
+            raise SystemExit(f"GFOpenBlanker: {ttf} isn't there: --dejavu-sans/--dejavu-serif name DejaVu fonts 2.37's")
+        data = ttf.read_bytes()
+        got = hashlib.sha256(data).hexdigest()
+        if got != pin:
+            raise SystemExit(f"GFOpenBlanker: {ttf} has sha256 {got}; the pack takes DejaVu fonts 2.37's {name}.ttf, sha256 {pin}")
+        fonts.append((name, data))
+        # "add": a font of another program's stays
+        bl.add(f"Fonts/GFOpenBlanker/{name}.font", struct.pack(">HH", 0x0F03, 0), f"FONTS:GFOpenBlanker/{name}.font", own=True)
+        bl.add(f"Fonts/GFOpenBlanker/{name}.otag", outline_otag(f"FONTS:_ttf/{name}.ttf", ttf_ysize_factor(data)),
+               f"FONTS:GFOpenBlanker/{name}.otag", own=True)
+    serif = fonts[1][1]
+    licence = ttf_name(serif, 13)
+    if not licence:
+        raise SystemExit(f"GFOpenBlanker: {serif_ttf} has no licence description in its name table")
+    bl.add("Fonts/_ttf/DejaVuSerif.ttf", serif, "FONTS:_ttf/DejaVuSerif.ttf", own=True)
+    bl.add("Utilities/GFOpenUp/Licences/DejaVuSerif.txt",
+           ("DejaVu Serif, DejaVu fonts 2.37 (FONTS:_ttf/DejaVuSerif.ttf, unmodified, with FONTS:GFOpenBlanker/\n"
+            "DejaVuSerif.font and DejaVuSerif.otag), under the licence the font file gives:\n\n" +
+            licence.replace("\r\n", "\n") + "\n").encode("latin-1", "replace"),
+           "SYS:Utilities/GFOpenUp/Licences/DejaVuSerif.txt")
 
 
 def opentls_part(top: Path, tls_src: Path):
@@ -1618,6 +1676,8 @@ def main() -> int:
                     help="gfopenfont checkout: the ShellFont part, DejaVu Sans Mono as Amiga bitmap fonts "
                          "(its fonts/amiga; left out without it), and the GFOpenFont part's gfopenfont.library "
                          "(its build-amiga.sh's build/amiga/gfopenfont.library; left out without it)")
+    ap.add_argument("--dejavu-serif", type=Path, default=Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"),
+                    help="DejaVu fonts 2.37's DejaVuSerif.ttf (sha256 checked): GFOpenBlanker's serif where OS 3.2's CGTimes isn't")
     ap.add_argument("--dejavu-sans", type=Path, default=Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
                     help="DejaVu fonts 2.37's DejaVuSans.ttf, for the GFOpenFont part (default: the build PC's "
                          "fonts-dejavu-core); taken only with its sha256")
@@ -1878,12 +1938,15 @@ def main() -> int:
     # GFOpenBlanker: the screen blanker, started at boot, on every install
     # (gfopenprefs): after five minutes with no key or mouse it plays Gods
     # and Angels, AmiCradle's homage to the Amiga's makers and keepers
-    bl = Part(top, "GFOpenBlanker", "1.2", "GFOpenBlanker: the screen blanker, and its show, Gods and Angels")
+    # 1.4 (0.8.16): CGTriumvirate and CGTimes, OS 3.2's, else DejaVu Sans and DejaVu Serif (blanker_fonts): the open
+    # ROM's disk has no CGTriumvirate or CGTimes
+    bl = Part(top, "GFOpenBlanker", "1.4", "GFOpenBlanker: the screen blanker, and its show, Gods and Angels")
     bl.add("Tools/Commodities/GFOpenBlanker", (a.openamigaprefs / "Blanker/build/os3/GFOpenBlanker").read_bytes(),
            "SYS:Tools/Commodities/GFOpenBlanker")
     bl.add("Tools/Commodities/GFOpenBlanker.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Tools/Commodities/GFOpenBlanker.info")
     bl.add("Settings/Blanker", b"300\n", "ENVARC:GFOpenPrefs/Blanker", default=True)
     bl.add("Settings/Blanker.env", b"300\n", "ENV:GFOpenPrefs/Blanker", default=True)
+    blanker_fonts(bl, a.dejavu_sans, a.dejavu_serif)
     bl.line("startup Run >NIL: SYS:Tools/Commodities/GFOpenBlanker")
     bl.write()
 
@@ -1936,7 +1999,7 @@ def main() -> int:
     # (the ROM's or this C:GFOpenDock, the newer by $VER) when ENV:GFOpenDock/Dock
     # is there, and GFOpenDock 0.6.6 ends at once when one runs already, so an
     # old "Run >NIL: C:GFOpenDock" line left by an earlier GFOpenUp does no harm.
-    dock = Part(top, "GFOpenDock", "0.6.12", "GFOpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "GFOpenDock", "0.6.13", "GFOpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/GFOpenDock", (a.openamigaprefs / "Dock/build/os3/GFOpenDock").read_bytes(), "SYS:C/GFOpenDock")
     # its editor is GFOpenPrefs's Dock page (W48), SYS:Preferences/Dock (the GFOpenPrefs part). C:GFOpenDock stays on the
     # open ROM too: the dock left the ROM (the no-ROM-volume design, section 7.4)
@@ -1946,6 +2009,11 @@ def main() -> int:
     # (Workbench writes it on Window > Snapshot, not when Backdrop is toggled).
     # GFOpenUpTool keeps the original in SYS:Storage and UNINSTALL puts it back.
     dock.add("Prefs/Env-Archive/Sys/WBConfig.prefs", wbconfig_backdrop(), "ENVARC:Sys/WBConfig.prefs")
+    # 0.6.13: the Shell button's picture where there is no SYS:System/Shell (the open ROM's disk: NewShell is the
+    # ROM's), GFOpenIcons' Shell; GFOpenDock 0.6.13 takes it after SYS:System/Shell's icon
+    if not a.no_openicons and (oi.dir / "Icons/Shell.info").is_file():
+        dock.add("Prefs/Presets/GFOpenDock/Shell.info", (oi.dir / "Icons/Shell.info").read_bytes(),
+                 "SYS:Prefs/Presets/GFOpenDock/Shell.info")
     dock.write()
 
     # GFOpenMenus: the engine, started at boot, and its editor (gfopenprefs).

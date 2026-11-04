@@ -52,6 +52,19 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   2026). GFOpenBench's theme names DejaVu Sans 13 and the Open programs' look
   DejaVu Sans 12; without the library their text falls back to the screen's
   font ([docs/openbench-labels.png](docs/openbench-labels.png)).
+- GFOpenBlanker 1.4 (0.8.16): its credits are CGTriumvirate and CGTimes, OS
+  3.2's own, where they are. The open ROM's disk has neither, so the part
+  brings DejaVu Sans and DejaVu Serif (DejaVu fonts 2.37, free) as outline
+  fonts in `FONTS:GFOpenBlanker/` (a drawer Font prefs doesn't list), whose
+  `.otag`s have `OT_YSizeFactor` so ascent and descent fit the size
+  (gfopenfont.library 1.7 reads it), with `FONTS:_ttf/DejaVuSerif.ttf` and its
+  licence; the sans is GFOpenFont's `FONTS:_ttf/DejaVuSans.ttf`. GFOpenFont's
+  own `DejaVuSans.otag` is unchanged, so the Open programs' text keeps its
+  size. CGTriumvirate and CGTimes are never in the pack.
+- GFOpenDock 0.6.13 (0.8.16): a Shell button (`NewShell`) takes
+  `SYS:System/Shell`'s icon, and on a disk without one (the open ROM's, where
+  NewShell is the ROM's) GFOpenIcons' Shell picture, which the GFOpenDock part
+  puts in `SYS:Prefs/Presets/GFOpenDock/Shell.info`.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
