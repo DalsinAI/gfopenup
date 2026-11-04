@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmiCradle Team
 Type:         util/misc
-Version:      0.8.13
+Version:      0.8.14
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -43,9 +43,12 @@ choose:
   datatypes already there stay;
 - GFOpenWindows: windows snap to edges and to each other, Amiga+Tab switches
   between them, a double-click in a title bar brings the window to the
-  front, the wheel scrolls the window under the pointer, and programs'
-  windows open where they were last left, Workbench drawers too if you like
-  (Windows in SYS:Preferences);
+  front, the wheel scrolls the list or scroller you last clicked (or the
+  one under the pointer, if you choose), and programs' windows open where
+  they were last left, Workbench drawers too if you like; new windows can
+  open in the centre of the screen until you snap them, with a snapshot
+  pin in their title bars (click to keep the place, Shift-click to forget
+  it), both off unless chosen (Windows in SYS:Preferences);
 - GFOpenDock: a dock for your programs, starting with ToolManager's, AmiDock's
   or AmiStart's buttons when you have one (Dock in SYS:Preferences);
 - GFOpenUp Setup: a few questions at the next start, and the startup switches;
@@ -211,7 +214,8 @@ choose:
   sixth page, offered only once each one's test against OS 3.2's own, call
   for call, is clean: utility.library 47.100 (a 68020 or later),
   mathieeedoubbas.library 47.100 (a 68040 or 68060 with its FPU),
-  input.device 50.2 (a 68020 or later) and OpenRexx 48, ARexx's
+  input.device 50.5 (a 68020 or later; the
+  wheel and the middle button) and OpenRexx 48, ARexx's
   rexxsyslib.library and rexxsupport.library (a 68040 or 68060 with its
   FPU; OS 3.2's RexxMast and Rexxc commands work with them). The ROM ones are loaded by OS 3.2's
   own LoadModule, so the Amiga restarts once by itself as it starts;
@@ -227,6 +231,12 @@ SYS:Storage/GFOpenUp-Superseded. SYS:Prefs keeps the OS's own (Env-Archive,
 Presets, Classic), GFOpenTata and GFOpenUp-Setup. On the open ROM, which applies
 Sound's levels, the gamepads and the stack caps itself at boot, User-Startup
 no longer runs GFOpenPrefs APPLY; under OS 3.2.3's own ROM it does.
+The Theme page's choices come with it (0.8.14): the themes in
+SYS:Prefs/Presets/Themes and the desktop profiles in
+SYS:Prefs/Presets/GFOpenPrefs. Nothing is applied until you pick one.
+On the GFOpenKick ROM, GFOpenUp also puts in the disk libraries and devices
+that ROM leaves to a disk (iffparse, diskfont, commodities and lowlevel
+library, clipboard, serial and parallel device), each only where none is.
 Workbench's Tools menu gets two sub-menus (new): GFOpenUp, with the Open
 programs that are installed (and GFOpenUp Update...), and Preferences, with
 their settings editors (Theme, Dock, Sound, Date & Time, Input, Gamepads,

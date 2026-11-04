@@ -13,7 +13,10 @@
  *   GFOpenUpTool THEME <name> <look>    the look's theme: a saved look keeps its mode and other lines (see THEME)
  *   GFOpenUpTool BACKDROP <prefix>      Workbench's backdrop: <prefix>-strip-<H>.png for the
  *                                     screen's height, tiled, when there is one; else <prefix>-<W>x<H>.png, the
- *                                     one nearest the screen's shape, scaled to fit
+ *                                     one nearest the screen's shape, scaled to fit; KEEP (an upgrade from
+ *                                     an OpenUp before the GF names): the backdrop the user had (as OLDNAMES
+ *                                     found it) stays when its picture is there, or moves to the same picture
+ *                                     in GFOpenUp's drawer
  *   GFOpenUpTool FONT <font> <size>     the desktop's text: the screens' font and the icons'
  *                                     text (Font prefs, "Screen text" and "Workbench icon text")
  *   GFOpenUpTool TITLEBARS <screen> <window>  extra pixels in the title bars (IControl
@@ -128,7 +131,7 @@
 
 #include "openup_lines.h"
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.13 (3.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.14 (4.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -2014,16 +2017,80 @@ static void put32(UBYTE *p, ULONG v) { p[0] = v >> 24; p[1] = v >> 16; p[2] = v 
  * picture nearest the screen's shape, scaled to fit; the drawer and screen
  * patterns are kept as they are. The old file is kept, as every file GFOpenUp
  * replaces is. */
-static int backdrop(const char *prefix)
+/* The picture WBPattern.prefs' ROOT pattern names, and its flags: 1 when there is one. */
+static int root_picture(const char *file, char *out, int outlen, UWORD *flags)
+{
+    LONG len = 0, k = 12;
+    UBYTE *p = (UBYTE *)read_file(file, &len);
+    int found = 0;
+    if (!p) return 0;
+    if (len > 12 && !memcmp(p, "FORM", 4) && !memcmp(p + 8, "PREF", 4)) {
+        while (!found && k + 8 <= len) {
+            ULONG n = get32(p + k + 4), whole = 8 + n + (n & 1);
+            if (k + (LONG)whole > len) break;
+            if (!memcmp(p + k, "PTRN", 4) && n > 24 && (p[k + 8 + 16] << 8 | p[k + 8 + 17]) == 0) {
+                ULONG dl = p[k + 8 + 22] << 8 | p[k + 8 + 23];
+                if (dl > n - 24) dl = n - 24;
+                if (dl > 0 && dl < (ULONG)outlen) {
+                    memcpy(out, p + k + 8 + 24, dl);
+                    out[dl] = 0;
+                    *flags = p[k + 8 + 18] << 8 | p[k + 8 + 19];
+                    found = out[0] != 0;
+                }
+            }
+            k += whole;
+        }
+    }
+    FreeVec(p);
+    return found;
+}
+
+/* BACKDROP <prefix> KEEP (0.8.14: an upgrade from an OpenUp before the GF names, which has just been taken out):
+ * the backdrop the user had (WBPattern.prefs as OLDNAMES found it, T:GFOpenUp-WBPattern.prefs, before the old
+ * OpenUp's UNINSTALL put back the one from before it) stays when its picture is still there (one of their own,
+ * such as Cradle's), and one from OpenUp's old drawer (SYS:Prefs/Presets/Backdrops/OpenUp, gone with that
+ * OpenUp) becomes the same picture in GFOpenUp's drawer. Only when neither is there does the theme's come. */
+#define OLD_BACKDROP_DRAWER "SYS:Prefs/Presets/Backdrops/OpenUp/"
+#define WBPATTERN_BEFORE "T:GFOpenUp-WBPattern.prefs"
+static int keep_backdrop(char *pic, UWORD *flags)
+{
+    char cur[220];
+    int i, n = sizeof OLD_BACKDROP_DRAWER - 1;
+    if (!root_picture(exists(WBPATTERN_BEFORE) ? WBPATTERN_BEFORE : WBPATTERN, cur, sizeof cur, flags)) return 0;
+    if (exists(cur)) {
+        strcpy(pic, cur);
+        return 1;
+    }
+    for (i = 0; i < n; i++)
+    {
+        char a = cur[i], b = OLD_BACKDROP_DRAWER[i];
+        if (a >= 'a' && a <= 'z') a -= 32;
+        if (b >= 'a' && b <= 'z') b -= 32;
+        if (!a || a != b) return 0;
+    }
+    strcpy(pic, BACKDROP_DRAWER);
+    strncat(pic, cur + n, 219 - strlen(pic));
+    if (!exists(pic)) return 0;
+    return 2;
+}
+
+static int backdrop(const char *prefix, int keep)
 {
     static const UWORD sizes[4][2] = { { 1920, 1080 }, { 1920, 1200 }, { 1600, 1200 }, { 1280, 1024 } };
     char pic[220];
-    struct Screen *scr = LockPubScreen((STRPTR)"Workbench");
-    long sw = scr ? scr->Width : 640, sh = scr ? scr->Height : 480, best = -1, bestd = 0;
+    struct Screen *scr;
+    long sw, sh, best = -1, bestd = 0;
     int i;
     LONG oldlen = 0, len;
     UBYTE *old, *buf, *o;
     UWORD flags = 0x3a00;                                    /* scale (good), image precision, good dither */
+    if (keep) {
+        UWORD kf = flags;
+        int k = keep_backdrop(pic, &kf);
+        if (k) { flags = kf; best = 0; goto write; }
+    }
+    scr = LockPubScreen((STRPTR)"Workbench");
+    sw = scr ? scr->Width : 640; sh = scr ? scr->Height : 480;
     if (scr) UnlockPubScreen(NULL, scr);
     {
         /* a strip as tall as the screen, tiled across from the top left: it
@@ -2069,6 +2136,7 @@ static int backdrop(const char *prefix)
         say("GFOpenUp: no backdrop pictures named ", prefix, "-<width>x<height>.png. Install the Backdrops part first.");
         return RETURN_ERROR;
     }
+write:
     old = (UBYTE *)read_file(WBPATTERN, &oldlen);
     if (!(buf = AllocVec(oldlen + 512, MEMF_CLEAR))) { if (old) FreeVec(old); return RETURN_FAIL; }
     o = buf;
@@ -4000,6 +4068,9 @@ static int old_settings_copy(void)
             return RETURN_ERROR;
         }
     }
+    /* 0.8.14: the backdrop the user has now, for BACKDROP KEEP after the old OpenUp's UNINSTALL puts back the
+     * WBPattern.prefs from before it (lab t5-up0814-32, a copy of Instance-32) */
+    if (exists(WBPATTERN)) copy_all(WBPATTERN, WBPATTERN_BEFORE);
     for (v = 0; v < 2; v++)
         for (i = 0; old_settings[i]; i++) {
             strlcpy(from, vols[v], sizeof from); str_cat(from, old_settings[i], sizeof from);
@@ -4128,7 +4199,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n");
+        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -4143,7 +4214,7 @@ static int real_main(void)
     else if (same_word(cmd, "UNINSTALL")) rc = uninstall();
     else if (same_word(cmd, "FIXTOOLS") && args[1]) rc = fix_tools((const char *)args[1], args[2] && same_word((const char *)args[2], "ALL"));
     else if (same_word(cmd, "LIST")) rc = list();
-    else if (same_word(cmd, "BACKDROP") && args[1]) rc = backdrop((const char *)args[1]);
+    else if (same_word(cmd, "BACKDROP") && args[1]) rc = backdrop((const char *)args[1], args[2] && same_word((const char *)args[2], "KEEP"));
     else if (same_word(cmd, "FONT") && args[1] && args[2]) rc = set_font((const char *)args[1], atol((const char *)args[2]));
     else if (same_word(cmd, "TITLEBARS") && args[1] && args[2]) rc = set_titlebars(atol((const char *)args[1]), atol((const char *)args[2]));
     else if (same_word(cmd, "WBBACKDROP")) rc = set_wb_backdrop();
@@ -4190,7 +4261,7 @@ static int real_main(void)
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
     else if (same_word(cmd, "OLDNAMES")) rc = args[1] && same_word((const char *)args[1], "DOCK") ? old_dock() : old_settings_copy();
-    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
