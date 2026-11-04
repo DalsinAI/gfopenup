@@ -1936,7 +1936,7 @@ def main() -> int:
     # (the ROM's or this C:GFOpenDock, the newer by $VER) when ENV:GFOpenDock/Dock
     # is there, and GFOpenDock 0.6.6 ends at once when one runs already, so an
     # old "Run >NIL: C:GFOpenDock" line left by an earlier GFOpenUp does no harm.
-    dock = Part(top, "GFOpenDock", "0.6.11", "GFOpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "GFOpenDock", "0.6.12", "GFOpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/GFOpenDock", (a.openamigaprefs / "Dock/build/os3/GFOpenDock").read_bytes(), "SYS:C/GFOpenDock")
     # its editor is GFOpenPrefs's Dock page (W48), SYS:Preferences/Dock (the GFOpenPrefs part). C:GFOpenDock stays on the
     # open ROM too: the dock left the ROM (the no-ROM-volume design, section 7.4)
