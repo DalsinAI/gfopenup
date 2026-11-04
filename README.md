@@ -8,6 +8,12 @@ AmiCradle's sharing tools, GFOpenLook and the background pack, and its uninstall
 back exactly as it was: validated on a scratch OS 3.2.3 instance
 (`docs/history/VALIDATION.md`).
 
+**Latest: GFOpenUp 0.8.14** (4 November 2026; `docs/releases/0.8.14`): GFOpenPrefs 2.7, GFOpenWindows 0.11
+(the wheel scrolls the list last clicked; new windows centred until snapped, with a snapshot pin, both off unless
+chosen), Tata's known fixes (`S:Tata.fixes`), the themes and desktop profiles for the Theme page, and on the open
+ROM the disk libraries it leaves to a disk, each only where none is. Packs are on the
+[releases page](https://github.com/DalsinAI/gfopenup/releases).
+
 GFOpenUp's programs and their settings are in Workbench's Tools menu, under
 GFOpenUp and Preferences (`src/openupmenu.c`, `DESIGN.md` section 7):
 
