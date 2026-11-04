@@ -2027,6 +2027,12 @@ def main() -> int:
     for n in sats:
         gp.add(f"Libs/GFOpenGPU/{n}.module", (rtg / f"{n}.module").read_bytes(), f"LIBS:GFOpenGPU/{n}.module")
     gp.add("Libs/GFOpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:GFOpenGPU/GL.module")
+    # 0.8.16: the same modules under the drawer's name from before the GF rename too, LIBS:OpenGPU, for programs built
+    # against it: OpenTunnel opens LIBS:OpenGPU/SDL2.module and couldn't start on Instance-32 after 0.8.15. The modules
+    # open gfopengpu.library themselves. The pack carries each file once; the line copies it to both places.
+    gp.line("; 0.8.16: the modules under the drawer's name from before the GF rename too (LIBS:OpenGPU), for programs built against it (OpenTunnel opens LIBS:OpenGPU/SDL2.module)")
+    for n in ["SDL2", *sats, "GL"]:
+        gp.line(f'copy "Libs/GFOpenGPU/{n}.module" "LIBS:OpenGPU/{n}.module"')
     # gfopenrtg's tools/build.sh still writes it as OpenGPUCheck (not yet renamed there): either name
     gpu_check = next((c for c in (rtg / "GFOpenGPUCheck", rtg / "OpenGPUCheck") if c.is_file()), rtg / "GFOpenGPUCheck")
     gp.add("C/GFOpenGPUCheck", gpu_check.read_bytes(), "C:GFOpenGPUCheck")
