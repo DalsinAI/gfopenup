@@ -606,8 +606,13 @@
             (message "The backgrounds didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
         ; the theme's backdrop on a new install, a new theme, or the first time the backgrounds come;
         ; an upgrade that keeps the look keeps the backdrop the user has too
+        ; 0.8.14: over an OpenUp from before the GF names (Instance-32) the theme in place keeps the user's
+        ; backdrop: KEEP leaves it when its picture is still there (one of the user's own), or takes the same
+        ; picture from GFOpenUp's drawer when it was one of the old OpenUp's (taken out above)
         (if (and (<> #back "") (or #newlook (not #hadback)))
-            (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/GFOpenUp/" #back " >>T:GFOpenUp.log")))
+            (if (and #oldup (not #newlook))
+                (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/GFOpenUp/" #back " KEEP >>T:GFOpenUp.log"))
+                (run (cat #tool " BACKDROP SYS:Prefs/Presets/Backdrops/GFOpenUp/" #back " >>T:GFOpenUp.log"))))
         ; with a backdrop: Workbench as a backdrop (no frame, scroll bars or size gadget on its window), and
         ; no fill gauge down the left border of drive windows (Workbench's own settings; up to 0.8.1 these
         ; came with GFOpenLook)

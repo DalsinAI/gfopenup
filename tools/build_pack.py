@@ -659,7 +659,7 @@ def build_parts(a):
         run(["sh", a.openamigaprefs / "Gamepads/build.sh"], env=dict(env, STOVE=str(STOVE)))
     # GFOpenLibs (0.8.0): the open libraries the Installer offers one switch each, off by default
     # (amicradle-guest libraries/OPEN_LIBRARIES.md, section 3), each built with its own script as written:
-    # utility.module and the IEEE maths (amicradle-guest, their default os32-gcc16 stove), and input.device 50.2
+    # utility.module and the IEEE maths (amicradle-guest, their default os32-gcc16 stove), and input.device 50.5
     # (gfopeninput device/build.sh, os32 stove). The ROM ones load with OS 3.2's own C:LoadModule (OPENLIBS_STARTUP).
     # Their own stove: STOVE here is the os32 one, so it is left out of their environment.
     ol = ROOT / "build/openlibs"
@@ -1382,7 +1382,7 @@ OPENLIBS = {
                         "LIBS:mathieeedoubbas.library", "mathieeedoubbas.library",
                         "mathieeedoubbas.library 47.100 in LIBS:, for a 68040 or 68060 with its FPU"),
     "input": ("input/input.device", "Libs/GFOpenLibs/input.device", "LIBS:GFOpenLibs/input.device", "input.device",
-              "input.device 50.2 in the ROM's place (gfopeninput #9; a module, loaded by OS 3.2's LoadModule)"),
+              "input.device 50.5 in the ROM's place, with the wheel (gfopeninput #9, #27; a module, loaded by OS 3.2's LoadModule)"),
     # ARexx stays on the disk (Dale, 18 Oct 2026): OpenRexx's two libraries in OS 3.2's place in LIBS:, and its
     # RexxMast only where there is none (OS 3.2.3's RexxMast works with them, measured: amicradle-guest
     # docs/design/openrexx.md, and under stock Kickstart 3.2.3: W75). Off by default, as every switch here is.
@@ -1868,8 +1868,8 @@ def main() -> int:
     img.write()
 
     # GFOpenWindows: the commodity, started at boot, and its editor (gfopenprefs)
-    ow = Part(top, "GFOpenWindows", "0.10", "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel under the pointer, window places, "
-                                            "new windows centred until snapped and a snapshot gadget (both off unless chosen in Prefs/Windows)")
+    ow = Part(top, "GFOpenWindows", "0.11", "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel scrolls the list last clicked, "
+                                            "window places, new windows centred until snapped and a snapshot gadget (both off unless chosen in Prefs/Windows)")
     ow.add("Tools/Commodities/GFOpenWindows", (a.openamigaprefs / "Windows/build/os3/GFOpenWindows").read_bytes(),
            "SYS:Tools/Commodities/GFOpenWindows")
     ow.line("startup Run >NIL: SYS:Tools/Commodities/GFOpenWindows")
