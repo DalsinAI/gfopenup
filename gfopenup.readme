@@ -166,7 +166,10 @@ choose:
   a file opens, Tata checks it against a list of programs and files known
   to crash, draw wrongly or fail on AmigaOS 3.2.3 or with GFOpenUp
   (S:Tata.known), and asks first; its window is SYS:Prefs/Tata, its icon
-  sits on the title bar, and "Tata OFF" in a Shell turns it off;
+  sits on the title bar, and "Tata OFF" in a Shell turns it off; its known
+  fixes (S:Tata.fixes) put right a few programs' own bugs in memory as
+  they load, Lupus Reditus' copper list first ("Tata FIXES OFF" turns
+  them off);
 - GFOpenFTP (new, off unless picked): FTP and FTPS in two panes, with a site
   manager (SYS:Utilities/GFOpenFTP); plain FTP works as it is; FTPS works
   through GFOpenTLS (gfopentls.library), which comes with it;
