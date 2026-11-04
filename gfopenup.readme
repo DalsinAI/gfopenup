@@ -2,7 +2,7 @@ Short:        One pack: AmigaOS 3.2.3, ready to use
 Uploader:     (the Team fills this in at upload time)
 Author:       AmiCradle Team
 Type:         util/misc
-Version:      0.8.14
+Version:      0.8.15
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
@@ -45,10 +45,10 @@ choose:
   between them, a double-click in a title bar brings the window to the
   front, the wheel scrolls the list or scroller you last clicked (or the
   one under the pointer, if you choose), and programs' windows open where
-  they were last left, Workbench drawers too if you like; new windows can
+  they were last left, Workbench drawers too if you like; new windows
   open in the centre of the screen until you snap them, with a snapshot
   pin in their title bars (click to keep the place, Shift-click to forget
-  it), both off unless chosen (Windows in SYS:Preferences);
+  it), both on unless you switch them off (Windows in SYS:Preferences);
 - GFOpenDock: a dock for your programs, starting with ToolManager's, AmiDock's
   or AmiStart's buttons when you have one (Dock in SYS:Preferences);
 - GFOpenUp Setup: a few questions at the next start, and the startup switches;

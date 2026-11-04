@@ -1868,8 +1868,8 @@ def main() -> int:
     img.write()
 
     # GFOpenWindows: the commodity, started at boot, and its editor (gfopenprefs)
-    ow = Part(top, "GFOpenWindows", "0.11", "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel scrolls the list last clicked, "
-                                            "window places, new windows centred until snapped and a snapshot gadget (both off unless chosen in Prefs/Windows)")
+    ow = Part(top, "GFOpenWindows", "0.12", "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel scrolls the list last clicked, "
+                                            "window places, new windows centred until snapped and a snapshot gadget (both on unless switched off in Prefs/Windows)")
     ow.add("Tools/Commodities/GFOpenWindows", (a.openamigaprefs / "Windows/build/os3/GFOpenWindows").read_bytes(),
            "SYS:Tools/Commodities/GFOpenWindows")
     ow.line("startup Run >NIL: SYS:Tools/Commodities/GFOpenWindows")

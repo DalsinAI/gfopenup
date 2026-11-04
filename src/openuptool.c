@@ -131,7 +131,7 @@
 
 #include "openup_lines.h"
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.14 (4.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.15 (4.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
