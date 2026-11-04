@@ -256,6 +256,12 @@ GFOpenMonitor (new, SYS:Utilities) shows the tasks, the CPU and the cores,
 memory and the GPU in the theme's font, and ends a program from its
 right-click menu. On the open ROM it is the ROM's and GFOpenUp puts only its
 icon there.
+Ctrl + Alt + Help opens GFOpenMonitor from anywhere, or brings it to the
+front; on a PC keyboard Ctrl + Alt + F12 does too (in AmiCradle, Insert is
+Help, so Ctrl + Alt + Insert works on any PC). GFOpenUpMenu holds the keys.
+Turn them off in GFOpenPrefs' Input page, or in Exchange (GFOpenUp Hotkeys).
+On Linux the desktop takes Ctrl + Alt + F12 to change console before the
+browser sees it: use Ctrl + Alt + Insert there.
 LIBS:softfpu.library (new, with GFOpenUp itself): the FPU in software for a
 68LC040 or 68EC040 under the GFOpenKick ROM, which opens it at boot; with an
 FPU, or under OS 3.2's own ROM, nothing opens it.
