@@ -565,6 +565,19 @@ def main() -> int:
         check("Install-GFOpenUp installs GFOpenSnap on every install",
               "INSTALL Parts/GFOpenSnap" in (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1"))
 
+        # GFOpenUpMenu's hotkeys: Ctrl+Alt+Help and Ctrl+Alt+F12 open GFOpenMonitor (tests/test_openup_hotkeys.c)
+        hk = tmp / "test_openup_hotkeys"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}", str(ROOT / "tests/test_openup_hotkeys.c"),
+                        "-o", str(hk)], check=True)
+        r = subprocess.run([str(hk)], capture_output=True, text=True)
+        check("GFOpenUpMenu's hotkeys and ENV:GFOpenPrefs/Hotkeys (tests/test_openup_hotkeys.c)", r.returncode == 0, r.stdout[-600:])
+        menu_src = (ROOT / "src/openupmenu.c").read_text(encoding="latin-1")
+        check("GFOpenUpMenu holds both hotkeys, reads the switch again on Ctrl-F, and starts GFOpenMonitor with WAIT",
+              '#include "openup_hotkeys.h"' in menu_src and "OUH_RAW_HELP, OUH_RAW_F12" in menu_src
+              and "SIGBREAKF_CTRL_F" in menu_src and "GFOpenMonitor WAIT" in menu_src)
+        check("GFOpenUpMenu, which holds the hotkeys, is started at boot by the GFOpenUp part",
+              'core.line("startup Run >NIL: C:GFOpenUpMenu")' in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
+
         gfoffice_checks(tmp, filt)
 
     # GFOpenTypes and GFOpenDateTime: pages of GFOpenPrefs, parts with no files that archive their stubs

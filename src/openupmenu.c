@@ -13,6 +13,19 @@
  *                       Workbench's Tools menu or waits for a Workbench
  *                       that takes them
  *
+ * The hotkeys (0.1.7; Dale, 3 November 2026: "an OS wide option to bring up
+ * monitor by pressing ctrl alt help on an amiga and ctrl alt f12 on a pc
+ * keyboard"): Ctrl+Alt+Help, and Ctrl+Alt+F12 (raw key 0x6F) on a PC
+ * keyboard, open GFOpenMonitor, or bring its window to the front when it is
+ * open. GFOpenUpMenu holds them because it runs from the boot on every
+ * GFOpenUp install, whatever the desktop. A commodity, "GFOpenUp Hotkeys":
+ * Exchange can disable or enable it, and its Remove takes the hotkeys out
+ * (the menus stay). The switch is ENV:GFOpenPrefs/Hotkeys ("monitor off";
+ * on by default), which GFOpenPrefs' Input page writes, then sends Ctrl-F
+ * to have it read again. Without commodities.library there are no hotkeys
+ * and the menus work as before. The keys and the file's words:
+ * src/openup_hotkeys.h.
+ *
  * Each menu shows only what is installed: an entry whose program isn't
  * there isn't shown. Choosing one starts the program as a double-click
  * does (OpenWorkbenchObjectA, so its icon's stack and tool types count);
@@ -51,16 +64,24 @@
 #include <workbench/workbench.h>
 #include <workbench/startup.h>
 #include <utility/tagitem.h>
+#include <intuition/intuition.h>
+#include <intuition/screens.h>
+#include <libraries/commodities.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/wb.h>
 #include <proto/icon.h>
+#include <proto/intuition.h>
+#include <proto/commodities.h>
 
 #include <string.h>
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpMenu 0.1.6 (24.10.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+#include "openup_hotkeys.h"
 
-struct Library *WorkbenchBase, *IconBase;
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpMenu 0.1.7 (03.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+
+struct Library *WorkbenchBase, *IconBase, *CxBase;
+struct IntuitionBase *IntuitionBase;
 
 #define PORT_NAME "GFOpenUpMenu"
 #define OPENPREFS "SYS:Preferences/GFOpenPrefs"
@@ -358,6 +379,146 @@ static void chosen(struct AppMessage *am)
     for (i = 0; i < n; i++) { UnLock(locks[i]); FreeVec(names[i]); }
 }
 
+/* ---- the hotkeys (0.1.7, openup_hotkeys.h) ---------------------------------------------------------- */
+
+#define MONITOR_PORT "GFOpenMonitor"            /* GFOpenMonitor's own: a message brings its window to the front */
+#define MONITOR_DISK "SYS:Utilities/GFOpenMonitor"
+#define HK_MONITOR 1
+
+static struct MsgPort *cxport;
+static CxObj *broker;
+
+/* GFOpenMonitor running: its window to the front, as a second GFOpenMonitor does it (its send_to_front). 1 sent. */
+static int monitor_front(void)
+{
+    struct MsgPort *reply = CreateMsgPort(), *p;
+    struct Message msg;
+    int sent = 0;
+    if (!reply)
+        return 0;
+    memset(&msg, 0, sizeof msg);
+    msg.mn_ReplyPort = reply;
+    msg.mn_Length = sizeof msg;
+    Forbid();
+    if ((p = FindPort((STRPTR)MONITOR_PORT))) { PutMsg(p, &msg); sent = 1; }
+    Permit();
+    if (sent) { WaitPort(reply); GetMsg(reply); }
+    DeleteMsgPort(reply);
+    return sent;
+}
+
+/* Ctrl+Alt+Help or Ctrl+Alt+F12: GFOpenMonitor to the front, else started, in the background, on the default
+ * public screen, which comes to the front first (a game's or a program's screen may be in front). The disk's
+ * copy (every GFOpenUp has it), else the ROM's C/GFOpenMonitor by its name. WAIT: it runs in the new process
+ * and doesn't start itself again; another one that came first gets the message instead and this one ends. */
+static void monitor(void)
+{
+    struct Screen *s;
+    BPTR in, out;
+    if (monitor_front())
+        return;
+    if (IntuitionBase && (s = LockPubScreen(NULL))) {
+        ScreenToFront(s);
+        UnlockPubScreen(NULL, s);
+    }
+    in = Open((STRPTR)"NIL:", MODE_OLDFILE);
+    out = Open((STRPTR)"NIL:", MODE_NEWFILE);
+    if (!in || !out) { if (in) Close(in); if (out) Close(out); return; }
+    if (SystemTags((STRPTR)(exists(MONITOR_DISK) ? "\"" MONITOR_DISK "\" WAIT" : "GFOpenMonitor WAIT"),
+                   SYS_Input, in, SYS_Output, out, SYS_Asynch, TRUE, SYS_UserShell, TRUE, NP_StackSize, 32768, TAG_DONE) == -1) {
+        Close(in);
+        Close(out);
+    }
+}
+
+/* ENV:GFOpenPrefs/Hotkeys says whether the hotkeys are on (no file: on) */
+static int hotkeys_wanted(void)
+{
+    char buf[512];
+    LONG n = 0;
+    BPTR fh = Open((STRPTR)OUH_SETTINGS, MODE_OLDFILE);
+    if (!fh)
+        return ouh_monitor_on(NULL);
+    n = Read(fh, buf, sizeof buf - 1);
+    Close(fh);
+    buf[n > 0 ? n : 0] = 0;
+    return ouh_monitor_on(buf);
+}
+
+static void hotkeys_off(void)
+{
+    struct Message *m;
+    if (broker) { DeleteCxObjAll(broker); broker = NULL; }
+    if (cxport)
+        while ((m = GetMsg(cxport))) ReplyMsg(m);
+}
+
+/* The broker and its two filters, each sending HK_MONITOR and swallowing the key; 1 in */
+static int hotkeys_on(void)
+{
+    static const UWORD raw[2] = { OUH_RAW_HELP, OUH_RAW_F12 };
+    struct NewBroker nb;
+    struct ouh_ix k;
+    IX ix;
+    CxObj *f;
+    LONG err = 0;
+    int i;
+    if (broker || !CxBase || !cxport)
+        return broker != NULL;
+    memset(&nb, 0, sizeof nb);
+    nb.nb_Version = NB_VERSION;
+    nb.nb_Name = (STRPTR)"GFOpenUp Hotkeys";
+    nb.nb_Title = (STRPTR)"GFOpenUp Hotkeys";
+    nb.nb_Descr = (STRPTR)"Ctrl+Alt+Help or F12: GFOpenMonitor";
+    nb.nb_Unique = NBU_UNIQUE | NBU_NOTIFY;
+    nb.nb_Port = cxport;
+    if (!(broker = CxBroker(&nb, &err)))
+        return 0;
+    for (i = 0; i < 2; i++) {
+        ouh_ix_for(&k, raw[i]);
+        memset(&ix, 0, sizeof ix);
+        ix.ix_Version = k.version;
+        ix.ix_Class = k.cls;
+        ix.ix_Code = k.code;
+        ix.ix_CodeMask = k.codemask;
+        ix.ix_Qualifier = k.qual;
+        ix.ix_QualMask = k.qualmask;
+        ix.ix_QualSame = k.qualsame;
+        if (!(f = CxFilter(NULL)))
+            break;
+        SetFilterIX(f, &ix);
+        AttachCxObj(f, CxSender(cxport, HK_MONITOR));
+        AttachCxObj(f, CxTranslate(NULL));
+        AttachCxObj(broker, f);
+    }
+    if (i < 2 || CxObjError(broker)) { hotkeys_off(); return 0; }
+    ActivateCxObj(broker, 1);
+    return 1;
+}
+
+/* The commodity's messages: a hotkey, or Exchange's Disable, Enable and Remove (Remove takes the hotkeys out
+ * until the switch is read again; the menus stay) */
+static void hotkey_msgs(void)
+{
+    CxMsg *m;
+    int run = 0, kill = 0;
+    while (cxport && (m = (CxMsg *)GetMsg(cxport))) {
+        ULONG type = CxMsgType(m), id = CxMsgID(m);
+        ReplyMsg((struct Message *)m);
+        if (type == CXM_IEVENT && id == HK_MONITOR)
+            run = 1;
+        else if (type == CXM_COMMAND && broker) {
+            if (id == CXCMD_DISABLE) ActivateCxObj(broker, 0);
+            else if (id == CXCMD_ENABLE) ActivateCxObj(broker, 1);
+            else if (id == CXCMD_KILL) kill = 1;
+        }
+    }
+    if (kill)
+        hotkeys_off();
+    else if (run)
+        monitor();
+}
+
 /* ---- one GFOpenUpMenu at a time ---------------------------------------------------------- */
 
 /* Tells a running GFOpenUpMenu what to do. 1 told, 0 none is running. */
@@ -427,7 +588,7 @@ static int serve(int from_shell)
     struct timerequest *tr = NULL;
     struct NotifyRequest nr;
     struct Message *msg;
-    ULONG appsig, cmdsig, tsig = 0, nsig = 0;
+    ULONG appsig, cmdsig, tsig = 0, nsig = 0, cxsig = 0;
     LONG nbit = -1;
     int in = 0, quit = 0, ticking = 0, notifying = 0, tries = 0;
     BPTR sys;
@@ -458,6 +619,12 @@ static int serve(int from_shell)
         if (tr) DeleteIORequest((struct IORequest *)tr);
         tr = NULL;
     }
+    /* the hotkeys (0.1.7): a commodity when commodities.library is there, while the switch says on */
+    if (CxBase && (cxport = CreateMsgPort())) {
+        cxsig = 1UL << cxport->mp_SigBit;
+        if (hotkeys_wanted())
+            hotkeys_on();
+    }
     /* GFOpenUp's list of installed files: written at every install and uninstall, so a change means the menus may */
     memset(&nr, 0, sizeof nr);
     if ((nbit = AllocSignal(-1)) >= 0) {
@@ -481,11 +648,16 @@ static int serve(int from_shell)
         }
         if (!in && !tr) {                   /* no timer.device: as before 0.1.6, two seconds at a time */
             Delay(100);
-            got = SetSignal(0, cmdsig | nsig | SIGBREAKF_CTRL_C);
+            got = SetSignal(0, cmdsig | nsig | cxsig | SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_F);
         } else
-            got = Wait(appsig | cmdsig | tsig | nsig | SIGBREAKF_CTRL_C);
+            got = Wait(appsig | cmdsig | tsig | nsig | cxsig | SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_F);
         if (got & SIGBREAKF_CTRL_C)
             quit = 1;
+        if ((got & SIGBREAKF_CTRL_F) && cxport) {   /* the switch changed (GFOpenPrefs' Input page): read again */
+            if (hotkeys_wanted()) hotkeys_on();
+            else hotkeys_off();
+        }
+        hotkey_msgs();
         if ((got & tsig) && ticking && GetMsg(tport))
             ticking = 0;                    /* the time to offer them again (at the top of the loop) */
         if (got & nsig) { built = 0; in = 0; tries = 0; }   /* installed or uninstalled: looked for again */
@@ -500,6 +672,8 @@ static int serve(int from_shell)
         }
     }
     take_out();
+    hotkeys_off();
+    if (cxport) { DeleteMsgPort(cxport); cxport = NULL; }
     if (notifying) EndNotify(&nr);
     if (nbit >= 0) FreeSignal(nbit);
     if (tr) {
@@ -533,6 +707,8 @@ int main(int argc, char **argv)
         return RETURN_FAIL;
     }
     IconBase = OpenLibrary((STRPTR)"icon.library", 37);
+    CxBase = OpenLibrary((STRPTR)"commodities.library", 37);           /* the hotkeys; none without it */
+    IntuitionBase = (struct IntuitionBase *)OpenLibrary((STRPTR)"intuition.library", 37);
     if (args[1])
         list(), rc = RETURN_OK;
     else if (args[0])
@@ -541,6 +717,8 @@ int main(int argc, char **argv)
         rc = RETURN_OK;                     /* the running one builds its menus anew */
     else
         rc = serve(argc > 0);
+    if (IntuitionBase) CloseLibrary((struct Library *)IntuitionBase);
+    if (CxBase) CloseLibrary(CxBase);
     if (IconBase) CloseLibrary(IconBase);
     CloseLibrary(WorkbenchBase);
     if (rda) FreeArgs(rda);
