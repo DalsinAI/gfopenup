@@ -32,8 +32,9 @@ choose:
 - GFOpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
   gzip, from its window in SYS:Utilities or from the Shell;
 - GFOpenService: services from AmiCradle's boards and from a Cradle you pair
-  with (DEVS:gfopenservice.device, and C:Nursery to list them); nothing goes on
-  the network until a Cradle is paired.
+  with (DEVS:gfopenservice.device, and C:Nursery to list them), and MEDIA:,
+  which gives files back decoded (Copy MEDIA:ilbm/Work:photo.qoi RAM:photo.iff);
+  nothing goes on the network until a Cradle is paired.
 - GFOpenImage: datatypes for PNG and Targa (TGA) pictures (the Team's own decoders),
   WebP and WebM on the Amiga itself, and through
   GFOpenService for AVIF, HEIC, JPEG XL, camera RAW, SVG, FLAC, Ogg, MP3, MIDI,
