@@ -2092,7 +2092,9 @@ def main() -> int:
     # when a program linked with libSDL2.a or libGL.a first calls them.
     # Picasso96 screens too: it doesn't need the GFOpenRTG part.
     gl = rtg / "gl"
-    gp = Part(top, "GFOpenGPU", "0.25", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    # 0.26 (0.8.18): SDL2.module from gfopenrtg #179, which can't freeze the machine when SDL's audio thread (priority
+    # 10) waits on a lock the program holds; gfopengpu.library is unchanged
+    gp = Part(top, "GFOpenGPU", "0.26", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
     gp.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
     gp.add("Libs/GFOpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:GFOpenGPU/SDL2.module")
