@@ -586,6 +586,10 @@ def main() -> int:
         check(f"the {name} part installs no stub, and archives SYS:Prefs/{stub}",
               f'"Prefs/{stub}", ' not in src and f"retire \"SYS:Prefs/{stub}\"" in src
               and name in bp.PART_OWN_VERSION and name not in bp.PART_MAIN)
+    # GFOpenService 1.2 (0.8.17): the device with MEDIA:'s handler, its mountlist and ServiceTest, a version of its own
+    check("the GFOpenService part brings MEDIA: (L:media-handler, DEVS:DOSDrivers/MEDIA) and C:ServiceTest",
+          '"L:media-handler"' in src and '"DEVS:DOSDrivers/MEDIA", own=True' in src and '"C:ServiceTest"' in src
+          and "GFOpenService" in bp.PART_OWN_VERSION and "GFOpenService" not in bp.PART_MAIN)
     check("GFOpenPrefs's part version is read from SYS:Preferences/GFOpenPrefs",
           bp.PART_MAIN["GFOpenPrefs"] == ("Preferences/GFOpenPrefs", "GFOpenPrefs"))
 
