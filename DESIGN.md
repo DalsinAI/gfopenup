@@ -65,6 +65,14 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   `SYS:System/Shell`'s icon, and on a disk without one (the open ROM's, where
   NewShell is the ROM's) GFOpenIcons' Shell picture, which the GFOpenDock part
   puts in `SYS:Prefs/Presets/GFOpenDock/Shell.info`.
+- GFOpenService 1.2 (0.8.17): `MEDIA:`, gfopenservice's read-only DOS handler
+  on top of `media.decode/1` (`L:media-handler`, and its mountlist
+  `DEVS:DOSDrivers/MEDIA`, mounted at boot), so shell scripts and programs
+  that know nothing of datatypes can decode files by copying them:
+  `Copy MEDIA:ilbm/Work:grad.qoi RAM:grad.iff`. The part also brings
+  `C:ServiceTest`, which lists the services and opens one. A `MEDIA`
+  mountlist of the user's own stays. The part's version is its own:
+  gfopenservice.device is still 1.1.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for

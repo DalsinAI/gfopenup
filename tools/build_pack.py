@@ -53,7 +53,8 @@ a Part file that C/GFOpenUpTool reads:
                         design (24 October 2026); it archives its old name's stub in SYS:Prefs
   GFOpenCompress/         GFOpenCompress, its window and command (gfopencompress)
   GFOpenService/          gfopenservice.device and Nursery: services from boards and
-                        paired Cradles (gfopenservice)
+                        paired Cradles; ServiceTest; MEDIA:, files decoded through
+                        media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA) (gfopenservice)
   GFOpenImage/            datatypes: PNG, Targa (TGA), WebP, WebM and music modules (MOD,
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through GFOpenService (gfopendatatypes)
@@ -1029,7 +1030,6 @@ PART_MAIN = {
     "GFOpenPrinter": ("Devs/printer.device", "printer.device"),
     "GFOpenPrefs": ("Preferences/GFOpenPrefs", "GFOpenPrefs"),
     "GFOpenCompress": ("Utilities/GFOpenCompress", "GFOpenCompress"),
-    "GFOpenService": ("Devs/gfopenservice.device", "gfopenservice.device"),
     "GFOpenMulticore": ("Libs/gfopenmulticore.library", "gfopenmulticore.library"),
     "GFOpenRTG": ("Libs/gfopenrtg.library", "gfopenrtg.library"),
     "GFOpenGPU": ("Libs/gfopengpu.library", "gfopengpu.library"),
@@ -1065,12 +1065,13 @@ PART_MAIN = {
 # zunemaster.library (0.1, with the datatypes cache's Stricmp fix of 12 October 2026) with the
 # muimaster.library face (19.1). Sound 0.2.2 is GFOpenSpeaker (0.1.4; the editor is GFOpenPrefs's since W48) with GFOpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmiCradle machines only). GFOpenImage 0.4 adds
-# opentga.datatype (47.1). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
+# opentga.datatype (47.1). GFOpenService 1.2 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:) and
+# ServiceTest (0.1). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
 # fonts/amiga). ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so GFOpenUpTool UPDATE
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
 # binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
-PART_OWN_VERSION = {"GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "Backdrops", "GFOpenIcons", "GFOpenDemos", "GFOpenGPUDev",
+PART_OWN_VERSION = {"GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "GFOpenService", "Backdrops", "GFOpenIcons", "GFOpenDemos", "GFOpenGPUDev",
                     "GFOpenPrint", "GFOpenMUI", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon",
                     # pages of GFOpenPrefs with no files of their own since the no-ROM-volume design: GFOpenPrefs's version
                     "GFOpenTypes", "GFOpenDateTime"}
@@ -1880,9 +1881,15 @@ def main() -> int:
 
     # GFOpenService: the services device and Nursery (gfopenservice). It
     # does nothing on the LAN until ENV:GFOpenService/Paired lists a Cradle.
-    sv = Part(top, "GFOpenService", "1.1", "GFOpenService: services from AutoConfig boards and paired Cradles")
+    # 1.2 (0.8.17): MEDIA:, gfopenservice's read-only DOS handler on top of media.decode/1 (L:media-handler and its
+    # mountlist DEVS:DOSDrivers/MEDIA, mounted at boot; docs/MEDIA_HANDLER.md), and ServiceTest, which lists the
+    # services and opens one. A MEDIA mountlist of the user's own stays.
+    sv = Part(top, "GFOpenService", "1.2", "GFOpenService: services from AutoConfig boards and paired Cradles, and MEDIA:")
     sv.add("Devs/gfopenservice.device", (a.openamigaservice / "bin/gfopenservice.device").read_bytes(), "DEVS:gfopenservice.device")
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
+    sv.add("C/ServiceTest", (a.openamigaservice / "bin/ServiceTest").read_bytes(), "C:ServiceTest")
+    sv.add("L/media-handler", (a.openamigaservice / "bin/media-handler").read_bytes(), "L:media-handler")
+    sv.add("Devs/DOSDrivers/MEDIA", (a.openamigaservice / "devs/MEDIA").read_bytes(), "DEVS:DOSDrivers/MEDIA", own=True)
     sv.write()
 
     # GFOpenImage: datatypes (gfopendatatypes). PNG, Targa (opentga.datatype), WebP, WebM and music modules
