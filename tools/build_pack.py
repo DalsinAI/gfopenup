@@ -674,7 +674,8 @@ def build_parts(a):
     # OpenRexx (amicradle-guest libraries/openrexx, its default os32-gcc16 stove): rexxsyslib.library,
     # rexxsupport.library and RexxMast
     run(["sh", g / "openrexx/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openrexx")))
-    # z.library 53.12 (amicradle-guest libraries/openzlib, GCC 16): the GFOffice part's (and GFOpenImage's).
+    # z.library 53.13 (amicradle-guest libraries/openzlib, GCC 16; the Aminet jump table since #632): the GFOffice part's
+    # (and GFOpenImage's). GFOpenCompress 0.3.3 and the datatypes' zlibrary.c refuse 53.12, so they ship with it.
     # libowf opens it when a document first needs deflate (saving, PNG pictures in PDFs) or inflate (faster than
     # libowf's own inflater, which reads zip packages without it)
     run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
@@ -1874,7 +1875,8 @@ def main() -> int:
 
     # GFOpenCompress: one program, the window from Workbench and the command in
     # the Shell (SYS:Utilities is in the Shell's path)
-    oc = Part(top, "GFOpenCompress", "0.3.2", "GFOpenCompress: archives and disk images, from its window or the Shell")
+    # 0.3.3 (0.8.19): inflate through z.library at run time (gfopencompress #24), 53.12 refused
+    oc = Part(top, "GFOpenCompress", "0.3.3", "GFOpenCompress: archives and disk images, from its window or the Shell")
     oc.add("Utilities/GFOpenCompress", (a.openamigacompress / "build/os3/GFOpenCompress").read_bytes(), "SYS:Utilities/GFOpenCompress")
     oc.add("Utilities/GFOpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenCompress.info")
     oc.write()
@@ -1906,7 +1908,8 @@ def main() -> int:
     # GFOpenImage and the pack never differ. Its datatypes.library and system classes stay out: an open library goes
     # in GFOpenLibs, off by default, once its ABI test is clean (below). A checkout without the pack builder yet
     # gives Datatypes/out as before.
-    img = Part(top, "GFOpenImage", "0.4", "GFOpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
+    # 0.5 (0.8.19): GIF and IFF ANIM saving, alpha, z.library's Aminet LVOs, WebP save (gfopendatatypes #28-#32)
+    img = Part(top, "GFOpenImage", "0.5", "GFOpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
     packer = a.opendatatypes / "tools/build_pack.py"
     if packer.is_file():
         pk = ROOT / "build/gfopendatatypes"
@@ -2094,7 +2097,9 @@ def main() -> int:
     gl = rtg / "gl"
     # 0.26 (0.8.18): SDL2.module from gfopenrtg #179, which can't freeze the machine when SDL's audio thread (priority
     # 10) waits on a lock the program holds; gfopengpu.library is unchanged
-    gp = Part(top, "GFOpenGPU", "0.26", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    # 0.27 (0.8.19): gfopengpu.library 0.27, stream v1.10 (RemoteFX Progressive ops, BE DWT_INV; gfopenrtg #177,
+    # #180, #184); the modules as 0.26
+    gp = Part(top, "GFOpenGPU", "0.27", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
     gp.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
     gp.add("Libs/GFOpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:GFOpenGPU/SDL2.module")

@@ -82,6 +82,17 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   absolute mouse, the desktop mode is the Workbench's, and only SDL's own
   audio threads go above priority 0. gfopengpu.library, GL.module and the
   SDL 2 satellites are unchanged.
+- GFOpenUp 0.8.19: z.library 53.13 (amicradle-guest #632, the Aminet
+  z.library's jump table; 53.12's was wrong from -102 on) in the GFOffice and
+  GFOpenImage parts, and with it the programs that refuse 53.12:
+  GFOpenCompress 0.3.3 (gzip, zip, ADZ and tar.gz through z.library at run
+  time, gfopencompress #24) and GFOpenImage 0.5 (gfopendatatypes #28-#32: GIF
+  and IFF ANIM saving, alpha through picture.datatype, the Aminet LVOs, and
+  the WebP lossless save that hung on libnix's qsort). They ship together: a
+  disk with one and not the others loses PNG, gzip or zip. GFOpenGPU 0.27:
+  gfopengpu.library 0.27, stream v1.10 (RLGR_DEC, RFX_TILE and RFX_YCBCR for
+  RemoteFX Progressive, DWT_INV big-endian; gfopenrtg #177, #180, #184). The
+  modules are 0.26's. GFOpenCrypto 2.2 (gfopentls #24): SHA-1.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for

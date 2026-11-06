@@ -590,8 +590,10 @@ def main() -> int:
     check("the GFOpenService part brings MEDIA: (L:media-handler, DEVS:DOSDrivers/MEDIA) and C:ServiceTest",
           '"L:media-handler"' in src and '"DEVS:DOSDrivers/MEDIA", own=True' in src and '"C:ServiceTest"' in src
           and "GFOpenService" in bp.PART_OWN_VERSION and "GFOpenService" not in bp.PART_MAIN)
-    # GFOpenGPU 0.26 (0.8.18): SDL2.module from gfopenrtg #179 (no freeze when SDL's audio thread waits on a lock)
-    check("the GFOpenGPU part is 0.26 (SDL2.module from gfopenrtg #179)", 'Part(top, "GFOpenGPU", "0.26",' in src)
+    # GFOpenGPU 0.27 (0.8.19): gfopengpu.library 0.27 (stream v1.10); SDL2.module as 0.26 (gfopenrtg #179, #181)
+    check("the GFOpenGPU part is 0.27 (gfopengpu.library 0.27)", 'Part(top, "GFOpenGPU", "0.27",' in src)
+    check("the GFOpenCompress part is 0.3.3 (z.library at run time)", 'Part(top, "GFOpenCompress", "0.3.3",' in src)
+    check("the GFOpenImage part is 0.5 (gfopendatatypes #28-#32)", 'Part(top, "GFOpenImage", "0.5",' in src)
     check("GFOpenPrefs's part version is read from SYS:Preferences/GFOpenPrefs",
           bp.PART_MAIN["GFOpenPrefs"] == ("Preferences/GFOpenPrefs", "GFOpenPrefs"))
 
