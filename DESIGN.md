@@ -73,6 +73,13 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   `C:ServiceTest`, which lists the services and opens one. A `MEDIA`
   mountlist of the user's own stays. The part's version is its own:
   gfopenservice.device is still 1.1.
+- GFOpenGPU 0.26 (0.8.18): SDL2.module from gfopenrtg #179. SDL's audio
+  thread runs at priority 10 and waited on SDL's emulated atomics with a spin
+  lock; when the program (priority 0) held one, the thread spun for ever and
+  every task at 5 or below, the file systems too, stopped. The atomics now run
+  inside `Forbid()`, a waiting lock sleeps, and `SDL_Delay(0)` sleeps for a
+  millisecond. gfopengpu.library, GL.module and the SDL 2 satellites are
+  unchanged.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
