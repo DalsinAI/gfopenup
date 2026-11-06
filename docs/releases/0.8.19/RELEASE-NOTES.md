@@ -1,6 +1,6 @@
 # GFOpenUp 0.8.19 (6 November 2026)
 
-This release is GFOpenUp 0.8.18 with **z.library 53.13** and the programs that need it: GFOpenCompress 0.3.3 and the GFOpenImage datatypes. It also has **gfopengpu.library 0.27** and **gfopencrypto.library 2.2**. Install it before the open ROM full36-t5, because that ROM's PNG datatype needs z.library 53.13 on the disk.
+This release is GFOpenUp 0.8.18 with **z.library 53.13** and the programs that need it: GFOpenCompress 0.3.3 and the GFOpenImage datatypes. It also has **gfopengpu.library 0.27** and **gfopencrypto.library 2.2**. Install it before the open ROM full36-t5, because that ROM's PNG datatype needs z.library 53.13 on the disk; on full34/full35 PNG saves stay broken until full36 is in (see Known issues).
 
 ## What's fixed and new
 
@@ -48,14 +48,33 @@ The pack is 0.8.18's archive with only those parts changed, as 0.8.16 to 0.8.18 
 | gfopengpu.library 0.27 | gfopenrtg 9a4c37d `library/opengpu/build-amiga.sh` | 260,624 | `533c620656bc3594fed50ff90e2b20db5a97eb6498319ee5a356d48fb689d70b` |
 | z.library 53.13 | amicradle-guest d506dccd `libraries/openzlib/build-amiga.sh` | 34,736 | `a7ed2eace39f83e43a8d904736668534b7a3b8516fc2be925a7cf90566b41698` |
 | gfopencrypto.library 2.2 | gfopentls 028034e `build-amiga.sh` | 54,868 | `94b3d908af691f71ae3b0fd7479868c428bd7770b5a650025755ad2679da8fe9` |
-| GFOpenCompress 0.3.3 | gfopencompress 762a9dd `build-os3.sh` | 153,792 | DT_SHA_COMPRESS |
-| the GFOpenImage datatypes | gfopendatatypes ed39481 `Datatypes/build.sh` | | listed in SHA256SUMS-parts |
+| GFOpenCompress 0.3.3 | gfopencompress 762a9dd `build-os3.sh` | 153,792 | `d3a01155236dd182da249ac157b922196c40568a31c88b5be5bd61037828ecee` |
+| gfopenpng.datatype 47.6 | gfopendatatypes ed39481 `Datatypes/build.sh` | 19,132 | `01afc714b7578372555a7b62d5ec1a84a8f917305831d0955a225dcfe49cb1fe` |
+| gzip.datatype 47.3 | the same | 7,816 | `3f725566c4e4f6284fc428ba3f7a855d4210f0d3c4eda26b6f4a71d223717cfa` |
+| stream.datatype 47.3 | the same | 8,660 | `33b7e3f9ffc50c29c241c4a4ba95f9a076c4bc3d8d6f50188ec25d57f7680b83` |
+| webp.datatype 47.3 | the same | 227,184 | `55847205def2fc54073c7fa5b4bc353a8b2c2c322f8ba8d08a8da7b03e0d7513` |
+| gfopengif.datatype 47.4 | the same | 24,048 | `837cc7e21a1674679f1d61b5e5c5e788acfe7594fad5fc72d7a6486a97e5a2aa` |
 
 ## Tested
 
-TESTED_PLACEHOLDER
+Lab `t4-up0819`, a copy of Instance-32 (0.8.18 on the open ROM full35-t5), upgraded with GFOpenUpTool UPDATE from the 0.8.19 drawer. Lab `t4-up0818-base`, a second copy left on 0.8.18, for comparison.
+
+| Check | Result |
+|---|---|
+| Upgrade | the manifest lists GFOpenUp 0.8.19, GFOpenImage 0.5, GFOpenCompress 0.3.3, GFOpenGPU 0.27 and GFOpenCrypto 2.2; `LIBS:z.library` is 53.13 |
+| ZlibABITest (53.13 against itself) | 295 answers, 0 differences |
+| GFOpenCompress 0.3.3 Test on t.zip, t.tar.gz and plain.txt.gz | all three: "1 file tested, 4,400 bytes, all good" |
+| GFOpenGPUCheck | gfopengpu.library 0.27, golden/v1.1/v1.2 scenes right on the GPU and on the 68k, "all right" |
+| WebP lossless save | SAME, no hang |
+| PNG save (`dtsave` same class) | empty files, **on 0.8.18 as well** (see Known issues): the ROM's gfopenpng.datatype 47.5 is used instead of the disk's 47.6 |
+| gzip.datatype read through OS 3.2's datatypes.library | ioerr 212, **on 0.8.18 as well** (see Known issues) |
+
+The pack's own checks (`check_part_versions`, the build_pack tests) pass. `SHA256SUMS` in this folder lists the archive.
 
 ## Known issues
+
+- **On full34/full35 ROMs, PNG saves come out empty.** Those ROMs carry gfopenpng.datatype 47.5, and a ROM class is already in memory, so datatypes.library uses it and never loads the disk's 47.6. It was the same on 0.8.18. The open ROM full36-t5 carries 47.6, so install 0.8.19 and then full36. (Programs that ask for gfopengpu.library 0.27 by version get the disk's copy; `Version gfopengpu.library` still names the ROM's 0.25.)
+- gzip.datatype fails to open a `.gz` (ioerr 212) under OS 3.2's own datatypes.library; it works under GFOpenDatatypes' datatypes.library 47.100. Same on 0.8.18. GFOpenCompress opens the same files.
 
 - Blob Wars stops with a memory-corruption alert while it loads 8-bit RGB pictures, so ports keep converting their PNGs to RGBA (as 0.8.18).
 - picture.datatype's `PDTA_AlphaChannel` isn't reported back through the system's picture class. Pixels are right. picture.datatype is a system class, so it isn't in GFOpenUp.
