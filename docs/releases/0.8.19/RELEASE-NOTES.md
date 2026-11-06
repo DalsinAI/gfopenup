@@ -1,6 +1,6 @@
 # GFOpenUp 0.8.19 (6 November 2026)
 
-This release is GFOpenUp 0.8.18 with **z.library 53.13** and the programs that need it: GFOpenCompress 0.3.3 and the GFOpenImage datatypes. It also has **gfopengpu.library 0.27** and **gfopencrypto.library 2.2**. Install it before the open ROM full36-t5, because that ROM's PNG datatype needs z.library 53.13 on the disk; on full34/full35 PNG saves stay broken until full36 is in (see Known issues).
+This release is GFOpenUp 0.8.18 with **z.library 53.13** and the programs that need it: GFOpenCompress 0.3.3 and the GFOpenImage datatypes. It also has **gfopengpu.library 0.27** and **gfopencrypto.library 2.2**. Install it before the open ROM full36-t5, because that ROM's PNG datatype needs z.library 53.13 on the disk.
 
 ## What's fixed and new
 
@@ -66,14 +66,16 @@ Lab `t4-up0819`, a copy of Instance-32 (0.8.18 on the open ROM full35-t5), upgra
 | GFOpenCompress 0.3.3 Test on t.zip, t.tar.gz and plain.txt.gz | all three: "1 file tested, 4,400 bytes, all good" |
 | GFOpenGPUCheck | gfopengpu.library 0.27, golden/v1.1/v1.2 scenes right on the GPU and on the 68k, "all right" |
 | WebP lossless save | SAME, no hang |
-| PNG save (`dtsave` same class) | empty files, **on 0.8.18 as well** (see Known issues): the ROM's gfopenpng.datatype 47.5 is used instead of the disk's 47.6 |
+| PNG save (`dtsave` same class) | empty files on Instance-32's copy, **on 0.8.18 as well**: its old `DEVS:DataTypes/OpenPNG` descriptor (openpng.datatype 47.3, which can't save) is tried first. With that descriptor aside, all four saves (alpha, opaque, STORE, 16 colours) read back SAME; on Instance-40's copy, which has no OpenPNG, SAME as installed (see Known issues) |
+| OpenTyrian (SDL 2), its demo left running | still playing after 12 minutes, no freeze |
 | gzip.datatype read through OS 3.2's datatypes.library | ioerr 212, **on 0.8.18 as well** (see Known issues) |
 
 The pack's own checks (`check_part_versions`, the build_pack tests) pass. `SHA256SUMS` in this folder lists the archive.
 
 ## Known issues
 
-- **On full34/full35 ROMs, PNG saves come out empty.** Those ROMs carry gfopenpng.datatype 47.5, and a ROM class is already in memory, so datatypes.library uses it and never loads the disk's 47.6. It was the same on 0.8.18. The open ROM full36-t5 carries 47.6, so install 0.8.19 and then full36. (Programs that ask for gfopengpu.library 0.27 by version get the disk's copy; `Version gfopengpu.library` still names the ROM's 0.25.)
+- **A disk with the old `DEVS:DataTypes/OpenPNG` descriptor saves empty PNGs.** That descriptor comes from the pack before the GFOpen rename and is tried before GFOpenPNG, so openpng.datatype 47.3 (which can't save) opens PNGs. GFOpenDatatypes' own Installer moves it aside; GFOpenUp's GFOpenImage part doesn't yet. Instance-32 has it. Move `DEVS:DataTypes/OpenPNG` out of DEVS:DataTypes until GFOpenUp does it.
+- **The ROM's datatype classes are used ahead of the disk's.** A ROM class is in memory from boot, so datatypes.library uses it and never loads a newer one from Classes/DataTypes; on full34/full35 that is gfopenpng.datatype 47.5, built for z.library 53.12's table. full36-t5 carries 47.6, so put full36 in after 0.8.19. (A program that asks for gfopengpu.library 0.27 by version gets the disk's copy; `Version gfopengpu.library` still names the ROM's.)
 - gzip.datatype fails to open a `.gz` (ioerr 212) under OS 3.2's own datatypes.library; it works under GFOpenDatatypes' datatypes.library 47.100. Same on 0.8.18. GFOpenCompress opens the same files.
 
 - Blob Wars stops with a memory-corruption alert while it loads 8-bit RGB pictures, so ports keep converting their PNGs to RGBA (as 0.8.18).
