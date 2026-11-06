@@ -31,7 +31,7 @@ Programs need nothing new: they load SDL2.module when they start, so every SDL 2
 
 ## How it was built
 
-The pack is 0.8.17's archive with only those files changed. Every other member is copied from `GFOpenUp-0.8.17.lha` byte for byte. SDL2.module (@SDL2_SIZE@ bytes, sha256 `8d6e95705ca6f00b37f93f2520609883acebdbada45fa805d48f47f5044eaa31`) was built from gfopenrtg 29d32bf, the last commit of #181, whose module source is the same as main (102f5b6, #179 and #181), with `library/modules/sdl2/build.sh` on the os32-gcc16 stove (OpenAmigaGCC 16.2.0-open4).
+The pack is 0.8.17's archive with only those files changed. Every other member is copied from `GFOpenUp-0.8.17.lha` byte for byte. SDL2.module (1,003,264 bytes, sha256 `8d6e95705ca6f00b37f93f2520609883acebdbada45fa805d48f47f5044eaa31`) was built from gfopenrtg 29d32bf, the last commit of #181, whose module source is the same as main (102f5b6, #179 and #181), with `library/modules/sdl2/build.sh` on the os32-gcc16 stove (OpenAmigaGCC 16.2.0-open4).
 
 ## Tested
 
