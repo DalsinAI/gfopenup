@@ -31,7 +31,7 @@ Programs need nothing new: they load SDL2.module when they start, so every SDL 2
 
 ## How it was built
 
-The pack is 0.8.17's archive with only those files changed. Every other member is copied from `GFOpenUp-0.8.17.lha` byte for byte. SDL2.module (@SDL2_SIZE@ bytes, sha256 `@SDL2_SHA256@`) was built from gfopenrtg main (102f5b6, #179 and #181) with `library/modules/sdl2/build.sh` on the os32-gcc16 stove (OpenAmigaGCC 16.2.0-open4).
+The pack is 0.8.17's archive with only those files changed. Every other member is copied from `GFOpenUp-0.8.17.lha` byte for byte. SDL2.module (@SDL2_SIZE@ bytes, sha256 `8d6e95705ca6f00b37f93f2520609883acebdbada45fa805d48f47f5044eaa31`) was built from gfopenrtg 29d32bf, the last commit of #181, whose module source is the same as main (102f5b6, #179 and #181), with `library/modules/sdl2/build.sh` on the os32-gcc16 stove (OpenAmigaGCC 16.2.0-open4).
 
 ## Tested
 
@@ -45,7 +45,7 @@ This was a lab copy of Instance-32 (Instance-45, the games lab), with this SDL2.
 - Flare played for about 12 minutes with sound, and saved.
 - Mouse clicks in a window landed where the pointer was. The 26 October module put them about 16 pixels right and 32 down.
 
-With #181's module (6 November): OpenFodder's crosshair follows the mouse and its menus take clicks. Full screen at the desktop size came up at 1920x1080, the Workbench's size. LTris, without its own code to close them, left no empty screens behind. Blob Wars' clicks land on the pointer. Flare's threaded loading gave no "No signal bits" errors (there were 90 before). OpenLieroX ran without its workarounds. threadcheck passed. @EDUKE32_LAB@
+With #181's module (6 November): OpenFodder's crosshair follows the mouse and its menus take clicks. Full screen at the desktop size came up at 1920x1080, the Workbench's size. LTris, without its own code to close them, left no empty screens behind. Blob Wars' clicks land on the pointer. Flare's threaded loading gave no "No signal bits" errors (there were 90 before). OpenLieroX ran without its workarounds. threadcheck passed. EDuke32, with no workaround, went from its skill screen into E1L1 with the game at priority 0 and its sound thread at 10, and quit cleanly.
 
 ## Known issues
 
