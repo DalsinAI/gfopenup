@@ -1,4 +1,4 @@
-Short:        One pack: AmigaOS 3.2.3, ready to use
+Short:        Add-on pack for AmigaOS 3.2.3 (no OS)
 Uploader:     (the Team fills this in at upload time)
 Author:       AmiCradle Team
 Type:         util/misc
@@ -6,15 +6,49 @@ Version:      0.8.19
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
-GFOpenUp sets up an AmigaOS 3.2.3 installation in one go. Install AmigaOS 3.2.3,
-run GFOpenUp, reboot: graphics on every monitor, networking, MUI programs,
-printing, mail, archives and file types all work, with nothing more to read.
+GFOpenUp is an add-on pack for AmigaOS 3.2. Install AmigaOS 3.2.3 from your
+own copy, run GFOpenUp's Installer once and reboot: it adds the GFOpen family
+of programs, libraries, datatypes, preferences and icons, set up to work
+together. Anything it replaces is kept in SYS:Storage/GFOpenUp-Superseded, and
+Uninstall-GFOpenUp puts the system back as it was.
 
-It finds what it is running on (a real Amiga with its cards, a PiStorm, or
-AmiCradle) and installs the GFOpen family to match. Anything it replaces is
-kept, and one uninstaller puts everything back.
+GFOpenUp is not an operating system and does not include one: there is no
+Kickstart ROM, no AmigaOS file and no Workbench disk in it. You supply those.
 
-Version 0.7 is for AmiCradle instances. Its Installer installs, as you
+What it needs
+-------------
+- AmigaOS 3.2.3 (Hyperion), from your own copy. The Installer refuses
+  anything older than 3.2; 3.2.0 to 3.2.2 are untested.
+- The Kickstart 3.2 ROM that came with your AmigaOS 3.2, or the GFOpenKick
+  open ROM.
+- A 68020 or later. GFOpenUp's own tools are built for the 68040 with soft
+  float and need no FPU; it is tested on a 68040, and a 68020 or 68030 is
+  untested. These parts need a 68040 or 68060 with its FPU and are left out
+  without one: GFOpenRTG, GFOpenFont, Warp3D and MiniGL, OpenBrowser Lite,
+  OpenBrowser and the maths libraries.
+- Fast RAM, strongly advised. The parts that draw on a true-colour screen
+  (GFOpenGPU, the backdrops, the browsers) are made for an RTG board.
+- About 110 MB on SYS: for every part; the backdrops (42 MB), GFOpenGPU
+  (22 MB) and OpenAmigaPython (18 MB) are most of it, and each is optional.
+- SYS:System/Installer, which comes with AmigaOS 3.2.
+
+Where it runs
+-------------
+GFOpenUp finds what it is running on and offers the parts to match.
+AmiCradle (an instance or the appliance) is the main target, and where every
+release is tested. On a real Amiga or a PiStorm (Emu68) the Installer works,
+but neither is tested yet, and these parts are left out because they talk to
+AmiCradle's boards: GFOpenRTG (Workbench on the ACRTG board), GFOpenSocket
+(the network), AmiCradle sharing, the printer part and GFOpenAHI. Your own
+Picasso96 or CyberGraphX, and your Roadshow or AmiTCP, stay as they are.
+GFOpenGPU, GFOpenMulticore and GFOpenCrypto use AmiCradle's other cores
+when they are there and the Amiga's own CPU otherwise. A network stack
+(GFOpenSocket, Roadshow or AmiTCP) is needed by GFOpenMail, GFOpenFTP,
+GFOpenPuTTY, the browsers and Unofficial Telegram.
+
+What it installs
+----------------
+The Installer explains each part before you tick it, and installs, as you
 choose:
 - GFOpenSocket: the network, through the x86 or ARM64 cores (bsdsocket.library
   4.3);
