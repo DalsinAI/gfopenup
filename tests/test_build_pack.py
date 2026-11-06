@@ -150,6 +150,12 @@ def openprinter_checks() -> None:
     check("Install-GFOpenUp: GFOpenPrinter right after GFOpenPrint, under the same choice", 0 < a < b
           and inst.rfind("(if (bitand #parts 2)", 0, a) > inst.rfind("(if (bitand #parts", 0, a) - 1
           and inst.find("(if (bitand #parts", a) > b)
+    a = inst.find("INSTALL Parts/GFOpenImage >>")
+    end = inst.find("(if (bitand #parts", a)
+    check("Install-GFOpenUp: with GFOpenImage, the old OpenPNG, OpenTGA and OpenGIF descriptors are RETIREd "
+          "(Uninstall puts them back)", a > 0 and all(
+              0 < inst.find(f'(if (exists "DEVS:DataTypes/{d}") (run (cat #tool " RETIRE DEVS:DataTypes/{d} >>', a) < end
+              for d in ("OpenPNG", "OpenTGA", "OpenGIF")))
 
 
 def manifest_run(filt: Path, how: str, part_file: Path, manifest: str, tmp: Path, *more: str) -> tuple[int, str]:
