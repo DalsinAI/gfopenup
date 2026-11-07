@@ -105,6 +105,10 @@ a Part file that C/GFOpenUpTool reads:
                         board's ring, amicradle-guest), SDL2.module and GL.module
                         (Mesa), loaded when a program first asks; C:GFOpenGPUCheck.
                         On the CPU where there is no driver (gfopenrtg)
+  OGLES3/               ogles3.library on GFOpenGPU (OpenGL ES 3.1 for programs built for
+                        ladislawv's ogles3) and C:OGLES3Check, with GFOpenGPU on AmiCradle
+                        only; another ogles3.library (the PiStorm's) is left alone (gfopenrtg
+                        library/ogles3)
   Warp3D/               Warp3D.library 5.0 over GFOpenGPU or the CPU, C:Warp3DPrefs,
                         W3DTest and W3DCheck; Wazp3D's settings are taken over
                         (gfopenrtg; needs a 68040 or 68060 with its FPU)
@@ -602,6 +606,9 @@ def build_parts(a):
     run(["sh", a.opendatatypes / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
     run(["sh", a.openamigartg / "library/build.sh"], env=env)   # also Warp3D and, with the GCC 16 stove, SDL2.module
     run(["sh", a.openamigartg / "tools/build.sh"], env=env)     # GFOpenGPUCheck
+    # ogles3.library on GFOpenGPU and OGLES3Check (gfopenrtg #190), with the GCC 16 open6 stove its script asks for
+    run(["sh", a.openamigartg / "library/ogles3/build-amiga.sh", a.openamigartg / "build/ogles3"],
+        env=dict(os.environ, STOVE=os.environ.get("OS32_GCC16_OPEN6", str(Path.home() / "AmiCradle/stoves/os32-gcc16-open6"))))
     # GL.module (Mesa) with the GCC 16 stove, which its script puts first on PATH; then GFOpenDemos on it
     gl_out = a.openamigartg / "build/gl"
     run(["sh", a.openamigartg / "library/modules/gl/module/build.sh", gl_out], env=dict(os.environ))
@@ -1034,6 +1041,7 @@ PART_MAIN = {
     "GFOpenMulticore": ("Libs/gfopenmulticore.library", "gfopenmulticore.library"),
     "GFOpenRTG": ("Libs/gfopenrtg.library", "gfopenrtg.library"),
     "GFOpenGPU": ("Libs/gfopengpu.library", "gfopengpu.library"),
+    "OGLES3": ("Libs/ogles3.library", "ogles3.library"),
     "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
     "GFOpenCrypto": ("Libs/gfopencrypto.library", "gfopencrypto.library"),
     "GFOpenTLS": ("Libs/gfopentls.library", "gfopentls.library"),
@@ -1591,6 +1599,39 @@ def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_
     return bd
 
 
+def ogles3_credits(src: Path) -> bytes:
+    """SYS:Utilities/GFOpenUp/Licences/ogles3.txt: ogles3.library's README (what it is, credits, licence) and the
+    notice of ogles3's MIT SDK header, whose dispatch table it keeps (ogles3_api.txt), as Latin-1 text."""
+    readme = (src / "README.md").read_text(encoding="utf-8")
+    notice = []
+    for line in (src / "ogles3_api.txt").read_text(encoding="utf-8").splitlines():
+        if not line.startswith("#"):
+            break
+        notice.append(line[2:] if line.startswith("# ") else line[1:])
+    text = readme.rstrip() + "\n\n## ogles3's SDK notice (ogles3_api.txt)\n\n" + "\n".join(notice).strip() + "\n"
+    return text.encode("latin-1", errors="replace")
+
+
+def ogles3_part(top: Path, built: Path, src: Path) -> Part | None:
+    """Parts/OGLES3 from gfopenrtg library/ogles3's build (libs/ogles3.library and OGLES3Check), when it was
+    built. Its version is the library's."""
+    lib = built / "libs/ogles3.library"
+    if not lib.is_file():
+        print("  OGLES3: left out, ogles3.library wasn't built")
+        return None
+    data = lib.read_bytes()
+    og = Part(top, "OGLES3", binary_version(data, "ogles3.library") or "1.0",
+              "ogles3.library on GFOpenGPU: OpenGL ES 3.1 for ogles3 programs, on the PC's GPU (AmiCradle only)")
+    og.line("needs AmiCradle")
+    og.needs_part("GFOpenGPU")
+    og.line('keep "LIBS:ogles3.library" "on GFOpenGPU"')
+    og.add("Libs/ogles3.library", data, "LIBS:ogles3.library")
+    og.add("C/OGLES3Check", (built / "OGLES3Check").read_bytes(), "C:OGLES3Check")
+    og.add("Utilities/GFOpenUp/Licences/ogles3.txt", ogles3_credits(src), "SYS:Utilities/GFOpenUp/Licences/ogles3.txt")
+    og.write()
+    return og
+
+
 def check_part_versions(parts: Path) -> None:
     """Stops the build when a part's declared version is not its main
     binary's $VER, or when a part says neither which binary that is nor
@@ -2141,6 +2182,13 @@ def main() -> int:
             raise SystemExit(f"GFOpenGPU: {name}'s licence text wasn't found (GL_WORK, {sdl})")
         gp.add(f"Utilities/GFOpenUp/Licences/{name}", f.read_bytes(), f"SYS:Utilities/GFOpenUp/Licences/{name}")
     gp.write()
+
+    # OGLES3 (0.8.20): ogles3.library on GFOpenGPU (gfopenrtg library/ogles3, #190), OpenGL ES 3.1 for programs built
+    # for ladislawv's ogles3, a face of GFOpenGPU's GL.module (virgl on the PC's GPU, softpipe without), and
+    # C:OGLES3Check. As Install-ogles3: AmiCradle only (ladislawv's own library is the PiStorm's), with GFOpenGPU's
+    # ACRTG.gpu and GL.module (the GFOpenGPU part's), and never over another ogles3.library: "keep" leaves the part
+    # out unless LIBS:ogles3.library is absent or this one ("on GFOpenGPU" in its version string).
+    ogles3_part(top, rtg / "ogles3", a.openamigartg / "library/ogles3")
 
     # Warp3D: Warp3D.library 5.0 (gfopenrtg), drawing through GFOpenGPU or
     # on the CPU. Another Warp3D.library (Wazp3D's, say) is kept in

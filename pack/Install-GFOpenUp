@@ -229,7 +229,9 @@
               "GFOpenGPU: gfopengpu.library, so programs' drawing and SDL 2 games run on the x86 or "
               "ARM64 cores and GL (Mesa) on the GPU, through AmiCradle's graphics board; where there is "
               "no board they run on the Amiga's own CPU, as before (new). SDL 2 and GL are in "
-              "LIBS:GFOpenGPU and load only when a program asks. GFOpenGPUCheck in a Shell checks it.\n\n"
+              "LIBS:GFOpenGPU and load only when a program asks. GFOpenGPUCheck in a Shell checks it. "
+              "On AmiCradle it brings ogles3.library too: OpenGL ES 3.1 for programs made for ogles3, "
+              "on the GPU (OGLES3Check checks it); an ogles3.library already there is left alone.\n\n"
               "Icons: GFOpenIcons, the Team's own icon set, as new pictures for the system's own drawers, "
               "programs and kinds of file, in the look of the GFOpenKick ROM's own icons (new in 0.8.4, in "
               "place of Gorilla). Each icon keeps what it does; the old pictures are kept in SYS:Storage, "
@@ -689,7 +691,15 @@
     (
         (working "Installing GFOpenGPU")
         (if (> (run (cat #tool " INSTALL Parts/GFOpenGPU >>T:GFOpenUp.log")) 5)
-            (message "GFOpenGPU didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+            (message "GFOpenGPU didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+        ; 0.8.20: ogles3.library on GFOpenGPU (gfopenrtg #190) comes with GFOpenGPU, as Install-ogles3 has it: its
+        ; Part needs AmiCradle and the GFOpenGPU part (ACRTG.gpu, GL.module), and keeps another ogles3.library
+        ; (ladislawv's, the PiStorm's), so GFOpenUpTool leaves it out (a warning, 5) on any other machine or disk.
+        (if (exists "Parts/OGLES3/Part")
+            (
+                (working "Installing ogles3.library on GFOpenGPU")
+                (if (> (run (cat #tool " INSTALL Parts/OGLES3 >>T:GFOpenUp.log")) 5)
+                    (message "ogles3.library didn't install completely. T:GFOpenUp.log says why."))))))
 
 ; Warp3D, as it always has, needs a 68040 or 68060 and its FPU. Wazp3D's
 ; settings are taken over once (ENVARC:GFOpenAmiga/Wazp3D-taken says so), and

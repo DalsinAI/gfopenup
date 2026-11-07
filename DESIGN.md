@@ -93,6 +93,15 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   gfopengpu.library 0.27, stream v1.10 (RLGR_DEC, RFX_TILE and RFX_YCBCR for
   RemoteFX Progressive, DWT_INV big-endian; gfopenrtg #177, #180, #184). The
   modules are 0.26's. GFOpenCrypto 2.2 (gfopentls #24): SHA-1.
+- GFOpenUp 0.8.20: the OGLES3 part, ogles3.library 1.1 on GFOpenGPU
+  (gfopenrtg #190): OpenGL ES 3.1 for programs built for ladislawv's ogles3,
+  a face of GL.module (virgl on the PC's GPU, softpipe without), with
+  C:OGLES3Check and its README and credits in GFOpenUp's Licences drawer. It
+  installs with GFOpenGPU, as gfopenrtg's Install-ogles3 has it: "needs
+  AmiCradle", "needs part GFOpenGPU" (ACRTG.gpu and GL.module), and a keep
+  line that leaves the part out when LIBS:ogles3.library is another one (its
+  version string lacks "on GFOpenGPU"), so a PiStorm's ogles3.library is
+  never touched.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for

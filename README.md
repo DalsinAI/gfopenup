@@ -12,7 +12,7 @@ no Kickstart ROM, no AmigaOS files and no Workbench disks: you supply those.
 
 ![Tools > GFOpenUp](docs/tools-menu-openup.png)
 
-**Latest release: 0.8.19** (6 November 2026). Packs are on the
+**Latest release: 0.8.20** (7 November 2026). Packs are on the
 [releases page](https://github.com/DalsinAI/gfopenup/releases), and each
 release's notes are in `docs/releases/<version>/`.
 
@@ -68,8 +68,9 @@ You choose the parts in the Installer. Among them:
   GFOpenView in place of MultiView, GFOpenPlay (a media player).
 - **Programs:** GFOpenEdit, GFOpenWrite and GFOffice, GFOpenCalc, GFOpenMail,
   GFOpenFTP, GFOpenPuTTY, OpenBrowser Lite, OpenAmigaPython, Tata.
-- **Libraries:** GFOpenGPU (SDL 2, GL through Mesa), Warp3D 5.0 and MiniGL on
-  GFOpenGPU, GFOpenMUI (Zune as a muimaster.library where there is no MUI),
+- **Libraries:** GFOpenGPU (SDL 2, GL through Mesa), ogles3.library (OpenGL ES
+  3.1, AmiCradle only), Warp3D 5.0 and MiniGL on GFOpenGPU,
+  GFOpenMUI (Zune as a muimaster.library where there is no MUI),
   GFOpenTLS and GFOpenCrypto, GFOpenFont, GFOpenMulticore, z.library and the
   open replacements of OS libraries.
 - **Developer files:** the GFOpenGPU SDK (headers and link libraries).

@@ -598,6 +598,30 @@ def main() -> int:
           and "GFOpenService" in bp.PART_OWN_VERSION and "GFOpenService" not in bp.PART_MAIN)
     # GFOpenGPU 0.27 (0.8.19): gfopengpu.library 0.27 (stream v1.10); SDL2.module as 0.26 (gfopenrtg #179, #181)
     check("the GFOpenGPU part is 0.27 (gfopengpu.library 0.27)", 'Part(top, "GFOpenGPU", "0.27",' in src)
+    # OGLES3 (0.8.20): ogles3.library on GFOpenGPU (gfopenrtg #190), as Install-ogles3 has it: AmiCradle only, with
+    # the GFOpenGPU part, never over another ogles3.library; its version is the library's
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        (t / "built/libs").mkdir(parents=True)
+        (t / "built/libs/ogles3.library").write_bytes(b"\0$VER: ogles3.library 1.1 (6.11.2026) on GFOpenGPU, x\0")
+        (t / "built/OGLES3Check").write_bytes(b"\0$VER: OGLES3Check 1.1 (6.11.2026)\0")
+        (t / "src").mkdir()
+        (t / "src/README.md").write_text("# ogles3.library on GFOpenGPU\n\nladislawv's ogles3 \u2014 credits\n", encoding="utf-8")
+        (t / "src/ogles3_api.txt").write_text("# table\n#   Copyright (c) 2026 R-Typer and Ladislawv\nagl|x|y|z\n", encoding="utf-8")
+        og = bp.ogles3_part(t / "top", t / "built", t / "src")
+        lines = (t / "top/Parts/OGLES3/Part").read_text(encoding="latin-1").splitlines()
+        check("the OGLES3 part is the library's version, AmiCradle only, after GFOpenGPU, and keeps another ogles3.library",
+              og is not None and lines[0] == "part OGLES3 1.1" and "needs AmiCradle" in lines
+              and "needs part GFOpenGPU" in lines and 'keep "LIBS:ogles3.library" "on GFOpenGPU"' in lines
+              and 'copy "Libs/ogles3.library" "LIBS:ogles3.library"' in lines and 'copy "C/OGLES3Check" "C:OGLES3Check"' in lines,
+              str(lines))
+        credits = (t / "top/Parts/OGLES3/Utilities/GFOpenUp/Licences/ogles3.txt").read_bytes()
+        check("ogles3.txt carries the README and ogles3's SDK notice, in Latin-1",
+              b"ladislawv" in credits and b"R-Typer and Ladislawv" in credits and b"agl|" not in credits)
+        bp.check_part_versions(t / "top/Parts")
+    inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+    gpu_block = inst[inst.index('(working "Installing GFOpenGPU")'):inst.index("; Warp3D, as it always has")]
+    check("Install-GFOpenUp installs Parts/OGLES3 with GFOpenGPU", "INSTALL Parts/OGLES3" in gpu_block)
     check("the GFOpenCompress part is 0.3.3 (z.library at run time)", 'Part(top, "GFOpenCompress", "0.3.3",' in src)
     check("the GFOpenImage part is 0.5 (gfopendatatypes #28-#32)", 'Part(top, "GFOpenImage", "0.5",' in src)
     check("GFOpenPrefs's part version is read from SYS:Preferences/GFOpenPrefs",
