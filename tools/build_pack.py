@@ -704,8 +704,9 @@ def build_parts(a):
             arch = Path(a.opengpu_sdk) / "archive"
             arch.mkdir(parents=True, exist_ok=True)
             old.rename(arch / f"{old.name}-{time.strftime('%Y%m%dT%H%M%S')}")
+        # 0.7 (0.8.22): libGL.a and gla_core.h from gfopenrtg #195 (gla_last_why); make_sdk.py's default is still 0.6
         run([sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
-             "--gl", gl_out, a.opengpu_sdk], env=dict(os.environ))
+             "--gl", gl_out, "--version", "0.7", a.opengpu_sdk], env=dict(os.environ))
     # GFOpenBench (gfopenbench desktop/build.sh, GCC 16 since gfopenbench #31: it stops when given the
     # os32 stove's GCC 6.5): the desktop with the dock and the Open editors built in, from this build's
     # gfopengadtools, gfopenprefs, gfopentata and gfopenfilemanager (its drag and drop)
@@ -2140,7 +2141,10 @@ def main() -> int:
     # 10) waits on a lock the program holds; gfopengpu.library is unchanged
     # 0.27 (0.8.19): gfopengpu.library 0.27, stream v1.10 (RemoteFX Progressive ops, BE DWT_INV; gfopenrtg #177,
     # #180, #184); the modules as 0.26
-    gp = Part(top, "GFOpenGPU", "0.27", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    # 0.29 (0.8.22): gfopengpu.library 0.29 (gfopenrtg #194, the last 256 batches' results; #185, WriteChunkyPixels' and
+    # WritePixelArray8's c2p through GFOpenGfx's core), ACRTG.gpu 1.6 (amicradle-guest #638, 256 results), GL.module
+    # with the softpipe notice and ENV:GFOpenGPU/GLDriver (gfopenrtg #195), and C:GLQuery
+    gp = Part(top, "GFOpenGPU", "0.29", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
     gp.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
     gp.add("Libs/GFOpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:GFOpenGPU/SDL2.module")
@@ -2161,6 +2165,12 @@ def main() -> int:
     # gfopenrtg's tools/build.sh still writes it as OpenGPUCheck (not yet renamed there): either name
     gpu_check = next((c for c in (rtg / "GFOpenGPUCheck", rtg / "OpenGPUCheck") if c.is_file()), rtg / "GFOpenGPUCheck")
     gp.add("C/GFOpenGPUCheck", gpu_check.read_bytes(), "C:GFOpenGPUCheck")
+    # 0.8.22: C:GLQuery (gfopenrtg tests/amiga/glquery, linked with this GL build's libGL.a): GL's version and renderer,
+    # and which driver GL.module took (virgl or softpipe) and why, when the gfopenrtg build has it
+    for glq in (rtg / "GLQuery", rtg / "c/GLQuery"):
+        if glq.is_file():
+            gp.add("C/GLQuery", glq.read_bytes(), "C:GLQuery")
+            break
     # tinygl.library 53 (gfopenrtg library/tinygl, from #50): the stand-in TinyGL programs
     # open; their calls are in the program (libtinygl.a) and run on GL.module
     if (rtg / "tinygl.library").is_file():
