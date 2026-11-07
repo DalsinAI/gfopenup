@@ -2149,6 +2149,8 @@ def main() -> int:
     sats = [n for n in ("SDL2_image", "SDL2_mixer") if (rtg / f"{n}.module").is_file()]
     for n in sats:
         gp.add(f"Libs/GFOpenGPU/{n}.module", (rtg / f"{n}.module").read_bytes(), f"LIBS:GFOpenGPU/{n}.module")
+    # 0.8.21: GL.module from gfopenrtg #192 (a virgl fence whose result expired is done, not failed); the part stays
+    # 0.27, gfopengpu.library's version, and GFOpenUpTool INSTALL puts the changed file in place
     gp.add("Libs/GFOpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:GFOpenGPU/GL.module")
     # 0.8.16: the same modules under the drawer's name from before the GF rename too, LIBS:OpenGPU, for programs built
     # against it: OpenTunnel opens LIBS:OpenGPU/SDL2.module and couldn't start on Instance-32 after 0.8.15. The modules

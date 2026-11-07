@@ -102,6 +102,13 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   line that leaves the part out when LIBS:ogles3.library is another one (its
   version string lacks "on GFOpenGPU"), so a PiStorm's ogles3.library is
   never touched.
+- GFOpenUp 0.8.21: GL.module from gfopenrtg #192, in the GFOpenGPU part
+  (still 0.27: the part's version is gfopengpu.library's). A virgl
+  fence whose result the board had forgotten (done, but 16 or more batches
+  ago: OGPU_ERR_EXPIRED) was taken as a failure, so with several GL programs
+  running one dropped to softpipe or later lost its virgl context ("Illegal
+  command buffer"). It is now taken as done. gfopengpu.library, the other
+  modules and ogles3.library are unchanged.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
