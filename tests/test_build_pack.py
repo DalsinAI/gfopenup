@@ -596,8 +596,9 @@ def main() -> int:
     check("the GFOpenService part brings MEDIA: (L:media-handler, DEVS:DOSDrivers/MEDIA) and C:ServiceTest",
           '"L:media-handler"' in src and '"DEVS:DOSDrivers/MEDIA", own=True' in src and '"C:ServiceTest"' in src
           and "GFOpenService" in bp.PART_OWN_VERSION and "GFOpenService" not in bp.PART_MAIN)
-    # GFOpenGPU 0.27 (0.8.19): gfopengpu.library 0.27 (stream v1.10); SDL2.module as 0.26 (gfopenrtg #179, #181)
-    check("the GFOpenGPU part is 0.27 (gfopengpu.library 0.27)", 'Part(top, "GFOpenGPU", "0.27",' in src)
+    # GFOpenGPU 0.29 (0.8.22): gfopengpu.library 0.29 (256 fence results, c2p through the core), ACRTG.gpu 1.6, C:GLQuery
+    check("the GFOpenGPU part is 0.29 (gfopengpu.library 0.29)", 'Part(top, "GFOpenGPU", "0.29",' in src)
+    check("the GFOpenGPU part brings C:GLQuery when the build has it", '"C:GLQuery"' in src)
     # OGLES3 (0.8.20): ogles3.library on GFOpenGPU (gfopenrtg #190), as Install-ogles3 has it: AmiCradle only, with
     # the GFOpenGPU part, never over another ogles3.library; its version is the library's
     with tempfile.TemporaryDirectory() as t:

@@ -109,6 +109,17 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   running one dropped to softpipe or later lost its virgl context ("Illegal
   command buffer"). It is now taken as done. gfopengpu.library, the other
   modules and ogles3.library are unchanged.
+- GFOpenUp 0.8.22: the GFOpenGPU part is 0.29, matching ROM full37 (whose
+  gfopengpu.library 0.29 and ACRTG.gpu 1.6 shadow the disk's on an open-ROM
+  machine). gfopengpu.library 0.29 keeps the last 256 batches' fence results
+  where 0.27 kept 16 (gfopenrtg #194) and puts WriteChunkyPixels and
+  WritePixelArray8 on planar bitmaps through GFOpenGfx's core (#185; on the
+  open ROM graphics.library does that itself); ACRTG.gpu 1.6 keeps 256 too
+  (amicradle-guest #638). GL.module says on the program's output and in the
+  runtime's log when a program falls to softpipe and why, and
+  ENV:GFOpenGPU/GLDriver gpu or cpu chooses (gfopenrtg #195); C:GLQuery
+  (new) and C:OGLES3Check print the driver. GFOpenGPUDev 0.7 carries the
+  matching libGL.a and gla_core.h. ogles3.library is unchanged (OGLES3 1.1).
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
