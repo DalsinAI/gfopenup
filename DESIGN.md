@@ -120,6 +120,17 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   ENV:GFOpenGPU/GLDriver gpu or cpu chooses (gfopenrtg #195); C:GLQuery
   (new) and C:OGLES3Check print the driver. GFOpenGPUDev 0.7 carries the
   matching libGL.a and gla_core.h. ogles3.library is unchanged (OGLES3 1.1).
+- GFOpenUp 0.8.23: LIBS:z.library 53.14 (amicradle-guest #643; in the
+  GFOffice and GFOpenImage parts, whose versions are their own programs' and
+  stay as they were): CRC-32, Adler-32 and its copies and clears go through
+  AC090's helpers, so on AmiCradle they run as host code, and on any other
+  68k the same library runs its own C as before. GFOpenWindows 0.12.2
+  (gfopenprefs #181 and #184): no snapshot pin on system requesters, and a
+  click on a pushed-in pin unsnaps the window. GFOpenFont 1.8 (gfopenfont
+  #36): an Intellifont font handed to bullet.library has a space with a
+  width again. The Windows page's new label ("click again to unsnap") is in
+  GFOpenPrefs 2.8, which isn't in this pack (it is still a release
+  candidate), so the pack's GFOpenPrefs stays 2.7.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for

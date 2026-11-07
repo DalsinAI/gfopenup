@@ -681,8 +681,9 @@ def build_parts(a):
     # OpenRexx (amicradle-guest libraries/openrexx, its default os32-gcc16 stove): rexxsyslib.library,
     # rexxsupport.library and RexxMast
     run(["sh", g / "openrexx/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openrexx")))
-    # z.library 53.13 (amicradle-guest libraries/openzlib, GCC 16; the Aminet jump table since #632): the GFOffice part's
-    # (and GFOpenImage's). GFOpenCompress 0.3.3 and the datatypes' zlibrary.c refuse 53.12, so they ship with it.
+    # z.library 53.14 (amicradle-guest libraries/openzlib, GCC 16; the Aminet jump table since #632; since #643, 0.8.23,
+    # CRC-32, Adler-32 and its copies and clears through AC090's helpers, plain 68k code on any other machine): the
+    # GFOffice part's (and GFOpenImage's). GFOpenCompress 0.3.3 and the datatypes' zlibrary.c refuse 53.12, so they ship with it.
     # libowf opens it when a document first needs deflate (saving, PNG pictures in PDFs) or inflate (faster than
     # libowf's own inflater, which reads zip packages without it)
     run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
@@ -1980,7 +1981,9 @@ def main() -> int:
     img.write()
 
     # GFOpenWindows: the commodity, started at boot, and its editor (gfopenprefs)
-    ow = Part(top, "GFOpenWindows", "0.12", "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel scrolls the list last clicked, "
+    # 0.12.2 (0.8.23): no snapshot pin on system requesters (gfopenprefs #181, 0.12.1), and the pin is a toggle: a click
+    # on a pushed-in pin unsnaps the window (#184)
+    ow = Part(top, "GFOpenWindows", "0.12.2", "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel scrolls the list last clicked, "
                                             "window places, new windows centred until snapped and a snapshot gadget (both on unless switched off in Prefs/Windows)")
     ow.add("Tools/Commodities/GFOpenWindows", (a.openamigaprefs / "Windows/build/os3/GFOpenWindows").read_bytes(),
            "SYS:Tools/Commodities/GFOpenWindows")
