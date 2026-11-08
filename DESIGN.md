@@ -131,6 +131,10 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   width again. The Windows page's new label ("click again to unsnap") is in
   GFOpenPrefs 2.8, which isn't in this pack (it is still a release
   candidate), so the pack's GFOpenPrefs stays 2.7.
+- GFOpenUp 0.8.24-rc1 put gfopendatatypes edd58bd in the GFOpenImage part,
+  but was built on 0.8.22. GFOpenUp 0.8.25 is 0.8.23 with those datatype
+  files added (none of them was changed by 0.8.23), so it has both. 0.8.23
+  itself was never published.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
