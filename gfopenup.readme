@@ -66,7 +66,8 @@ choose:
 - GFOpenCompress: opens, tests and extracts ADF, ADZ, DMS, LhA, zip, tar and
   gzip, from its window in SYS:Utilities or from the Shell;
 - GFOpenService: services from AmiCradle's boards and from a Cradle you pair
-  with (DEVS:gfopenservice.device, LIBS:mitchy.library for programs, C:Nursery
+  with (DEVS:mitchy.device and DEVS:gfopenservice.device, its old name,
+  LIBS:mitchy.library for programs, C:Nursery
   to list them and C:ServiceTest to try them), AkikoPlus (LIBS:akikoplus.library:
   chunky to planar, swaps, fills, scaling, colours and zlib on AmiCradle's media
   board, or on the 68k without it), and MEDIA:,

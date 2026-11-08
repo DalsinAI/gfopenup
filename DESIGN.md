@@ -73,6 +73,9 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   `SYS:System/Shell`'s icon, and on a disk without one (the open ROM's, where
   NewShell is the ROM's) GFOpenIcons' Shell picture, which the GFOpenDock part
   puts in `SYS:Prefs/Presets/GFOpenDock/Shell.info`.
+- GFOpenService 1.4: the services card is Mitchy, and the device
+  `mitchy.device` 2.0. `gfopenservice.device` 2.0 is a small device that opens
+  it, so programs built with the old name go on working.
 - GFOpenService 1.2 (0.8.17): `MEDIA:`, gfopenservice's read-only DOS handler
   on top of `media.decode/1` (`L:media-handler`, and its mountlist
   `DEVS:DOSDrivers/MEDIA`, mounted at boot), so shell scripts and programs
