@@ -612,9 +612,12 @@ def build_parts(a):
     # GL.module (Mesa) with the GCC 16 stove, which its script puts first on PATH; then GFOpenDemos on it
     gl_out = a.openamigartg / "build/gl"
     run(["sh", a.openamigartg / "library/modules/gl/module/build.sh", gl_out], env=dict(os.environ))
-    # OpenAL.module (gfopenrtg library/modules/openal: OpenAL 1.1 on AHI, or ACAHI's voices), with the GCC 16
-    # stove its script defaults to; make_sdk.py finds build/openal and puts AL/, libopenal.a and openal.pc in the kit
-    run(["sh", a.openamigartg / "library/modules/openal/build.sh", a.openamigartg / "build/openal"], env=dict(os.environ))
+    # OpenAL.module (gfopenrtg library/modules/openal: OpenAL 1.1 on AHI, or ACAHI's voices) with the GCC 16 stove,
+    # named here: the script takes STOVE as the prefix, and this script's own STOVE is the os32 stove's root. For the
+    # 68040 or 68060 with its FPU, like SDL2.module and GL.module (the part's CPU world). make_sdk.py finds
+    # build/openal and puts AL/, libopenal.a and openal.pc in the kit
+    run(["sh", a.openamigartg / "library/modules/openal/build.sh", a.openamigartg / "build/openal"],
+        env=dict(os.environ, STOVE=str(Path(gcc16_root) / "prefix")))
     if a.openamigamesa:                     # the GCC 16 stove first on PATH, as demos/README.md says
         stove16 = Path(os.environ.get("STOVE16", Path.home() / "AmiCradle/stoves/os32-gcc16/prefix"))
         run(["sh", a.openamigamesa / "demos/build.sh"],
