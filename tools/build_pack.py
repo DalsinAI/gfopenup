@@ -2073,14 +2073,14 @@ def main() -> int:
 
     # GFOpenMenus: the engine, started at boot, and its editor (gfopenprefs).
     # The Installer takes MagicMenu's settings over once, when there are any.
-    menus = Part(top, "GFOpenMenus", "0.4.7", "GFOpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
+    menus = Part(top, "GFOpenMenus", "0.4.8", "GFOpenMenus: menus in the theme's look, the menu bar at any edge, right-click menus on Workbench, and their editor")
     menus.add("C/GFOpenMenus", (a.openamigaprefs / "Menus/build/os3/GFOpenMenus").read_bytes(), "SYS:C/GFOpenMenus")
     menus.line("startup Run >NIL: C:GFOpenMenus")
     menus.write()
 
     # GFOpenUp Setup: the first-start wizard (gfopenprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:GFOpenAmiga/Setup.done.
-    setup = Part(top, "GFOpenUpSetup", "0.1.7", "GFOpenUp Setup: the first-start wizard, with the startup switches")
+    setup = Part(top, "GFOpenUpSetup", "0.1.8", "GFOpenUp Setup: the first-start wizard, with the startup switches")
     setup.add("Prefs/GFOpenUp-Setup", (a.openamigaprefs / "Setup/build/os3/GFOpenUp-Setup").read_bytes(), "SYS:Prefs/GFOpenUp-Setup")
     setup.add("Prefs/GFOpenUp-Setup.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/GFOpenUp-Setup.info")
     setup.add("WBStartup/GFOpenUp-Setup", b"", "SYS:WBStartup/GFOpenUp-Setup")
