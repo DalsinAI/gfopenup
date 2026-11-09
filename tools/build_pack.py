@@ -612,6 +612,9 @@ def build_parts(a):
     # GL.module (Mesa) with the GCC 16 stove, which its script puts first on PATH; then GFOpenDemos on it
     gl_out = a.openamigartg / "build/gl"
     run(["sh", a.openamigartg / "library/modules/gl/module/build.sh", gl_out], env=dict(os.environ))
+    # OpenAL.module (gfopenrtg library/modules/openal: OpenAL 1.1 on AHI, or ACAHI's voices), with the GCC 16
+    # stove its script defaults to; make_sdk.py finds build/openal and puts AL/, libopenal.a and openal.pc in the kit
+    run(["sh", a.openamigartg / "library/modules/openal/build.sh", a.openamigartg / "build/openal"], env=dict(os.environ))
     if a.openamigamesa:                     # the GCC 16 stove first on PATH, as demos/README.md says
         stove16 = Path(os.environ.get("STOVE16", Path.home() / "AmiCradle/stoves/os32-gcc16/prefix"))
         run(["sh", a.openamigamesa / "demos/build.sh"],
@@ -2161,11 +2164,14 @@ def main() -> int:
     # 0.8.21: GL.module from gfopenrtg #192 (a virgl fence whose result expired is done, not failed); the part stays
     # 0.27, gfopengpu.library's version, and GFOpenUpTool INSTALL puts the changed file in place
     gp.add("Libs/GFOpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:GFOpenGPU/GL.module")
+    # 0.8.27: OpenAL.module (gfopenrtg library/modules/openal; OpenAL 1.1, no EFX or capture), which programs linked
+    # with the kit's libopenal.a open from LIBS:GFOpenGPU/; MIT, the Team's, like the rest of the part
+    gp.add("Libs/GFOpenGPU/OpenAL.module", (rtg / "openal" / "OpenAL.module").read_bytes(), "LIBS:GFOpenGPU/OpenAL.module")
     # 0.8.16: the same modules under the drawer's name from before the GF rename too, LIBS:OpenGPU, for programs built
     # against it: OpenTunnel opens LIBS:OpenGPU/SDL2.module and couldn't start on Instance-32 after 0.8.15. The modules
     # open gfopengpu.library themselves. The pack carries each file once; the line copies it to both places.
     gp.line("; 0.8.16: the modules under the drawer's name from before the GF rename too (LIBS:OpenGPU), for programs built against it (OpenTunnel opens LIBS:OpenGPU/SDL2.module)")
-    for n in ["SDL2", *sats, "GL"]:
+    for n in ["SDL2", *sats, "GL", "OpenAL"]:
         gp.line(f'copy "Libs/GFOpenGPU/{n}.module" "LIBS:OpenGPU/{n}.module"')
     # gfopenrtg's tools/build.sh still writes it as OpenGPUCheck (not yet renamed there): either name
     gpu_check = next((c for c in (rtg / "GFOpenGPUCheck", rtg / "OpenGPUCheck") if c.is_file()), rtg / "GFOpenGPUCheck")
