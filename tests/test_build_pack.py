@@ -664,6 +664,27 @@ def main() -> int:
         check("ogles3.txt carries the README and ogles3's SDK notice, in Latin-1",
               b"ladislawv" in credits and b"R-Typer and Ladislawv" in credits and b"agl|" not in credits)
         bp.check_part_versions(t / "top/Parts")
+    # AkikoPlus 2.0 (0.8.27): akikoplus.library 2 from a built drawer, its version the library's, no needs line,
+    # installed with GFOpenService
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        for rel, _ in bp.AKIKOPLUS_FILES:
+            (t / "ak" / rel).parent.mkdir(parents=True, exist_ok=True)
+            (t / "ak" / rel).write_bytes(b"x")
+        (t / "ak/Libs/akikoplus.library").write_bytes(b"\0$VER: akikoplus.library 2.0 (9.11.2026) board and 68k\0")
+        ak = bp.akikoplus_part(t / "top", t / "ak")
+        lines = (t / "top/Parts/AkikoPlus/Part").read_text(encoding="latin-1").splitlines()
+        check("the AkikoPlus part is the library's version, with every file and no needs line",
+              ak is not None and lines[0] == "part AkikoPlus 2.0"
+              and 'copy "Libs/akikoplus.library" "LIBS:akikoplus.library"' in lines
+              and 'copy "C/AkikoTest" "C:AkikoTest"' in lines and 'copy "C/APTest" "C:APTest"' in lines
+              and sum(1 for x in lines if x.startswith("copy ")) == len(bp.AKIKOPLUS_FILES)
+              and not any(x.startswith("needs") for x in lines), str(lines))
+        bp.check_part_versions(t / "top/Parts")
+        check("without --akikoplus the AkikoPlus part is left out", bp.akikoplus_part(t / "top2", None) is None)
+    inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+    sv_block = inst[inst.index('(working "Installing GFOpenService")'):inst.index("(if (bitand #parts 8388608)")]
+    check("Install-GFOpenUp installs Parts/AkikoPlus with GFOpenService", "INSTALL Parts/AkikoPlus" in sv_block)
     inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
     gpu_block = inst[inst.index('(working "Installing GFOpenGPU")'):inst.index("; Warp3D, as it always has")]
     check("Install-GFOpenUp installs Parts/OGLES3 with GFOpenGPU", "INSTALL Parts/OGLES3" in gpu_block)

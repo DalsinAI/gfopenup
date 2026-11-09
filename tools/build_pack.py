@@ -54,7 +54,11 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenCompress/         GFOpenCompress, its window and command (gfopencompress)
   GFOpenService/          gfopenservice.device and Nursery: services from boards and
                         paired Cradles; ServiceTest; MEDIA:, files decoded through
-                        media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA) (gfopenservice)
+                        media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA); mitchy.library (gfopenservice)
+  AkikoPlus/              akikoplus.library 2: C2P, swaps, fills, scaling, YUV, colours and zlib on
+                        AmiCradle's AkikoPlus media board (through mitchy.library) or on the 68k;
+                        C:AkikoTest, C:APTest and SYS:Developer/AkikoPlus. Installed with GFOpenService
+                        (gfosautoconfigboards cards/akikoplus/guest; left out without --akikoplus)
   GFOpenImage/            datatypes: PNG, Targa (TGA), WebP, WebM and music modules (MOD,
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through GFOpenService (gfopendatatypes)
@@ -1047,6 +1051,7 @@ PART_MAIN = {
     "GFOpenRTG": ("Libs/gfopenrtg.library", "gfopenrtg.library"),
     "GFOpenGPU": ("Libs/gfopengpu.library", "gfopengpu.library"),
     "OGLES3": ("Libs/ogles3.library", "ogles3.library"),
+    "AkikoPlus": ("Libs/akikoplus.library", "akikoplus.library"),
     "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
     "GFOpenCrypto": ("Libs/gfopencrypto.library", "gfopencrypto.library"),
     "GFOpenTLS": ("Libs/gfopentls.library", "gfopentls.library"),
@@ -1079,8 +1084,8 @@ PART_MAIN = {
 # zunemaster.library (0.1, with the datatypes cache's Stricmp fix of 12 October 2026) with the
 # muimaster.library face (19.1). Sound 0.2.2 is GFOpenSpeaker (0.1.4; the editor is GFOpenPrefs's since W48) with GFOpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmiCradle machines only). GFOpenImage 0.4 adds
-# opentga.datatype (47.1). GFOpenService 1.2 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:) and
-# ServiceTest (0.1). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
+# opentga.datatype (47.1). GFOpenService 1.3 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:),
+# mitchy.library (1.0) and ServiceTest (0.2). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
 # fonts/amiga). ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so GFOpenUpTool UPDATE
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
@@ -1691,6 +1696,45 @@ def ogles3_part(top: Path, built: Path, src: Path) -> Part | None:
     return og
 
 
+# AkikoPlus (0.8.27): akikoplus.library 2 (gfosautoconfigboards #4, cards/akikoplus/guest), built with the os32-gcc16
+# stove. --akikoplus is a folder laid out as the part: Libs/akikoplus.library, C/AkikoTest, C/APTest and
+# Developer/AkikoPlus/ (the autodoc, SFD, FD, headers and boardonly/akikoplus.library, the AP_NO_FALLBACK build).
+AKIKOPLUS_FILES = (
+    ("Libs/akikoplus.library", "LIBS:akikoplus.library"),
+    ("C/AkikoTest", "C:AkikoTest"),
+    ("C/APTest", "C:APTest"),
+    ("Developer/AkikoPlus/akikoplus.doc", "SYS:Developer/AkikoPlus/akikoplus.doc"),
+    ("Developer/AkikoPlus/boardonly/akikoplus.library", "SYS:Developer/AkikoPlus/boardonly/akikoplus.library"),
+    ("Developer/AkikoPlus/fd/akikoplus_lib.fd", "SYS:Developer/AkikoPlus/fd/akikoplus_lib.fd"),
+    ("Developer/AkikoPlus/include/clib/akikoplus_protos.h", "SYS:Developer/AkikoPlus/include/clib/akikoplus_protos.h"),
+    ("Developer/AkikoPlus/include/inline/akikoplus.h", "SYS:Developer/AkikoPlus/include/inline/akikoplus.h"),
+    ("Developer/AkikoPlus/include/libraries/akikoplus.h", "SYS:Developer/AkikoPlus/include/libraries/akikoplus.h"),
+    ("Developer/AkikoPlus/include/pragmas/akikoplus_pragmas.h", "SYS:Developer/AkikoPlus/include/pragmas/akikoplus_pragmas.h"),
+    ("Developer/AkikoPlus/include/proto/akikoplus.h", "SYS:Developer/AkikoPlus/include/proto/akikoplus.h"),
+    ("Developer/AkikoPlus/sfd/akikoplus_lib.sfd", "SYS:Developer/AkikoPlus/sfd/akikoplus_lib.sfd"),
+)
+
+
+def akikoplus_part(top: Path, src: Path | None) -> Part | None:
+    """Parts/AkikoPlus from a built AkikoPlus drawer (--akikoplus). No needs line: without mitchy.library or the
+    board every call runs on the 68k; Install-GFOpenUp installs it with GFOpenService, which brings mitchy.library.
+    Its version is the library's."""
+    if not src or not (src / "Libs/akikoplus.library").is_file():
+        print("  AkikoPlus: left out, no --akikoplus with Libs/akikoplus.library")
+        return None
+    missing = [rel for rel, _ in AKIKOPLUS_FILES if not (src / rel).is_file()]
+    if missing:
+        raise SystemExit(f"AkikoPlus: {src} lacks " + ", ".join(missing))
+    data = (src / "Libs/akikoplus.library").read_bytes()
+    ak = Part(top, "AkikoPlus", binary_version(data, "akikoplus.library") or "2.0",
+              "AkikoPlus: akikoplus.library, the media board's helpers (C2P, swaps, fills, scaling, YUV, colours, "
+              "zlib) on the board when fitted, on the 68k when not; AkikoTest and APTest")
+    for rel, dest in AKIKOPLUS_FILES:
+        ak.add(rel, (src / rel).read_bytes(), dest)
+    ak.write()
+    return ak
+
+
 def check_part_versions(parts: Path) -> None:
     """Stops the build when a part's declared version is not its main
     binary's $VER, or when a part says neither which binary that is nor
@@ -1788,6 +1832,9 @@ def main() -> int:
                     help=f"OpenAmigaPython's release archive {OPENAMIGAPYTHON['asset']} (from "
                          f"{OPENAMIGAPYTHON['release']}; build/ is looked in first), for the "
                          "OpenAmigaPython part, taken only with its pinned sha256 (left out without it)")
+    ap.add_argument("--akikoplus", type=Path, default=None,
+                    help="a built AkikoPlus drawer (Libs/akikoplus.library, C/AkikoTest, C/APTest, Developer/AkikoPlus/): "
+                         "gfosautoconfigboards cards/akikoplus/guest's build; the part is left out without it")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the GFOpenGPU developer kit is made (or, with --no-build, read): the GFOpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -1986,13 +2033,20 @@ def main() -> int:
     # 1.2 (0.8.17): MEDIA:, gfopenservice's read-only DOS handler on top of media.decode/1 (L:media-handler and its
     # mountlist DEVS:DOSDrivers/MEDIA, mounted at boot; docs/MEDIA_HANDLER.md), and ServiceTest, which lists the
     # services and opens one. A MEDIA mountlist of the user's own stays.
-    sv = Part(top, "GFOpenService", "1.2", "GFOpenService: services from AutoConfig boards and paired Cradles, and MEDIA:")
+    # 1.3 (0.8.27): LIBS:mitchy.library 1.0, the services card's (Mitchy's) library for every program, on the
+    # device (gfopenservice #34), and ServiceTest 0.2 on it, with one checked job for each service on offer.
+    sv = Part(top, "GFOpenService", "1.3", "GFOpenService: services from AutoConfig boards and paired Cradles, and MEDIA:")
     sv.add("Devs/gfopenservice.device", (a.openamigaservice / "bin/gfopenservice.device").read_bytes(), "DEVS:gfopenservice.device")
+    sv.add("Libs/mitchy.library", (a.openamigaservice / "bin/mitchy.library").read_bytes(), "LIBS:mitchy.library")
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
     sv.add("C/ServiceTest", (a.openamigaservice / "bin/ServiceTest").read_bytes(), "C:ServiceTest")
     sv.add("L/media-handler", (a.openamigaservice / "bin/media-handler").read_bytes(), "L:media-handler")
     sv.add("Devs/DOSDrivers/MEDIA", (a.openamigaservice / "devs/MEDIA").read_bytes(), "DEVS:DOSDrivers/MEDIA", own=True)
     sv.write()
+
+    # AkikoPlus 2.0 (0.8.27): akikoplus.library (gfosautoconfigboards #4), on AmiCradle's media board through
+    # mitchy.library when it is fitted, on the 68k when not; Install-GFOpenUp installs it with GFOpenService.
+    akikoplus_part(top, a.akikoplus)
 
     # GFOpenImage: datatypes (gfopendatatypes). PNG, Targa (opentga.datatype), WebP, WebM and music modules
     # (openmodule.datatype: MOD, MED, Oktalyzer, DigiBooster, XM, S3M, IT,
