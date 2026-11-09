@@ -43,6 +43,12 @@ a Part file that C/GFOpenUpTool reads:
                         OS 3.2.3's printer drivers, editors, tools and their help archived (amicradle-guest
                         devices/openprinter.device; AmiCradle instances only)
   AmiCradleSharing/   accontrol.device, ACClip and ACDrop (amicradle-guest)
+  HostClock/            C:HostClock, GFOpenBattClock as a command: at boot it puts the host-backed
+                        battclock.resource (amicradle-guest resources/openbattclock.resource) in place of
+                        the Kickstart's, sets the system time from it once, and from then on the resource
+                        keeps the Amiga's clock with the host's (snapshot resumes, the host's clock set
+                        after boot). On every ROM of an AmiCradle instance; the open ROM from full40 has
+                        it in ROM already, and HostClock then only sets the time
   Backdrops/            the themes' desktops as Workbench backdrops, each with its .tone
                         (gfopengadtools); not the AmiCradle Background Pack's art, an
                         optional install from Cradle's Media Library
@@ -708,6 +714,9 @@ def build_parts(a):
         run(["sh", a.guest / src / "build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openkickdisk" / name)))
     # ACROMFix (amicradle-guest tools/acromfix, the os32 stove as its build.sh): the GFOpenUp part's
     run(["sh", a.guest / "tools/acromfix/build-amiga.sh"], env=dict(genv, STOVE=str(STOVE), OUT=str(ROOT / "build/acromfix")))
+    # HostClock (amicradle-guest resources/openbattclock.resource built -DOBC_INSTALL, its default os32-gcc16 stove):
+    # the HostClock part's
+    run(["sh", a.guest / "resources/openbattclock.resource/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/hostclock")))
     # printer.device (amicradle-guest devices/openprinter.device, its default os32-gcc16 stove): the GFOpenPrinter part's
     run(["sh", a.guest / "devices/openprinter.device/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openprinter")))
     if a.openamigainput:
@@ -1071,6 +1080,7 @@ PART_MAIN = {
     "GFOpenDock": ("C/GFOpenDock", "GFOpenDock"),
     "GFOpenUpSetup": ("Prefs/GFOpenUp-Setup", "GFOpenUp-Setup"),
     "GFOpenMenus": ("C/GFOpenMenus", "GFOpenMenus"),
+    "HostClock": ("C/HostClock", "HostClock"),
     "GFOpenFiles": ("Utilities/GFOpenFiles", "GFOpenFiles"),
     "GFOpenPlay": ("Utilities/GFOpenPlay", "GFOpenPlay"),
     "GFOpenTitle": ("C/GFOpenTitle", "GFOpenTitle"),
@@ -1986,6 +1996,22 @@ def main() -> int:
         sh.add(f"C/{tool_name}", (gout / tool_name).read_bytes(), f"SYS:C/{tool_name}")
         sh.add(f"WBStartup/{tool_name}.info", (icondir / f"{tool_name}.info").read_bytes(), f"SYS:WBStartup/{tool_name}.info")
     sh.write()
+
+    # HostClock: battclock.resource is the host's clock (Dale, 9 Nov 2026: "battclock is the way, even for a 3.2.3
+    # ROM"). C:HostClock is GFOpenBattClock 47.101 as a command: early in the boot it takes the Kickstart's
+    # battclock.resource off the list and puts itself there (its code stays), so ReadBattClock, SetClock and
+    # timer.device read the host's time through ACBridge's $4C, and its own task sets the system time again on
+    # each snapshot resume and each step of the host's clock ($48). It replaces ACClock (amicradle-guest #650),
+    # which was never in a part.
+    hostclock = ROOT / "build/hostclock/resources/HostClock"
+    if not hostclock.is_file():
+        raise SystemExit(f"{hostclock} wasn't built (amicradle-guest resources/openbattclock.resource/build-amiga.sh)")
+    hc = Part(top, "HostClock", binary_version(hostclock.read_bytes(), "HostClock") or "0",
+              "HostClock: the Amiga's battery clock is the host's clock, and the Amiga's time follows it")
+    hc.line("needs AmiCradle")
+    hc.add("C/HostClock", hostclock.read_bytes(), "SYS:C/HostClock")
+    hc.line("startup C:HostClock QUIET")
+    hc.write()
 
     # GFOpenLook (C:GFOpenLook, its themes, GFOpenPrefs Look and its profiles) was a part up to GFOpenUp 0.8.1. Since 0.8.2
     # Workbench's look is the OS's own (the GFOpenKick ROM's: the user, 16 October 2026, "it should be default,
