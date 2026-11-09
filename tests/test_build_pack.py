@@ -720,7 +720,9 @@ def main() -> int:
     gpu_block = inst[inst.index('(working "Installing GFOpenGPU")'):inst.index("; Warp3D, as it always has")]
     check("Install-GFOpenUp installs Parts/OGLES3 with GFOpenGPU", "INSTALL Parts/OGLES3" in gpu_block)
     check("the GFOpenCompress part is 0.3.3 (z.library at run time)", 'Part(top, "GFOpenCompress", "0.3.3",' in src)
-    check("the GFOpenImage part is 0.5 (gfopendatatypes #28-#32)", 'Part(top, "GFOpenImage", "0.5",' in src)
+    check("the GFOpenImage part is 0.6 (gfopensound-decoders.library)", 'Part(top, "GFOpenImage", "0.6",' in src)
+    check("GFOpenImage without the pack builder: Datatypes/out/Libs's libraries go to LIBS:",
+          'img.add(f"Libs/{lib.name}", lib.read_bytes(), f"LIBS:{lib.name}")' in src)
     check("GFOpenPrefs's part version is read from SYS:Preferences/GFOpenPrefs",
           bp.PART_MAIN["GFOpenPrefs"] == ("Preferences/GFOpenPrefs", "GFOpenPrefs"))
 
