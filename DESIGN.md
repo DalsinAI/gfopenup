@@ -147,6 +147,12 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   SDL_Quit. The part copies the module to LIBS:OpenGPU/ too, so installing
   it replaces the older one there. gfopengpu.library, GL.module, the SDL 2
   satellites and ogles3.library are unchanged.
+- GFOpenUp 0.8.26 itself is 0.8.26-rc1 (the blanker's roll call, GFOpenMenus
+  0.4.8, the off-screen drawer menu, smaller PDFs, Reinstall and the asking
+  Uninstall with GFOpenUpTool 0.8.17, Setup 0.1.8, the old datatype
+  descriptors moved aside) with that SDL2.module put in: rc1 was built on
+  0.8.25 and still had 8d6e9570. The SDL2-only pack on 0.8.25 (e693f86c)
+  was never published. gfopenrtg #218 (Right Amiga keys) isn't in it.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
