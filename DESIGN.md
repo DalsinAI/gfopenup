@@ -135,6 +135,18 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   but was built on 0.8.22. GFOpenUp 0.8.25 is 0.8.23 with those datatype
   files added (none of them was changed by 0.8.23), so it has both. 0.8.23
   itself was never published.
+- GFOpenUp 0.8.26: SDL2.module from gfopenrtg #217 (b407b01), in the
+  GFOpenGPU part (still 0.29: the part's version is gfopengpu.library's).
+  It hardens full-screen exit. An older SDL2.module (6c85c04c, from before
+  0.8.18, still in LIBS:OpenGPU/ where the GFOpenGPU part was never
+  installed) left SDL's screens in front and the board at the game's mode
+  when a program left full screen or quit in it; 0.8.25's (8d6e9570) passes
+  the same checks. Patch 0019 sends a screen Intuition won't close behind
+  the Workbench and closes it later, brings the Workbench to the front with
+  RemakeDisplay() and repaints it, and does the same on SDL_DestroyWindow and
+  SDL_Quit. The part copies the module to LIBS:OpenGPU/ too, so installing
+  it replaces the older one there. gfopengpu.library, GL.module, the SDL 2
+  satellites and ogles3.library are unchanged.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for

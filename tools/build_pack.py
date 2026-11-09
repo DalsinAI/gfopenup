@@ -2150,6 +2150,8 @@ def main() -> int:
     gp = Part(top, "GFOpenGPU", "0.29", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
     gp.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
     gp.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
+    # 0.8.26: SDL2.module from gfopenrtg #217 (b407b01; full-screen exit hardened, back to the Workbench); the part
+    # stays 0.29, gfopengpu.library's version, and GFOpenUpTool INSTALL puts the changed file in place
     gp.add("Libs/GFOpenGPU/SDL2.module", (rtg / "SDL2.module").read_bytes(), "LIBS:GFOpenGPU/SDL2.module")
     # SDL2_image and SDL2_mixer (gfopenrtg #54): resident modules beside SDL2.module,
     # decoding on the x86 or ARM64 cores first; their licences go in GFOpenUp's drawer
