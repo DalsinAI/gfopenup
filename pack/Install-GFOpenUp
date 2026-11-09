@@ -734,6 +734,13 @@
                         (default 0))
                     (run (cat #tool " INSTALL Parts/GFOpenRTG/Mode >>T:GFOpenUp.log")))))))
 
+; 0.8.27: GFOpenGPU's modules (SDL2, GL, OpenAL) are built for a 68040 or 68060 with its FPU and MMU, the floor
+; (the user, 9 November 2026); its Part says "needs 68040" too, for GFOpenUpTool INSTALL in a Shell.
+(if (and (bitand #parts 33554432) (or (= (database "fpu") "NOFPU") (and (<> (database "cpu") "68040") (<> (database "cpu") "68060"))))
+    (
+        (set #parts (bitand #parts (bitnot 33554432)))
+        (message "GFOpenGPU needs a 68040 or 68060 with its FPU and MMU, and this Amiga doesn't have one, "
+                 "so it was left out. Nothing else changed.")))
 (if (bitand #parts 33554432)
     (
         (working "Installing GFOpenGPU")

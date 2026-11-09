@@ -124,6 +124,12 @@ static int need_checks(void)
     same("needs parts is not needs part", oul_needs_part(w, n), NULL);
     n = oul_words(l7, w, 12);
     same("needs part with tabs and a comment after", oul_needs_part(w, n), "GFOffice");
+    /* needs 68040: the CPU floor (9 Nov 2026) */
+    truth("68040 with its FPU", oul_full_040(0x0008u | 0x0040u | 0x0007u), 1);
+    truth("68060 with its FPU", oul_full_040(0x0080u | 0x0008u | 0x0040u | 0x0007u), 1);
+    truth("68LC040 or 68EC040 (no FPU)", oul_full_040(0x0008u | 0x0007u), 0);
+    truth("68030 with a 68882", oul_full_040(0x0003u | 0x0010u | 0x0020u), 0);
+    truth("68000", oul_full_040(0), 0);
     truth("installed: GFOffice", oul_installed(m, nm, "GFOffice"), 1);
     truth("installed: not GFOpenCalc (a needpart line is not a part line)", oul_installed(m, nm, "GFOpenCalc"), 0);
     truth("installed: not a name's start (GFOffic)", oul_installed(m, nm, "GFOffic"), 0);

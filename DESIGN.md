@@ -169,6 +169,12 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   developer kit (gfopenrtg #233). It is its own file: gfopengpu.library is
   unchanged, and only programs that use OpenAL load it. Ports that carried
   their own mixer can link -lopenal instead.
+- The CPU floor (the user, 9 November 2026): a 68040 or 68060 with its FPU
+  and MMU, nothing less, even for handy things. The GFOpenGPU part says
+  "needs 68040" (GFOpenUpTool 0.8.18 leaves it out on less, from AttnFlags:
+  68040 or 68060, and FPU40; an FPU there means the full chip, MMU too), and
+  the Installer leaves it out with a message, as it does Warp3D. Its modules
+  are -m68040 -m68881 and used to install on any CPU.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
