@@ -616,6 +616,13 @@
             (default 1))
         (run (cat #tool " RETIRE LIBS:Picasso96API.library >>T:GFOpenUp.log"))))
 
+; HostClock: first, so its line is the first of GFOpenUp's block in S:User-Startup. Always: the Amiga's battery clock
+; becomes the host's and its time follows the host's (snapshot resumes, the host's clock set after boot). AmiCradle
+; instances only: elsewhere GFOpenUpTool says so and changes nothing (it answers 5, which isn't a failure)
+(working "Installing HostClock")
+(if (> (run (cat #tool " INSTALL Parts/HostClock >>T:GFOpenUp.log")) 5)
+    (message "HostClock didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+
 ; Tata: early, so its line comes near the top of GFOpenUp's block in S:User-Startup
 (if (bitand #parts 1073741824)
     (
