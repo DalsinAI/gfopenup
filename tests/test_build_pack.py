@@ -440,6 +440,14 @@ def main() -> int:
                         "-o", str(filt)], check=True)
         r = subprocess.run([str(filt)], capture_output=True, text=True)
         check("GFOpenUpTool's conditions (tests/test_openup_lines.c)", r.returncode == 0, r.stdout[-400:])
+        sseq = tmp / "test_openup_startupseq"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_startupseq.c"), "-o", str(sseq)], check=True)
+        r = subprocess.run([str(sseq)], capture_output=True, text=True)
+        check("GFOpenUpTool STARTUPSEQ (tests/test_openup_startupseq.c)", r.returncode == 0, r.stdout[-400:])
+        inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("the Installer offers the ROM's Startup-Sequence, never replacing it unasked",
+              'STARTUPSEQ CHECK' in inst and 'STARTUPSEQ ROM' in inst and 'STARTUPSEQ KEEP' in inst)
 
         icons = FakeIcons()
         top = tmp / "GFOpenUp"

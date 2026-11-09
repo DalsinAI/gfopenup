@@ -54,6 +54,14 @@
  *                                     at the program's own first size again
  *   GFOpenUpTool KICKSET [CHECK] [<part drawer>]  the slim ROM's module set (the KickstartSet part): installs it,
  *                                     or CHECK says whether SYS:Kickstart/default/ has it whole (9 Nov 2026, KICKSET below)
+ *   GFOpenUpTool STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]  the disk's S:Startup-Sequence against the ROM's default
+ *                                     (amicradle-guest docs/design/rom-or-disk.md, section 6; 9 Nov 2026): CHECK
+ *                                     says how they compare, WARN (5) when the disk's is older or not the ROM's and
+ *                                     the user hasn't kept it against this ROM's version; COMPARE lists the lines
+ *                                     that differ; KEEP remembers the user's choice (ENVARC:GFOpenAmiga/
+ *                                     StartupSequence.kept, the ROM's version); ROM puts the ROM's default in its
+ *                                     place, the user's kept in SYS:Storage/GFOpenUp-Superseded for UNINSTALL.
+ *                                     Never at boot, only when the user chooses (Install-GFOpenUp asks)
  *   GFOpenUpTool UPDATE [CHECK|YES]     a newer pack Cradle put in DH1:GFOpenUp: CHECK says
  *                                     (WARN when one waits); UPDATE shows what changes and
  *                                     asks; YES doesn't ask. It never runs on its own
@@ -134,6 +142,7 @@
 #include <stdlib.h>
 
 #include "openup_lines.h"
+#include "openup_startupseq.h"
 
 static int slim_rom(void);
 
@@ -4651,6 +4660,109 @@ static int kickset(const char *a1, const char *a2)
     return kickset_check(a1);
 }
 
+/* ---- STARTUPSEQ: the disk's S:Startup-Sequence against the ROM's default (amicradle-guest
+ * docs/design/rom-or-disk.md, section 6). The ROM's bytes and dos's weighing are GFOpenDOS's private calls,
+ * ODRomDefault (-1176) and ODRomDefaultState (-1182), on GFOpenDOS 47.100 and up (OS 3.2.3's is 47.30) with
+ * them; elsewhere there is no ROM default to offer. ---- */
+
+#define STARTUPSEQ "S:Startup-Sequence"
+#define STARTUPSEQ_KEPT "ENVARC:GFOpenAmiga/StartupSequence.kept"
+
+static int rom_defaults_here(void)
+{
+    return DOSBase->dl_lib.lib_Revision >= 100 && DOSBase->dl_lib.lib_NegSize >= 1182;
+}
+
+static const UBYTE *rom_default(const char *name, ULONG *len)
+{
+    register const UBYTE *d0 __asm("d0");
+    register const char *d1 __asm("d1") = name;
+    register ULONG *d2 __asm("d2") = len;
+    register struct DosLibrary *a6 __asm("a6") = DOSBase;
+    *len = 0;
+    if (!rom_defaults_here()) return NULL;
+    __asm volatile("jsr -1176(%%a6)" : "=r"(d0), "+r"(d1), "+r"(d2) : "r"(a6) : "a0", "a1", "cc", "memory");
+    return d0;
+}
+
+static ULONG rom_default_state(const char *name, ULONG *romvr, ULONG *diskvr)
+{
+    register ULONG d0 __asm("d0");
+    register const char *d1 __asm("d1") = name;
+    register ULONG *d2 __asm("d2") = romvr;
+    register ULONG *d3 __asm("d3") = diskvr;
+    register struct DosLibrary *a6 __asm("a6") = DOSBase;
+    *romvr = *diskvr = 0;
+    if (!rom_defaults_here()) return OSS_NONE;
+    __asm volatile("jsr -1182(%%a6)" : "=r"(d0), "+r"(d1), "+r"(d2) : "r"(d3), "r"(a6) : "a0", "a1", "cc", "memory");
+    return d0;
+}
+
+static void put_out(void *ctx, const char *s, unsigned long len)
+{
+    (void)ctx;
+    Write(Output(), (APTR)s, (LONG)len);
+}
+
+static int startupseq(const char *how)
+{
+    ULONG romvr, diskvr, len = 0, st = rom_default_state(STARTUPSEQ, &romvr, &diskvr);
+    const UBYTE *rom = rom_default(STARTUPSEQ, &len);
+    char rv[16], dv[16], *kept;
+    if (!how || same_word(how, "CHECK")) {
+        unsigned long k = 0;
+        if ((kept = read_file(STARTUPSEQ_KEPT, NULL))) { k = oss_kept(kept); FreeVec(kept); }
+        say("GFOpenUp: ", oss_says(st), NULL);
+        if (st != OSS_NONE) say("GFOpenUp: the ROM's default is ", oss_vr(rv, romvr), ".");
+        if (diskvr) say("GFOpenUp: S:Startup-Sequence is ", oss_vr(dv, diskvr), ".");
+        if ((st == OSS_OLDER || st == OSS_DIFFERS) && k == romvr) say("GFOpenUp: you chose to keep yours against this version.", NULL, NULL);
+        return oss_offer(st, romvr, k) ? RETURN_WARN : RETURN_OK;
+    }
+    if (st == OSS_NONE || !rom) {
+        say("GFOpenUp: this ROM has no default Startup-Sequence.", NULL, NULL);
+        return RETURN_WARN;
+    }
+    if (same_word(how, "COMPARE")) {
+        LONG dl = 0;
+        char *disk = read_file(STARTUPSEQ, &dl);
+        unsigned long n;
+        if (!disk) { say("GFOpenUp: can't read S:Startup-Sequence.", NULL, NULL); return RETURN_ERROR; }
+        say("; - the ROM's default's lines, + yours, where they differ (", oss_vr(rv, romvr), ")");
+        n = oss_compare((const char *)rom, len, disk, (unsigned long)dl, put_out, NULL);
+        if (!n) say("; none differ", NULL, NULL);
+        FreeVec(disk);
+        return RETURN_OK;
+    }
+    if (same_word(how, "KEEP")) {
+        char line[16];
+        int ok;
+        UnLock(CreateDir((STRPTR)"ENVARC:GFOpenAmiga"));
+        oss_vr(line, romvr);
+        strcat(line, "\n");
+        ok = write_file(STARTUPSEQ_KEPT, line, (LONG)strlen(line));
+        UnLock(CreateDir((STRPTR)"ENV:GFOpenAmiga"));
+        write_file("ENV:GFOpenAmiga/StartupSequence.kept", line, (LONG)strlen(line));
+        say("GFOpenUp: your S:Startup-Sequence stays; not asked again until the ROM's default changes.", NULL, NULL);
+        return ok ? RETURN_OK : RETURN_ERROR;
+    }
+    if (same_word(how, "ROM")) {
+        int r;
+        manifest_load();
+        if ((r = retire_file(STARTUPSEQ)) < 0) return RETURN_ERROR;
+        if (!write_file(STARTUPSEQ, (const char *)rom, (LONG)len)) {
+            say("GFOpenUp: can't write S:Startup-Sequence. Is SYS: write-protected?", NULL, NULL);
+            manifest_save();
+            return RETURN_ERROR;
+        }
+        if (!manifest_save()) return RETURN_ERROR;
+        say("GFOpenUp: S:Startup-Sequence is now the ROM's default ", oss_vr(rv, romvr),
+            r ? "; yours is in SYS:Storage/GFOpenUp-Superseded." : ".");
+        return RETURN_OK;
+    }
+    say("Usage: GFOpenUpTool STARTUPSEQ [CHECK | COMPARE | KEEP | ROM]", NULL, NULL);
+    return RETURN_FAIL;
+}
+
 static int real_main(void);
 
 /* GFOpenUpTool needs a big stack: FIXTOOLS reads and writes icons through icon.library, which takes far more
@@ -4691,7 +4803,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>]\n");
+        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -4747,6 +4859,7 @@ static int real_main(void)
         rc = (!is_amicradle() && !rtg && exists("LIBS:Picasso96API.library")) ? RETURN_WARN : RETURN_OK;
     }
     else if (same_word(cmd, "UPDATE")) rc = update((const char *)args[1]);
+    else if (same_word(cmd, "STARTUPSEQ")) rc = startupseq((const char *)args[1]);
     else if (same_word(cmd, "KICKSET")) rc = kickset((const char *)args[1], (const char *)args[2]);
     else if (same_word(cmd, "RETIRE") && args[1]) {
         manifest_load();
@@ -4755,7 +4868,7 @@ static int real_main(void)
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
     else if (same_word(cmd, "OLDNAMES")) rc = args[1] && same_word((const char *)args[1], "DOCK") ? old_dock() : old_settings_copy();
-    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
