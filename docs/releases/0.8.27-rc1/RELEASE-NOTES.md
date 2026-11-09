@@ -23,7 +23,7 @@ The emulator side is gfosmotherboards #60 (and the amicradle pin, #951). Mitchy 
 | AkikoPlus | new, 2.0: `LIBS:akikoplus.library`, `C:AkikoTest`, `C:APTest`, and `SYS:Developer/AkikoPlus/` (autodoc, SFD, FD, headers, and `boardonly/akikoplus.library`, the build without the 68k fallback) |
 | GFOpenUp | 0.8.26 to 0.8.27-rc1: `Install-GFOpenUp` (the version, and AkikoPlus installed with GFOpenService), both copies of `Uninstall-GFOpenUp` (the version), the readme (the version, and the GFOpenService entry names mitchy.library and AkikoPlus), and the part |
 
-`tools/build_pack.py` now puts mitchy.library in GFOpenService 1.3. Two things aren't in it yet: the AkikoPlus part, and the Install-GFOpenUp lines that install AkikoPlus in `pack/`. They follow once gfosautoconfigboards #4 is merged.
+`tools/build_pack.py` now puts mitchy.library in GFOpenService 1.3, and makes the AkikoPlus part from a built AkikoPlus drawer (`--akikoplus`; left out without it). `pack/Install-GFOpenUp` installs AkikoPlus with GFOpenService, and `gfopenup.readme`'s GFOpenService entry names mitchy.library and AkikoPlus, as in this candidate.
 
 ## How it was built
 
