@@ -77,6 +77,8 @@ It ran on lab copies only, with each module in `LIBS:GFOpenGPU/`:
 
 Canvas Skies, which has its own workaround, with the new module on Lab-51: F9 into full screen and back, twice, then Esc from full screen, gave a clean Workbench every time.
 
+Installed from the archive: on a fresh lab copy of an AmigaOS 3.2.3 machine that had only the older module in `LIBS:OpenGPU/` and no `LIBS:GFOpenGPU/`, `GFOpenUpTool INSTALL DH1:GFOpenUp/Parts/GFOpenGPU` reported "GFOpenGPU 0.29 installed (20 files changed)". Both `LIBS:GFOpenGPU/SDL2.module` and `LIBS:OpenGPU/SDL2.module` were then 1,003,932 bytes, `4e98af54...`, and `fsrestore.m` passed all 7.
+
 The archive:
 - It tests clean with `lha t` and `lhasa t`.
 - It extracts to the same 2,566 files as 0.8.25's, in the same places. Only the six files above differ.
