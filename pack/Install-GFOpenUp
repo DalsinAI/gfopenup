@@ -682,7 +682,12 @@
     (
         (working "Installing GFOpenService")
         (if (> (run (cat #tool " INSTALL Parts/GFOpenService >>T:GFOpenUp.log")) 5)
-            (message "GFOpenService didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+            (message "GFOpenService didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+        ; AkikoPlus 2.0 (0.8.27): akikoplus.library, the media board's helpers, on the board through
+        ; GFOpenService's mitchy.library when it is fitted, on the 68k when not, so it goes in with GFOpenService.
+        (working "Installing AkikoPlus")
+        (if (> (run (cat #tool " INSTALL Parts/AkikoPlus >>T:GFOpenUp.log")) 5)
+            (message "AkikoPlus didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
 
 (if (bitand #parts 8388608)
     (
