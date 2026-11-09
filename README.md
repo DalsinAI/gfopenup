@@ -12,7 +12,7 @@ no Kickstart ROM, no AmigaOS files and no Workbench disks: you supply those.
 
 ![Tools > GFOpenUp](docs/tools-menu-openup.png)
 
-**Latest release: 0.8.26** (9 November 2026). Packs are on the
+**Latest release: 0.8.27** (9 November 2026). Packs are on the
 [releases page](https://github.com/DalsinAI/gfopenup/releases), and each
 release's notes are in `docs/releases/<version>/`.
 
