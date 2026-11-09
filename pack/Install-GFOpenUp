@@ -623,6 +623,16 @@
 (if (> (run (cat #tool " INSTALL Parts/HostClock >>T:GFOpenUp.log")) 5)
     (message "HostClock didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
 
+; KickstartSet (9 Nov 2026): on the slim ROM (amicradle-guest's thin profile), its module set (SYS:Kickstart/default/)
+; and the files the full ROM held on demand, always: without them the slim ROM boots to its rescue Shell. On any other
+; ROM it isn't installed (the slim ROM isn't the default yet); GFOpenUpTool KICKSET Parts/KickstartSet installs it
+; before a machine moves to the slim ROM, and Cradle won't start one on it without the set
+(if (and (= (getenv "GFOpenUp/SlimROM") "yes") (exists "Parts/KickstartSet/Part"))
+    (
+        (working "Installing the slim ROM's module set")
+        (if (> (run (cat #tool " KICKSET Parts/KickstartSet >>T:GFOpenUp.log")) 5)
+            (message "The slim ROM's module set didn't install completely. T:GFOpenUp.log says why."))))
+
 ; Tata: early, so its line comes near the top of GFOpenUp's block in S:User-Startup
 (if (bitand #parts 1073741824)
     (

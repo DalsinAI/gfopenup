@@ -65,6 +65,13 @@ a Part file that C/GFOpenUpTool reads:
                         AmiCradle's AkikoPlus media board (through mitchy.library) or on the 68k;
                         C:AkikoTest, C:APTest and SYS:Developer/AkikoPlus. Installed with GFOpenService
                         (gfosautoconfigboards cards/akikoplus/guest; left out without --akikoplus)
+  KickstartSet/           the slim ROM's disk part (amicradle-guest's thin profile, docs/design/thin-loader.md):
+                        the module set the ROM leaves out, as SYS:Kickstart/default/ with its Manifest, and
+                        the files the full ROM held on demand (asl, locale, version, datatypes and its
+                        classes, realtime, the maths libraries, the L: handlers, CDFileSystem, ACRTG.gpu...),
+                        all from the same build as the ROM (its OUT/thin-support/, --thinsupport). Installed
+                        by GFOpenUpTool KICKSET on a machine on the slim ROM, and before one moves to it;
+                        left out without --thinsupport
   GFOpenImage/            datatypes: PNG, Targa (TGA), WebP, WebM and music modules (MOD,
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through GFOpenService (gfopendatatypes)
@@ -1106,7 +1113,7 @@ PART_MAIN = {
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
 # binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
-PART_OWN_VERSION = {"GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "GFOpenService", "Backdrops", "GFOpenIcons", "GFOpenDemos", "GFOpenGPUDev",
+PART_OWN_VERSION = {"KickstartSet", "GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "GFOpenService", "Backdrops", "GFOpenIcons", "GFOpenDemos", "GFOpenGPUDev",
                     "GFOpenPrint", "GFOpenMUI", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon",
                     # pages of GFOpenPrefs with no files of their own since the no-ROM-volume design: GFOpenPrefs's version
                     "GFOpenTypes", "GFOpenDateTime"}
@@ -1751,6 +1758,75 @@ def akikoplus_part(top: Path, src: Path | None) -> Part | None:
     return ak
 
 
+# The slim ROM's disk part (9 November 2026; amicradle-guest docs/design/thin-loader.md). The thin ROM keeps what a
+# machine needs to reach its disk and loads the rest from SYS:Kickstart/default/ (kickload, once per power-on); the
+# files the full ROM held on demand are files on the disk. trial-1m/build.sh --profile thin lays both out as
+# OUT/thin-support/ from the same build as the ROM (tools/openkickrom/thinsupport.py), with MANIFEST.txt (path, bytes,
+# SHA-256, version, build output) and Kickstart/default/Manifest (kickload's). --thinsupport is that folder.
+KICKSET_MAN_HEAD = "# GFOpenKickLoad manifest 1"
+
+
+def kickstartset_part(top: Path, support: Path | None) -> Part | None:
+    """Parts/KickstartSet from a thin build's thin-support/. The set's modules are copied over whatever is there (a
+    set is one unit: kickload refuses a set whose files aren't its Manifest's), the Manifest last, so a copy cut
+    short is never taken for the set; GFOpenUpTool KICKSET moves an older set's module the new Manifest doesn't
+    list aside. The files on demand are "add": where the disk has none or GFOpenUp put it, so a disk's own stays.
+    Its version is the ROM's (SOURCES.txt beside thin-support/: "GFOpenKick 47.100 full41-thin")."""
+    import hashlib
+    if not support:
+        print("  KickstartSet: left out, no --thinsupport")
+        return None
+    support = Path(support)
+    kick = support / "Kickstart/default"
+    man = kick / "Manifest"
+    listing = support / "MANIFEST.txt"
+    if not man.is_file() or not listing.is_file():
+        raise SystemExit(f"KickstartSet: {support} is no thin-support/ (no Kickstart/default/Manifest or MANIFEST.txt)")
+    lines = man.read_text(encoding="latin-1").splitlines()
+    if not lines or not lines[0].startswith(KICKSET_MAN_HEAD):
+        raise SystemExit(f"KickstartSet: {man} isn't a GFOpenKickLoad Manifest")
+    modules = []
+    for line in lines[1:]:
+        w = line.split()
+        if not w or w[0].startswith("#"):
+            continue
+        f = kick / w[0]
+        data = f.read_bytes() if f.is_file() else b""
+        if len(w) != 5 or len(data) != int(w[3]) or hashlib.sha256(data).hexdigest() != w[4].lower():
+            raise SystemExit(f"KickstartSet: {f} isn't the module its Manifest lists")
+        modules.append((w[0], data))
+    rom_id, version = "", "47.100"
+    sources = support.parent / "SOURCES.txt"
+    if sources.is_file():
+        for line in sources.read_text(encoding="latin-1", errors="replace").splitlines()[:30]:
+            if "GFOpenKick " in line:
+                words = line[line.index("GFOpenKick "):].split()
+                if len(words) >= 3 and words[1][:1].isdigit():
+                    version, rom_id = words[1], words[2].strip('"')
+                    break
+    ks = Part(top, "KickstartSet", version,
+              f"KickstartSet: the slim ROM's module set and its files on the disk{' (' + rom_id + ')' if rom_id else ''}: "
+              f"{len(modules)} modules in SYS:Kickstart/default/")
+    for name, data in modules:
+        ks.add(f"Kickstart/default/{name}", data, f"SYS:Kickstart/default/{name}")
+    files = 0
+    for line in listing.read_text(encoding="latin-1").splitlines():
+        if line.startswith("#") or not line.strip():
+            continue
+        rel = line.split("\t")[0]
+        if rel.startswith("Kickstart/"):
+            continue
+        f = support / rel
+        if not f.is_file():
+            raise SystemExit(f"KickstartSet: {f} (in MANIFEST.txt) isn't there")
+        ks.add(rel, f.read_bytes(), "SYS:" + rel, own=True)
+        files += 1
+    ks.add("Kickstart/default/Manifest", man.read_bytes(), "SYS:Kickstart/default/Manifest")
+    ks.write()
+    print(f"  KickstartSet {version}: {len(modules)} modules and {files} files on demand{' (' + rom_id + ')' if rom_id else ''}")
+    return ks
+
+
 def check_part_versions(parts: Path) -> None:
     """Stops the build when a part's declared version is not its main
     binary's $VER, or when a part says neither which binary that is nor
@@ -1848,6 +1924,9 @@ def main() -> int:
                     help=f"OpenAmigaPython's release archive {OPENAMIGAPYTHON['asset']} (from "
                          f"{OPENAMIGAPYTHON['release']}; build/ is looked in first), for the "
                          "OpenAmigaPython part, taken only with its pinned sha256 (left out without it)")
+    ap.add_argument("--thinsupport", type=Path, default=None,
+                    help="a thin ROM build's OUT/thin-support/ (amicradle-guest trial-1m/build.sh --profile thin), for the "
+                         "KickstartSet part (left out without it)")
     ap.add_argument("--akikoplus", type=Path, default=None,
                     help="a built AkikoPlus drawer (Libs/akikoplus.library, C/AkikoTest, C/APTest, Developer/AkikoPlus/): "
                          "gfosautoconfigboards cards/akikoplus/guest's build; the part is left out without it")
@@ -2079,6 +2158,7 @@ def main() -> int:
     # AkikoPlus 2.0 (0.8.27): akikoplus.library (gfosautoconfigboards #4), on AmiCradle's media board through
     # mitchy.library when it is fitted, on the 68k when not; Install-GFOpenUp installs it with GFOpenService.
     akikoplus_part(top, a.akikoplus)
+    kickstartset_part(top, a.thinsupport)
 
     # GFOpenImage: datatypes (gfopendatatypes). PNG, Targa (opentga.datatype), WebP, WebM and music modules
     # (openmodule.datatype: MOD, MED, Oktalyzer, DigiBooster, XM, S3M, IT,

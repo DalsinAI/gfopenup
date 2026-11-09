@@ -52,6 +52,8 @@
  *   GFOpenUpTool UNPLACE <program>      drops the program's windows from GFOpenWindows' Places
  *                                     (ENV: and ENVARC:GFOpenPrefs/WindowPlaces), so they open
  *                                     at the program's own first size again
+ *   GFOpenUpTool KICKSET [CHECK] [<part drawer>]  the slim ROM's module set (the KickstartSet part): installs it,
+ *                                     or CHECK says whether SYS:Kickstart/default/ has it whole (9 Nov 2026, KICKSET below)
  *   GFOpenUpTool UPDATE [CHECK|YES]     a newer pack Cradle put in DH1:GFOpenUp: CHECK says
  *                                     (WARN when one waits); UPDATE shows what changes and
  *                                     asks; YES doesn't ask. It never runs on its own
@@ -133,7 +135,9 @@
 
 #include "openup_lines.h"
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.18 (9.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static int slim_rom(void);
+
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.19 (9.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -812,6 +816,8 @@ static int detect(void)
      * and where gfopenrtg.library is, so an upgrade (a Novice one never sees the questions) brings GFOpenRTG up to date
      * wherever GFOpenUp put it or the ROM has it, not only where LIBS:gfopenrtg.library is on the disk */
     set_env("GFOpenUp/ROM", okick ? "GFOpenKick" : "Kickstart");
+    /* 9 Nov 2026: the slim ROM, whose module set the KickstartSet part brings (KICKSET) */
+    set_env("GFOpenUp/SlimROM", slim_rom() ? "yes" : "no");
     manifest_load();
     set_env("GFOpenUp/GFOpenRTG", find_entry("part", "GFOpenRTG") ? "GFOpenUp"
                               : exists("SYS:Libs/gfopenrtg.library") ? "LIBS"
@@ -4475,6 +4481,176 @@ static int old_dock(void)
     return RETURN_OK;
 }
 
+/* ---- KICKSET: the slim ROM's module set (9 November 2026) ---------------------------------------------------
+ *
+ * The slim ROM (amicradle-guest's thin profile, docs/design/thin-loader.md) keeps only what a machine needs to
+ * reach its disk; the rest (workbench.library, icon.library, GFOpenRTG, audio, the maths libraries, ...) is a
+ * module set on SYS:Kickstart/default/, which the ROM's kickload loads at each power-on, and the files the full
+ * ROM held on demand (asl, locale, version, datatypes, realtime, the handlers, CDFileSystem...) are on the disk.
+ * The KickstartSet part brings both, built from the same tree as the ROM. Without them the slim ROM boots only
+ * to its rescue Shell, so the set goes on before a machine moves to that ROM:
+ *   GFOpenUpTool KICKSET <Parts/KickstartSet>   installs the part, then checks it (as CHECK)
+ *   GFOpenUpTool KICKSET CHECK [<part drawer>]  0 when SYS:Kickstart/default/Manifest is there and every module it
+ *                                               lists is there at its size (kickload checks the SHA-256 at each
+ *                                               boot), and, given the part's drawer, every other file it installs;
+ *                                               10 (and what to do) when not
+ * ENV:GFOpenUp/KickstartSet says "ready" or "missing"; DETECT's ENV:GFOpenUp/SlimROM says whether this ROM is the
+ * slim one (kickload in it and no workbench.library of its own), and the Installer then installs the part. Cradle
+ * refuses to start an instance or build a card on the slim ROM without the set (amicradle openkick_rom.py). */
+#define KICKSET_DIR "SYS:Kickstart/default/"
+
+static int in_rom_window(ULONG a)
+{
+    return (a >= 0x00F80000UL && a < 0x01000000UL) || (a >= 0x00E00000UL && a < 0x00E80000UL);
+}
+
+/* 1 on the slim ROM: kickload in the ROM, and workbench.library not a RomTag of the ROM (none, or the set's in RAM) */
+static int slim_rom(void)
+{
+    struct Resident *k, *wb;
+    Forbid();
+    k = FindResident((STRPTR)"kickload");
+    wb = FindResident((STRPTR)"workbench.library");
+    Permit();
+    return k && in_rom_window((ULONG)k) && (!wb || !in_rom_window((ULONG)wb));
+}
+
+/* The file's size, or -1 when it isn't a file there */
+static LONG file_size(const char *path)
+{
+    struct Process *me = (struct Process *)FindTask(NULL);
+    APTR win = me->pr_WindowPtr;
+    struct FileInfoBlock *fib;
+    BPTR l;
+    LONG size = -1;
+    me->pr_WindowPtr = (APTR)-1;
+    l = Lock((STRPTR)path, ACCESS_READ);
+    me->pr_WindowPtr = win;
+    if (!l) return -1;
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (Examine(l, fib) && fib->fib_DirEntryType < 0) size = fib->fib_Size;
+        FreeDosObject(DOS_FIB, fib);
+    }
+    UnLock(l);
+    return size;
+}
+
+static int kickset_check(const char *drawer)
+{
+    char *text, *p, *line, path[260], *w[8];
+    int n, modules = 0, bad = 0;
+    if (!(text = read_file(KICKSET_DIR "Manifest", NULL))) {
+        say("GFOpenUp: there is no module set for the slim ROM (" KICKSET_DIR "Manifest is missing).",
+            " Install it with GFOpenUpTool KICKSET Parts/KickstartSet from GFOpenUp's drawer before",
+            " this machine moves to the slim ROM.");
+        set_env("GFOpenUp/KickstartSet", "missing");
+        return RETURN_ERROR;
+    }
+    for (p = text; *p && !bad; ) {
+        line = p;
+        while (*p && *p != '\n') p++;
+        if (*p) *p++ = 0;
+        n = oul_words(line, w, 8);
+        if (!n) continue;
+        if (n != 5) { say("GFOpenUp: " KICKSET_DIR "Manifest has a line that isn't a Manifest line: ", line, NULL); bad = 1; break; }
+        strcpy(path, KICKSET_DIR);
+        strncat(path, w[0], 64);
+        if (file_size(path) != atol(w[3])) {
+            say("GFOpenUp: the module set for the slim ROM is incomplete: ", path,
+                file_size(path) < 0 ? " is missing" : " is not the size its Manifest lists");
+            bad = 1;
+        }
+        modules++;
+    }
+    FreeVec(text);
+    if (!bad && !modules) { say("GFOpenUp: " KICKSET_DIR "Manifest lists no module.", NULL, NULL); bad = 1; }
+    if (!bad && drawer) {
+        /* the part's other files: what the full ROM held on demand, on the disk now */
+        strncpy(path, drawer, 200);
+        path[200] = 0;
+        AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
+        if ((text = read_file(path, NULL))) {
+            for (p = text; *p && !bad; ) {
+                const char *rest;
+                line = p;
+                while (*p && *p != '\n') p++;
+                if (*p) *p++ = 0;
+                if (!(rest = oul_strip(line, machine_bits(), 0))) continue;
+                strncpy(path, rest, sizeof path - 1);
+                path[sizeof path - 1] = 0;
+                n = oul_words(path, w, 8);
+                if (n >= 3 && (!strcmp(w[0], "copy") || !strcmp(w[0], "add") || !strcmp(w[0], "default")) && !exists(w[2])) {
+                    say("GFOpenUp: the slim ROM's files on the disk are incomplete: ", w[2], " is missing");
+                    bad = 1;
+                }
+            }
+            FreeVec(text);
+        }
+    }
+    set_env("GFOpenUp/KickstartSet", bad ? "missing" : "ready");
+    if (bad) {
+        say("GFOpenUp: install GFOpenUp's KickstartSet part again (GFOpenUpTool KICKSET Parts/KickstartSet)",
+            " before this machine moves to the slim ROM.", NULL);
+        return RETURN_ERROR;
+    }
+    Printf((STRPTR)"GFOpenUp: the module set for the slim ROM is ready: %ld modules in " KICKSET_DIR "%s.\n", (LONG)modules,
+           (LONG)(slim_rom() ? " (this machine runs the slim ROM)" : ""));
+    return RETURN_OK;
+}
+
+/* A module of an older set that the new Manifest doesn't list: kickload would refuse the whole set for it (a set
+ * is one unit), so it moves to SYS:Kickstart/.retired/ (kickload passes over names that start with a dot) */
+static void kickset_prune(void)
+{
+    char *text, name[108], from[160], to[160];
+    struct FileInfoBlock *fib;
+    BPTR l;
+    if (!(text = read_file(KICKSET_DIR "Manifest", NULL))) return;
+    if (!(l = Lock((STRPTR)KICKSET_DIR, ACCESS_READ))) { FreeVec(text); return; }
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (Examine(l, fib)) {
+            while (ExNext(l, fib)) {
+                const char *p, *fn = (const char *)fib->fib_FileName;
+                int listed = 0, k = strlen(fn);
+                if (fib->fib_DirEntryType >= 0 || fn[0] == '.' || !strcmp(fn, "Manifest") ||
+                    (k > 5 && same_word(fn + k - 5, ".info")))
+                    continue;
+                for (p = text; *p; ) {              /* the line starts with the name and a blank */
+                    int i;
+                    for (i = 0; i < k && p[i] && (p[i] | 0x20) == (fn[i] | 0x20); i++) ;
+                    if (i == k && (p[k] == ' ' || p[k] == '\t')) { listed = 1; break; }
+                    while (*p && *p != '\n') p++;
+                    if (*p) p++;
+                }
+                if (listed) continue;
+                strncpy(name, fn, sizeof name - 1);
+                name[sizeof name - 1] = 0;
+                strcpy(from, KICKSET_DIR);
+                strncat(from, name, 100);
+                UnLock(CreateDir((STRPTR)"SYS:Kickstart/.retired"));
+                strcpy(to, "SYS:Kickstart/.retired/");
+                strncat(to, name, 100);
+                DeleteFile((STRPTR)to);
+                if (Rename((STRPTR)from, (STRPTR)to))
+                    say("GFOpenUp: ", from, ": an older set's module the new set doesn't have, moved to SYS:Kickstart/.retired");
+            }
+        }
+        FreeDosObject(DOS_FIB, fib);
+    }
+    UnLock(l);
+    FreeVec(text);
+}
+
+static int kickset(const char *a1, const char *a2)
+{
+    int rc;
+    if (a1 && same_word(a1, "CHECK")) return kickset_check(a2);
+    if (!a1) { say("GFOpenUpTool KICKSET <Parts/KickstartSet> | KICKSET CHECK [<part drawer>]", NULL, NULL); return RETURN_FAIL; }
+    if ((rc = install(a1)) > RETURN_WARN) return rc;
+    kickset_prune();
+    return kickset_check(a1);
+}
+
 static int real_main(void);
 
 /* GFOpenUpTool needs a big stack: FIXTOOLS reads and writes icons through icon.library, which takes far more
@@ -4515,7 +4691,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n");
+        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -4571,6 +4747,7 @@ static int real_main(void)
         rc = (!is_amicradle() && !rtg && exists("LIBS:Picasso96API.library")) ? RETURN_WARN : RETURN_OK;
     }
     else if (same_word(cmd, "UPDATE")) rc = update((const char *)args[1]);
+    else if (same_word(cmd, "KICKSET")) rc = kickset((const char *)args[1], (const char *)args[2]);
     else if (same_word(cmd, "RETIRE") && args[1]) {
         manifest_load();
         rc = retire_file((const char *)args[1]) < 0 ? RETURN_ERROR : RETURN_OK;
@@ -4578,7 +4755,7 @@ static int real_main(void)
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
     else if (same_word(cmd, "OLDNAMES")) rc = args[1] && same_word((const char *)args[1], "DOCK") ? old_dock() : old_settings_copy();
-    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;
