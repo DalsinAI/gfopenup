@@ -383,6 +383,51 @@ def amisans_checks() -> None:
               and 'add "Fonts/_otf/texgyreheros-regular.otf" "FONTS:_otf/texgyreheros-regular.otf"' in p.lines)
 
 
+def kickstartset_checks(tmp: Path) -> None:
+    """The slim ROM's disk part (9 November 2026): Parts/KickstartSet from a thin build's thin-support/: the set's
+    modules copied, its Manifest last, the files on demand added (a disk's own stays), the ROM's version; a module
+    that isn't its Manifest's stops the build."""
+    import hashlib
+    support = tmp / "out" / "thin-support"
+    (support / "Kickstart/default").mkdir(parents=True)
+    (support / "Libs").mkdir()
+    (support / "L").mkdir()
+    mods = {"icon.module": b"\0\0\x03\xf3icon", "workbench.module": b"\0\0\x03\xf3wb"}
+    man = ["# GFOpenKickLoad manifest 1"]
+    for name, data in mods.items():
+        (support / "Kickstart/default" / name).write_bytes(data)
+        man.append(f"{name} x.library 47.1 {len(data)} {hashlib.sha256(data).hexdigest()}")
+    (support / "Kickstart/default/Manifest").write_text("\n".join(man) + "\n")
+    (support / "Libs/asl.library").write_bytes(b"asl")
+    (support / "L/CDFileSystem").write_bytes(b"cdfs")
+    (support / "MANIFEST.txt").write_text("# the thin ROM's disk part\n"
+                                          "Kickstart/default/icon.module\t8\tx\t47.5\tm/icon.module\n"
+                                          "Libs/asl.library\t3\tx\t47.100\tb/asl/libs/asl.library\n"
+                                          "L/CDFileSystem\t4\tx\t1.1\tb/cdfs/l/CDFileSystem\n")
+    (tmp / "out" / "SOURCES.txt").write_text("# GFOpenKick trial ROM\n# id \"GFOpenKick 47.100 full41-thin\" (the ROM's version string)\n")
+    top = tmp / "KS"
+    check("no --thinsupport: no KickstartSet part", bp.kickstartset_part(top, None) is None)
+    ks = bp.kickstartset_part(top, support)
+    lines = (ks.dir / "Part").read_text(encoding="latin-1").splitlines()
+    check("KickstartSet at the ROM's version", lines[0] == "part KickstartSet 47.100" and "full41-thin" in lines[1], lines[0] + lines[1])
+    check("the set's modules copied whole into SYS:Kickstart/default/",
+          'copy "Kickstart/default/icon.module" "SYS:Kickstart/default/icon.module"' in lines
+          and 'copy "Kickstart/default/workbench.module" "SYS:Kickstart/default/workbench.module"' in lines)
+    check("its Manifest last", lines[-1] == 'copy "Kickstart/default/Manifest" "SYS:Kickstart/default/Manifest"', lines[-1])
+    check("the files on demand added where the disk has none (or GFOpenUp's)",
+          'add "Libs/asl.library" "SYS:Libs/asl.library"' in lines and 'add "L/CDFileSystem" "SYS:L/CDFileSystem"' in lines)
+    check("no needs line: the set goes on any machine that asks (KICKSET)", not any(l.startswith("needs") for l in lines))
+    (support / "Kickstart/default/icon.module").write_bytes(b"changed")
+    try:
+        bp.kickstartset_part(top, support)
+        check("a module that isn't its Manifest's stops the build", False)
+    except SystemExit as exc:
+        check("a module that isn't its Manifest's stops the build", "icon.module" in str(exc), str(exc))
+    check("the Installer installs it with KICKSET on the slim ROM only",
+          'KICKSET Parts/KickstartSet' in (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+          and '(= (getenv "GFOpenUp/SlimROM") "yes")' in (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1"))
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -735,6 +780,8 @@ def main() -> int:
 
     amisans_checks()
     openprinter_checks()
+    with tempfile.TemporaryDirectory() as ktmp:
+        kickstartset_checks(Path(ktmp))
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
     return 1 if fails else 0

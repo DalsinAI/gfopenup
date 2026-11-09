@@ -183,6 +183,21 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   68040 or 68060, and FPU40; an FPU there means the full chip, MMU too), and
   the Installer leaves it out with a message, as it does Warp3D. Its modules
   are -m68040 -m68881 and used to install on any CPU.
+- The slim ROM's disk part (9 November 2026): the KickstartSet part, from a thin
+  ROM build's `thin-support/` (amicradle-guest `trial-1m/build.sh --profile
+  thin`, `--thinsupport`). It puts the module set the slim ROM leaves out in
+  `SYS:Kickstart/default/` with its Manifest (kickload loads it at each
+  power-on and checks every module's SHA-256), and the files the full ROM held
+  on demand (asl, locale, version, datatypes and its classes, realtime, the
+  maths libraries, the L: handlers, CDFileSystem, ACRTG.gpu...) in their
+  drawers, where the disk has none. `GFOpenUpTool KICKSET Parts/KickstartSet`
+  installs it, moves an older set's module the new Manifest doesn't list to
+  `SYS:Kickstart/.retired`, and checks the set; `KICKSET CHECK` only checks
+  (0 ready, 10 not). DETECT's `ENV:GFOpenUp/SlimROM` says whether this ROM is
+  the slim one, and the Installer then installs the part; on any other ROM it
+  doesn't, because the slim ROM isn't the default yet. Cradle won't start a
+  machine on the slim ROM without the set (amicradle `openkick_rom.py
+  checkset`).
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
