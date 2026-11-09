@@ -8,12 +8,35 @@
 
 (welcome "This takes GFOpenUp out and puts back everything it replaced.")
 
+; 9 Nov 2026: Dale's PiStorm card (GFOS, GFOpenKick full38) lost 2,080 of its system drive's 2,170 files at 02:07,
+; with Install-GFOpenUp and Uninstall-GFOpenUp side by side in Work:GFOpenUp and the install being run again. This
+; script's icon starts the Installer as a Novice (MINUSER=NOVICE), and a Novice is never asked an askbool: its
+; default is the answer. The question below was "(default 1)", so a double-click on this icon and Proceed on the
+; welcome took GFOpenUp out with no question at all; on a GFOS disk, where the desktop (GFOpenBench), the editors
+; and nearly every program are GFOpenUp's, that is nearly every file. Now nothing is taken out without the question,
+; shown at every level ((all)): Abort leaves everything as it is. To put GFOpenUp's files back instead, run
+; Install-GFOpenUp and choose Reinstall.
+(if (not (exists "ENVARC:GFOpenAmiga/GFOpenUp.manifest"))
+    (abort "GFOpenUp isn't installed here: there is no list of what it put in "
+           "(ENVARC:GFOpenAmiga/GFOpenUp.manifest), so there is nothing this can take out. Nothing was changed."))
+(run (cat #tool " DETECT >NIL:"))
+(message
+    (cat "Take GFOpenUp out of this Amiga?\n\n"
+         "Every file it put in goes, and every file it replaced comes back.\n\n"
+         (if (= (getenv "GFOpenUp/ROM") "GFOpenKick")
+             "On the GFOpenKick ROM that is most of the system disk: the desktop, the editors and the programs.\n\n"
+             "")
+         "To repair it instead, keeping your settings: Abort, then run Install-GFOpenUp.\n\n"
+         "Proceed takes GFOpenUp out. Abort changes nothing.")
+    (all))
+
 (if (askbool
-        (prompt "Take GFOpenUp out of this Amiga?")
+        (prompt "Take GFOpenUp out of this Amiga now?")
         (help "GFOpenUp keeps a list of every file it added or replaced "
               "(ENVARC:GFOpenAmiga/GFOpenUp.manifest). Uninstalling works from that list, "
               "so files GFOpenUp didn't install are left alone.")
-        (default 1))
+        ; a Novice isn't asked: the message above, at every level, was the question
+        (default (if (= @user-level 0) 1 0)))
     (
         ; every icon GFOpenTypes changed (GFOpenUp 0.7.1 moved the kinds of file to
         ; GFOpenView) goes back first, while GFOpenTypes is still there to do it.
