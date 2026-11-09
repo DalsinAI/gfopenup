@@ -2095,7 +2095,11 @@ def main() -> int:
     # in GFOpenLibs, off by default, once its ABI test is clean (below). A checkout without the pack builder yet
     # gives Datatypes/out as before.
     # 0.5 (0.8.19): GIF and IFF ANIM saving, alpha, z.library's Aminet LVOs, WebP save (gfopendatatypes #28-#32)
-    img = Part(top, "GFOpenImage", "0.5", "GFOpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
+    # 0.6: LIBS:gfopensound-decoders.library, gfopensound.datatype 47.3's Ogg Vorbis, FLAC and MP3 decoders on the
+    # 68k (Dale, 9 November 2026): the ROM's gfopensound.datatype carries none and sends those formats to
+    # media.decode/1 through mitchy.library (the services card); without the card it opens this library, which
+    # the pack installs with gfopensound's choice (its CLASS_LIBS), so a disk install always has it.
+    img = Part(top, "GFOpenImage", "0.6", "GFOpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
     packer = a.opendatatypes / "tools/build_pack.py"
     if packer.is_file():
         pk = ROOT / "build/gfopendatatypes"
@@ -2121,6 +2125,8 @@ def main() -> int:
         for d in sorted((dt / "Devs/DataTypes").iterdir()):
             if d.is_file() and not d.name.endswith(".info"):
                 img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", own=True)
+        for lib in sorted((dt / "Libs").glob("*.library")) if (dt / "Libs").is_dir() else []:
+            img.add(f"Libs/{lib.name}", lib.read_bytes(), f"LIBS:{lib.name}")   # gfopensound-decoders.library
     img.write()
 
     # GFOpenWindows: the commodity, started at boot, and its editor (gfopenprefs)
