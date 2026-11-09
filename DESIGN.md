@@ -161,6 +161,14 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   descriptors moved aside) with that SDL2.module put in: rc1 was built on
   0.8.25 and still had 8d6e9570. The SDL2-only pack on 0.8.25 (e693f86c)
   was never published. gfopenrtg #218 (Right Amiga keys) isn't in it.
+- GFOpenUp 0.8.27: OpenAL.module (gfopenrtg library/modules/openal,
+  OpenAL 1.1 and ALC 1.1 on AHI, or ACAHI's voices; no EFX, no capture) in
+  the GFOpenGPU part, at LIBS:GFOpenGPU/OpenAL.module and copied to
+  LIBS:OpenGPU/ like the other modules, and AL/, libopenal.a,
+  libopenal_static.a, openal.pc and find_package(OpenAL) in the GFOpenGPU
+  developer kit (gfopenrtg #233). It is its own file: gfopengpu.library is
+  unchanged, and only programs that use OpenAL load it. Ports that carried
+  their own mixer can link -lopenal instead.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for
