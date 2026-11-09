@@ -177,7 +177,7 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   developer kit (gfopenrtg #233). It is its own file: gfopengpu.library is
   unchanged, and only programs that use OpenAL load it. Ports that carried
   their own mixer can link -lopenal instead.
-- GFOpenUp 0.8.28: LIBS:physfs.library 1.1 (gfopenphysfs, PhysicsFS 3.2.0
+- After GFOpenUp 0.8.28-rc1: LIBS:physfs.library 1.1 (gfopenphysfs, PhysicsFS 3.2.0
   as one shared library with one copy of its state per program) in the
   GFOpenGPU part, with LIBS:z.library, which it inflates zip members
   through, and physfs.h, libphysfs_auto.a, libphysfs.a and
