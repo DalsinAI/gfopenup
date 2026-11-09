@@ -133,7 +133,7 @@
 
 #include "openup_lines.h"
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.17 (9.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.18 (9.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1310,6 +1310,12 @@ static int install(const char *drawer)
                 }
                 if (!strcmp(w[1], "Kickstart") && openkick_rom()) {
                     say("GFOpenUp: ", partname, " is loaded by OS 3.2's LoadModule, which is for Kickstart ROMs; the GFOpenKick ROM has its own, so it is left out here.");
+                    refused = 1;
+                }
+                /* 9 Nov 2026: the CPU floor, a 68040 or 68060 with its FPU and MMU (src/openup_lines.h, oul_full_040).
+                 * The GFOpenGPU part's modules are built -m68040 -m68881: on less they crash the first program. */
+                if (!strcmp(w[1], "68040") && !oul_full_040(((struct ExecBase *)SysBase)->AttnFlags)) {
+                    say("GFOpenUp: ", partname, " needs a 68040 or 68060 with its FPU and MMU; left out here.");
                     refused = 1;
                 }
                 if (!strcmp(w[1], "ACRTG") && !acrtg_board()) {

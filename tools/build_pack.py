@@ -2265,6 +2265,9 @@ def main() -> int:
     # WritePixelArray8's c2p through GFOpenGfx's core), ACRTG.gpu 1.6 (amicradle-guest #638, 256 results), GL.module
     # with the softpipe notice and ENV:GFOpenGPU/GLDriver (gfopenrtg #195), and C:GLQuery
     gp = Part(top, "GFOpenGPU", "0.29", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    # 0.8.27: the CPU floor (the user, 9 November 2026: a 68040 or 68060 with its FPU and MMU). SDL2.module, GL.module
+    # and OpenAL.module are -m68040 -m68881; GFOpenUpTool 0.8.18 leaves the part out on less (older ones ignore it)
+    gp.line("needs 68040")
     gp.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
     gp.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
     # 0.8.26: SDL2.module from gfopenrtg #217 (b407b01; full-screen exit hardened, back to the Workbench); the part
