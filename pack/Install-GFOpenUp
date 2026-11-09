@@ -49,6 +49,48 @@
          "Nothing of the OS is deleted: a file GFOpenUp replaces is kept in "
          "SYS:Storage/GFOpenUp-Superseded, and Uninstall-GFOpenUp puts it back."))
 
+; 9 Nov 2026, Reinstall (Dale: "the installer is a bit crap... it needs a reinstall option"): with GFOpenUp installed
+; already, put back every installed part's files from this pack (GFOpenUpTool REINSTALL), without uninstalling
+; first: a file that is missing or isn't GFOpenUp's bytes is written again, the settings in ENVARC: and ENV: stay,
+; and S:User-Startup's block is written again with the lines switched off kept off (STARTUP). The default where the
+; pack is the version installed (running it again to repair); "Install or upgrade" (the parts' questions, as
+; before) where it is another. A Novice isn't asked an askchoice, so is told what happens, at every level ((all)),
+; with Abort to change nothing. Not over an OpenUp from before the GF names: that goes through the whole install.
+(set #installed (getenv "GFOpenUp/Installed"))
+(if (and (<> #installed "") (not #oldup))
+    (
+        (set #how
+            (askchoice
+                (prompt (cat "GFOpenUp " #installed " is installed already. What should this do?"))
+                (help "Reinstall: every part GFOpenUp has installed goes in again from this pack. A file of "
+                      "GFOpenUp's that is missing or has changed is put back; nothing is taken out first. Your "
+                      "settings (ENVARC:) and the startup lines you switched off stay as they are.\n\n"
+                      "Install or upgrade: choose the parts, as on a new install; the parts installed are ticked.")
+                (choices (cat "Reinstall: put GFOpenUp's files back, keep my settings")
+                         (cat "Install or upgrade to " #version ": choose the parts"))
+                (default (if (= #installed #version) 0 1))))
+        (if (= #how 0)
+            (
+                (if (= @user-level 0)
+                    (message (cat "GFOpenUp " #installed " is installed already, so this reinstalls it: every part "
+                                  "it has installed goes in again from this pack (" #version "), and any of its files "
+                                  "that is missing or has changed is put back. Nothing is taken out first, and your "
+                                  "settings and startup lines stay as they are.\n\n"
+                                  "Proceed reinstalls. Abort changes nothing.")
+                             (all)))
+                (working "Reinstalling GFOpenUp: every installed part's files")
+                (set #rc (run (cat #tool " REINSTALL Parts >>T:GFOpenUp.log")))
+                (if (> (run (cat #tool " STARTUP >>T:GFOpenUp.log")) 5)
+                    (set #rc 10))
+                (if (exists "SYS:C/GFOpenUpMenu")
+                    (run "Run >NIL: SYS:C/GFOpenUpMenu"))
+                (exit
+                    (cat (if (> #rc 5)
+                             "GFOpenUp was reinstalled, but some files couldn't be put back: T:GFOpenUp.log says which.\n\n"
+                             (cat "GFOpenUp is reinstalled: every installed part's files are back, from " #version ".\n\n"))
+                         "Reboot the Amiga to start everything.")
+                    (quiet))))))
+
 ; Bits: 1 GFOpenSocket, 2 GFOpenPrint, 4 AmiCradle sharing, 8 GFOpenLook (up to 0.8.1; no longer offered), 16 backgrounds, 32 GFOpenTypes, 64 GFOpenCompress,
 ; 128 GFOpenService, 256 GFOpenImage, 512 GFOpenRTG, 1024 GFOpenWindows, 2048 GFOpenDock, 4096 GFOpenUp Setup, 8192 GFOpenMenus,
 ; 16384 GFOpenFiles, 32768 GFOpenPlay, 65536 GFOpenMUI, 131072 GFOpenTitle, 262144 Sound, 524288 GFOpenEdit,
