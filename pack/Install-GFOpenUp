@@ -616,6 +616,34 @@
             (default 1))
         (run (cat #tool " RETIRE LIBS:Picasso96API.library >>T:GFOpenUp.log"))))
 
+; The disk's S:Startup-Sequence against the ROM's default (amicradle-guest docs/design/rom-or-disk.md, section 6,
+; Dale, 9 Nov 2026): yours always runs. When it is older than the ROM's default, or isn't the ROM's and has no
+; version, GFOpenUp offers the ROM's; it is never replaced unasked, and never at boot. Keep remembers the choice
+; until the ROM's default changes. Not asked of a Novice install (it keeps yours, and asks the next time).
+(if (> @user-level 0)
+    (if (= (run (cat #tool " STARTUPSEQ CHECK >>T:GFOpenUp.log")) 5)
+        (
+            (set #ss_choice 2)
+            (while (= #ss_choice 2)
+                (
+                    (set #ss_choice
+                        (askchoice
+                            (prompt "Your S:Startup-Sequence is older than this ROM's default, or isn't the ROM's "
+                                    "and has no version.\n\nYours keeps running either way. Use the ROM's "
+                                    "instead? Yours would be kept in SYS:Storage/GFOpenUp-Superseded, and "
+                                    "Uninstall-GFOpenUp puts it back.")
+                            (help "Keep mine: nothing changes, and you aren't asked again until the ROM's default "
+                                  "changes. Use the ROM's: S:Startup-Sequence becomes the ROM's default. Show the "
+                                  "differences: the lines that differ, - the ROM's, + yours.")
+                            (choices "Keep mine" "Use the ROM's" "Show the differences")
+                            (default 0)))
+                    (if (= #ss_choice 2)
+                        (
+                            (run (cat #tool " STARTUPSEQ COMPARE >T:Startup-Sequence.diff"))
+                            (run "Ed T:Startup-Sequence.diff")))))
+            (if (= #ss_choice 0) (run (cat #tool " STARTUPSEQ KEEP >>T:GFOpenUp.log")))
+            (if (= #ss_choice 1) (run (cat #tool " STARTUPSEQ ROM >>T:GFOpenUp.log"))))))
+
 ; HostClock: first, so its line is the first of GFOpenUp's block in S:User-Startup. Always: the Amiga's battery clock
 ; becomes the host's and its time follows the host's (snapshot resumes, the host's clock set after boot). AmiCradle
 ; instances only: elsewhere GFOpenUpTool says so and changes nothing (it answers 5, which isn't a failure)
