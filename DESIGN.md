@@ -161,7 +161,15 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   descriptors moved aside) with that SDL2.module put in: rc1 was built on
   0.8.25 and still had 8d6e9570. The SDL2-only pack on 0.8.25 (e693f86c)
   was never published. gfopenrtg #218 (Right Amiga keys) isn't in it.
-- GFOpenUp 0.8.27: OpenAL.module (gfopenrtg library/modules/openal,
+- GFOpenUp 0.8.27 is 0.8.27-rc1 (mitchy.library 1.0 and ServiceTest 0.2 in
+  GFOpenService 1.3, AkikoPlus 2.0) with SDL2.module from gfopenrtg main
+  (1975197, 8ec87228) put in: rc1 was built on 0.8.26 and still had
+  4e98af54. The new module adds gfopenrtg #218, the standard keys every
+  SDL 2 program has (Right Amiga + F, Q, P, M, S, Help), and SDL 1.2 programs
+  through sdl12-compat get them too. The part stays 0.29, and the module goes
+  to LIBS:GFOpenGPU/ and LIBS:OpenGPU/ as before. AmiSans, OpenAL.module,
+  the CPU floor and HostClock, merged after rc1, wait for 0.8.28.
+- GFOpenUp 0.8.28: OpenAL.module (gfopenrtg library/modules/openal,
   OpenAL 1.1 and ALC 1.1 on AHI, or ACAHI's voices; no EFX, no capture) in
   the GFOpenGPU part, at LIBS:GFOpenGPU/OpenAL.module and copied to
   LIBS:OpenGPU/ like the other modules, and AL/, libopenal.a,
