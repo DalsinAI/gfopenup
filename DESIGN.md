@@ -52,6 +52,14 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   2026). GFOpenBench's theme names DejaVu Sans 13 and the Open programs' look
   DejaVu Sans 12; without the library their text falls back to the screen's
   font ([docs/openbench-labels.png](docs/openbench-labels.png)).
+  With them, AmiSans (9 November 2026): TeX Gyre Heros (GUST Font License),
+  the open Helvetica closest to OS 3.2.3's CGTriumvirate, as
+  `FONTS:AmiSans.font` with gfopenfont's hinted bitmap sizes 12 and 13
+  (`FONTS:AmiSans/`), `AmiSans.otag` (CGTriumvirate's `OT_YSizeFactor`) and
+  the unmodified `_otf/texgyreheros-regular.otf`, from gfopenfont's
+  `fonts/outline`. The open ROM's tall Workbench takes it where there is no
+  CGTriumvirate, before DejaVu Sans, in the same 24-pixel bars; GFOpenUp
+  still writes no Font prefs.
 - GFOpenBlanker 1.4 (0.8.16): its credits are CGTriumvirate and CGTimes, OS
   3.2's own, where they are. The open ROM's disk has neither, so the part
   brings DejaVu Sans and DejaVu Serif (DejaVu fonts 2.37, free) as outline
@@ -153,6 +161,20 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   descriptors moved aside) with that SDL2.module put in: rc1 was built on
   0.8.25 and still had 8d6e9570. The SDL2-only pack on 0.8.25 (e693f86c)
   was never published. gfopenrtg #218 (Right Amiga keys) isn't in it.
+- GFOpenUp 0.8.27: OpenAL.module (gfopenrtg library/modules/openal,
+  OpenAL 1.1 and ALC 1.1 on AHI, or ACAHI's voices; no EFX, no capture) in
+  the GFOpenGPU part, at LIBS:GFOpenGPU/OpenAL.module and copied to
+  LIBS:OpenGPU/ like the other modules, and AL/, libopenal.a,
+  libopenal_static.a, openal.pc and find_package(OpenAL) in the GFOpenGPU
+  developer kit (gfopenrtg #233). It is its own file: gfopengpu.library is
+  unchanged, and only programs that use OpenAL load it. Ports that carried
+  their own mixer can link -lopenal instead.
+- The CPU floor (the user, 9 November 2026): a 68040 or 68060 with its FPU
+  and MMU, nothing less, even for handy things. The GFOpenGPU part says
+  "needs 68040" (GFOpenUpTool 0.8.18 leaves it out on less, from AttnFlags:
+  68040 or 68060, and FPU40; an FPU there means the full chip, MMU too), and
+  the Installer leaves it out with a message, as it does Warp3D. Its modules
+  are -m68040 -m68881 and used to install on any CPU.
 
 TLS is GFOpenTLS's (gfopentls.library, with GFOpenCrypto): GFOpenMail, GFOpenFTP's
 FTPS, GFOpenPrint's IPPS and httpget use it, and the pack doesn't look for

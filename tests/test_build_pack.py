@@ -341,6 +341,48 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
 OUL_NEEDPART = "needpart"     # src/openup_lines.h
 
 
+def amisans_checks() -> None:
+    """The GFOpenFont part's AmiSans, TeX Gyre Heros (9 November 2026): from a gfopenfont checkout's fonts/outline
+    (OPENAMIGAFONT=dir, or one beside this one), its .font an outline one listing the bitmap sizes 12 and 13, which
+    come with it, the .otag naming _otf/texgyreheros-regular.otf with CGTriumvirate's OT_YSizeFactor, the file
+    unmodified and the GUST Font License."""
+    import struct
+    src = Path(os.environ.get("OPENAMIGAFONT", ROOT.parent / "gfopenfont"))
+    o = src / "fonts/outline"
+    if not (o / "AmiSans.font").is_file():
+        print(f"skipped: AmiSans (no {o}/AmiSans.font)")
+        return
+    with tempfile.TemporaryDirectory() as t:
+        p = bp.Part(Path(t), "GFOpenFont", "0.9", "test")
+        check("AmiSans: taken from gfopenfont", bp.amisans(p, src))
+        d = p.dir
+        otag = (d / "Fonts/AmiSans.otag").read_bytes()
+        tags = {}
+        for i in range(0, len(otag) - 8, 8):
+            tag, val = struct.unpack(">II", otag[i:i + 8])
+            if tag == 0:
+                break
+            tags[tag] = val
+        spec = otag[tags.get(0x80009101, 0):].split(b"\0")[0]
+        font = (d / "Fonts/AmiSans.font").read_bytes()
+        check("AmiSans: an outline .font (OFCH_ID) listing AmiSans/12 and AmiSans/13, both in the part",
+              font[:4] == b"\x0f\x03\x00\x02" and font[4:14] == b"AmiSans/12" and font[264:274] == b"AmiSans/13"
+              and (d / "Fonts/AmiSans/12").is_file() and (d / "Fonts/AmiSans/13").is_file()
+              and 'add "Fonts/AmiSans/13" "FONTS:AmiSans/13"' in p.lines)
+        check("AmiSans: the .otag's engine, file, size and OT_YSizeFactor 8782/10519",
+              tags.get(0x80001001) == len(otag) and spec == b"_otf/texgyreheros-regular.otf"
+              and tags.get(0x80001011) == (8782 << 16 | 10519), str(tags))
+        check("AmiSans: TeX Gyre Heros's file unmodified",
+              (d / "Fonts/_otf/texgyreheros-regular.otf").read_bytes() ==
+              (o / "TeXGyreHeros/texgyreheros-regular.otf").read_bytes())
+        lic = (d / "Utilities/GFOpenUp/Licences/AmiSans.txt").read_text("latin-1")
+        check("AmiSans: its licence, the GUST Font License, with the font's notice",
+              "GUST Font License" in lic and "LaTeX Project Public License" in lic and "Jackowski" in lic)
+        check("AmiSans: the Part lines add it where nothing is or GFOpenUp put it",
+              'add "Fonts/AmiSans.otag" "FONTS:AmiSans.otag"' in p.lines
+              and 'add "Fonts/_otf/texgyreheros-regular.otf" "FONTS:_otf/texgyreheros-regular.otf"' in p.lines)
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -599,6 +641,10 @@ def main() -> int:
     # GFOpenGPU 0.29 (0.8.22): gfopengpu.library 0.29 (256 fence results, c2p through the core), ACRTG.gpu 1.6, C:GLQuery
     check("the GFOpenGPU part is 0.29 (gfopengpu.library 0.29)", 'Part(top, "GFOpenGPU", "0.29",' in src)
     check("the GFOpenGPU part brings C:GLQuery when the build has it", '"C:GLQuery"' in src)
+    # 0.8.27: the CPU floor (9 November 2026), and OpenAL.module beside SDL2.module and GL.module
+    check("the GFOpenGPU part needs a 68040 or 68060 with its FPU and MMU", 'gp.line("needs 68040")' in src)
+    check("the GFOpenGPU part brings OpenAL.module, and copies it to LIBS:OpenGPU",
+          '"LIBS:GFOpenGPU/OpenAL.module"' in src and '"GL", "OpenAL"]' in src)
     # GFOpenWindows 0.12.2 (0.8.23): the snapshot pin is a toggle (gfopenprefs #184); 0.12.1, none on system requesters
     check("the GFOpenWindows part is 0.12.2", 'Part(top, "GFOpenWindows", "0.12.2",' in src)
     # OGLES3 (0.8.20): ogles3.library on GFOpenGPU (gfopenrtg #190), as Install-ogles3 has it: AmiCradle only, with
@@ -622,6 +668,27 @@ def main() -> int:
         check("ogles3.txt carries the README and ogles3's SDK notice, in Latin-1",
               b"ladislawv" in credits and b"R-Typer and Ladislawv" in credits and b"agl|" not in credits)
         bp.check_part_versions(t / "top/Parts")
+    # AkikoPlus 2.0 (0.8.27): akikoplus.library 2 from a built drawer, its version the library's, no needs line,
+    # installed with GFOpenService
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        for rel, _ in bp.AKIKOPLUS_FILES:
+            (t / "ak" / rel).parent.mkdir(parents=True, exist_ok=True)
+            (t / "ak" / rel).write_bytes(b"x")
+        (t / "ak/Libs/akikoplus.library").write_bytes(b"\0$VER: akikoplus.library 2.0 (9.11.2026) board and 68k\0")
+        ak = bp.akikoplus_part(t / "top", t / "ak")
+        lines = (t / "top/Parts/AkikoPlus/Part").read_text(encoding="latin-1").splitlines()
+        check("the AkikoPlus part is the library's version, with every file and no needs line",
+              ak is not None and lines[0] == "part AkikoPlus 2.0"
+              and 'copy "Libs/akikoplus.library" "LIBS:akikoplus.library"' in lines
+              and 'copy "C/AkikoTest" "C:AkikoTest"' in lines and 'copy "C/APTest" "C:APTest"' in lines
+              and sum(1 for x in lines if x.startswith("copy ")) == len(bp.AKIKOPLUS_FILES)
+              and not any(x.startswith("needs") for x in lines), str(lines))
+        bp.check_part_versions(t / "top/Parts")
+        check("without --akikoplus the AkikoPlus part is left out", bp.akikoplus_part(t / "top2", None) is None)
+    inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+    sv_block = inst[inst.index('(working "Installing GFOpenService")'):inst.index("(if (bitand #parts 8388608)")]
+    check("Install-GFOpenUp installs Parts/AkikoPlus with GFOpenService", "INSTALL Parts/AkikoPlus" in sv_block)
     inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
     gpu_block = inst[inst.index('(working "Installing GFOpenGPU")'):inst.index("; Warp3D, as it always has")]
     check("Install-GFOpenUp installs Parts/OGLES3 with GFOpenGPU", "INSTALL Parts/OGLES3" in gpu_block)
@@ -664,6 +731,7 @@ def main() -> int:
     check("GFOpenUpMenu's page entries: each a page icon by its plain name, with its page's SECTION word",
           entries and all(label == page and pagewords.get(page) == word for label, page, word in entries), str(entries))
 
+    amisans_checks()
     openprinter_checks()
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")

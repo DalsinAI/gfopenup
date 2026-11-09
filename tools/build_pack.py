@@ -60,7 +60,11 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenCompress/         GFOpenCompress, its window and command (gfopencompress)
   GFOpenService/          gfopenservice.device and Nursery: services from boards and
                         paired Cradles; ServiceTest; MEDIA:, files decoded through
-                        media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA) (gfopenservice)
+                        media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA); mitchy.library (gfopenservice)
+  AkikoPlus/              akikoplus.library 2: C2P, swaps, fills, scaling, YUV, colours and zlib on
+                        AmiCradle's AkikoPlus media board (through mitchy.library) or on the 68k;
+                        C:AkikoTest, C:APTest and SYS:Developer/AkikoPlus. Installed with GFOpenService
+                        (gfosautoconfigboards cards/akikoplus/guest; left out without --akikoplus)
   GFOpenImage/            datatypes: PNG, Targa (TGA), WebP, WebM and music modules (MOD,
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through GFOpenService (gfopendatatypes)
@@ -80,8 +84,11 @@ a Part file that C/GFOpenUpTool reads:
                         (GFOpenUpTool REMOVE Parts/ShellIcon puts the 130 back)
   GFOpenFont/             gfopenfont.library, and DejaVu Sans as an outline font it draws (FONTS:DejaVuSans.font,
                         .otag and _ttf/DejaVuSans.ttf), with their licences: the font GFOpenBench's theme and
-                        the Open programs' look name. Installed on a 68040 or 68060 with its FPU (the
-                        --openamigafont checkout's build-amiga.sh; DejaVu Sans from --dejavu-sans)
+                        the Open programs' look name; and AmiSans, TeX Gyre Heros (FONTS:AmiSans.font with
+                        hinted sizes 12 and 13, .otag and _otf/texgyreheros-regular.otf, GUST Font License),
+                        the open stand-in for OS 3.2.3's CGTriumvirate that the ROM's tall Workbench falls
+                        back to. Installed on a 68040 or 68060 with its FPU (the --openamigafont
+                        checkout's build-amiga.sh and fonts/outline; DejaVu Sans from --dejavu-sans)
   GFOpenPrefs/            GFOpenPrefs, every editor of ours as a page of one program, in its own
                         drawer, SYS:Preferences/GFOpenPrefs, with a project icon per page by its
                         plain name (Theme, Sound, Date & Time...) and SYS:Preferences on the
@@ -618,6 +625,12 @@ def build_parts(a):
     # GL.module (Mesa) with the GCC 16 stove, which its script puts first on PATH; then GFOpenDemos on it
     gl_out = a.openamigartg / "build/gl"
     run(["sh", a.openamigartg / "library/modules/gl/module/build.sh", gl_out], env=dict(os.environ))
+    # OpenAL.module (gfopenrtg library/modules/openal: OpenAL 1.1 on AHI, or ACAHI's voices) with the GCC 16 stove,
+    # named here: the script takes STOVE as the prefix, and this script's own STOVE is the os32 stove's root. For the
+    # 68040 or 68060 with its FPU, like SDL2.module and GL.module (the part's CPU world). make_sdk.py finds
+    # build/openal and puts AL/, libopenal.a and openal.pc in the kit
+    run(["sh", a.openamigartg / "library/modules/openal/build.sh", a.openamigartg / "build/openal"],
+        env=dict(os.environ, STOVE=str(Path(gcc16_root) / "prefix")))
     if a.openamigamesa:                     # the GCC 16 stove first on PATH, as demos/README.md says
         stove16 = Path(os.environ.get("STOVE16", Path.home() / "AmiCradle/stoves/os32-gcc16/prefix"))
         run(["sh", a.openamigamesa / "demos/build.sh"],
@@ -1053,6 +1066,7 @@ PART_MAIN = {
     "GFOpenRTG": ("Libs/gfopenrtg.library", "gfopenrtg.library"),
     "GFOpenGPU": ("Libs/gfopengpu.library", "gfopengpu.library"),
     "OGLES3": ("Libs/ogles3.library", "ogles3.library"),
+    "AkikoPlus": ("Libs/akikoplus.library", "akikoplus.library"),
     "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
     "GFOpenCrypto": ("Libs/gfopencrypto.library", "gfopencrypto.library"),
     "GFOpenTLS": ("Libs/gfopentls.library", "gfopentls.library"),
@@ -1086,8 +1100,8 @@ PART_MAIN = {
 # zunemaster.library (0.1, with the datatypes cache's Stricmp fix of 12 October 2026) with the
 # muimaster.library face (19.1). Sound 0.2.2 is GFOpenSpeaker (0.1.4; the editor is GFOpenPrefs's since W48) with GFOpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmiCradle machines only). GFOpenImage 0.4 adds
-# opentga.datatype (47.1). GFOpenService 1.2 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:) and
-# ServiceTest (0.1). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
+# opentga.datatype (47.1). GFOpenService 1.3 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:),
+# mitchy.library (1.0) and ServiceTest (0.2). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
 # fonts/amiga). ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so GFOpenUpTool UPDATE
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
@@ -1294,6 +1308,15 @@ def check_openbrowser_pin(archive: Path) -> None:
 DEJAVU_SANS_SHA256 = "b4c632e3cdf9acc7f28758fb5a323c8524d7fc6660d46904d9b6cbe2809c419c"
 # DejaVu Serif for the GFOpenBlanker part (0.8.16): the same DejaVu fonts 2.37 package's DejaVuSerif.ttf.
 DEJAVU_SERIF_SHA256 = "a52c2a69dfc93d0b511b98c1019a57eb3d6a62d328bdf1387f00851b02e3a315"
+# AmiSans for the GFOpenFont part (9 November 2026): TeX Gyre Heros, texgyreheros-regular.otf 2.004 from GUST's
+# e-foundry (qhv2.004otf.zip; tg2_501otf.zip has the same file), unmodified, in gfopenfont's fonts/outline/TeXGyreHeros
+# with the GUST Font License, and gfopenfont's hinted bitmap sizes of it (fonts/outline/AmiSans.font). The open
+# stand-in for OS 3.2.3's CGTriumvirate: the GFOpenKick ROM's tall Workbench font falls back to it (amicradle-guest
+# screen_core.h OI_TALL_FONT_OPEN) and GFOpenPrefs' standard font is it on an open disk.
+TEXGYRE_HEROS_SHA256 = "6ae1a09d5a940367b7aaaa91ee8bd8a2c333bfe193e7096e23f931357d62081f"
+# Its .otag's OT_YSizeFactor: CGTriumvirate.otag's own 8782/10519 (OS 3.2.3), so a YSize draws the same em (13: 11
+# pixels, as the bitmap size) and AmiSans 13 stands where CGTriumvirate 13 stood, in the same 24-pixel bars.
+TEXGYRE_HEROS_YSIZE_FACTOR = (8782, 10519)
 
 
 def ttf_name(data: bytes, nid: int) -> str | None:
@@ -1373,6 +1396,7 @@ def openfont_part(top: Path, font_src: Path | None, ttf: Path):
     p.add("Fonts/DejaVuSans.font", struct.pack(">HH", 0x0F03, 0), "FONTS:DejaVuSans.font", own=True)
     p.add("Fonts/DejaVuSans.otag", outline_otag("_ttf/DejaVuSans.ttf"), "FONTS:DejaVuSans.otag", own=True)
     p.add("Fonts/_ttf/DejaVuSans.ttf", sans, "FONTS:_ttf/DejaVuSans.ttf", own=True)
+    heros = amisans(p, font_src)
     p.add("Utilities/GFOpenUp/Licences/GFOpenFont.txt",
           (font_src / "LICENSE").read_bytes() + b"\n\nThe Unicode character data in gfopenfont.library:\n\n" +
           (font_src / "LICENSES/Unicode-License-v3.txt").read_bytes(),
@@ -1383,8 +1407,52 @@ def openfont_part(top: Path, font_src: Path | None, ttf: Path):
           .encode("latin-1", "replace"),
           "SYS:Utilities/GFOpenUp/Licences/DejaVuSans.txt")
     p.write()
-    print(f"  GFOpenFont {p.lines[0].split()[-1]}: gfopenfont.library, DejaVu Sans (sha256 checked)")
+    print(f"  GFOpenFont {p.lines[0].split()[-1]}: gfopenfont.library, DejaVu Sans" +
+          (", AmiSans (TeX Gyre Heros)" if heros else "") + " (sha256 checked)")
     return p
+
+
+def amisans(p: "Part", font_src: Path) -> bool:
+    """AmiSans in the GFOpenFont part: TeX Gyre Heros, from gfopenfont's fonts/outline (9 November 2026).
+    FONTS:AmiSans.font (an outline .font, OFCH_ID $0F03, with gfopenfont's hinted bitmap sizes 12 and 13,
+    FONTS:AmiSans/12 and 13, the sizes the look uses), FONTS:AmiSans.otag for every other size (bullet,
+    _otf/texgyreheros-regular.otf, OT_YSizeFactor CGTriumvirate's) and FONTS:_otf/texgyreheros-regular.otf, the
+    OpenType file unmodified; the GUST Font License with it in SYS:Utilities/GFOpenUp/Licences/AmiSans.txt. AmiSans,
+    not TeX Gyre Heros: the bitmap sizes are drawn from it, and GUST asks that derived works have a new name.
+    False, and the part without it, when the checkout has none (an older gfopenfont)."""
+    import hashlib
+    o = font_src / "fonts/outline"
+    otf = o / "TeXGyreHeros/texgyreheros-regular.otf"
+    if not otf.is_file() or not (o / "AmiSans.font").is_file():
+        print(f"  GFOpenFont: AmiSans left out ({o} has no AmiSans.font and TeX Gyre Heros: an older gfopenfont)")
+        return False
+    data = otf.read_bytes()
+    got = hashlib.sha256(data).hexdigest()
+    if got != TEXGYRE_HEROS_SHA256:
+        raise SystemExit(f"GFOpenFont: {otf} has sha256 {got}; the pack takes TeX Gyre Heros 2.004's "
+                         f"texgyreheros-regular.otf, sha256 {TEXGYRE_HEROS_SHA256}")
+    contents = (o / "AmiSans.font").read_bytes()
+    fid, n = struct.unpack(">HH", contents[:4])
+    if fid != 0x0F03 or len(contents) != 4 + 260 * n:
+        raise SystemExit(f"GFOpenFont: {o}/AmiSans.font isn't an outline font's contents file (OFCH_ID $0F03)")
+    sizes = [contents[4 + 260 * i:4 + 260 * i + 256].split(b"\0")[0].decode("latin-1") for i in range(n)]
+    notice = ttf_name(data, 0) or ""
+    # "add": an AmiSans of another program's stays
+    p.add("Fonts/AmiSans.font", contents, "FONTS:AmiSans.font", own=True)
+    for rel in sizes:
+        p.add(f"Fonts/{rel}", (o / rel).read_bytes(), f"FONTS:{rel}", own=True)
+    p.add("Fonts/AmiSans.otag", outline_otag("_otf/texgyreheros-regular.otf", TEXGYRE_HEROS_YSIZE_FACTOR),
+          "FONTS:AmiSans.otag", own=True)
+    p.add("Fonts/_otf/texgyreheros-regular.otf", data, "FONTS:_otf/texgyreheros-regular.otf", own=True)
+    p.add("Utilities/GFOpenUp/Licences/AmiSans.txt",
+          ("AmiSans is TeX Gyre Heros 2.004 (FONTS:_otf/texgyreheros-regular.otf, unmodified, from GUST's e-foundry,\n"
+           "https://www.gust.org.pl/projects/e-foundry/tex-gyre/heros), with FONTS:AmiSans.otag and bitmap sizes\n"
+           "drawn from it (FONTS:AmiSans.font, " + ", ".join(f"FONTS:{r}" for r in sizes) + "; gfopenfont's\n"
+           "tools/amigapropfont.py), named AmiSans as GUST asks of derived works. All of it is under the GUST Font\n"
+           "License.\nThe font file's notice: " + notice + "\n\n" +
+           (o / "TeXGyreHeros/GUST-FONT-LICENSE.txt").read_text("latin-1")).encode("latin-1", "replace"),
+          "SYS:Utilities/GFOpenUp/Licences/AmiSans.txt")
+    return True
 
 
 def blanker_fonts(bl: "Part", sans_ttf: Path, serif_ttf: Path) -> None:
@@ -1644,6 +1712,45 @@ def ogles3_part(top: Path, built: Path, src: Path) -> Part | None:
     return og
 
 
+# AkikoPlus (0.8.27): akikoplus.library 2 (gfosautoconfigboards #4, cards/akikoplus/guest), built with the os32-gcc16
+# stove. --akikoplus is a folder laid out as the part: Libs/akikoplus.library, C/AkikoTest, C/APTest and
+# Developer/AkikoPlus/ (the autodoc, SFD, FD, headers and boardonly/akikoplus.library, the AP_NO_FALLBACK build).
+AKIKOPLUS_FILES = (
+    ("Libs/akikoplus.library", "LIBS:akikoplus.library"),
+    ("C/AkikoTest", "C:AkikoTest"),
+    ("C/APTest", "C:APTest"),
+    ("Developer/AkikoPlus/akikoplus.doc", "SYS:Developer/AkikoPlus/akikoplus.doc"),
+    ("Developer/AkikoPlus/boardonly/akikoplus.library", "SYS:Developer/AkikoPlus/boardonly/akikoplus.library"),
+    ("Developer/AkikoPlus/fd/akikoplus_lib.fd", "SYS:Developer/AkikoPlus/fd/akikoplus_lib.fd"),
+    ("Developer/AkikoPlus/include/clib/akikoplus_protos.h", "SYS:Developer/AkikoPlus/include/clib/akikoplus_protos.h"),
+    ("Developer/AkikoPlus/include/inline/akikoplus.h", "SYS:Developer/AkikoPlus/include/inline/akikoplus.h"),
+    ("Developer/AkikoPlus/include/libraries/akikoplus.h", "SYS:Developer/AkikoPlus/include/libraries/akikoplus.h"),
+    ("Developer/AkikoPlus/include/pragmas/akikoplus_pragmas.h", "SYS:Developer/AkikoPlus/include/pragmas/akikoplus_pragmas.h"),
+    ("Developer/AkikoPlus/include/proto/akikoplus.h", "SYS:Developer/AkikoPlus/include/proto/akikoplus.h"),
+    ("Developer/AkikoPlus/sfd/akikoplus_lib.sfd", "SYS:Developer/AkikoPlus/sfd/akikoplus_lib.sfd"),
+)
+
+
+def akikoplus_part(top: Path, src: Path | None) -> Part | None:
+    """Parts/AkikoPlus from a built AkikoPlus drawer (--akikoplus). No needs line: without mitchy.library or the
+    board every call runs on the 68k; Install-GFOpenUp installs it with GFOpenService, which brings mitchy.library.
+    Its version is the library's."""
+    if not src or not (src / "Libs/akikoplus.library").is_file():
+        print("  AkikoPlus: left out, no --akikoplus with Libs/akikoplus.library")
+        return None
+    missing = [rel for rel, _ in AKIKOPLUS_FILES if not (src / rel).is_file()]
+    if missing:
+        raise SystemExit(f"AkikoPlus: {src} lacks " + ", ".join(missing))
+    data = (src / "Libs/akikoplus.library").read_bytes()
+    ak = Part(top, "AkikoPlus", binary_version(data, "akikoplus.library") or "2.0",
+              "AkikoPlus: akikoplus.library, the media board's helpers (C2P, swaps, fills, scaling, YUV, colours, "
+              "zlib) on the board when fitted, on the 68k when not; AkikoTest and APTest")
+    for rel, dest in AKIKOPLUS_FILES:
+        ak.add(rel, (src / rel).read_bytes(), dest)
+    ak.write()
+    return ak
+
+
 def check_part_versions(parts: Path) -> None:
     """Stops the build when a part's declared version is not its main
     binary's $VER, or when a part says neither which binary that is nor
@@ -1741,6 +1848,9 @@ def main() -> int:
                     help=f"OpenAmigaPython's release archive {OPENAMIGAPYTHON['asset']} (from "
                          f"{OPENAMIGAPYTHON['release']}; build/ is looked in first), for the "
                          "OpenAmigaPython part, taken only with its pinned sha256 (left out without it)")
+    ap.add_argument("--akikoplus", type=Path, default=None,
+                    help="a built AkikoPlus drawer (Libs/akikoplus.library, C/AkikoTest, C/APTest, Developer/AkikoPlus/): "
+                         "gfosautoconfigboards cards/akikoplus/guest's build; the part is left out without it")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the GFOpenGPU developer kit is made (or, with --no-build, read): the GFOpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
@@ -1955,13 +2065,20 @@ def main() -> int:
     # 1.2 (0.8.17): MEDIA:, gfopenservice's read-only DOS handler on top of media.decode/1 (L:media-handler and its
     # mountlist DEVS:DOSDrivers/MEDIA, mounted at boot; docs/MEDIA_HANDLER.md), and ServiceTest, which lists the
     # services and opens one. A MEDIA mountlist of the user's own stays.
-    sv = Part(top, "GFOpenService", "1.2", "GFOpenService: services from AutoConfig boards and paired Cradles, and MEDIA:")
+    # 1.3 (0.8.27): LIBS:mitchy.library 1.0, the services card's (Mitchy's) library for every program, on the
+    # device (gfopenservice #34), and ServiceTest 0.2 on it, with one checked job for each service on offer.
+    sv = Part(top, "GFOpenService", "1.3", "GFOpenService: services from AutoConfig boards and paired Cradles, and MEDIA:")
     sv.add("Devs/gfopenservice.device", (a.openamigaservice / "bin/gfopenservice.device").read_bytes(), "DEVS:gfopenservice.device")
+    sv.add("Libs/mitchy.library", (a.openamigaservice / "bin/mitchy.library").read_bytes(), "LIBS:mitchy.library")
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
     sv.add("C/ServiceTest", (a.openamigaservice / "bin/ServiceTest").read_bytes(), "C:ServiceTest")
     sv.add("L/media-handler", (a.openamigaservice / "bin/media-handler").read_bytes(), "L:media-handler")
     sv.add("Devs/DOSDrivers/MEDIA", (a.openamigaservice / "devs/MEDIA").read_bytes(), "DEVS:DOSDrivers/MEDIA", own=True)
     sv.write()
+
+    # AkikoPlus 2.0 (0.8.27): akikoplus.library (gfosautoconfigboards #4), on AmiCradle's media board through
+    # mitchy.library when it is fitted, on the 68k when not; Install-GFOpenUp installs it with GFOpenService.
+    akikoplus_part(top, a.akikoplus)
 
     # GFOpenImage: datatypes (gfopendatatypes). PNG, Targa (opentga.datatype), WebP, WebM and music modules
     # (openmodule.datatype: MOD, MED, Oktalyzer, DigiBooster, XM, S3M, IT,
@@ -2174,6 +2291,9 @@ def main() -> int:
     # WritePixelArray8's c2p through GFOpenGfx's core), ACRTG.gpu 1.6 (amicradle-guest #638, 256 results), GL.module
     # with the softpipe notice and ENV:GFOpenGPU/GLDriver (gfopenrtg #195), and C:GLQuery
     gp = Part(top, "GFOpenGPU", "0.29", "GFOpenGPU: gfopengpu.library with GFOpenGfx, the ACRTG board's driver, and SDL 2 and GL (Mesa) for programs")
+    # 0.8.27: the CPU floor (the user, 9 November 2026: a 68040 or 68060 with its FPU and MMU). SDL2.module, GL.module
+    # and OpenAL.module are -m68040 -m68881; GFOpenUpTool 0.8.18 leaves the part out on less (older ones ignore it)
+    gp.line("needs 68040")
     gp.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
     gp.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
     # 0.8.26: SDL2.module from gfopenrtg #217 (b407b01; full-screen exit hardened, back to the Workbench); the part
@@ -2187,11 +2307,14 @@ def main() -> int:
     # 0.8.21: GL.module from gfopenrtg #192 (a virgl fence whose result expired is done, not failed); the part stays
     # 0.27, gfopengpu.library's version, and GFOpenUpTool INSTALL puts the changed file in place
     gp.add("Libs/GFOpenGPU/GL.module", (gl / "GL.module").read_bytes(), "LIBS:GFOpenGPU/GL.module")
+    # 0.8.27: OpenAL.module (gfopenrtg library/modules/openal; OpenAL 1.1, no EFX or capture), which programs linked
+    # with the kit's libopenal.a open from LIBS:GFOpenGPU/; MIT, the Team's, like the rest of the part
+    gp.add("Libs/GFOpenGPU/OpenAL.module", (rtg / "openal" / "OpenAL.module").read_bytes(), "LIBS:GFOpenGPU/OpenAL.module")
     # 0.8.16: the same modules under the drawer's name from before the GF rename too, LIBS:OpenGPU, for programs built
     # against it: OpenTunnel opens LIBS:OpenGPU/SDL2.module and couldn't start on Instance-32 after 0.8.15. The modules
     # open gfopengpu.library themselves. The pack carries each file once; the line copies it to both places.
     gp.line("; 0.8.16: the modules under the drawer's name from before the GF rename too (LIBS:OpenGPU), for programs built against it (OpenTunnel opens LIBS:OpenGPU/SDL2.module)")
-    for n in ["SDL2", *sats, "GL"]:
+    for n in ["SDL2", *sats, "GL", "OpenAL"]:
         gp.line(f'copy "Libs/GFOpenGPU/{n}.module" "LIBS:OpenGPU/{n}.module"')
     # gfopenrtg's tools/build.sh still writes it as OpenGPUCheck (not yet renamed there): either name
     gpu_check = next((c for c in (rtg / "GFOpenGPUCheck", rtg / "OpenGPUCheck") if c.is_file()), rtg / "GFOpenGPUCheck")

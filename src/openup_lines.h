@@ -52,6 +52,18 @@ static int oul_acrtg_product(unsigned product)
     return 0;
 }
 
+/* "needs 68040" (9 November 2026, the user's CPU floor: a 68040 or 68060 with its FPU and MMU; nothing less, even
+ * for handy things): 1 when exec's AttnFlags say so. AttnFlags has no MMU bit, but a 68040 or 68060 with its FPU is
+ * the full chip: the EC parts have neither FPU nor MMU, the LC parts an MMU and no FPU. The bits are exec's
+ * AFF_68040 (1 << 3), AFF_FPU40 (1 << 6) and AFF_68060 (1 << 7), written out so the host test needs no NDK. */
+#define OUL_AFF_68040 0x0008u
+#define OUL_AFF_FPU40 0x0040u
+#define OUL_AFF_68060 0x0080u
+static int oul_full_040(unsigned attn)
+{
+    return (attn & (OUL_AFF_68040 | OUL_AFF_68060)) && (attn & OUL_AFF_FPU40);
+}
+
 static int oul_blank(char c) { return c == ' ' || c == '\t'; }
 
 /* The word at s is w, followed by a blank: the length of w, else 0. */
