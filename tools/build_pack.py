@@ -9,7 +9,7 @@ archive (DESIGN.md sections 3 and 4).
         [--openamigaedit DIR] [--gfoffice DIR] [--openamigalayout DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
-        [--openamigasocket DIR] [--openamigabench DIR] [--openamigafont DIR] [--openamigapython FILE]
+        [--openamigasocket DIR] [--openamigaphysfs DIR] [--openamigabench DIR] [--openamigafont DIR] [--openamigapython FILE]
         [--openbrowserlite FILE] [--no-build] [--lha]
 
 GL.module's build (gfopenrtg library/modules/gl) needs meson on PATH and
@@ -117,7 +117,9 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenGPU/              gfopengpu.library and LIBS:GFOpenGPU/: ACRTG.gpu (the ACRTG
                         board's ring, amicradle-guest), SDL2.module and GL.module
                         (Mesa), loaded when a program first asks; C:GFOpenGPUCheck.
-                        On the CPU where there is no driver (gfopenrtg)
+                        On the CPU where there is no driver (gfopenrtg). LIBS:physfs.library 1.1
+                        (PhysicsFS for the game ports, gfopenphysfs at GFOPENPHYSFS's commit) with
+                        LIBS:z.library, which it inflates zip members through (--openamigaphysfs)
   OGLES3/               ogles3.library on GFOpenGPU (OpenGL ES 3.1 for programs built for
                         ladislawv's ogles3) and C:OGLES3Check, with GFOpenGPU on AmiCradle
                         only; another ogles3.library (the PiStorm's) is left alone (gfopenrtg
@@ -706,6 +708,10 @@ def build_parts(a):
     # libowf opens it when a document first needs deflate (saving, PNG pictures in PDFs) or inflate (faster than
     # libowf's own inflater, which reads zip packages without it)
     run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
+    # physfs.library 1.1 (gfopenphysfs at GFOPENPHYSFS's commit, GCC 16): the GFOpenGPU part's, with that z.library;
+    # its SDK files go in the developer kit (make_sdk.py --physfs)
+    if a.openamigaphysfs:
+        build_physfs(a.openamigaphysfs, ROOT / "build/physfs", gcc16_root)
     # softfpu.library (amicradle-guest libraries/opensoftfpu, its default os32-gcc16 stove): the GFOpenUp part's
     run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
     # The disk libraries and devices the open ROM leaves to a disk (the OpenKick boot disk's, gfopenkick
@@ -728,8 +734,12 @@ def build_parts(a):
             arch.mkdir(parents=True, exist_ok=True)
             old.rename(arch / f"{old.name}-{time.strftime('%Y%m%dT%H%M%S')}")
         # 0.7 (0.8.22): libGL.a and gla_core.h from gfopenrtg #195 (gla_last_why); make_sdk.py's default is still 0.6
+        # physfs.library's SDK (0.8.28) when it was built and make_sdk.py takes it (gfopenrtg's --physfs)
+        physfs_sdk = []
+        if (ROOT / "build/physfs/COMMIT").is_file() and "--physfs" in (a.openamigartg / "tools/make_sdk.py").read_text():
+            physfs_sdk = ["--physfs", ROOT / "build/physfs"]
         run([sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
-             "--gl", gl_out, "--version", "0.7", a.opengpu_sdk], env=dict(os.environ))
+             "--gl", gl_out, *physfs_sdk, "--version", "0.7", a.opengpu_sdk], env=dict(os.environ))
     # GFOpenBench (gfopenbench desktop/build.sh, GCC 16 since gfopenbench #31: it stops when given the
     # os32 stove's GCC 6.5): the desktop with the dock and the Open editors built in, from this build's
     # gfopengadtools, gfopenprefs, gfopentata and gfopenfilemanager (its drag and drop)
@@ -1260,6 +1270,54 @@ def openbrowserlite_files(archive: Path | None) -> dict:
         shutil.rmtree(tmp, ignore_errors=True)
     print(f"  {pin.get('name', 'OpenBrowserLite')} {pin['version']}: {pin['asset']}, sha256 checked")
     return files
+
+
+# physfs.library (gfopenphysfs: PhysicsFS 3.2.0 as one shared library, one copy of its state per program), for the
+# game ports built with the GFOpenGPU developer kit's -lphysfs_auto. Pinned by commit: main after gfopenphysfs #1
+# and #2 (1.1: a RomTag and per-opener bases; zip members inflate through LIBS:z.library). The pack builds that
+# commit from the --openamigaphysfs checkout whatever the checkout has out (git archive), so a newer main is a
+# change here. gfopenrtg's make_sdk.py checks the same commit (its PHYSFS_COMMIT) before the kit takes the SDK files.
+GFOPENPHYSFS = {
+    "version": "1.1",
+    "commit": "21cfa03d8cbff7ddad62c8a2fbba4c7fd0589e20",
+    "source": "https://github.com/DalsinAI/gfopenphysfs/commit/21cfa03d8cbff7ddad62c8a2fbba4c7fd0589e20",
+}
+
+
+def build_physfs(checkout: Path, out: Path, stove16: str) -> None:
+    """physfs.library and its SDK (gfopenphysfs build-amiga.sh, GCC 16) from GFOPENPHYSFS's commit into out, with
+    LICENSE.txt (PhysicsFS's zlib licence, then the Team's) and COMMIT beside them, as make_sdk.py --physfs takes
+    them. The commit is taken out of the checkout with git archive, so the checkout's own state doesn't matter."""
+    pin = GFOPENPHYSFS["commit"]
+    if subprocess.run(["git", "-C", str(checkout), "cat-file", "-e", pin + "^{commit}"], capture_output=True).returncode:
+        raise SystemExit(f"physfs.library: {checkout} has no commit {pin[:12]} (GFOPENPHYSFS): "
+                         f"git -C {checkout} fetch origin main")
+    src = out.parent / "physfs-src"
+    shutil.rmtree(src, ignore_errors=True)
+    src.mkdir(parents=True)
+    tar = subprocess.run(["git", "-C", str(checkout), "archive", pin], check=True, capture_output=True).stdout
+    subprocess.run(["tar", "-x", "-C", str(src)], input=tar, check=True)
+    run(["sh", src / "build-amiga.sh"], env=dict(os.environ, STOVE=stove16, OUT=str(out)))
+    (out / "LICENSE.txt").write_bytes((src / "physfs/LICENSE.txt").read_bytes() + b"\n\n" + (src / "LICENSE").read_bytes())
+    (out / "COMMIT").write_text(pin + "\n")
+
+
+def physfs_into_gpu(gp: "Part", built: Path, zlib: bytes) -> None:
+    """LIBS:physfs.library (built by build_physfs) into the GFOpenGPU part, with LIBS:z.library, which its zip
+    reader opens to inflate members (the same GFOpenZlib file the GFOffice and GFOpenImage parts carry: z.library
+    is no part of its own, so each part that needs it brings it), and PhysicsFS's licence."""
+    if (built / "COMMIT").read_text().strip() != GFOPENPHYSFS["commit"]:
+        raise SystemExit(f"physfs.library: {built} isn't gfopenphysfs {GFOPENPHYSFS['commit'][:12]} (GFOPENPHYSFS)")
+    lib = (built / "Libs/physfs.library").read_bytes()
+    ver = binary_version(lib, "physfs.library")
+    if ver != GFOPENPHYSFS["version"]:
+        raise SystemExit(f"physfs.library: {built} has version {ver}, GFOPENPHYSFS says {GFOPENPHYSFS['version']}")
+    gp.add("Libs/physfs.library", lib, "LIBS:physfs.library")
+    gp.add("Libs/z.library", zlib, "LIBS:z.library")
+    gp.add("Utilities/GFOpenUp/Licences/PhysicsFS.txt",
+           f"LIBS:physfs.library {ver} is PhysicsFS 3.2.0 as one shared library (DalsinAI/gfopenphysfs "
+           f"{GFOPENPHYSFS['commit'][:12]}):\n\n".encode() + (built / "LICENSE.txt").read_bytes(),
+           "SYS:Utilities/GFOpenUp/Licences/PhysicsFS.txt")
 
 
 # OpenBrowser, the WebKit browser, in its own archive beside the pack (GFOpenUp-<version>-OpenBrowser.lha): the engine
@@ -1832,6 +1890,8 @@ def main() -> int:
     ap.add_argument("--openamigasocket", type=Path, default=first(DEV / "gfopensocket", DEV.parent / "gfopensocket"),
                     help="gfopensocket, for the GFOpenSocket part's files, built here (without it, amicradle's "
                          "vendored payload, which can be older than gfopensocket's main)")
+    ap.add_argument("--openamigaphysfs", type=Path, default=first(DEV / "gfopenphysfs", DEV.parent / "gfopenphysfs"),
+                    help="gfopenphysfs: physfs.library for the GFOpenGPU part and the kit, built at GFOPENPHYSFS's commit")
     ap.add_argument("--openamigabench", type=Path, default=first(DEV / "gfopenbench", DEV.parent / "gfopenbench"),
                     help="gfopenbench checkout: GFOpenBench, the Team's own Workbench (desktop/build.sh)")
     ap.add_argument("--openamigafont", type=Path, default=first(DEV / "gfopenfont", DEV.parent / "gfopenfont"),
@@ -2319,6 +2379,13 @@ def main() -> int:
     # gfopenrtg's tools/build.sh still writes it as OpenGPUCheck (not yet renamed there): either name
     gpu_check = next((c for c in (rtg / "GFOpenGPUCheck", rtg / "OpenGPUCheck") if c.is_file()), rtg / "GFOpenGPUCheck")
     gp.add("C/GFOpenGPUCheck", gpu_check.read_bytes(), "C:GFOpenGPUCheck")
+    # 0.8.28: LIBS:physfs.library 1.1 (gfopenphysfs, pinned: GFOPENPHYSFS), which the game ports linked with the kit's
+    # -lphysfs_auto open, with LIBS:z.library for its zip members. Here, as tinygl.library is: a library the ports
+    # built with this part's kit need, on the same CPU floor (-m68040). The part stays 0.29, gfopengpu.library's
+    if (ROOT / "build/physfs/COMMIT").is_file():
+        physfs_into_gpu(gp, ROOT / "build/physfs", (ROOT / "build/openzlib/libs/z.library").read_bytes())
+    else:
+        print("  GFOpenGPU: physfs.library left out (no --openamigaphysfs checkout)")
     # 0.8.22: C:GLQuery (gfopenrtg tests/amiga/glquery, linked with this GL build's libGL.a): GL's version and renderer,
     # and which driver GL.module took (virgl or softpipe) and why, when the gfopenrtg build has it
     for glq in (rtg / "GLQuery", rtg / "c/GLQuery"):

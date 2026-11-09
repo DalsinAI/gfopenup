@@ -645,6 +645,33 @@ def main() -> int:
     check("the GFOpenGPU part needs a 68040 or 68060 with its FPU and MMU", 'gp.line("needs 68040")' in src)
     check("the GFOpenGPU part brings OpenAL.module, and copies it to LIBS:OpenGPU",
           '"LIBS:GFOpenGPU/OpenAL.module"' in src and '"GL", "OpenAL"]' in src)
+    # 0.8.28: LIBS:physfs.library 1.1 (gfopenphysfs, pinned by commit) with LIBS:z.library in the GFOpenGPU part
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        built = t / "physfs"
+        (built / "Libs").mkdir(parents=True)
+        (built / "Libs/physfs.library").write_bytes(b"\0physfs.library 1.1 (9.11.2026) PhysicsFS 3.2.0\0")
+        (built / "LICENSE.txt").write_text("zlib License\n")
+        (built / "COMMIT").write_text(bp.GFOPENPHYSFS["commit"] + "\n")
+        gp = bp.Part(t / "top", "GFOpenGPU", "0.29", "x")
+        bp.physfs_into_gpu(gp, built, b"\0z.library 53.14 (1.11.2026)\0")
+        gp.write()
+        lines = (t / "top/Parts/GFOpenGPU/Part").read_text(encoding="latin-1").splitlines()
+        check("the GFOpenGPU part brings LIBS:physfs.library and the z.library it inflates zip members through",
+              'copy "Libs/physfs.library" "LIBS:physfs.library"' in lines and 'copy "Libs/z.library" "LIBS:z.library"' in lines
+              and (t / "top/Parts/GFOpenGPU/Utilities/GFOpenUp/Licences/PhysicsFS.txt").is_file(), str(lines))
+        (built / "COMMIT").write_text("0" * 40 + "\n")
+        try:
+            bp.physfs_into_gpu(bp.Part(t / "top", "GFOpenGPU", "0.29", "x"), built, b"")
+            refused = False
+        except SystemExit:
+            refused = True
+        check("physfs.library from another gfopenphysfs commit than GFOPENPHYSFS is refused", refused)
+    check("the GFOpenGPU part takes physfs.library when it was built", "physfs_into_gpu(gp, " in src)
+    rtg_sdk = ROOT.parent / "gfopenrtg/tools/make_sdk.py"
+    if rtg_sdk.is_file() and "PHYSFS_COMMIT" in rtg_sdk.read_text(encoding="utf-8"):
+        check("gfopenrtg's make_sdk.py pins the same gfopenphysfs commit",
+              f'PHYSFS_COMMIT = "{bp.GFOPENPHYSFS["commit"]}"' in rtg_sdk.read_text(encoding="utf-8"))
     # GFOpenWindows 0.12.2 (0.8.23): the snapshot pin is a toggle (gfopenprefs #184); 0.12.1, none on system requesters
     check("the GFOpenWindows part is 0.12.2", 'Part(top, "GFOpenWindows", "0.12.2",' in src)
     # OGLES3 (0.8.20): ogles3.library on GFOpenGPU (gfopenrtg #190), as Install-ogles3 has it: AmiCradle only, with

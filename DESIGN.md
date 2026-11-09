@@ -177,6 +177,16 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   developer kit (gfopenrtg #233). It is its own file: gfopengpu.library is
   unchanged, and only programs that use OpenAL load it. Ports that carried
   their own mixer can link -lopenal instead.
+- GFOpenUp 0.8.28: LIBS:physfs.library 1.1 (gfopenphysfs, PhysicsFS 3.2.0
+  as one shared library with one copy of its state per program) in the
+  GFOpenGPU part, with LIBS:z.library, which it inflates zip members
+  through, and physfs.h, libphysfs_auto.a, libphysfs.a and
+  find_package(PhysFS) in the developer kit (gfopenrtg's make_sdk.py
+  --physfs). Pinned by commit (build_pack.py's GFOPENPHYSFS, and
+  make_sdk.py's PHYSFS_COMMIT, both 21cfa03): the pack builds that commit
+  of the --openamigaphysfs checkout. In the GFOpenGPU part, as
+  tinygl.library is, because the ports that open it are built with that
+  part's kit and run on its CPU floor. The part stays 0.29.
 - The CPU floor (the user, 9 November 2026): a 68040 or 68060 with its FPU
   and MMU, nothing less, even for handy things. The GFOpenGPU part says
   "needs 68040" (GFOpenUpTool 0.8.18 leaves it out on less, from AttnFlags:
