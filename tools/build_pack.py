@@ -1076,8 +1076,8 @@ PART_MAIN = {
 # zunemaster.library (0.1, with the datatypes cache's Stricmp fix of 12 October 2026) with the
 # muimaster.library face (19.1). Sound 0.2.2 is GFOpenSpeaker (0.1.4; the editor is GFOpenPrefs's since W48) with GFOpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmiCradle machines only). GFOpenImage 0.4 adds
-# opentga.datatype (47.1). GFOpenService 1.2 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:) and
-# ServiceTest (0.1). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
+# opentga.datatype (47.1). GFOpenService 1.3 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:),
+# mitchy.library (1.0) and ServiceTest (0.2). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
 # fonts/amiga). ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so GFOpenUpTool UPDATE
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
@@ -1929,8 +1929,11 @@ def main() -> int:
     # 1.2 (0.8.17): MEDIA:, gfopenservice's read-only DOS handler on top of media.decode/1 (L:media-handler and its
     # mountlist DEVS:DOSDrivers/MEDIA, mounted at boot; docs/MEDIA_HANDLER.md), and ServiceTest, which lists the
     # services and opens one. A MEDIA mountlist of the user's own stays.
-    sv = Part(top, "GFOpenService", "1.2", "GFOpenService: services from AutoConfig boards and paired Cradles, and MEDIA:")
+    # 1.3 (0.8.27): LIBS:mitchy.library 1.0, the services card's (Mitchy's) library for every program, on the
+    # device (gfopenservice #34), and ServiceTest 0.2 on it, with one checked job for each service on offer.
+    sv = Part(top, "GFOpenService", "1.3", "GFOpenService: services from AutoConfig boards and paired Cradles, and MEDIA:")
     sv.add("Devs/gfopenservice.device", (a.openamigaservice / "bin/gfopenservice.device").read_bytes(), "DEVS:gfopenservice.device")
+    sv.add("Libs/mitchy.library", (a.openamigaservice / "bin/mitchy.library").read_bytes(), "LIBS:mitchy.library")
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")
     sv.add("C/ServiceTest", (a.openamigaservice / "bin/ServiceTest").read_bytes(), "C:ServiceTest")
     sv.add("L/media-handler", (a.openamigaservice / "bin/media-handler").read_bytes(), "L:media-handler")
