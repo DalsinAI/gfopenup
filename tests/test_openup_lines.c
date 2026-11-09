@@ -43,6 +43,9 @@ static int need_checks(void);
 static int way_checks(void);
 static int manifest_checks(void);
 
+/* GFOpenUp's list, for oul_old_line_taken: it names one file */
+static int gf_has(const char *path) { return !strcmp(path, "SYS:Developer/x.h"); }
+
 static int checks(void)
 {
     const unsigned none = 0, ac = OUL_AMICRADLE, ok = OUL_OPENKICK, both = OUL_AMICRADLE | OUL_OPENKICK;
@@ -237,6 +240,38 @@ static int manifest_checks(void)
     truth("a later one (0.3) needs the end line", whole("GFOpenUp\t0.3\nnew\tC:x\n"), 0);
     truth("a later one with it is whole", whole("GFOpenUp\t0.3\nnew\tC:x\n" OUL_MANIFEST_END "\n"), 1);
     truth("no first line: not a manifest", whole("new\tC:x\n" OUL_MANIFEST_END "\n"), 0);
+
+    /* a "new" line's mark: only what GFOpenUp wrote is taken out (9 Nov 2026) */
+    {
+        char mark[24];
+        unsigned long size = 0, crc = 0, c1;
+        const unsigned char *txt = (const unsigned char *)"123456789";
+        same("CRC-32 of \"123456789\" (the check value)", oul_crc32(0, txt, 9) == 0xCBF43926UL ? "cbf43926" : "wrong", "cbf43926");
+        c1 = oul_crc32(oul_crc32(0, txt, 4), txt + 4, 5);
+        truth("CRC-32 a chunk at a time is the same", c1 == 0xCBF43926UL, 1);
+        oul_mark(mark, 9, 0xCBF43926UL);
+        same("the mark of a 9-byte file", mark, "=9:cbf43926");
+        oul_mark(mark, 0, 0);
+        same("the mark of an empty file", mark, "=0:00000000");
+        oul_mark(mark, 4000000000UL, 0xFFFFFFFFUL);
+        same("the mark of a big file", mark, "=4000000000:ffffffff");
+        truth("a mark reads back", oul_mark_read("=9:cbf43926", &size, &crc) && size == 9 && crc == 0xCBF43926UL, 1);
+        truth("no field: not a mark", oul_mark_read("", &size, &crc), 0);
+        truth("a replaced line's backup path: not a mark", oul_mark_read("SYS:Storage/GFOpenUp-Superseded/SYS/C/x", &size, &crc), 0);
+        truth("a mark cut short: not a mark", oul_mark_read("=9:cbf4392", &size, &crc), 0);
+        truth("a mark with more after it: not a mark", oul_mark_read("=9:cbf43926x", &size, &crc), 0);
+        truth("the file as GFOpenUp wrote it is taken out", oul_still_ours("=9:cbf43926", 1, 9, 0xCBF43926UL), 1);
+        truth("the file written over since (other bytes) stays", oul_still_ours("=9:cbf43926", 1, 9, 0x12345678UL), 0);
+        truth("the file written over since (other size) stays", oul_still_ours("=9:cbf43926", 1, 10, 0xCBF43926UL), 0);
+        truth("a line from before marks is taken out as before", oul_still_ours("", 1, 10, 1), 1);
+        truth("a file that can't be read is left to DeleteFile", oul_still_ours("=9:cbf43926", 0, 0, 0), 1);
+    }
+    /* the old OpenUp's list: its lines for GFOpenUp's files go before its UNINSTALL (9 Nov 2026) */
+    truth("an old new line for a file GFOpenUp lists is taken out", oul_old_line_taken("new\tSYS:Developer/x.h", gf_has), 1);
+    truth("an old new line for a file GFOpenUp doesn't list stays", oul_old_line_taken("new\tSYS:C/OpenDock", gf_has), 0);
+    truth("an old replaced line stays", oul_old_line_taken("replaced\tSYS:Developer/x.h\tSYS:Storage/x", gf_has), 0);
+    truth("an old dir line stays", oul_old_line_taken("dir\tSYS:Developer", gf_has), 0);
+    truth("Windows line ends are read too", oul_old_line_taken("new\tSYS:Developer/x.h\r", gf_has), 1);
     printf(fails ? "%d FAILED\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }

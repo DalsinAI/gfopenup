@@ -4,6 +4,8 @@
  *                                     0.8.7; GFOpenRTG: where gfopenrtg.library is, 0.8.7)
  *   GFOpenUpTool INSTALL <part drawer>  installs one part, as its Part file says
  *   GFOpenUpTool REMOVE <part drawer>   takes one part out, putting back what it replaced (0.8.0)
+ *   GFOpenUpTool REINSTALL <Parts drawer>  every part the manifest lists, in again from the pack: missing or
+ *                                     changed files put back, the settings in ENVARC: and ENV: kept (9 Nov 2026)
  *   GFOpenUpTool STARTUP                writes the marked block in S:User-Startup
  *   GFOpenUpTool UNINSTALL              puts everything back
  *   GFOpenUpTool FIXTOOLS <table> [ALL] puts back default tools that GFOpenUp 0.6.14 to 0.7.0 changed
@@ -131,7 +133,7 @@
 
 #include "openup_lines.h"
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.16 (4.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.17 (9.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -638,6 +640,45 @@ static int copy_file(const char *from, const char *to, int record_dirs)
     return 1;
 }
 
+/* ---- what GFOpenUp wrote (9 Nov 2026; src/openup_lines.h, oul_mark) ---------------------------------------------- */
+
+/* The file's size and CRC-32, as a "new" line's mark (out: 24 bytes); 0 when it isn't a file that can be read whole. */
+static int file_mark(const char *path, char *out)
+{
+    BPTR fh;
+    char *buf;
+    LONG n;
+    unsigned long crc = 0, size = 0;
+    int ok = 0;
+    if (!is_file(path) || !(fh = Open((STRPTR)path, MODE_OLDFILE)))
+        return 0;
+    if ((buf = AllocVec(CHUNK, MEMF_ANY))) {
+        while ((n = Read(fh, buf, CHUNK)) > 0) { crc = oul_crc32(crc, (const unsigned char *)buf, n); size += n; }
+        ok = n == 0;
+        FreeVec(buf);
+    }
+    Close(fh);
+    if (ok) oul_mark(out, size, crc);
+    return ok;
+}
+
+/* A "new" line's mark set to the file as it is now (GFOpenUp's bytes, just written or found the same as its own). */
+static void note_mark(entry *e)
+{
+    char mark[24];
+    if (e && !strcmp(e->kind, "new") && file_mark(e->a, mark))
+        set_text(&e->b, mark);
+}
+
+/* 1 when a "new" line's file is still what GFOpenUp wrote, or the line has no mark to tell by (oul_still_ours) */
+static int still_ours(const entry *e)
+{
+    char mark[24];
+    unsigned long size = 0, crc = 0;
+    int there = file_mark(e->a, mark) && oul_mark_read(mark, &size, &crc);
+    return oul_still_ours(e->b, there, size, crc);
+}
+
 /* Where a file's original goes: SYS:Storage/GFOpenUp-Superseded/LIBS/x. */
 static void backup_path(const char *dest, char *out, int outlen)
 {
@@ -775,6 +816,12 @@ static int detect(void)
     set_env("GFOpenUp/GFOpenRTG", find_entry("part", "GFOpenRTG") ? "GFOpenUp"
                               : exists("SYS:Libs/gfopenrtg.library") ? "LIBS"
                               : FindResident((STRPTR)"gfopenrtg.library") ? "ROM" : "");
+    /* 9 Nov 2026: the version of GFOpenUp installed ("" when none, or its list can't be read whole), so the
+     * Installer offers Reinstall over the same version */
+    {
+        entry *pe = manifest_short ? NULL : find_entry("part", "GFOpenUp");
+        set_env("GFOpenUp/Installed", pe ? pe->b : "");
+    }
     strcpy(summary, "This is ");
     strcat(summary, ac ? "an AmiCradle instance" : !strcmp(machine, "PiStorm") ? "a PiStorm (Emu68)" : "an Amiga");
     strcat(summary, ", with a ");
@@ -809,7 +856,9 @@ static int out_of_way(const char *path)
     char backup[ENTRY_PATH], bdir[ENTRY_PATH];
     entry *e = find_entry(NULL, path);
     int made = 0;
-    if (e && (!strcmp(e->kind, "new") || !strcmp(e->kind, "replaced"))) {
+    if (e && !strcmp(e->kind, "new") && !still_ours(e))
+        set_text(&e->b, "");                                /* someone else's bytes now: kept, as any other file */
+    else if (e && (!strcmp(e->kind, "new") || !strcmp(e->kind, "replaced"))) {
         if (!DeleteFile((STRPTR)path)) {
             say("GFOpenUp: can't move ", path, " out of the way of the drawer that goes there. Is it in use, or the disk write-protected?");
             return -1;
@@ -861,6 +910,21 @@ static int clear_way(const char *dest)
     return 0;
 }
 
+static int reinstalling;                            /* REINSTALL (below): the settings in place stay */
+
+/* 1 when dest is a setting: in ENVARC: or ENV: */
+static int env_setting(const char *dest)
+{
+    static const char *const vols[] = { "ENVARC:", "ENV:" };
+    int v, i;
+    for (v = 0; v < 2; v++) {
+        for (i = 0; vols[v][i] && (dest[i] | 0x20) == (vols[v][i] | 0x20); i++)
+            ;
+        if (!vols[v][i]) return 1;
+    }
+    return 0;
+}
+
 /* Puts one file in place, keeping the original the first time GFOpenUp
  * replaces it, and notes it in the manifest (loaded by the caller).
  * only_if_missing: 1 leaves any file already there (the user's own setting);
@@ -870,22 +934,25 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
 {
     char backup[260];
     entry *e = find_entry(NULL, dest), *added = NULL;
-    if (only_if_missing == 1 && exists(dest))
-        return 0;                                   /* the user's own setting stays */
-    if (only_if_missing == 2 && exists(dest) && (!e || strcmp(e->kind, "new")))
+    /* a file GFOpenUp put there that has other bytes now (its mark, src/openup_lines.h): someone else's */
+    int theirs = e && !strcmp(e->kind, "new") && exists(dest) && !still_ours(e);
+    if ((only_if_missing == 1 || (reinstalling && env_setting(dest))) && exists(dest))
+        return 0;                                   /* the user's own setting stays (a reinstall: every setting) */
+    if (only_if_missing == 2 && exists(dest) && (!e || strcmp(e->kind, "new") || theirs))
         return 0;                                   /* another program's file stays */
     if (!exists(dest) && clear_way(dest) < 0)       /* (a file there means its drawers are drawers) */
         return -1;                                  /* a file where its drawer goes, which couldn't be kept */
     if (exists(dest) && same_file(from, dest)) {
         if (!e) add_entry("same", dest, NULL);
+        else note_mark(e);                          /* GFOpenUp's bytes: a line from before marks gets its mark */
         return 0;
     }
-    if (exists(dest) && (!e || !strcmp(e->kind, "same"))) {
+    if (exists(dest) && (!e || !strcmp(e->kind, "same") || theirs)) {
         /* The first time GFOpenUp replaces this file: keep the original. */
         char dir[260];
         backup_path(dest, backup, sizeof backup);
         parent_of(backup, dir, sizeof dir);
-        if (!exists(backup) && (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0))) {
+        if ((!exists(backup) || theirs) && (!ensure_dir(dir, 0) || !copy_file(dest, backup, 0))) {
             say("GFOpenUp: can't keep a copy of ", dest, " in SYS:Storage; it wasn't replaced. Is SYS: full or write-protected?");
             return -1;
         }
@@ -894,6 +961,7 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
             return -1;
         }
         if (e) strcpy(e->kind, "replaced");
+        if (theirs) say("GFOpenUp: ", dest, " had changed since GFOpenUp put it there; that copy is kept in SYS:Storage/GFOpenUp-Superseded.");
     } else if (!e) {
         added = add_entry("new", dest, NULL);
     }
@@ -902,6 +970,7 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
         say("GFOpenUp: can't write ", dest, ". Is the disk full or write-protected?");
         return -1;
     }
+    note_mark(added ? added : e);                   /* what GFOpenUp wrote, so UNINSTALL takes out only that */
     return 1;
 }
 
@@ -911,10 +980,16 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
 static int retire_file(const char *dest)
 {
     char backup[260], dir[260];
-    entry *e;
+    entry *e, *theirs = NULL;
     if (!exists(dest))
         return 0;                                   /* absent */
-    if ((e = find_entry(NULL, dest))) {
+    if ((e = find_entry(NULL, dest)) && !strcmp(e->kind, "new") && !still_ours(e)) {
+        /* GFOpenUp put it there, but it has other bytes now (its mark): kept in SYS:Storage as any other file is,
+         * its line becoming the "replaced" one */
+        theirs = e;
+        e = NULL;
+    }
+    if (e) {
         /* GFOpenUp's own file, from an earlier part that the retiring part has taken over: it goes. A "new"
          * one leaves the manifest with it; a "replaced" one keeps its entry, so UNINSTALL still puts the
          * original back from SYS:Storage. A "same" file is the user's own bytes and stays. Before, every
@@ -941,7 +1016,8 @@ static int retire_file(const char *dest)
         say("GFOpenUp: can't move ", dest, " out of the way. Is it in use, or the disk write-protected?");
         return -1;
     }
-    add_entry("replaced", dest, backup);
+    if (theirs && set_text(&theirs->b, backup)) strcpy(theirs->kind, "replaced");
+    else add_entry("replaced", dest, backup);
     return 1;
 }
 
@@ -1367,7 +1443,12 @@ static int remove_part(const char *drawer)
                  && n >= 3) dest = w[2];
         if (!dest || !(e = find_entry(NULL, dest)))
             continue;
-        if (!strcmp(e->kind, "new")) {
+        if (!strcmp(e->kind, "new") && !still_ours(e)) {
+            /* other bytes than GFOpenUp wrote (its mark): someone else's file now, so it stays, and leaves the list */
+            say("GFOpenUp: ", e->a, " has changed since GFOpenUp put it there, so it stays.");
+            e->kind[0] = 0;
+            continue;
+        } else if (!strcmp(e->kind, "new")) {
             if (DeleteFile((STRPTR)e->a) || !exists(e->a)) { removed++; e->kind[0] = 0; }
             else { say("GFOpenUp: can't delete ", e->a, "; is it in use?"); problems++; continue; }
         } else if (!strcmp(e->kind, "replaced")) {
@@ -1412,6 +1493,90 @@ static int remove_part(const char *drawer)
     Printf((STRPTR)"GFOpenUp: %s taken out (%ld file%s removed, %ld put back as they were)\n", (LONG)partname, removed,
            (LONG)(removed == 1 ? "" : "s"), restored);
     return problems ? RETURN_ERROR : RETURN_OK;
+}
+
+/* ---- REINSTALL: every installed part's files put back (9 Nov 2026) ----------------------------------------------
+ *   GFOpenUpTool REINSTALL <Parts drawer>
+ * Dale (9 Nov 2026): "it needs a reinstall option". Each part the manifest lists as installed goes in again from the
+ * pack's Parts drawer (and the drawers in it: Parts/GFOpenLibs/rexx...), in the order the manifest lists them, with
+ * INSTALL's own rules: a file that is missing or not GFOpenUp's bytes is written again (an original GFOpenUp hasn't
+ * kept yet is kept first), one that is GFOpenUp's already is left. Nothing is uninstalled first. The user's settings
+ * stay: in a reinstall no line writes over a file in ENVARC: or ENV: that is there (reinstalling), as "default"
+ * lines never do; S:User-Startup's block is the Installer's STARTUP's, after, which keeps the lines switched off. A
+ * part this pack hasn't got is said and left as it is. RETURN_OK, or the worst of the parts' codes. */
+#define MAXPARTS 128
+static char part_names[MAXPARTS][48], part_drawers[MAXPARTS][160];
+static int nparts;
+
+/* each Part file in drawer and the drawers in it, one level down: its part's name and drawer */
+static void find_parts(const char *drawer, int depth)
+{
+    BPTR lock = Lock((STRPTR)drawer, ACCESS_READ);
+    struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
+    char path[220], name[48], *text;
+    if (lock && fib && Examine(lock, fib)) {
+        strlcpy(path, drawer, sizeof path);
+        AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
+        if (depth > 0 && (text = read_file(path, NULL))) {
+            if (oul_part_name(text, name, sizeof name) && nparts < MAXPARTS && strlen(drawer) < sizeof part_drawers[0]) {
+                strcpy(part_names[nparts], name);
+                strcpy(part_drawers[nparts], drawer);
+                nparts++;
+            }
+            FreeVec(text);
+        }
+        if (depth < 2)
+            while (ExNext(lock, fib))
+                if (fib->fib_DirEntryType > 0) {
+                    strlcpy(path, drawer, sizeof path);
+                    if (AddPart((STRPTR)path, fib->fib_FileName, sizeof path)) find_parts(path, depth + 1);
+                }
+    }
+    if (fib) FreeDosObject(DOS_FIB, fib);
+    if (lock) UnLock(lock);
+}
+
+static int reinstall(const char *parts)
+{
+    static char wanted[MAXPARTS][48];
+    int nwanted = 0, i, j, rc = RETURN_OK, done = 0;
+    manifest_load();
+    if (manifest_short) {
+        manifest_save();                            /* says why */
+        return RETURN_ERROR;
+    }
+    if (!nents) {
+        say("GFOpenUp isn't installed here (no " MANIFEST "): there is nothing to reinstall. Install it instead.", NULL, NULL);
+        return RETURN_WARN;
+    }
+    for (i = 0; i < nents && nwanted < MAXPARTS; i++)
+        if (!strcmp(ents[i].kind, "part") && strlen(ents[i].a) < sizeof wanted[0])
+            strcpy(wanted[nwanted++], ents[i].a);
+    nparts = 0;
+    find_parts(parts, 0);
+    if (!nparts) {
+        say("GFOpenUp: no parts in ", parts, ". Run the Installer from the GFOpenUp drawer.");
+        return RETURN_FAIL;
+    }
+    reinstalling = 1;
+    for (i = 0; i < nwanted; i++) {
+        for (j = 0; j < nparts && strcmp(part_names[j], wanted[i]); j++)
+            ;
+        if (j == nparts) {
+            say("GFOpenUp: ", wanted[i], " is installed, but this pack hasn't got it; it was left as it is.");
+            if (rc < RETURN_WARN) rc = RETURN_WARN;
+            continue;
+        }
+        {
+            int r = install(part_drawers[j]);
+            if (r > rc) rc = r;
+            done++;
+        }
+    }
+    reinstalling = 0;
+    Printf((STRPTR)"GFOpenUp: reinstalled %ld part%s%s\n", (LONG)done, (LONG)(done == 1 ? "" : "s"),
+           (LONG)(rc > RETURN_WARN ? "; see the messages above" : ""));
+    return rc;
 }
 
 /* ---- S:User-Startup ---------------------------------------------------------------------- */
@@ -1897,11 +2062,18 @@ static void delete_tone(const char *pic)
 
 static int uninstall(void)
 {
-    int i, problems = 0, restored = 0, removed = 0, said_wait = 0;
+    int i, problems = 0, restored = 0, removed = 0, said_wait = 0, kept = 0;
     manifest_load();
     if (!nents && !exists(MANIFEST)) {
-        say("GFOpenUp isn't installed here: there is no list of its files (" MANIFEST ").", NULL, NULL);
+        say("GFOpenUp isn't installed here: there is no list of its files (" MANIFEST "), so nothing was changed.", NULL, NULL);
         return RETURN_WARN;
+    }
+    /* 9 Nov 2026: only from a whole list. A list cut short or not read whole names part of what GFOpenUp put in and
+     * none of what it didn't, but it can't be told which drawers and originals its lost lines held: nothing is done. */
+    if (manifest_short) {
+        say("GFOpenUp: its list of installed files (" MANIFEST ") is cut short or can't be read, so nothing was taken out. "
+            "If " MANIFEST_ENV " is whole, copy it in its place and run Uninstall-GFOpenUp again.", NULL, NULL);
+        return RETURN_ERROR;
     }
     /* default tools still on GFOpenView (GFOpenTypes' UNDO has run before this when the Uninstall-GFOpenUp script
      * does it): put back, with the kinds of file too, before GFOpenView goes */
@@ -1925,6 +2097,12 @@ static int uninstall(void)
                 for (LONG k = 0; t && k < len; k++) if (t[k] != '\n' && t[k] != ' ') { blank = 0; break; }
                 if (t) FreeVec(t);
                 if (!blank) { e->kind[0] = 0; continue; }   /* someone else wrote in it since: theirs now */
+            } else if (!still_ours(e)) {
+                /* other bytes than GFOpenUp wrote there (its mark, src/openup_lines.h): someone else's now */
+                say("GFOpenUp: ", e->a, " has changed since GFOpenUp put it there, so it stays.");
+                e->kind[0] = 0;
+                kept++;
+                continue;
             }
             if (DeleteFile((STRPTR)e->a)) { removed++; e->kind[0] = 0; }
             else if (!exists(e->a)) e->kind[0] = 0;          /* gone already */
@@ -2005,6 +2183,9 @@ static int uninstall(void)
     }
     Printf((STRPTR)"GFOpenUp: uninstalled: %ld file%s removed, %ld put back as they were%s\n", removed, (LONG)(removed == 1 ? "" : "s"),
            restored, (LONG)(problems ? "; see the messages above" : ". Reboot to finish."));
+    if (kept)
+        Printf((STRPTR)"GFOpenUp: %ld file%s GFOpenUp put in had changed since, so %s left as %s.\n", kept,
+               (LONG)(kept == 1 ? "" : "s"), (LONG)(kept == 1 ? "it was" : "they were"), (LONG)(kept == 1 ? "it is" : "they are"));
     return problems ? RETURN_ERROR : RETURN_OK;
 }
 
@@ -4102,6 +4283,54 @@ static char *gf_lines(const char *text)
     return out;
 }
 
+/* 1 when GFOpenUp's own list names path (any kind but a blank one) */
+static int gf_listed(const char *path)
+{
+    int i;
+    for (i = 0; i < nents; i++)
+        if (ents[i].kind[0] && same_word(ents[i].a, path)) return 1;
+    return 0;
+}
+
+/* 9 Nov 2026: the old list without its "new" lines for files GFOpenUp's list names (src/openup_lines.h,
+ * oul_old_line_taken), so the old OpenUpTool UNINSTALL the Installer runs next leaves GFOpenUp's files alone. Only
+ * with the copy of the old list kept (OLD_KEPT), and only from a whole GFOpenUp list. 1 done (or nothing to do). */
+static int old_list_prune(void)
+{
+    LONG len = 0;
+    char *text, *out, *o, *p;
+    int taken = 0, ok = 1;
+    manifest_load();
+    if (manifest_short) {
+        say("GFOpenUp: its own list (" MANIFEST ") can't be read whole, so the old OpenUp can't be told which files are GFOpenUp's now.", NULL, NULL);
+        return 0;
+    }
+    if (!nents || !(text = read_file(OLD_MANIFEST, &len)))
+        return 1;
+    if (!(out = AllocVec(len + 1, MEMF_ANY))) { FreeVec(text); return 0; }
+    for (o = out, p = text; *p; ) {
+        char *e = p;
+        char c;
+        while (*e && *e != '\n') e++;
+        c = *e; *e = 0;
+        if (oul_old_line_taken(p, gf_listed)) taken++;
+        else { strcpy(o, p); o += strlen(p); if (c) *o++ = '\n'; }
+        *e = c;
+        p = c ? e + 1 : e;
+    }
+    *o = 0;
+    if (taken) {
+        ok = write_file(OLD_MANIFEST, out, o - out);
+        Printf((STRPTR)(ok ? "GFOpenUp: OpenUp's list no longer names the %ld files GFOpenUp has put in their places since, so "
+                             "OpenUp's UNINSTALL leaves them.\n"
+                           : "GFOpenUp: couldn't take the %ld files GFOpenUp has put in their places since out of OpenUp's list, "
+                             "so OpenUp wasn't taken out.\n"), (LONG)taken);
+    }
+    FreeVec(out);
+    FreeVec(text);
+    return ok;
+}
+
 static int old_settings_copy(void)
 {
     static const char *const vols[2] = { "ENVARC:", "ENV:" };
@@ -4129,6 +4358,9 @@ static int old_settings_copy(void)
             return RETURN_ERROR;
         }
     }
+    /* GFOpenUp's files where the old OpenUp's were: out of the old list, before the old UNINSTALL runs */
+    if (!old_list_prune())
+        return RETURN_ERROR;                         /* the Installer stops: the old UNINSTALL would delete them */
     /* 0.8.14: the backdrop the user has now, for BACKDROP KEEP after the old OpenUp's UNINSTALL puts back the
      * WBPattern.prefs from before it (lab t5-up0814-32, a copy of Instance-32) */
     if (exists(WBPATTERN)) copy_all(WBPATTERN, WBPATTERN_BEFORE);
@@ -4277,7 +4509,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n");
+        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -4288,6 +4520,7 @@ static int real_main(void)
     if (same_word(cmd, "DETECT")) rc = detect();
     else if (same_word(cmd, "INSTALL") && args[1]) rc = install((const char *)args[1]);
     else if (same_word(cmd, "REMOVE") && args[1]) rc = remove_part((const char *)args[1]);
+    else if (same_word(cmd, "REINSTALL") && args[1]) rc = reinstall((const char *)args[1]);
     else if (same_word(cmd, "STARTUP")) rc = write_startup(0) ? RETURN_OK : (say("GFOpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL), RETURN_ERROR);
     else if (same_word(cmd, "UNINSTALL")) rc = uninstall();
     else if (same_word(cmd, "FIXTOOLS") && args[1]) rc = fix_tools((const char *)args[1], args[2] && same_word((const char *)args[2], "ALL"));
@@ -4339,7 +4572,7 @@ static int real_main(void)
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
     else if (same_word(cmd, "OLDNAMES")) rc = args[1] && same_word((const char *)args[1], "DOCK") ? old_dock() : old_settings_copy();
-    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;

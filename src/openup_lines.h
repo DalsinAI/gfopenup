@@ -270,4 +270,91 @@ static int oul_manifest_whole(const char *text, long len)
     return last > head && oul_line_is(last, end, OUL_MANIFEST_END);
 }
 
+/* ---- What GFOpenUp wrote, so only that is taken out (9 November 2026) ----
+ * A "new" line names a file GFOpenUp put where there was none. UNINSTALL and REMOVE deleted every one of them,
+ * whatever had happened to the file since: written over by the OS, another program or a card builder, it went all
+ * the same (Dale's PiStorm card, GFOS on GFOpenKick full38, 9 Nov 2026: 2,080 of its system drive's 2,170 files went
+ * at 02:07 while the GFOpenUp pack's Install and Uninstall were being run). Now INSTALL notes each "new" file's size and CRC-32 as the line's second field,
+ * "=<size>:<crc, 8 hex digits>", and a file that is no longer those bytes is someone else's: it stays, and leaves the
+ * list. A line without the field (GFOpenUpTool 0.8.16 and earlier) is checked against nothing; INSTALL adds the field
+ * the next time it finds GFOpenUp's bytes there (an upgrade, a reinstall). */
+static unsigned long oul_crc_table[256];
+
+/* the CRC-32 (IEEE 802.3, as zip's) of n more bytes, from crc (0 to start) */
+static unsigned long oul_crc32(unsigned long crc, const unsigned char *p, long n)
+{
+    if (!oul_crc_table[1]) {
+        unsigned long c, i;
+        int k;
+        for (i = 0; i < 256; i++) {
+            for (c = i, k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320UL ^ (c >> 1) : c >> 1;
+            oul_crc_table[i] = c;
+        }
+    }
+    crc = ~crc & 0xFFFFFFFFUL;
+    while (n-- > 0) crc = oul_crc_table[(crc ^ *p++) & 0xFF] ^ (crc >> 8);
+    return ~crc & 0xFFFFFFFFUL;
+}
+
+/* the field for a file of size bytes and that CRC, in out (at least 21 bytes) */
+static void oul_mark(char *out, unsigned long size, unsigned long crc)
+{
+    static const char hex[] = "0123456789abcdef";
+    char digits[12];
+    int n = 0, i;
+    *out++ = '=';
+    do { digits[n++] = (char)('0' + size % 10); size /= 10; } while (size && n < 11);
+    while (n) *out++ = digits[--n];
+    *out++ = ':';
+    for (i = 7; i >= 0; i--) *out++ = hex[(crc >> (4 * i)) & 15];
+    *out = 0;
+}
+
+/* 1 when the field is a mark (oul_mark), with its size and CRC */
+static int oul_mark_read(const char *s, unsigned long *size, unsigned long *crc)
+{
+    unsigned long v = 0, c = 0;
+    int digits = 0;
+    if (!s || *s++ != '=') return 0;
+    while (*s >= '0' && *s <= '9' && digits < 11) { v = v * 10 + (unsigned long)(*s++ - '0'); digits++; }
+    if (!digits || *s++ != ':') return 0;
+    for (digits = 0; digits < 8; digits++, s++) {
+        int d = *s >= '0' && *s <= '9' ? *s - '0' : *s >= 'a' && *s <= 'f' ? *s - 'a' + 10 : *s >= 'A' && *s <= 'F' ? *s - 'A' + 10 : -1;
+        if (d < 0) return 0;
+        c = c << 4 | (unsigned long)d;
+    }
+    if (*s) return 0;
+    *size = v;
+    *crc = c & 0xFFFFFFFFUL;
+    return 1;
+}
+
+/* What UNINSTALL and REMOVE do with a "new" line's file, from its field (b) and the file as it is (there: 1 when it
+ * is a file that could be read whole, with its size and CRC): 1 take it out, 0 leave it (someone else's now). A line
+ * without a mark is taken out as before, as is a file that couldn't be read (DeleteFile says what is wrong). */
+static int oul_still_ours(const char *b, int there, unsigned long size, unsigned long crc)
+{
+    unsigned long msize, mcrc;
+    if (!oul_mark_read(b, &msize, &mcrc) || !there) return 1;
+    return msize == size && mcrc == crc;
+}
+
+/* ---- the OpenUp from before the GF names (9 November 2026) ----
+ * Its OpenUpTool UNINSTALL (0.8.11 and earlier, not GFOpenUp's to change) deletes every "new" line of its list,
+ * ENVARC:OpenAmiga/OpenUp.manifest. Where GFOpenUp has put its own file at the same name since, that file is
+ * GFOpenUp's (its manifest lists it), and the old UNINSTALL would delete it: the backdrops, the developer files, the
+ * datatypes and the rest that both put in the same places, nearly all of a GFOS disk. OLDNAMES takes those lines out
+ * of the old list first (its copy in SYS:Storage/GFOpenUp-Superseded/OpenUp-before-GF keeps them). 1 when the old
+ * list's line (without its newline) is a "new" line for a path the GFOpenUp list names (listed(path) != 0). */
+static int oul_old_line_taken(const char *line, int (*listed)(const char *path))
+{
+    char path[260];
+    int n = 0;
+    if (strncmp(line, "new\t", 4)) return 0;
+    line += 4;
+    while (line[n] && line[n] != '\t' && line[n] != '\r' && n < (int)sizeof path - 1) { path[n] = line[n]; n++; }
+    path[n] = 0;
+    return n > 0 && listed(path);
+}
+
 #endif
