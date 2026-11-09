@@ -52,6 +52,14 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   2026). GFOpenBench's theme names DejaVu Sans 13 and the Open programs' look
   DejaVu Sans 12; without the library their text falls back to the screen's
   font ([docs/openbench-labels.png](docs/openbench-labels.png)).
+  With them, AmiSans (9 November 2026): TeX Gyre Heros (GUST Font License),
+  the open Helvetica closest to OS 3.2.3's CGTriumvirate, as
+  `FONTS:AmiSans.font` with gfopenfont's hinted bitmap sizes 12 and 13
+  (`FONTS:AmiSans/`), `AmiSans.otag` (CGTriumvirate's `OT_YSizeFactor`) and
+  the unmodified `_otf/texgyreheros-regular.otf`, from gfopenfont's
+  `fonts/outline`. The open ROM's tall Workbench takes it where there is no
+  CGTriumvirate, before DejaVu Sans, in the same 24-pixel bars; GFOpenUp
+  still writes no Font prefs.
 - GFOpenBlanker 1.4 (0.8.16): its credits are CGTriumvirate and CGTimes, OS
   3.2's own, where they are. The open ROM's disk has neither, so the part
   brings DejaVu Sans and DejaVu Serif (DejaVu fonts 2.37, free) as outline

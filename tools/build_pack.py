@@ -74,8 +74,11 @@ a Part file that C/GFOpenUpTool reads:
                         (GFOpenUpTool REMOVE Parts/ShellIcon puts the 130 back)
   GFOpenFont/             gfopenfont.library, and DejaVu Sans as an outline font it draws (FONTS:DejaVuSans.font,
                         .otag and _ttf/DejaVuSans.ttf), with their licences: the font GFOpenBench's theme and
-                        the Open programs' look name. Installed on a 68040 or 68060 with its FPU (the
-                        --openamigafont checkout's build-amiga.sh; DejaVu Sans from --dejavu-sans)
+                        the Open programs' look name; and AmiSans, TeX Gyre Heros (FONTS:AmiSans.font with
+                        hinted sizes 12 and 13, .otag and _otf/texgyreheros-regular.otf, GUST Font License),
+                        the open stand-in for OS 3.2.3's CGTriumvirate that the ROM's tall Workbench falls
+                        back to. Installed on a 68040 or 68060 with its FPU (the --openamigafont
+                        checkout's build-amiga.sh and fonts/outline; DejaVu Sans from --dejavu-sans)
   GFOpenPrefs/            GFOpenPrefs, every editor of ours as a page of one program, in its own
                         drawer, SYS:Preferences/GFOpenPrefs, with a project icon per page by its
                         plain name (Theme, Sound, Date & Time...) and SYS:Preferences on the
@@ -1284,6 +1287,15 @@ def check_openbrowser_pin(archive: Path) -> None:
 DEJAVU_SANS_SHA256 = "b4c632e3cdf9acc7f28758fb5a323c8524d7fc6660d46904d9b6cbe2809c419c"
 # DejaVu Serif for the GFOpenBlanker part (0.8.16): the same DejaVu fonts 2.37 package's DejaVuSerif.ttf.
 DEJAVU_SERIF_SHA256 = "a52c2a69dfc93d0b511b98c1019a57eb3d6a62d328bdf1387f00851b02e3a315"
+# AmiSans for the GFOpenFont part (9 November 2026): TeX Gyre Heros, texgyreheros-regular.otf 2.004 from GUST's
+# e-foundry (qhv2.004otf.zip; tg2_501otf.zip has the same file), unmodified, in gfopenfont's fonts/outline/TeXGyreHeros
+# with the GUST Font License, and gfopenfont's hinted bitmap sizes of it (fonts/outline/AmiSans.font). The open
+# stand-in for OS 3.2.3's CGTriumvirate: the GFOpenKick ROM's tall Workbench font falls back to it (amicradle-guest
+# screen_core.h OI_TALL_FONT_OPEN) and GFOpenPrefs' standard font is it on an open disk.
+TEXGYRE_HEROS_SHA256 = "6ae1a09d5a940367b7aaaa91ee8bd8a2c333bfe193e7096e23f931357d62081f"
+# Its .otag's OT_YSizeFactor: CGTriumvirate.otag's own 8782/10519 (OS 3.2.3), so a YSize draws the same em (13: 11
+# pixels, as the bitmap size) and AmiSans 13 stands where CGTriumvirate 13 stood, in the same 24-pixel bars.
+TEXGYRE_HEROS_YSIZE_FACTOR = (8782, 10519)
 
 
 def ttf_name(data: bytes, nid: int) -> str | None:
@@ -1363,6 +1375,7 @@ def openfont_part(top: Path, font_src: Path | None, ttf: Path):
     p.add("Fonts/DejaVuSans.font", struct.pack(">HH", 0x0F03, 0), "FONTS:DejaVuSans.font", own=True)
     p.add("Fonts/DejaVuSans.otag", outline_otag("_ttf/DejaVuSans.ttf"), "FONTS:DejaVuSans.otag", own=True)
     p.add("Fonts/_ttf/DejaVuSans.ttf", sans, "FONTS:_ttf/DejaVuSans.ttf", own=True)
+    heros = amisans(p, font_src)
     p.add("Utilities/GFOpenUp/Licences/GFOpenFont.txt",
           (font_src / "LICENSE").read_bytes() + b"\n\nThe Unicode character data in gfopenfont.library:\n\n" +
           (font_src / "LICENSES/Unicode-License-v3.txt").read_bytes(),
@@ -1373,8 +1386,52 @@ def openfont_part(top: Path, font_src: Path | None, ttf: Path):
           .encode("latin-1", "replace"),
           "SYS:Utilities/GFOpenUp/Licences/DejaVuSans.txt")
     p.write()
-    print(f"  GFOpenFont {p.lines[0].split()[-1]}: gfopenfont.library, DejaVu Sans (sha256 checked)")
+    print(f"  GFOpenFont {p.lines[0].split()[-1]}: gfopenfont.library, DejaVu Sans" +
+          (", AmiSans (TeX Gyre Heros)" if heros else "") + " (sha256 checked)")
     return p
+
+
+def amisans(p: "Part", font_src: Path) -> bool:
+    """AmiSans in the GFOpenFont part: TeX Gyre Heros, from gfopenfont's fonts/outline (9 November 2026).
+    FONTS:AmiSans.font (an outline .font, OFCH_ID $0F03, with gfopenfont's hinted bitmap sizes 12 and 13,
+    FONTS:AmiSans/12 and 13, the sizes the look uses), FONTS:AmiSans.otag for every other size (bullet,
+    _otf/texgyreheros-regular.otf, OT_YSizeFactor CGTriumvirate's) and FONTS:_otf/texgyreheros-regular.otf, the
+    OpenType file unmodified; the GUST Font License with it in SYS:Utilities/GFOpenUp/Licences/AmiSans.txt. AmiSans,
+    not TeX Gyre Heros: the bitmap sizes are drawn from it, and GUST asks that derived works have a new name.
+    False, and the part without it, when the checkout has none (an older gfopenfont)."""
+    import hashlib
+    o = font_src / "fonts/outline"
+    otf = o / "TeXGyreHeros/texgyreheros-regular.otf"
+    if not otf.is_file() or not (o / "AmiSans.font").is_file():
+        print(f"  GFOpenFont: AmiSans left out ({o} has no AmiSans.font and TeX Gyre Heros: an older gfopenfont)")
+        return False
+    data = otf.read_bytes()
+    got = hashlib.sha256(data).hexdigest()
+    if got != TEXGYRE_HEROS_SHA256:
+        raise SystemExit(f"GFOpenFont: {otf} has sha256 {got}; the pack takes TeX Gyre Heros 2.004's "
+                         f"texgyreheros-regular.otf, sha256 {TEXGYRE_HEROS_SHA256}")
+    contents = (o / "AmiSans.font").read_bytes()
+    fid, n = struct.unpack(">HH", contents[:4])
+    if fid != 0x0F03 or len(contents) != 4 + 260 * n:
+        raise SystemExit(f"GFOpenFont: {o}/AmiSans.font isn't an outline font's contents file (OFCH_ID $0F03)")
+    sizes = [contents[4 + 260 * i:4 + 260 * i + 256].split(b"\0")[0].decode("latin-1") for i in range(n)]
+    notice = ttf_name(data, 0) or ""
+    # "add": an AmiSans of another program's stays
+    p.add("Fonts/AmiSans.font", contents, "FONTS:AmiSans.font", own=True)
+    for rel in sizes:
+        p.add(f"Fonts/{rel}", (o / rel).read_bytes(), f"FONTS:{rel}", own=True)
+    p.add("Fonts/AmiSans.otag", outline_otag("_otf/texgyreheros-regular.otf", TEXGYRE_HEROS_YSIZE_FACTOR),
+          "FONTS:AmiSans.otag", own=True)
+    p.add("Fonts/_otf/texgyreheros-regular.otf", data, "FONTS:_otf/texgyreheros-regular.otf", own=True)
+    p.add("Utilities/GFOpenUp/Licences/AmiSans.txt",
+          ("AmiSans is TeX Gyre Heros 2.004 (FONTS:_otf/texgyreheros-regular.otf, unmodified, from GUST's e-foundry,\n"
+           "https://www.gust.org.pl/projects/e-foundry/tex-gyre/heros), with FONTS:AmiSans.otag and bitmap sizes\n"
+           "drawn from it (FONTS:AmiSans.font, " + ", ".join(f"FONTS:{r}" for r in sizes) + "; gfopenfont's\n"
+           "tools/amigapropfont.py), named AmiSans as GUST asks of derived works. All of it is under the GUST Font\n"
+           "License.\nThe font file's notice: " + notice + "\n\n" +
+           (o / "TeXGyreHeros/GUST-FONT-LICENSE.txt").read_text("latin-1")).encode("latin-1", "replace"),
+          "SYS:Utilities/GFOpenUp/Licences/AmiSans.txt")
+    return True
 
 
 def blanker_fonts(bl: "Part", sans_ttf: Path, serif_ttf: Path) -> None:

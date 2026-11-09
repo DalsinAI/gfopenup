@@ -341,6 +341,48 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
 OUL_NEEDPART = "needpart"     # src/openup_lines.h
 
 
+def amisans_checks() -> None:
+    """The GFOpenFont part's AmiSans, TeX Gyre Heros (9 November 2026): from a gfopenfont checkout's fonts/outline
+    (OPENAMIGAFONT=dir, or one beside this one), its .font an outline one listing the bitmap sizes 12 and 13, which
+    come with it, the .otag naming _otf/texgyreheros-regular.otf with CGTriumvirate's OT_YSizeFactor, the file
+    unmodified and the GUST Font License."""
+    import struct
+    src = Path(os.environ.get("OPENAMIGAFONT", ROOT.parent / "gfopenfont"))
+    o = src / "fonts/outline"
+    if not (o / "AmiSans.font").is_file():
+        print(f"skipped: AmiSans (no {o}/AmiSans.font)")
+        return
+    with tempfile.TemporaryDirectory() as t:
+        p = bp.Part(Path(t), "GFOpenFont", "0.9", "test")
+        check("AmiSans: taken from gfopenfont", bp.amisans(p, src))
+        d = p.dir
+        otag = (d / "Fonts/AmiSans.otag").read_bytes()
+        tags = {}
+        for i in range(0, len(otag) - 8, 8):
+            tag, val = struct.unpack(">II", otag[i:i + 8])
+            if tag == 0:
+                break
+            tags[tag] = val
+        spec = otag[tags.get(0x80009101, 0):].split(b"\0")[0]
+        font = (d / "Fonts/AmiSans.font").read_bytes()
+        check("AmiSans: an outline .font (OFCH_ID) listing AmiSans/12 and AmiSans/13, both in the part",
+              font[:4] == b"\x0f\x03\x00\x02" and font[4:14] == b"AmiSans/12" and font[264:274] == b"AmiSans/13"
+              and (d / "Fonts/AmiSans/12").is_file() and (d / "Fonts/AmiSans/13").is_file()
+              and 'add "Fonts/AmiSans/13" "FONTS:AmiSans/13"' in p.lines)
+        check("AmiSans: the .otag's engine, file, size and OT_YSizeFactor 8782/10519",
+              tags.get(0x80001001) == len(otag) and spec == b"_otf/texgyreheros-regular.otf"
+              and tags.get(0x80001011) == (8782 << 16 | 10519), str(tags))
+        check("AmiSans: TeX Gyre Heros's file unmodified",
+              (d / "Fonts/_otf/texgyreheros-regular.otf").read_bytes() ==
+              (o / "TeXGyreHeros/texgyreheros-regular.otf").read_bytes())
+        lic = (d / "Utilities/GFOpenUp/Licences/AmiSans.txt").read_text("latin-1")
+        check("AmiSans: its licence, the GUST Font License, with the font's notice",
+              "GUST Font License" in lic and "LaTeX Project Public License" in lic and "Jackowski" in lic)
+        check("AmiSans: the Part lines add it where nothing is or GFOpenUp put it",
+              'add "Fonts/AmiSans.otag" "FONTS:AmiSans.otag"' in p.lines
+              and 'add "Fonts/_otf/texgyreheros-regular.otf" "FONTS:_otf/texgyreheros-regular.otf"' in p.lines)
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -664,6 +706,7 @@ def main() -> int:
     check("GFOpenUpMenu's page entries: each a page icon by its plain name, with its page's SECTION word",
           entries and all(label == page and pagewords.get(page) == word for label, page, word in entries), str(entries))
 
+    amisans_checks()
     openprinter_checks()
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
