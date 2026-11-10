@@ -710,13 +710,15 @@ def build_parts(a):
     # OpenRexx (amicradle-guest libraries/openrexx, its default os32-gcc16 stove): rexxsyslib.library,
     # rexxsupport.library and RexxMast
     run(["sh", g / "openrexx/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openrexx")))
-    # z.library 53.14 (amicradle-guest libraries/openzlib, GCC 16; the Aminet jump table since #632; since #643, 0.8.23,
-    # CRC-32, Adler-32 and its copies and clears through AC090's helpers, plain 68k code on any other machine): the
+    # z.library 53.15 (amicradle-guest libraries/openzlib, GCC 16; the Aminet jump table since #632; since #643, 0.8.23,
+    # CRC-32, Adler-32 and its copies and clears through AC090's helpers, plain 68k code on any other machine; since
+    # #677/#690, 53.15, a block's codes and a whole-input deflate as hostlib calls, ZLIB_MIN_FOR_PHYSFS): the
     # GFOffice part's (and GFOpenImage's). GFOpenCompress 0.3.3 and the datatypes' zlibrary.c refuse 53.12, so they ship with it.
     # libowf opens it when a document first needs deflate (saving, PNG pictures in PDFs) or inflate (faster than
     # libowf's own inflater, which reads zip packages without it)
     run(["sh", g / "openzlib/build-amiga.sh"], env=dict(genv, STOVE=gcc16_root, OUT=str(ROOT / "build/openzlib")))
-    # physfs.library 1.1 (gfopenphysfs at GFOPENPHYSFS's commit, GCC 16): the GFOpenGPU part's, with that z.library;
+    # physfs.library 1.1 (gfopenphysfs at GFOPENPHYSFS's commit, GCC 16): the GFOpenGPU part's, with that z.library
+    # (53.15 or newer, ZLIB_MIN_FOR_PHYSFS);
     # its SDK files go in the developer kit (make_sdk.py --physfs)
     if a.openamigaphysfs:
         build_physfs(a.openamigaphysfs, ROOT / "build/physfs", gcc16_root)
@@ -1313,15 +1315,22 @@ def openbrowserlite_files(archive: Path | None) -> dict:
 
 
 # physfs.library (gfopenphysfs: PhysicsFS 3.2.0 as one shared library, one copy of its state per program), for the
-# game ports built with the GFOpenGPU developer kit's -lphysfs_auto. Pinned by commit: main after gfopenphysfs #1
-# and #2 (1.1: a RomTag and per-opener bases; zip members inflate through LIBS:z.library). The pack builds that
-# commit from the --openamigaphysfs checkout whatever the checkout has out (git archive), so a newer main is a
-# change here. gfopenrtg's make_sdk.py checks the same commit (its PHYSFS_COMMIT) before the kit takes the SDK files.
+# game ports built with the GFOpenGPU developer kit's -lphysfs_auto. Pinned by commit: main after gfopenphysfs #5
+# (1.1: a RomTag and per-opener bases; zip members inflate through LIBS:z.library; since #5 files are read through
+# a read-ahead buffer, and seeking back in a deflated member is right; the same functions and LVOs as 21cfa03, the
+# 0.8.28-rc1 pin). The pack builds that commit from the --openamigaphysfs checkout whatever the checkout has out
+# (git archive), so a newer main is a change here. gfopenrtg's make_sdk.py checks the same commit (its
+# PHYSFS_COMMIT) before the kit takes the SDK files.
 GFOPENPHYSFS = {
     "version": "1.1",
-    "commit": "21cfa03d8cbff7ddad62c8a2fbba4c7fd0589e20",
-    "source": "https://github.com/DalsinAI/gfopenphysfs/commit/21cfa03d8cbff7ddad62c8a2fbba4c7fd0589e20",
+    "commit": "d3a0ad78e2a1cb5cc32306982593a9889f2e9ba4",
+    "source": "https://github.com/DalsinAI/gfopenphysfs/commit/d3a0ad78e2a1cb5cc32306982593a9889f2e9ba4",
 }
+
+# The oldest z.library physfs.library is shipped with: 53.15 (amicradle-guest #690), whose inflate runs a block's
+# codes as one hostlib call (host code on AmiCradle, the same C on any other 68k), so zip members read about a
+# quarter faster on AmiCradle (Team 2, task 42). An older guest checkout stops the pack here rather than ship 53.14.
+ZLIB_MIN_FOR_PHYSFS = (53, 15)
 
 
 def build_physfs(checkout: Path, out: Path, stove16: str) -> None:
@@ -1352,6 +1361,10 @@ def physfs_into_gpu(gp: "Part", built: Path, zlib: bytes) -> None:
     ver = binary_version(lib, "physfs.library")
     if ver != GFOPENPHYSFS["version"]:
         raise SystemExit(f"physfs.library: {built} has version {ver}, GFOPENPHYSFS says {GFOPENPHYSFS['version']}")
+    zver = binary_version(zlib, "z.library")
+    if zver is None or tuple(int(x) for x in zver.split(".")[:2]) < ZLIB_MIN_FOR_PHYSFS:
+        raise SystemExit(f"physfs.library: z.library is {zver or 'unversioned'}, it needs "
+                         f"{'.'.join(map(str, ZLIB_MIN_FOR_PHYSFS))} or newer (ZLIB_MIN_FOR_PHYSFS: amicradle-guest main)")
     gp.add("Libs/physfs.library", lib, "LIBS:physfs.library")
     gp.add("Libs/z.library", zlib, "LIBS:z.library")
     gp.add("Utilities/GFOpenUp/Licences/PhysicsFS.txt",
