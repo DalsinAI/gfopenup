@@ -606,6 +606,28 @@ def main() -> int:
         check("each file as built", all((core.dir / "OpenKick" / out).read_bytes() == f"{n} body".encode()
                                          for n, (_, out, _) in bp.OPENKICK_DISK.items()))
 
+        # GFOS had no SYS:Classes/arexx.class, so no program's ARexx port opened (Team 5, 10 November 2026): ours
+        # (GFOpenReaction) on the open ROM where none is, with its licence; under OS 3.2.3's ROM nothing (ReAction's)
+        built = tmp / "openkickclasses"
+        for name, (_, out, _) in bp.OPENKICK_CLASSES.items():
+            (built / name / out).parent.mkdir(parents=True, exist_ok=True)
+            (built / name / out).write_bytes(f"{name}.class 47.100 (10.11.2026) body".encode())
+        core = bp.Part(top, "GFOpenUp", "0.9", "test")
+        bp.openkick_classes_lines(core, built, b"MIT licence text")
+        core.write()
+        want = sorted(['default "OpenKick/classes/arexx.class" "SYS:Classes/arexx.class"',
+                       'copy "Utilities/GFOpenUp/Licences/GFOpenReaction.txt" '
+                       '"SYS:Utilities/GFOpenUp/Licences/GFOpenReaction.txt"'])
+        for machine in ("openkick100-ac", "openkick101-ac", "openkick101"):
+            eff = lines_on(core.dir / "Part", machine, filt)
+            if machine != "openkick100-ac":
+                check(f"{machine}: arexx.class where none is, and its licence", sorted(eff[2:]) == want, str(eff))
+        eff = lines_on(core.dir / "Part", "os323", filt)
+        check("os323: no arexx.class (ReAction's is there)", eff[2:] == [], str(eff))
+        check("arexx.class as built", (core.dir / "OpenKick/classes/arexx.class").read_bytes().endswith(b"body"))
+        check("GFOpenReaction's licence", (core.dir / "Utilities/GFOpenUp/Licences/GFOpenReaction.txt")
+              .read_bytes().endswith(b"MIT licence text"))
+
         # Backdrops: GFOpenUp's own desktops, each with its .tone; the AmiCradle Background Pack's art (which
         # gfopengadtools' make_backdrops.py also exports) is an optional install, not GFOpenUp's (24 October 2026)
         bdir = tmp / "backdrops"

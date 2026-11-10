@@ -33,7 +33,8 @@ a Part file that C/GFOpenUpTool reads:
                         68EC040 under the open ROM (amicradle-guest libraries/opensoftfpu); on the GFOpenKick
                         ROM, where none is, what it leaves to a disk: iffparse, diskfont, commodities and
                         lowlevel.library, clipboard, serial and parallel.device (OPENKICK_DISK, the OpenKick
-                        boot disk's files)
+                        boot disk's files), and SYS:Classes/arexx.class, so programs' ARexx ports open
+                        (OPENKICK_CLASSES: amicradle-guest's GFOpenReaction, with its licence)
   GFOpenSocket/           bsdsocket.library 4.3 and its tools, built from gfopensocket
                         (--openamigasocket) and laid out by the manifest of amicradle's
                         vendored payload (vendor/opensocket-os32); without the checkout,
@@ -725,6 +726,9 @@ def build_parts(a):
     # disks/openkick-boot/manifest.json): the GFOpenUp part's, on the GFOpenKick ROM, where none is (OPENKICK_DISK)
     for name, (src, _out, _dest) in OPENKICK_DISK.items():
         run(["sh", a.guest / src / "build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openkickdisk" / name)))
+    # GFOpenReaction's classes GFOS lacks (OPENKICK_CLASSES: arexx.class), each with its own script, the same way
+    for name, (src, _out, _dest) in OPENKICK_CLASSES.items():
+        run(["sh", a.guest / src / "build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openkickclasses" / name)))
     # ACROMFix (amicradle-guest tools/acromfix, the os32 stove as its build.sh): the GFOpenUp part's
     run(["sh", a.guest / "tools/acromfix/build-amiga.sh"], env=dict(genv, STOVE=str(STOVE), OUT=str(ROOT / "build/acromfix")))
     # HostClock (amicradle-guest resources/openbattclock.resource built -DOBC_INSTALL, its default os32-gcc16 stove):
@@ -962,6 +966,31 @@ def openkick_disk_lines(core: "Part", built: Path) -> None:
         if not f.is_file():
             raise SystemExit(f"{f} wasn't built (amicradle-guest {src}/build-amiga.sh)")
         core.add(f"OpenKick/{out}", f.read_bytes(), dest, default=True, cond="when GFOpenKick")
+
+
+# The BOOPSI classes GFOS has no copy of, which OS 3.2's ReAction puts in SYS:Classes (Dale, 10 Nov 2026: GFOS had
+# no SYS:Classes/arexx.class, so no program's ARexx port opened there). Ours, GFOpenReaction from amicradle-guest
+# libraries/openreaction (MIT, its default os32-gcc16 stove), on the GFOpenKick ROM where none is, so OS 3.2.3's own
+# on an OS 3.2.3 disk stays.
+#   name: (source drawer, the file in its build's OUT, where it goes)
+OPENKICK_CLASSES = {
+    "arexx": ("libraries/openreaction/arexx", "classes/arexx.class", "SYS:Classes/arexx.class"),
+}
+
+
+def openkick_classes_lines(core: "Part", built: Path, guest_licence: bytes) -> None:
+    """The GFOpenUp part, on the GFOpenKick ROM: OPENKICK_CLASSES, each only where none is ("default"), with
+    GFOpenReaction's licence (amicradle-guest's) in SYS:Utilities/GFOpenUp/Licences."""
+    for name, (src, out, dest) in OPENKICK_CLASSES.items():
+        f = built / name / out
+        if not f.is_file():
+            raise SystemExit(f"{f} wasn't built (amicradle-guest {src}/build-amiga.sh)")
+        if not binary_version(f.read_bytes(), Path(out).name):
+            raise SystemExit(f"{f} has no {Path(out).name} version")
+        core.add(f"OpenKick/{out}", f.read_bytes(), dest, default=True, cond="when GFOpenKick")
+    core.add("Utilities/GFOpenUp/Licences/GFOpenReaction.txt",
+             b"GFOpenReaction's classes (DalsinAI/amicradle-guest libraries/openreaction):\n\n" + guest_licence,
+             "SYS:Utilities/GFOpenUp/Licences/GFOpenReaction.txt", cond="when GFOpenKick")
 
 
 def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
@@ -2078,6 +2107,7 @@ def main() -> int:
         raise SystemExit(f"{sfl} wasn't built (amicradle-guest libraries/opensoftfpu/build-amiga.sh)")
     core.add("Libs/softfpu.library", sfl.read_bytes(), "LIBS:softfpu.library")
     openkick_disk_lines(core, ROOT / "build/openkickdisk")
+    openkick_classes_lines(core, ROOT / "build/openkickclasses", (a.guest / "LICENSE").read_bytes())
     core.write()
 
     # GFOpenSocket: the files and places amicradle's vendored payload's manifest lists (the same list Cradle's own
