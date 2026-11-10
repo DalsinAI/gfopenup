@@ -1,0 +1,8 @@
+; KICKSET on a lab (Team 6, 10 Nov 2026).
+; The host script has already laid SYS:KsTest/Parts/KickstartSet (bodies for
+; 62, 183 and 20) and two leftover drawers, 183 and 20. This runs the install.
+; FailAt 21 so a warning does not stop LabAgent before the marker.
+FailAt 21
+Echo "--- kickset ---"
+C:GFOpenUpTool KICKSET SYS:KsTest/Parts/KickstartSet
+Echo "--- kickset done ---"
