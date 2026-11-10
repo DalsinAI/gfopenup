@@ -1763,7 +1763,7 @@ def akikoplus_part(top: Path, src: Path | None) -> Part | None:
 # files the full ROM held on demand are files on the disk. trial-1m/build.sh --profile thin lays both out as
 # OUT/thin-support/ from the same build as the ROM (tools/openkickrom/thinsupport.py), with MANIFEST.txt (path, bytes,
 # SHA-256, version, build output) and Kickstart/default/Manifest (kickload's). --thinsupport is that folder.
-KICKSET_MAN_HEAD = "# GFOpenKickLoad manifest 1"
+KICKSET_MAN_HEAD = "# GFOpenKickLoad manifest "
 
 
 def kickstartset_part(top: Path, support: Path | None) -> Part | None:
@@ -1786,13 +1786,20 @@ def kickstartset_part(top: Path, support: Path | None) -> Part | None:
     if not lines or not lines[0].startswith(KICKSET_MAN_HEAD):
         raise SystemExit(f"KickstartSet: {man} isn't a GFOpenKickLoad Manifest")
     modules = []
-    for line in lines[1:]:
+    v2 = False
+    for line in lines:
         w = line.split()
         if not w or w[0].startswith("#"):
             continue
+        if w[0] == "manifest":
+            if w != ["manifest", "2"]:
+                raise SystemExit(f"KickstartSet: {man} has a version line that isn't 'manifest 2'")
+            v2 = True
+            continue
+        need = 6 if v2 else 5
         f = kick / w[0]
         data = f.read_bytes() if f.is_file() else b""
-        if len(w) != 5 or len(data) != int(w[3]) or hashlib.sha256(data).hexdigest() != w[4].lower():
+        if len(w) != need or len(data) != int(w[3]) or hashlib.sha256(data).hexdigest() != w[4].lower():
             raise SystemExit(f"KickstartSet: {f} isn't the module its Manifest lists")
         modules.append((w[0], data))
     rom_id, version = "", "47.100"
