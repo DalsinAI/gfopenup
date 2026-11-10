@@ -815,6 +815,10 @@ def binary_version(data: bytes, name: str) -> str | None:
     return m.group(1).decode() if m else None
 
 
+# The oldest minigl.library the Warp3D part takes: 30.0, the virgl route (gfopenrtg #230)
+MINIGL_MIN = (30, 0)
+
+
 # The old editors' names: each was a stub in SYS:Prefs that opened its section of GFOpenPrefs (W48), with an icon
 # from 21 Oct 2026. Since the no-ROM-volume design (24 Oct 2026, section 10) GFOpenUp archives them all, with their
 # icons: the 13 old ones, then the 9 GFOpenUp added on 21 October.
@@ -2460,11 +2464,22 @@ def main() -> int:
     w3.add("C/W3DCheck", (rtg / "W3DCheck").read_bytes(), "C:W3DCheck")
     w3.add("Tools/W3DTest", (rtg / "W3DTest").read_bytes(), "SYS:Tools/W3DTest")
     w3.add("Tools/W3DTest.info", icons.icon(icons.WBTOOL, "install", stack=65536), "SYS:Tools/W3DTest.info")
-    # MiniGL (gfopenrtg #37): minigl.library 29, OpenGL 1.1 on the same 3D
-    # core, with its MGLTest demo, when the gfopenrtg checkout builds them
+    # MiniGL (gfopenrtg #37): minigl.library, OpenGL 1.1 on the same 3D
+    # core, with its MGLTest demo, when the gfopenrtg checkout builds them.
+    # From the pack after 0.8.27 it is minigl.library 30 (gfopenrtg #221, #222,
+    # #224, #225, #229, #230): the clean-room interface and the virgl route on
+    # the PC's GPU, which ENV:MiniGL/Driver Auto (the default) takes when there
+    # is one (GLQuake 119.5 fps against 5.1 on the CPU route, 9 Nov 2026). 0.8.27
+    # shipped 29.10 from an older build/ directory, so an older one stops the
+    # build here rather than going into the pack again.
     if (rtg / "minigl.library").is_file():
+        mgl = (rtg / "minigl.library").read_bytes()
+        mglv = binary_version(mgl, "minigl.library") or "0"
+        if tuple(int(x) for x in mglv.split(".")[:2]) < MINIGL_MIN:
+            raise SystemExit(f"Warp3D: {rtg / 'minigl.library'} is {mglv}; the pack needs minigl.library "
+                             f"{MINIGL_MIN[0]}.{MINIGL_MIN[1]} or newer (gfopenrtg library/minigl/build.sh at main)")
         w3.lines[1] = "; Warp3D 5.0 and MiniGL on GFOpenGPU, with Warp3DPrefs, W3DTest, W3DCheck and MGLTest"
-        w3.add("Libs/minigl.library", (rtg / "minigl.library").read_bytes(), "LIBS:minigl.library")
+        w3.add("Libs/minigl.library", mgl, "LIBS:minigl.library")
         if (rtg / "MGLTest").is_file():
             w3.add("Tools/MGLTest", (rtg / "MGLTest").read_bytes(), "SYS:Tools/MGLTest")
             w3.add("Tools/MGLTest.info", icons.icon(icons.WBTOOL, "install", stack=65536), "SYS:Tools/MGLTest.info")
