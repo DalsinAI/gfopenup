@@ -759,7 +759,7 @@ def main() -> int:
         (built / "LICENSE.txt").write_text("zlib License\n")
         (built / "COMMIT").write_text(bp.GFOPENPHYSFS["commit"] + "\n")
         gp = bp.Part(t / "top", "GFOpenGPU", "0.29", "x")
-        bp.physfs_into_gpu(gp, built, b"\0z.library 53.14 (1.11.2026)\0")
+        bp.physfs_into_gpu(gp, built, b"\0z.library 53.15 (10.11.2026)\0")
         gp.write()
         lines = (t / "top/Parts/GFOpenGPU/Part").read_text(encoding="latin-1").splitlines()
         check("the GFOpenGPU part brings LIBS:physfs.library and the z.library it inflates zip members through",
@@ -772,6 +772,16 @@ def main() -> int:
         except SystemExit:
             refused = True
         check("physfs.library from another gfopenphysfs commit than GFOPENPHYSFS is refused", refused)
+        # The next pack: physfs.library at gfopenphysfs d3a0ad7 (main after #5) wants z.library 53.15 (the hostlib inflate)
+        (built / "COMMIT").write_text(bp.GFOPENPHYSFS["commit"] + "\n")
+        for zl, want in ((b"\0z.library 53.14 (7.11.2026)\0", True), (b"no version", True),
+                         (b"\0z.library 53.16 (1.12.2026)\0", False), (b"\0z.library 54.1 (1.1.2027)\0", False)):
+            try:
+                bp.physfs_into_gpu(bp.Part(t / "top2", "GFOpenGPU", "0.29", "x"), built, zl)
+                refused = False
+            except SystemExit:
+                refused = True
+            check(f"physfs.library with {zl[1:22]!r}: {'refused' if want else 'taken'}", refused == want)
     check("the GFOpenGPU part takes physfs.library when it was built", "physfs_into_gpu(gp, " in src)
     rtg_sdk = ROOT.parent / "gfopenrtg/tools/make_sdk.py"
     if rtg_sdk.is_file() and "PHYSFS_COMMIT" in rtg_sdk.read_text(encoding="utf-8"):

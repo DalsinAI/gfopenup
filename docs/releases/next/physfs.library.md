@@ -34,4 +34,4 @@ Still to run with the pack: `GFOpenUpTool INSTALL Parts/GFOpenGPU` on a fresh la
 ## Known
 
 - `GFOpenUpTool REMOVE` of GFOffice, GFOpenImage or GFOpenGPU takes `LIBS:z.library` with it while another of them still uses it, as GFOffice and GFOpenImage already do today. z.library wants a part of its own.
-- The kit's `proto/physfs.h` at 21cfa03 can't be included from C++ (PhysFSBase is declared twice with different linkage); `<physfs.h>` can, and that is what ports include. gfopenphysfs 56e3b9a fixes it without changing the library's bytes; move the pins (`GFOPENPHYSFS` here, `PHYSFS_COMMIT` in gfopenrtg) to it once it is on gfopenphysfs main.
+- The kit's `proto/physfs.h` at 21cfa03 can't be included from C++ (PhysFSBase is declared twice with different linkage); `<physfs.h>` can, and that is what ports include. gfopenphysfs 56e3b9a fixes it without changing the library's bytes. The pins now name d3a0ad7, which has it: see physfs-zlib-native.md.
