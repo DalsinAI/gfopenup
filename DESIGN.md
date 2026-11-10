@@ -190,10 +190,15 @@ PiStorm (Emu68), in an AmiCradle instance, and on the appliance.
   power-on and checks every module's SHA-256), and the files the full ROM held
   on demand (asl, locale, version, datatypes and its classes, realtime, the
   maths libraries, the L: handlers, CDFileSystem, ACRTG.gpu...) in their
-  drawers, where the disk has none. `GFOpenUpTool KICKSET Parts/KickstartSet`
-  installs it, moves an older set's module the new Manifest doesn't list to
-  `SYS:Kickstart/.retired`, and checks the set; `KICKSET CHECK` only checks
-  (0 ready, 10 not). DETECT's `ENV:GFOpenUp/SlimROM` says whether this ROM is
+  drawers, where the disk has none. The pack may hold a body for every CPU.
+  `GFOpenUpTool KICKSET Parts/KickstartSet` installs the 68k modules and only
+  `.bodies/<this host>/` (none on a 68k or a host that has not said: elf.library's
+  ElfHostCPU, the same rule as od_HostCPU). It moves an older set's module the
+  new Manifest doesn't list, and another CPU's drawer left from an earlier
+  install, to `SYS:Kickstart/.retired` without deleting it, and checks the set.
+  `KICKSET CHECK` says which CPU's bodies are installed and warns when the
+  host's listed bodies are missing (kickload would refuse the set); 0 ready,
+  10 not. DETECT's `ENV:GFOpenUp/SlimROM` says whether this ROM is
   the slim one, and the Installer then installs the part; on any other ROM it
   doesn't, because the slim ROM isn't the default yet. Cradle won't start a
   machine on the slim ROM without the set (amicradle `openkick_rom.py

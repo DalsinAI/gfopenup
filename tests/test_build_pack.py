@@ -417,6 +417,31 @@ def kickstartset_checks(tmp: Path) -> None:
     check("the files on demand added where the disk has none (or GFOpenUp's)",
           'add "Libs/asl.library" "SYS:Libs/asl.library"' in lines and 'add "L/CDFileSystem" "SYS:L/CDFileSystem"' in lines)
     check("no needs line: the set goes on any machine that asks (KICKSET)", not any(l.startswith("needs") for l in lines))
+    # Manifest 2: the pack holds every CPU's body. KICKSET copies one of them (tests/test_openup_kickset.c).
+    support2 = tmp / "out2" / "thin-support"
+    (support2 / "Kickstart/default/.bodies/62").mkdir(parents=True)
+    (support2 / "Kickstart/default/.bodies/183").mkdir(parents=True)
+    (support2 / "Kickstart/default/.bodies/20").mkdir(parents=True)
+    (support2 / "Libs").mkdir()
+    body = {4: b"\0\0\x03\xf3m68", 62: b"x86-64", 183: b"arm64", 20: b"ppc"}
+    man2 = ["# GFOpenKickLoad manifest 2", "manifest 2",
+            f"icon.module icon.library 47.5 {len(body[4])} {hashlib.sha256(body[4]).hexdigest()} 4"]
+    (support2 / "Kickstart/default/icon.module").write_bytes(body[4])
+    for cpu, data in ((62, body[62]), (183, body[183]), (20, body[20])):
+        rel = f".bodies/{cpu}/icon.module"
+        (support2 / "Kickstart/default" / rel).write_bytes(data)
+        man2.append(f"{rel} icon.library 47.5 {len(data)} {hashlib.sha256(data).hexdigest()} {cpu}")
+    (support2 / "Kickstart/default/Manifest").write_text("\n".join(man2) + "\n")
+    (support2 / "Libs/asl.library").write_bytes(b"asl")
+    (support2 / "MANIFEST.txt").write_text("# the thin ROM's disk part\nLibs/asl.library\t3\tx\t47.100\tb/asl\n")
+    (tmp / "out2" / "SOURCES.txt").write_text("# id \"GFOpenKick 47.100 full41-thin\"\n")
+    ks2 = bp.kickstartset_part(tmp / "KS2", support2)
+    lines2 = (ks2.dir / "Part").read_text(encoding="latin-1").splitlines()
+    check("a version 2 set lists every CPU's body in the pack",
+          all(f'.bodies/{cpu}/icon.module' in "\n".join(lines2) for cpu in (62, 183, 20))
+          and 'copy "Kickstart/default/icon.module"' in "\n".join(lines2),
+          "\n".join(lines2))
+    check("its Manifest is still last", lines2[-1].endswith('SYS:Kickstart/default/Manifest"'), lines2[-1])
     (support / "Kickstart/default/icon.module").write_bytes(b"changed")
     try:
         bp.kickstartset_part(top, support)
@@ -445,6 +470,11 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_startupseq.c"), "-o", str(sseq)], check=True)
         r = subprocess.run([str(sseq)], capture_output=True, text=True)
         check("GFOpenUpTool STARTUPSEQ (tests/test_openup_startupseq.c)", r.returncode == 0, r.stdout[-400:])
+        ks = tmp / "test_openup_kickset"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_kickset.c"), "-o", str(ks)], check=True)
+        r = subprocess.run([str(ks)], capture_output=True, text=True)
+        check("GFOpenUpTool KICKSET bodies (tests/test_openup_kickset.c)", r.returncode == 0, r.stdout[-600:])
         inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
         check("the Installer offers the ROM's Startup-Sequence, never replacing it unasked",
               'STARTUPSEQ CHECK' in inst and 'STARTUPSEQ ROM' in inst and 'STARTUPSEQ KEEP' in inst)

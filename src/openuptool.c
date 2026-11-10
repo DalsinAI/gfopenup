@@ -143,6 +143,7 @@
 
 #include "openup_lines.h"
 #include "openup_startupseq.h"
+#include "openup_kickset.h"
 
 static int slim_rom(void);
 
@@ -1253,11 +1254,14 @@ static void mark_startup(const char *part)
             strcpy(ents[i].kind, "ostartup");
 }
 
+static unsigned kickset_host(void);
+
 static int install(const char *drawer)
 {
     char path[220], from[260], *text, *p, *line, partname[64] = "", partver[32] = "";
     int pass, refused = 0, files = 0, errors = 0, first = 0;
     unsigned have = machine_bits();
+    unsigned hostcpu = kickset_host();
 
     strncpy(path, drawer, 200);
     path[200] = 0;
@@ -1362,6 +1366,8 @@ static int install(const char *drawer)
                 }
             } else if (pass == 1 && (!strcmp(w[0], "copy") || !strcmp(w[0], "default") || !strcmp(w[0], "add"))
                        && n >= 3) {
+                /* A body for another CPU is not this machine's. It stays in the pack and is not copied. */
+                if (!ouk_copy(w[2], hostcpu)) continue;
                 strcpy(from, drawer);
                 AddPart((STRPTR)from, (STRPTR)w[1], sizeof from);
                 switch (install_file(from, w[2], !strcmp(w[0], "default") ? 1 : !strcmp(w[0], "add") ? 2 : 0)) {
@@ -4498,11 +4504,15 @@ static int old_dock(void)
  * ROM held on demand (asl, locale, version, datatypes, realtime, the handlers, CDFileSystem...) are on the disk.
  * The KickstartSet part brings both, built from the same tree as the ROM. Without them the slim ROM boots only
  * to its rescue Shell, so the set goes on before a machine moves to that ROM:
- *   GFOpenUpTool KICKSET <Parts/KickstartSet>   installs the part, then checks it (as CHECK)
- *   GFOpenUpTool KICKSET CHECK [<part drawer>]  0 when SYS:Kickstart/default/Manifest is there and every module it
- *                                               lists is there at its size (kickload checks the SHA-256 at each
- *                                               boot), and, given the part's drawer, every other file it installs;
- *                                               10 (and what to do) when not
+ *   GFOpenUpTool KICKSET <Parts/KickstartSet>   installs the 68k modules and only this host's
+ *                                               .bodies/<e_machine>/ (none on a 68k), moves another
+ *                                               CPU's drawer left from earlier to SYS:Kickstart/.retired/
+ *                                               without deleting it, then checks the set
+ *   GFOpenUpTool KICKSET CHECK [<part drawer>]  0 when SYS:Kickstart/default/Manifest is there and every
+ *                                               68k module it lists is there at its size, and the host's
+ *                                               listed bodies too (another CPU's may be absent); it says
+ *                                               which CPU's bodies are installed; 10 when the host's are
+ *                                               missing, which kickload would refuse
  * ENV:GFOpenUp/KickstartSet says "ready" or "missing"; DETECT's ENV:GFOpenUp/SlimROM says whether this ROM is the
  * slim one (kickload in it and no workbench.library of its own), and the Installer then installs the part. Cradle
  * refuses to start an instance or build a card on the slim ROM without the set (amicradle openkick_rom.py). */
@@ -4544,10 +4554,115 @@ static LONG file_size(const char *path)
     return size;
 }
 
+/* ElfHostCPU(0), LVO -108. An older elf.library, or none, is a 68k: no bodies. */
+static unsigned kickset_host(void)
+{
+    struct Library *elf;
+    unsigned cpu = 4;
+    elf = OpenLibrary((STRPTR)"elf.library", 1);
+    if (elf && elf->lib_NegSize >= 108) {
+        register ULONG d0 __asm("d0") = 0;
+        register struct Library *a6 __asm("a6") = elf;
+        __asm volatile("jsr -108(%%a6)" : "+r"(d0) : "r"(a6) : "d1", "a0", "a1", "cc", "memory");
+        cpu = ouk_host_cpu((unsigned)d0);
+    }
+    if (elf) CloseLibrary(elf);
+    return cpu;
+}
+
+/* Which CPU's drawers are in the set now. */
+static void kickset_say_bodies(unsigned host)
+{
+    struct FileInfoBlock *fib;
+    BPTR l;
+    int any = 0;
+    l = Lock((STRPTR)KICKSET_DIR ".bodies", ACCESS_READ);
+    if (!l) {
+        Printf((STRPTR)"GFOpenUp: no native bodies installed%s.\n",
+               (LONG)(host == 4 ? " (this host is 68k)" : ""));
+        return;
+    }
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (Examine(l, fib) && fib->fib_DirEntryType > 0) {
+            while (ExNext(l, fib)) {
+                unsigned cpu;
+                if (fib->fib_DirEntryType <= 0) continue;
+                if (!ouk_u((const char *)fib->fib_FileName, &cpu) || !cpu) continue;
+                Printf((STRPTR)"GFOpenUp: native bodies installed for CPU %ld.\n", (LONG)cpu);
+                any = 1;
+            }
+        }
+        FreeDosObject(DOS_FIB, fib);
+    }
+    UnLock(l);
+    if (!any)
+        Printf((STRPTR)"GFOpenUp: no native bodies installed%s.\n",
+               (LONG)(host == 4 ? " (this host is 68k)" : ""));
+}
+
+/* A drawer for another CPU, left from an earlier install, moves under SYS:Kickstart/.retired/.
+ * Nothing is deleted: a name already there gets -2, -3, ... */
+static void kickset_retire_one(const char *fn)
+{
+    char from[160], to[160], rev[8];
+    int n, k, v;
+    strcpy(from, KICKSET_DIR ".bodies/");
+    strncat(from, fn, 40);
+    UnLock(CreateDir((STRPTR)"SYS:Kickstart/.retired"));
+    strcpy(to, "SYS:Kickstart/.retired/bodies-");
+    strncat(to, fn, 40);
+    for (n = 2; exists(to) && n < 100; n++) {
+        strcpy(to, "SYS:Kickstart/.retired/bodies-");
+        strncat(to, fn, 40);
+        strcat(to, "-");
+        v = n;
+        k = 0;
+        do rev[k++] = (char)('0' + v % 10); while ((v /= 10) && k < 7);
+        while (k) {
+            int L = (int)strlen(to);
+            to[L] = rev[--k];
+            to[L + 1] = 0;
+        }
+    }
+    if (exists(to)) {
+        say("GFOpenUp: ", from, " is another CPU's drawer, and SYS:Kickstart/.retired has no free name for it");
+        return;
+    }
+    if (Rename((STRPTR)from, (STRPTR)to))
+        say("GFOpenUp: ", from, ": another CPU's bodies from an earlier install, moved to SYS:Kickstart/.retired");
+}
+
+static void kickset_retire_bodies(unsigned host)
+{
+    struct FileInfoBlock *fib;
+    BPTR l;
+    char names[16][32];
+    int count = 0, i;
+    l = Lock((STRPTR)KICKSET_DIR ".bodies", ACCESS_READ);
+    if (!l) return;
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (Examine(l, fib)) {
+            while (ExNext(l, fib) && count < 16) {
+                unsigned cpu;
+                const char *fn = (const char *)fib->fib_FileName;
+                if (fib->fib_DirEntryType <= 0) continue;
+                if (!ouk_u(fn, &cpu) || !ouk_retire_drawer(cpu, host)) continue;
+                strncpy(names[count], fn, 31);
+                names[count][31] = 0;
+                count++;
+            }
+        }
+        FreeDosObject(DOS_FIB, fib);
+    }
+    UnLock(l);
+    for (i = 0; i < count; i++) kickset_retire_one(names[i]);
+}
+
 static int kickset_check(const char *drawer)
 {
     char *text, *p, *line, path[260], *w[8];
-    int n, modules = 0, bad = 0;
+    int n, modules = 0, bad = 0, v2 = 0;
+    unsigned host = kickset_host();
     if (!(text = read_file(KICKSET_DIR "Manifest", NULL))) {
         say("GFOpenUp: there is no module set for the slim ROM (" KICKSET_DIR "Manifest is missing).",
             " Install it with GFOpenUpTool KICKSET Parts/KickstartSet from GFOpenUp's drawer before",
@@ -4556,17 +4671,30 @@ static int kickset_check(const char *drawer)
         return RETURN_ERROR;
     }
     for (p = text; *p && !bad; ) {
+        unsigned cpu = 0;
+        const char *bytes = 0;
+        int kind;
         line = p;
         while (*p && *p != '\n') p++;
         if (*p) *p++ = 0;
         n = oul_words(line, w, 8);
-        if (!n) continue;
-        if (n != 5) { say("GFOpenUp: " KICKSET_DIR "Manifest has a line that isn't a Manifest line: ", line, NULL); bad = 1; break; }
+        kind = ouk_manifest(n, w, v2, &cpu, &bytes);
+        if (kind == OUK_SKIP) continue;
+        if (kind == OUK_VER) {
+            if (modules) { say("GFOpenUp: " KICKSET_DIR "Manifest has its version line after a module.", NULL, NULL); bad = 1; break; }
+            v2 = 1;
+            continue;
+        }
+        if (kind != OUK_FILE) { say("GFOpenUp: " KICKSET_DIR "Manifest has a line that isn't a Manifest line: ", line, NULL); bad = 1; break; }
+        /* A body for another CPU is not installed here. A missing one is not a failure. */
+        if (cpu != 4 && !(host != 4 && cpu == host)) continue;
         strcpy(path, KICKSET_DIR);
-        strncat(path, w[0], 64);
-        if (file_size(path) != atol(w[3])) {
+        strncat(path, w[0], 180);
+        if (file_size(path) != atol(bytes)) {
             say("GFOpenUp: the module set for the slim ROM is incomplete: ", path,
                 file_size(path) < 0 ? " is missing" : " is not the size its Manifest lists");
+            if (cpu != 4)
+                say("GFOpenUp: the host's listed body is missing, so kickload would refuse the set.", NULL, NULL);
             bad = 1;
         }
         modules++;
@@ -4588,6 +4716,9 @@ static int kickset_check(const char *drawer)
                 strncpy(path, rest, sizeof path - 1);
                 path[sizeof path - 1] = 0;
                 n = oul_words(path, w, 8);
+                if (n >= 3 && (!strcmp(w[0], "copy") || !strcmp(w[0], "add") || !strcmp(w[0], "default")) &&
+                    !ouk_copy(w[2], host))
+                    continue;
                 if (n >= 3 && (!strcmp(w[0], "copy") || !strcmp(w[0], "add") || !strcmp(w[0], "default")) && !exists(w[2])) {
                     say("GFOpenUp: the slim ROM's files on the disk are incomplete: ", w[2], " is missing");
                     bad = 1;
@@ -4598,12 +4729,14 @@ static int kickset_check(const char *drawer)
     }
     set_env("GFOpenUp/KickstartSet", bad ? "missing" : "ready");
     if (bad) {
+        kickset_say_bodies(host);
         say("GFOpenUp: install GFOpenUp's KickstartSet part again (GFOpenUpTool KICKSET Parts/KickstartSet)",
             " before this machine moves to the slim ROM.", NULL);
         return RETURN_ERROR;
     }
     Printf((STRPTR)"GFOpenUp: the module set for the slim ROM is ready: %ld modules in " KICKSET_DIR "%s.\n", (LONG)modules,
            (LONG)(slim_rom() ? " (this machine runs the slim ROM)" : ""));
+    kickset_say_bodies(host);
     return RETURN_OK;
 }
 
@@ -4657,6 +4790,7 @@ static int kickset(const char *a1, const char *a2)
     if (!a1) { say("GFOpenUpTool KICKSET <Parts/KickstartSet> | KICKSET CHECK [<part drawer>]", NULL, NULL); return RETURN_FAIL; }
     if ((rc = install(a1)) > RETURN_WARN) return rc;
     kickset_prune();
+    kickset_retire_bodies(kickset_host());
     return kickset_check(a1);
 }
 
