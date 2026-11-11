@@ -243,8 +243,11 @@ remove them and use ours"), in place of AROS's Gorilla set, which GFOpenUp
   file, but for its place, a window icon's stack and the pointers an icon
   file stores. It also takes out `SYS:Storage/Icons/Gorilla` and the
   GorillaIcons licence note.
-- **Kinds.** The part's `Kinds` drawer has GFOpenIcons' disk, drawer, tool,
-  project and trashcan, with no face line: `GFOpenUpTool ICONS` gives an old
+- **Kinds.** The part's `Kinds` drawer has GFOpenIcons' drawer, tool,
+  project and trashcan and, since 11 November 2026 (Dale's pick, red neon
+  accent), the chrome hard disk as its disk: the ROM's own drive picture
+  (amicradle-guest `libraries/openicon/romicons/chrome_drives.py`) in true
+  colour, 64x64, each frame up to 255 colours. All have no face line: `GFOpenUpTool ICONS` gives an old
   icon GFOpenIcons has no picture for by name the one of its kind.
 
 **The icon library** is `icons/LIST.csv`: 640 rows, every Amiga thing that
