@@ -762,6 +762,8 @@ def main() -> int:
               and "SIGBREAKF_CTRL_F" in menu_src and "GFOpenMonitor WAIT" in menu_src)
         check("GFOpenUpMenu, which holds the hotkeys, is started at boot by the GFOpenUp part",
               'core.line("startup Run >NIL: C:GFOpenUpMenu")' in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
+        check("GFOpenSpeaker, the menu bar's volume control, is started at boot by the Sound part (open ROM: no APPLY)",
+              'snd.line("startup Run >NIL: C:GFOpenSpeaker")' in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
 
         gfoffice_checks(tmp, filt)
 
