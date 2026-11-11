@@ -187,7 +187,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
         for name in bp.GFO_LIBS
     }
     files.update({
-        onlib / "GFOpenWrite": b"GFOpenWrite on owfwrite.library\0$VER: GFOpenWrite 2.0.23 (25.10.2026)\0",
+        onlib / "GFOpenWrite": b"GFOpenWrite on owfwrite.library\0$VER: GFOpenWrite 2.0.26 (25.10.2026)\0",
         onlib / "OWConvert": b"OWConvert on the four libraries\0",
         onlib / "GFOpenCalc": b"\0$VER: GFOpenCalc 0.1 (25.10.2026) GFOpenCalc, the spreadsheet of the GFOffice Suite\0",
         src / "Dictionaries/en_GB.words": b"aardvark\nabacus\n",
@@ -235,7 +235,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
           and (gf.dir / lic / "GFOffice-Dictionaries.txt").read_bytes().endswith(b"SCOWL notice\n"))
 
     # GFOpenWrite: on owfwrite.library, needing GFOffice, with none of the shared files
-    check("GFOpenWrite: 2.0.23, and it needs the GFOffice part", wl[0] == "part GFOpenWrite 2.0.23" and "needs part GFOffice" in wl,
+    check("GFOpenWrite: 2.0.26, and it needs the GFOffice part", wl[0] == "part GFOpenWrite 2.0.26" and "needs part GFOffice" in wl,
           str(wl[:3]))
     check("GFOpenWrite: the program built on its library (OWF=library)",
           (wr.dir / "Utilities/GFOpenWrite/GFOpenWrite").read_bytes() == files[onlib / "GFOpenWrite"])
@@ -296,7 +296,7 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
           and OUL_NEEDPART not in m1, f"{rc} {m1!r}")
     rc, m2 = manifest_run(filt, "install", wp, m1, tmp)
     check("INSTALL GFOpenWrite after GFOffice: installed, its need noted in the manifest",
-          rc == 0 and "part\tGFOpenWrite\t2.0.23" in m2.splitlines() and f"{OUL_NEEDPART}\tGFOpenWrite\tGFOffice" in m2.splitlines(),
+          rc == 0 and "part\tGFOpenWrite\t2.0.26" in m2.splitlines() and f"{OUL_NEEDPART}\tGFOpenWrite\tGFOffice" in m2.splitlines(),
           f"{rc} {m2!r}")
     rc, again = manifest_run(filt, "install", wp, m2, tmp)
     check("INSTALL GFOpenWrite again (an update): its need noted once", rc == 0 and again.count(f"{OUL_NEEDPART}\tGFOpenWrite\t") == 1,

@@ -1068,7 +1068,8 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
                "SYS:" + lic + "GFOffice-Dictionaries.txt")
 
     # GFOpenWrite: the word processor, as its 1.0 release laid it out, on owf.library
-    wr = Part(top, "GFOpenWrite", "2.0.23", "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    # 2.0.26 (0.8.28): gfoffice main since #124 (ARexx return codes, no requesters during a command)
+    wr = Part(top, "GFOpenWrite", "2.0.26", "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.needs_part("GFOffice")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite", (onlib / "GFOpenWrite").read_bytes(), "SYS:Utilities/GFOpenWrite/GFOpenWrite")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/GFOpenWrite/GFOpenWrite.info")
