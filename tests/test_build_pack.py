@@ -679,7 +679,7 @@ def main() -> int:
         bd = bp.backdrops_part(top, bdir, ogt, tone=fake_tone)
         bd.write()
         lines = (bd.dir / "Part").read_text(encoding="latin-1").splitlines()
-        check("the Backdrops part is 0.2 (its tones are new)", lines[0] == "part Backdrops 0.2", lines[0])
+        check("the Backdrops part is 0.3 (the Ethereal backdrops are new)", lines[0] == "part Backdrops 0.3", lines[0])
         want = []
         for n in own:
             want += [f'copy "Backdrops/{n}" "SYS:Prefs/Presets/Backdrops/GFOpenUp/{n}"',

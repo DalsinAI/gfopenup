@@ -1818,7 +1818,7 @@ def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_
     folder: an export from before pack 1.1 leaves its 2560x1440 and 3840x2160 art there, and 1.1's names no longer
     list them. None of GFOpenUp's own pictures is named so."""
     art = art_backdrop_names(opengadtools) or set()
-    bd = Part(top, "Backdrops", "0.2", "The themes' desktops as Workbench backdrops, with their tones")
+    bd = Part(top, "Backdrops", "0.3", "The themes' desktops and the Ethereal ones as Workbench backdrops, with their tones")
     for png in sorted(Path(backdrops).glob("*.png")):
         if png.name in art or ART_NAME_RE.match(png.name):
             continue
