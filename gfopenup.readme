@@ -2,7 +2,7 @@ Short:        Add-on pack for AmigaOS 3.2.3 (no OS)
 Uploader:     (the Team fills this in at upload time)
 Author:       AmiCradle Team
 Type:         util/misc
-Version:      0.8.27
+Version:      0.8.28
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 
