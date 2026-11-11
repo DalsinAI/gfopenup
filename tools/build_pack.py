@@ -59,7 +59,7 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenTypes/            GFOpenPrefs's File Types page: no files of its own since the no-ROM-volume
                         design (24 October 2026); it archives its old name's stub in SYS:Prefs
   GFOpenCompress/         GFOpenCompress, its window and command (gfopencompress)
-  GFOpenService/          gfopenservice.device and Nursery: services from boards and
+  GFOpenService/          mitchy.device (with gfopenservice.device, its old name) and Nursery: services from boards and
                         paired Cradles; ServiceTest; MEDIA:, files decoded through
                         media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA); mitchy.library (gfopenservice)
   AkikoPlus/              akikoplus.library 2: C2P, swaps, fills, scaling, YUV, colours and zlib on
@@ -1189,7 +1189,8 @@ PART_MAIN = {
 # muimaster.library face (19.1). Sound 0.2.2 is GFOpenSpeaker (0.1.4; the editor is GFOpenPrefs's since W48) with GFOpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmiCradle machines only). GFOpenImage 0.4 adds
 # opentga.datatype (47.1). GFOpenService 1.3 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:),
-# mitchy.library (1.0) and ServiceTest (0.2). ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
+# mitchy.library (1.0) and ServiceTest (0.2); 1.4 is mitchy.device (2.0), with gfopenservice.device (2.0) its old name
+# opening it. ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
 # fonts/amiga). ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so GFOpenUpTool UPDATE
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
@@ -2296,7 +2297,11 @@ def main() -> int:
     # services and opens one. A MEDIA mountlist of the user's own stays.
     # 1.3 (0.8.27): LIBS:mitchy.library 1.0, the services card's (Mitchy's) library for every program, on the
     # device (gfopenservice #34), and ServiceTest 0.2 on it, with one checked job for each service on offer.
-    sv = Part(top, "GFOpenService", "1.3", "GFOpenService: services from AutoConfig boards and paired Cradles, and MEDIA:")
+    # 1.4: the services card is Mitchy, and the device mitchy.device (gfopenservice, team3/mitchy-device-20261111). gfopenservice.device
+    # stays as a small device that opens it, for programs (and mitchy.library) built with the old name: the two go
+    # together, as the stub needs mitchy.device.
+    sv = Part(top, "GFOpenService", "1.4", "GFOpenService: services from AutoConfig boards and paired Cradles, and MEDIA:")
+    sv.add("Devs/mitchy.device", (a.openamigaservice / "bin/mitchy.device").read_bytes(), "DEVS:mitchy.device")
     sv.add("Devs/gfopenservice.device", (a.openamigaservice / "bin/gfopenservice.device").read_bytes(), "DEVS:gfopenservice.device")
     sv.add("Libs/mitchy.library", (a.openamigaservice / "bin/mitchy.library").read_bytes(), "LIBS:mitchy.library")
     sv.add("C/Nursery", (a.openamigaservice / "bin/Nursery").read_bytes(), "C:Nursery")

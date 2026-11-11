@@ -775,6 +775,9 @@ def main() -> int:
     check("the GFOpenService part brings MEDIA: (L:media-handler, DEVS:DOSDrivers/MEDIA) and C:ServiceTest",
           '"L:media-handler"' in src and '"DEVS:DOSDrivers/MEDIA", own=True' in src and '"C:ServiceTest"' in src
           and "GFOpenService" in bp.PART_OWN_VERSION and "GFOpenService" not in bp.PART_MAIN)
+    # GFOpenService 1.4: the stub needs mitchy.device, so the part brings both
+    check("the GFOpenService part is 1.4 and brings mitchy.device with gfopenservice.device, its old name",
+          'Part(top, "GFOpenService", "1.4",' in src and '"DEVS:mitchy.device"' in src and '"DEVS:gfopenservice.device"' in src)
     # GFOpenGPU 0.29 (0.8.22): gfopengpu.library 0.29 (256 fence results, c2p through the core), ACRTG.gpu 1.6, C:GLQuery
     check("the GFOpenGPU part is 0.29 (gfopengpu.library 0.29)", 'Part(top, "GFOpenGPU", "0.29",' in src)
     check("the GFOpenGPU part brings C:GLQuery when the build has it", '"C:GLQuery"' in src)
