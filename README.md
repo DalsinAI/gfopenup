@@ -66,7 +66,7 @@ You choose the parts in the Installer. Among them:
   (ADF, ADZ, DMS, LhA, zip, tar, gzip), GFOpenTypes (which program opens which
   file), GFOpenImage datatypes (PNG, GIF, Targa, WebP, WebM and more),
   GFOpenView in place of MultiView, GFOpenPlay (a media player).
-- **Programs:** GFOpenEdit, GFOpenWrite and GFOffice, GFOpenCalc, GFOpenMail,
+- **Programs:** GFOpenEdit, GFOpenWrite and GFOffice, GFOpenCalc, GFOpenPresentation, GFOpenMail,
   GFOpenFTP, GFOpenPuTTY, OpenBrowser Lite, OpenAmigaPython, Tata.
 - **Libraries:** GFOpenGPU (SDL 2, GL through Mesa), ogles3.library (OpenGL ES
   3.1, AmiCradle only), Warp3D 5.0 and MiniGL on GFOpenGPU,

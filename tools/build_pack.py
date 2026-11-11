@@ -192,6 +192,9 @@ a Part file that C/GFOpenUpTool reads:
                         (gfoffice, gfopenlayout)
   GFOpenCalc/             GFOpenCalc, the GFOffice Suite's spreadsheet, on owfcalc.library; it needs GFOffice. Left out when gfoffice's
                         build didn't make it; no Installer choice yet (GFOpenUpTool INSTALL Parts/GFOpenCalc)
+  GFOpenPresentation/     GFOpenPresentation, the GFOffice Suite's slides (ODP, PPTX in, PDF, print, show, the
+                        GFOPENPRESENTATION ARexx port), libowf linked in; it needs GFOffice (z.library). Left out
+                        when gfoffice's linked build didn't make it; no Installer choice yet
   GFOpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (gfopenmui)
   GFOpenMulticore/        gfopenmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (gfopenmulticore)
@@ -657,6 +660,9 @@ def build_parts(a):
     # (gfoffice_parts). Deflate is z.library's (openzlib, below), so there is no zlib source in the build
     gfo_env = dict(env, OS32_GCC16=gcc16_root, OPENLAYOUT_SRC=str(a.openamigalayout))
     run(["sh", a.gfoffice / "build-os3.sh", a.gfoffice / GFO_LIBRARY], env=dict(gfo_env, OWF="library"))
+    # GFOpenPresentation has no library build yet (build-os3.sh makes it with libowf linked in only), so the suite
+    # is built a second time, OWF=linked, for it alone (gfoffice_presentation_part)
+    run(["sh", a.gfoffice / "build-os3.sh", a.gfoffice / GFO_LINKED], env=dict(gfo_env, OWF="linked"))
     # GFOpenMail: GCC 16 (its build-os3.sh's own default), TLS through GFOpenTLS, whose headers it carries
     run(["sh", a.openamigamail / "build-os3.sh"], env=dict(env, STOVE=gcc16_root))
     # gfopenmulticore.library with the os32 stove, as its build.sh says (built with
@@ -1016,6 +1022,7 @@ def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
 # four, so each program loads its own part of libowf, once however many of the suite's programs run. (Until
 # 25 October 2026 it was built twice: OWConvert and GFOpenCalc with libowf linked in, GFOpenWrite on owf.library.)
 GFO_LIBRARY = "build/os3-library"
+GFO_LINKED = "build/os3-linked"      # OWF=linked: GFOpenPresentation's (owfpresent.library has no app on it yet)
 GFO_LIBS = ("owfwrite", "owfcalc", "owfpub", "owfpresent")
 
 
@@ -1105,6 +1112,33 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
     return gf, wr, oc
 
 
+def gfoffice_presentation_part(top: Path, src: Path, icons) -> "Part | None":
+    """GFOpenPresentation, the GFOffice Suite's slides (gfoffice app/openpresent.c): opens ODP and PPTX, saves ODP,
+    exports PDF, prints through GFOpenPrint, runs a show, and has the GFOPENPRESENTATION ARexx port (gfoffice #130).
+    It is built with libowf linked in (GFO_LINKED), so it needs no owf library, but it needs GFOffice for
+    LIBS:z.library (deflate, to save ODP) and the toolbar's pictures beside it (PROGDIR:Images/Toolbar). It goes in
+    SYS:Utilities/GFOpenPresentation; None, and left out, when the linked build didn't make it. Unwritten."""
+    linked = src / GFO_LINKED
+    prog = linked / "GFOpenPresentation"
+    if not prog.is_file():
+        print(f"  GFOpenPresentation: left out, {prog} wasn't built")
+        return None
+    data = prog.read_bytes()
+    d = "Utilities/GFOpenPresentation/"
+    gp = Part(top, "GFOpenPresentation", binary_version(data, "GFOpenPresentation") or "?",
+              "GFOpenPresentation: the GFOffice Suite's slides, for ODP and PPTX, with PDF, printing and a show")
+    gp.needs_part("GFOffice")
+    gp.add(d + "GFOpenPresentation", data, "SYS:" + d + "GFOpenPresentation")
+    gp.add(d + "GFOpenPresentation.info", icons.icon(icons.WBTOOL, "page", stack=65536), "SYS:" + d + "GFOpenPresentation.info")
+    for f in sorted((linked / "Images/Toolbar").glob("*.ilbm")):
+        gp.add(d + "Images/Toolbar/" + f.name, f.read_bytes(), "SYS:" + d + "Images/Toolbar/" + f.name)
+    if (src / "LICENSE").is_file():
+        gp.add(d + "LICENSE", (src / "LICENSE").read_bytes(), "SYS:" + d + "LICENSE")
+    gp.add("Utilities/GFOpenPresentation.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)),
+           "SYS:Utilities/GFOpenPresentation.info", own=True)
+    return gp
+
+
 # Each part's main binary: the part's declared version (its Part file, the
 # Installer's log, the manifest) must be that binary's $VER version.
 PART_MAIN = {
@@ -1143,6 +1177,7 @@ PART_MAIN = {
     "GFOpenWrite": ("Utilities/GFOpenWrite/GFOpenWrite", "GFOpenWrite"),
     "GFOffice": ("Libs/owfwrite.library", "owfwrite.library"),  # the GFOffice Suite's shared files: owfwrite.library's version
     "GFOpenCalc": ("Utilities/GFOpenCalc/GFOpenCalc", "GFOpenCalc"),
+    "GFOpenPresentation": ("Utilities/GFOpenPresentation/GFOpenPresentation", "GFOpenPresentation"),
     "GFOpenMail": ("Utilities/GFOpenMail/GFOpenMail", "GFOpenMail"),
     "OpenBrowser": ("Utilities/OpenBrowser/OpenBrowser", "OpenBrowser"),
     "GFOpenBrowserLite": ("Utilities/GFOpenBrowserLite/GFOpenBrowserLite", "GFOpenBrowserLite"),
@@ -2895,7 +2930,8 @@ def main() -> int:
     # owfcalc.library, need (gfoffice_parts)
     gfo, wr, gcalc = gfoffice_parts(top, a.gfoffice, (ROOT / "build/openzlib/libs/z.library").read_bytes(),
                                     (a.guest / "LICENSE").read_bytes(), icons)
-    for p in (gfo, wr, gcalc):
+    gpres = gfoffice_presentation_part(top, a.gfoffice, icons)
+    for p in (gfo, wr, gcalc, gpres):
         if p:
             p.write()
 
@@ -3025,6 +3061,8 @@ def main() -> int:
                     # GFOpenCalc has no picture of its own in icons/open yet
                     + ([(gcalc.dir / "Utilities/GFOpenCalc/GFOpenCalc.info", "page"), (gcalc.dir / "Utilities/GFOpenCalc.info", None)]
                        if gcalc else [])
+                    + ([(gpres.dir / "Utilities/GFOpenPresentation/GFOpenPresentation.info", "page"),
+                        (gpres.dir / "Utilities/GFOpenPresentation.info", None)] if gpres else [])
                     + ([(dev.dir / "Developer/GFOpenGPU-SDK.info", None), (dev.dir / "Developer.info", None)] if dev else [])
                     + ([(oin.dir / "Utilities/GFOpenUp/Docs.info", None)]
                        + [(oin.dir / f"Utilities/GFOpenUp/Docs/{n}.info", "page") for n in ("GFOpenInput.txt", "Design-GFOpenInput.txt", "Gamepads.txt")]
