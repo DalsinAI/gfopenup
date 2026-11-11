@@ -276,6 +276,38 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     except SystemExit as e:
         check("check_part_versions: GFOffice, GFOpenWrite and GFOpenCalc match their binaries", False, str(e))
 
+    # GFOpenPresentation: from the OWF=linked build, needing GFOffice (z.library), with its toolbar pictures
+    linked = src / bp.GFO_LINKED
+    pfiles = {linked / "GFOpenPresentation": b"\0$VER: GFOpenPresentation 0.6.23 (11.11.2026)\0",
+              linked / "Images/Toolbar/Toolbar.ilbm": b"FORM....ILBM"}
+    for f, data in pfiles.items():
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(data)
+    pr = bp.gfoffice_presentation_part(top, src, icons)
+    pr.write()
+    pl = (pr.dir / "Part").read_text(encoding="latin-1").splitlines()
+    d = "Utilities/GFOpenPresentation/"
+    check("GFOpenPresentation: its program's version, and it needs the GFOffice part",
+          pl[0] == "part GFOpenPresentation 0.6.23" and "needs part GFOffice" in pl, str(pl[:3]))
+    check("GFOpenPresentation: in SYS:Utilities/GFOpenPresentation with its icon, toolbar pictures, licence and drawer icon",
+          f'copy "{d}GFOpenPresentation" "SYS:{d}GFOpenPresentation"' in pl
+          and f'copy "{d}GFOpenPresentation.info" "SYS:{d}GFOpenPresentation.info"' in pl
+          and f'copy "{d}Images/Toolbar/Toolbar.ilbm" "SYS:{d}Images/Toolbar/Toolbar.ilbm"' in pl
+          and f'copy "{d}LICENSE" "SYS:{d}LICENSE"' in pl
+          and 'add "Utilities/GFOpenPresentation.info" "SYS:Utilities/GFOpenPresentation.info"' in pl
+          and (pr.dir / d / "GFOpenPresentation").read_bytes() == pfiles[linked / "GFOpenPresentation"], str(pl))
+    check("GFOpenPresentation's version is read from its program",
+          bp.PART_MAIN.get("GFOpenPresentation") == (d + "GFOpenPresentation", "GFOpenPresentation"))
+    try:
+        bp.check_part_versions(top / "Parts")
+        check("check_part_versions: GFOpenPresentation matches its binary", True)
+    except SystemExit as e:
+        check("check_part_versions: GFOpenPresentation matches its binary", False, str(e))
+    rc, out = manifest_run(filt, "install", pr.dir / "Part", "GFOpenUp\t0.1\npart\tGFOpenUp\t0.8.9\nnew\tSYS:C/GFOpenUpTool\n", tmp)
+    check("INSTALL GFOpenPresentation alone: left out (5), GFOffice missing", rc == 5 and out == "missing GFOffice\n", f"{rc} {out!r}")
+    (linked / "GFOpenPresentation").unlink()
+    check("without the linked build's GFOpenPresentation, no part", bp.gfoffice_presentation_part(tmp / "GF3/GFOpenUp", src, icons) is None)
+
     # GFOpenCalc's program not built: the part is left out, the others are made as before
     (onlib / "GFOpenCalc").unlink()
     top2 = tmp / "GF2/GFOpenUp"
