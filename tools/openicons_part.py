@@ -36,7 +36,8 @@ volume), and own_drawers(), which build_pack.py runs on GFOpenUp's own drawer
 icons (GFOpenUp, GFOpenPrint, GFOpenWrite, GFOpenDemos, Developer...) so they are look
 B drawers with their program's motif, not the Gorilla-era or Boxie drawers.
 
-OUT_DIR/Kinds holds GFOpenIcons' disk, drawer, tool, project and trashcan, and
+OUT_DIR/Kinds holds the chrome hard disk (chrome_disk, 11 November 2026) and GFOpenIcons'
+drawer, tool, project and trashcan, and
 OUT_DIR/Icons AmiCradle's own (GFOpenCalc, GFOpenClock...), with no face line:
 GFOpenUpTool ICONS, and OLDLOOK for a Gorilla picture GFOpenUp's list doesn't name,
 give an icon its picture by name, else the one of its kind.
@@ -275,9 +276,48 @@ def build(out: Path, guest: Path) -> list[str]:
             used.add(n.lower())
     by_name = {e["name"]: e for e in rows if e["group"] == "os32"}
     for kind, name in KINDS.items():
+        if kind == "Disk" and chrome_disk(guest, out / "Kinds" / "Disk.info"):
+            continue
         if name in by_name:
             write_entry(by_name[name], picture(by_name[name]), str(out / "Kinds" / f"{kind}.info"))
     return lines
+
+
+def chrome_disk(guest: Path, path: Path) -> bool:
+    """Kinds/Disk.info: the chrome hard disk (Dale's pick, 11 November 2026, red neon accent), the ROM's own drive
+    picture (amicradle-guest libraries/openicon/romicons/chrome_drives.py) in true colour, at rest and chosen, each
+    frame up to 255 colours of its own, colour 0 see-through. False when the guest checkout predates the chrome
+    drives (#704): the kind then keeps GFOpenIcons' def_disk."""
+    src = guest / "libraries" / "openicon" / "romicons"
+    if not (src / "chrome_drives.py").is_file():
+        return False
+    import numpy as np
+    sys.path.insert(0, str(src))
+    sys.path.insert(0, str(guest / "icons" / "openicons"))
+    import chrome_drives
+    from openicons import info as infofmt
+    from openicons.render import planar_from
+    size = 64
+    images, planar = [], []
+    for fr in chrome_drives.frames("HARDDISK", size):
+        q = fr.convert("RGB").quantize(colors=255, method=0, dither=0)    # median cut, no dither
+        idx = np.array(q, np.int32) + 1
+        idx[np.array(fr)[..., 3] == 0] = 0
+        pal = q.getpalette()[:255 * 3]
+        pal = [(0, 0, 0)] + [tuple(pal[i:i + 3]) for i in range(0, len(pal), 3)]
+        used = int(idx.max()) + 1
+        pal = pal[:used]
+        images.append((idx.reshape(-1).tolist(), pal))
+        planar.append(planar_from(idx, pal))
+    icon = dict(type="disk", width=size, height=size, planar=planar, planar_depth=2,
+                colour=dict(images=images, transparent=0, frameless=True), default_tool=None, tooltypes=[],
+                stack=0, drawer=dict(left=80, top=60, width=520, height=300, flags=0, viewmodes=0))
+    data = infofmt.write_info(icon)
+    errs = infofmt.validate(icon, data)
+    if errs:
+        raise infofmt.InfoError("Kinds/Disk: " + "; ".join(errs))
+    path.write_bytes(data)
+    return True
 
 
 def main(argv=None) -> int:
