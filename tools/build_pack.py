@@ -2875,8 +2875,12 @@ def main() -> int:
     # in SYS:Preferences/Sound (the OS's Sound goes to SYS:Prefs/Classic:
     # GFOpenUpTool RECONCILE), and GFOpenSpeaker on the menu bar (gfopenprefs).
     so = a.openamigaprefs / "Sound/build/os3"
-    snd = Part(top, "Sound", "0.2.2", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and GFOpenAHI on AmiCradle")
+    snd = Part(top, "Sound", "0.2.3", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and GFOpenAHI on AmiCradle")
     snd.add("C/GFOpenSpeaker", (so / "GFOpenSpeaker").read_bytes(), "SYS:C/GFOpenSpeaker")   # the editor: GFOpenPrefs's Sound (W48)
+    # started at boot by its own line (Dale, 11 Nov 2026, "where did the volume control go?"): on the open ROM the
+    # prefs task applies Sound's levels and GFOpenPrefs APPLY no longer runs, so nothing else started it. It quits
+    # at once when Sound says not to show it, and a second copy only tells the first to read its settings again.
+    snd.line("startup Run >NIL: C:GFOpenSpeaker")
     # GFOpenAHI, folded into Sound (the user, 9 Oct 2026), is the Team's own AHI for the ACAHI board: ahi.device
     # (devices/ahi.device, MIT, no Aminet code), acaudio.audio and DEVS:AudioModes/ACAUDIO (amicradle's
     # vendor/amigachrome-guest/devices/acaudio.audio, built here) and AHI's settings on the board's Host mix
