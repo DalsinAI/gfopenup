@@ -1027,7 +1027,10 @@ def drawer_frames(badge) -> tuple[list[Image.Image], list[Image.Image]]:
 
 def main(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
+    from aos_icons_art import OPEN          # drawn in the AOS drawer style by tools/aos_icons_art.py (12 November 2026)
     for name, fn in ICONS.items():
+        if name in OPEN:
+            continue
         rest, chosen = finish([fn(False).render(), fn(True).render()])
         rest.save(out / f"{name}.png")
         chosen.save(out / f"{name}-selected.png")

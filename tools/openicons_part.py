@@ -36,8 +36,10 @@ volume), and own_drawers(), which build_pack.py runs on GFOpenUp's own drawer
 icons (GFOpenUp, GFOpenPrint, GFOpenWrite, GFOpenDemos, Developer...) so they are look
 B drawers with their program's motif, not the Gorilla-era or Boxie drawers.
 
-OUT_DIR/Kinds holds the chrome hard disk (chrome_disk, 11 November 2026) and GFOpenIcons'
-drawer, tool, project and trashcan, and
+OUT_DIR/Kinds holds the hard disk and trashcan in the AOS drawer style (Dale, 12 November 2026: tools/aos_icons_art.py)
+and GFOpenIcons' drawer, tool and project; SYS:System/Shell (the dock's Shell) and the Work: and Games: volumes'
+Disk.info get their AOS pictures as faces (AOS_FACES, AOS_VOLUMES); OUT_DIR/Drives the System and RAM Disk drives'
+ENV:Sys/def_<device>.info (AOS_DEVICES); and
 OUT_DIR/Icons AmiCradle's own (GFOpenCalc, GFOpenClock...), with no face line:
 GFOpenUpTool ICONS, and OLDLOOK for a Gorilla picture GFOpenUp's list doesn't name,
 give an icon its picture by name, else the one of its kind.
@@ -265,7 +267,21 @@ def build(out: Path, guest: Path) -> list[str]:
     names = short_names([dest for dest, _ in todo], ".info")
     for dest, e in todo:
         write_entry(e, picture(e), str(out / "Icons" / names[dest]))
+        if dest in AOS_FACES:
+            f = out / "Icons" / names[dest]
+            f.write_bytes(aos_icon(AOS_FACES[dest], "tool", f.read_bytes()))
         lines.append(f'face "Icons/{names[dest]}" "{dest}.info"')
+    # the volumes with a Disk.info of their own, in the AOS drawer style
+    for dest, name in AOS_VOLUMES.items():
+        n = dest.replace(":", "-") + ".info"
+        (out / "Icons" / n).write_bytes(aos_icon(name, "disk"))
+        lines.append(f'face "Icons/{n}" "{dest}.info"')
+    # the drives with no Disk.info, by their device: OpenBench (0.1.47) and GFOpenIcon ask for def_<device> first
+    (out / "Drives").mkdir(parents=True, exist_ok=True)
+    for dev, name in AOS_DEVICES.items():
+        (out / "Drives" / f"def_{dev}.info").write_bytes(aos_icon(name, "disk"))
+        for where in ("ENVARC:Sys", "ENV:Sys"):         # ENV: too, so it shows before the next start
+            lines.append(f'add "Drives/def_{dev}.info" "{where}/def_{dev}.info"')
     # by name only, with no face line: AmiCradle's own (GFOpenCalc, GFOpenClock...), for an icon GFOpenUpTool gives a
     # picture by its name (ICONS, and OLDLOOK for a Gorilla picture GFOpenUp's list doesn't name)
     used = {n.lower() for n in names.values()}
@@ -273,51 +289,77 @@ def build(out: Path, guest: Path) -> list[str]:
         n = e["name"] + ".info"
         if e["group"] == "amigachrome" and len(n) <= FFS_NAME and n.lower() not in used and "/" not in e["name"]:
             write_entry(e, picture(e), str(out / "Icons" / n))
+            if e["name"] in AOS_BY_NAME:
+                f = out / "Icons" / n
+                f.write_bytes(aos_icon(AOS_BY_NAME[e["name"]], "tool", f.read_bytes()))
             used.add(n.lower())
     by_name = {e["name"]: e for e in rows if e["group"] == "os32"}
     for kind, name in KINDS.items():
-        if kind == "Disk" and chrome_disk(guest, out / "Kinds" / "Disk.info"):
+        if kind in AOS_KINDS:
+            (out / "Kinds" / f"{kind}.info").write_bytes(aos_icon(AOS_KINDS[kind], "garbage" if kind == "Trashcan" else "disk"))
             continue
         if name in by_name:
             write_entry(by_name[name], picture(by_name[name]), str(out / "Kinds" / f"{kind}.info"))
     return lines
 
 
-def chrome_disk(guest: Path, path: Path) -> bool:
-    """Kinds/Disk.info: the chrome hard disk (Dale's pick, 11 November 2026, red neon accent), the ROM's own drive
-    picture (amicradle-guest libraries/openicon/romicons/chrome_drives.py) in true colour, at rest and chosen, each
-    frame up to 255 colours of its own, colour 0 see-through. False when the guest checkout predates the chrome
-    drives (#704): the kind then keeps GFOpenIcons' def_disk."""
-    src = guest / "libraries" / "openicon" / "romicons"
-    if not (src / "chrome_drives.py").is_file():
-        return False
+# The AOS drawer style (Dale, 12 November 2026, 13:52 "go with those", 15:04 "those work"; tools/aos_icons_art.py):
+# Kinds/Disk and Kinds/Trashcan; SYS:System/Shell (the dock's Shell) and AmiCradle's own programs GFOpenUpTool
+# gives a picture by name (the dock's Calc, Clock, FTP, PuTTY, Look, Compress and Files) keep what they are and take
+# its picture.
+AOS_KINDS = {"Disk": "HARDDISK", "Trashcan": "TRASHCAN"}
+AOS_FACES = {"SYS:System/Shell": "SHELL", "SYS:Trashcan": "TRASHCAN"}
+AOS_BY_NAME = {"GFOpenCalc": "CALC", "GFOpenClock": "CLOCK", "GFOpenFTP": "FTP", "GFOpenPuTTY": "PUTTY",
+               "GFOpenLook": "LOOK", "GFOpenCompress": "COMPRESS", "GFOpenFiles": "FILES"}
+# The volumes with a Disk.info of their own (amicradle's provisioning makes Work:, the card a Games: drive); a
+# machine without the volume is left alone.
+AOS_VOLUMES = {"Work:Disk": "WORK", "Games:Disk": "GAMES"}
+# The drives with no Disk.info (OLDLOOK takes SYS:Disk.info out), by device: the boot drive and the RAM disk. A USB
+# stick's or the IDE drive's device name differs from machine to machine, so those keep the ROM's picture for their
+# device (GFOpenIcon's built-in).
+AOS_DEVICES = {"DH0": "SYSTEM", "RAM": "RAM"}
+ICON_SIZE = 64
+
+
+def aos_pictures(name: str):
+    """NAME's two AOS frames as GFOpenIcons' .info pictures: (colour images, planar images), each frame up to 255
+    colours of its own, colour 0 see-through (a pixel under 110 of 255 alpha), as a GlowIcon holds it."""
     import numpy as np
-    sys.path.insert(0, str(src))
-    sys.path.insert(0, str(guest / "icons" / "openicons"))
-    import chrome_drives
-    from openicons import info as infofmt
+    import aos_icons_art
     from openicons.render import planar_from
-    size = 64
     images, planar = [], []
-    for fr in chrome_drives.frames("HARDDISK", size):
+    for fr in aos_icons_art.frames(name, ICON_SIZE):
         q = fr.convert("RGB").quantize(colors=255, method=0, dither=0)    # median cut, no dither
         idx = np.array(q, np.int32) + 1
-        idx[np.array(fr)[..., 3] == 0] = 0
+        idx[np.array(fr)[..., 3] < 110] = 0
         pal = q.getpalette()[:255 * 3]
         pal = [(0, 0, 0)] + [tuple(pal[i:i + 3]) for i in range(0, len(pal), 3)]
-        used = int(idx.max()) + 1
-        pal = pal[:used]
+        pal = pal[:int(idx.max()) + 1]
         images.append((idx.reshape(-1).tolist(), pal))
         planar.append(planar_from(idx, pal))
-    icon = dict(type="disk", width=size, height=size, planar=planar, planar_depth=2,
-                colour=dict(images=images, transparent=0, frameless=True), default_tool=None, tooltypes=[],
-                stack=0, drawer=dict(left=80, top=60, width=520, height=300, flags=0, viewmodes=0))
+    return images, planar
+
+
+def aos_icon(name: str, wbtype: str, old: bytes | None = None) -> bytes:
+    """An icon file with NAME's AOS picture. With old (an icon file's bytes) it keeps old's type, default tool,
+    tool types, stack, place and drawer window, as a face does."""
+    from openicons import info as infofmt
+    images, planar = aos_pictures(name)
+    was = infofmt.read_info(old) if old else {}
+    icon = dict(type=was.get("type", wbtype), width=ICON_SIZE, height=ICON_SIZE, planar=planar, planar_depth=2,
+                colour=dict(images=images, transparent=0, frameless=True), default_tool=was.get("default_tool"),
+                tooltypes=was.get("tooltypes") or [], stack=was.get("stack", 0))
+    if icon["type"] in ("disk", "drawer", "garbage") or was.get("drawer"):
+        icon["drawer"] = was.get("drawer") or dict(left=80, top=60, width=520, height=300, flags=0, viewmodes=0)
     data = infofmt.write_info(icon)
     errs = infofmt.validate(icon, data)
     if errs:
-        raise infofmt.InfoError("Kinds/Disk: " + "; ".join(errs))
-    path.write_bytes(data)
-    return True
+        raise infofmt.InfoError(f"AOS {name}: " + "; ".join(errs))
+    if old:
+        data = bytearray(data)
+        data[58:66] = old[58:66]                # do_CurrentX, do_CurrentY: the icon's place
+        data = bytes(data)
+    return data
 
 
 def main(argv=None) -> int:
@@ -326,7 +368,7 @@ def main(argv=None) -> int:
     ap.add_argument("--guest", type=Path, required=True, help="the amicradle-guest checkout (icons/openicons)")
     a = ap.parse_args(argv)
     lines = build(a.out, a.guest)
-    (a.out / "Part").write_text("part GFOpenIcons 0.2\n" + "\n".join(lines) + "\n")
+    (a.out / "Part").write_text("part GFOpenIcons 0.3\n" + "\n".join(lines) + "\n")
     print(f"{len(lines) - 1} faces in {a.out}")
     return 0
 

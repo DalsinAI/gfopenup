@@ -51,6 +51,23 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 | KindsGallery (gfopengadtools) | Three tiles: a slider, a button, check boxes (one ticked) | Knob slides on, button pressed, the other box ticked |
 | GFOpenMeters (gfopenbench) | A frosted panel: the date and time over three bars, partly filled, the middle one in the accent | A reading later: the bars move on, the last past 90 per cent in the warning colour, the clock's hand on |
 
+**The AOS drawer style (Dale, 12 November 2026: 13:52 "go with those", 15:04 "those work").** Our own drawing in
+the genre of today's Amiga icon sets, by `tools/aos_icons_art.py`. Drives and drawers are a chunky navy box seen
+from the front and a little above, the handle recess lit warm, with what it holds standing large in the opening
+(chosen, it rises out); the dock's programs are rendered objects with a sheen and a faint floor reflection (chosen,
+the object lifts off it). Every frame is a GlowIcon's: each pixel solid or see-through, at most 255 colours.
+
+- icons/open: GFOpenFiles, GFOpenView, GFOpenWrite, GFOpenEdit, GFOpenPlay, Install-GFOpenUp, GFOpenMonitor,
+  GFOpenPrefs, GFOpenDrawer, GFOpenCompress, Look, GFOpenCalc, GFOpenFTP and GFOpenPuTTY (`OPEN`);
+  `tools/open_icons_art.py` leaves those names alone.
+- GFOpenIcons (`tools/openicons_part.py`): faces for SYS:System/Shell and SYS:Trashcan, and for Work:Disk.info
+  and Games:Disk.info; AmiCradle's own GFOpenCalc, GFOpenClock, GFOpenFTP, GFOpenPuTTY, GFOpenLook,
+  GFOpenCompress and GFOpenFiles by name; Kinds/Disk and Kinds/Trashcan.
+- Drives with no Disk.info, by device: `ENVARC:Sys/def_DH0.info` (System, the boing ball) and
+  `ENVARC:Sys/def_RAM.info` (RAM Disk, a memory module), also put in `ENV:Sys`; OpenBench 0.1.47 and GFOpenIcon ask
+  for `def_<device>` first. A USB stick's and the IDE drive's device names differ from machine to machine, so those
+  keep the ROM's own picture for their device.
+
 ## 2. Format
 
 - **OS 3.5 GlowIcon** (FORM ICON with FACE and two IMAG chunks), written by
