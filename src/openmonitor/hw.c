@@ -135,6 +135,8 @@ static void add_sensors(const char *st)
             add(B_AC, "Throttle", "%s", tw);
         }
     }
+    if (sp_json(obj, NULL, "underVoltage", v, sizeof v) && (!strcmp(v, "true") || !strcmp(v, "false")))
+        add(B_AC, "Supply", "%s", v[0] == 't' ? "low voltage now" : "voltage good");
     if (sp_json(obj, NULL, "fanRPM", v, sizeof v) && number(v, &n))
         add(B_AC, "Fan", "%ld rpm", (long)n);
     if (sp_json(obj, NULL, "powerLevel", v, sizeof v) && v[0])
