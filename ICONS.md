@@ -51,6 +51,15 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 | KindsGallery (gfopengadtools) | Three tiles: a slider, a button, check boxes (one ticked) | Knob slides on, button pressed, the other box ticked |
 | GFOpenMeters (gfopenbench) | A frosted panel: the date and time over three bars, partly filled, the middle one in the accent | A reading later: the bars move on, the last past 90 per cent in the warning colour, the clock's hand on |
 
+**The tile look (Dale, 12 November 2026, 11:46).** The dock's programs (GFOpenFiles, GFOpenView, GFOpenWrite,
+GFOpenEdit, GFOpenPlay, Install-GFOpenUp, GFOpenMonitor, GFOpenPrefs, GFOpenDrawer) are drawn in the ROM icons'
+tile look (amicradle-guest #704) by `tools/tile_icons_art.py`, from amicradle-guest's
+`libraries/openicon/romicons/tile_glyphs.py`: the graphic on the dark tile, something in it moving when chosen.
+`tools/open_icons_art.py` leaves those names alone. The Shell's icon (SYS:System/Shell) and the Work: and Games:
+volumes' Disk.info get tile pictures as GFOpenIcons faces (`tools/openicons_part.py`), and the Kinds drawer's disk
+is the tile hard disk. System, RAM Disk, USB sticks and the IDE drive have no Disk.info: the ROM draws each by its
+device.
+
 ## 2. Format
 
 - **OS 3.5 GlowIcon** (FORM ICON with FACE and two IMAG chunks), written by

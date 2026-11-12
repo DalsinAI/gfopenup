@@ -3103,7 +3103,8 @@ def main() -> int:
             (of.dir / "Utilities/GFOpenFiles.info", "GFOpenFiles"), (op.dir / "Utilities/GFOpenPlay.info", "GFOpenPlay"),
             (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/GFOpenEdit.info", "GFOpenEdit"),
             (wr.dir / "Utilities/GFOpenWrite/GFOpenWrite.info", "GFOpenWrite"),
-            (wr.dir / "Utilities/GFOpenWrite.info", "drawer-GFOpenWrite")]
+            (wr.dir / "Utilities/GFOpenWrite.info", "drawer-GFOpenWrite"),
+            (od.dir / "Utilities/GFOpenDrawer.info", "GFOpenDrawer")]
             # the icon library's GFOpenTata and Telegram (#104), when those parts are in the pack
             + ([(tt.dir / "Prefs/GFOpenTata.info", "GFOpenTata")] if tt else [])
             + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else []),

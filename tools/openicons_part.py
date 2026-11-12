@@ -36,8 +36,9 @@ volume), and own_drawers(), which build_pack.py runs on GFOpenUp's own drawer
 icons (GFOpenUp, GFOpenPrint, GFOpenWrite, GFOpenDemos, Developer...) so they are look
 B drawers with their program's motif, not the Gorilla-era or Boxie drawers.
 
-OUT_DIR/Kinds holds the chrome hard disk (chrome_disk, 11 November 2026) and GFOpenIcons'
-drawer, tool, project and trashcan, and
+OUT_DIR/Kinds holds the tile hard disk (Dale, 11 and 12 November 2026: the ROM's tile look, amicradle-guest
+tile_glyphs.py) and GFOpenIcons' drawer, tool, project and trashcan; SYS:System/Shell (the dock's Shell) and
+the Work: and Games: volumes' Disk.info get their tile pictures as faces (TILE_FACES, TILE_VOLUMES); and
 OUT_DIR/Icons AmiCradle's own (GFOpenCalc, GFOpenClock...), with no face line:
 GFOpenUpTool ICONS, and OLDLOOK for a Gorilla picture GFOpenUp's list doesn't name,
 give an icon its picture by name, else the one of its kind.
@@ -265,7 +266,17 @@ def build(out: Path, guest: Path) -> list[str]:
     names = short_names([dest for dest, _ in todo], ".info")
     for dest, e in todo:
         write_entry(e, picture(e), str(out / "Icons" / names[dest]))
+        if dest in TILE_FACES:
+            f = out / "Icons" / names[dest]
+            f.write_bytes(tile_icon(guest, TILE_FACES[dest], "tool", f.read_bytes()) or f.read_bytes())
         lines.append(f'face "Icons/{names[dest]}" "{dest}.info"')
+    # the volumes with a Disk.info of their own, in the tile look
+    for dest, name in TILE_VOLUMES.items():
+        data = tile_icon(guest, name, "disk")
+        if data:
+            n = dest.replace(":", "-") + ".info"
+            (out / "Icons" / n).write_bytes(data)
+            lines.append(f'face "Icons/{n}" "{dest}.info"')
     # by name only, with no face line: AmiCradle's own (GFOpenCalc, GFOpenClock...), for an icon GFOpenUpTool gives a
     # picture by its name (ICONS, and OLDLOOK for a Gorilla picture GFOpenUp's list doesn't name)
     used = {n.lower() for n in names.values()}
@@ -276,48 +287,81 @@ def build(out: Path, guest: Path) -> list[str]:
             used.add(n.lower())
     by_name = {e["name"]: e for e in rows if e["group"] == "os32"}
     for kind, name in KINDS.items():
-        if kind == "Disk" and chrome_disk(guest, out / "Kinds" / "Disk.info"):
+        data = tile_icon(guest, TILE_KINDS[kind], "disk") if kind in TILE_KINDS else None
+        if data:
+            (out / "Kinds" / f"{kind}.info").write_bytes(data)
             continue
         if name in by_name:
             write_entry(by_name[name], picture(by_name[name]), str(out / "Kinds" / f"{kind}.info"))
     return lines
 
 
-def chrome_disk(guest: Path, path: Path) -> bool:
-    """Kinds/Disk.info: the chrome hard disk (Dale's pick, 11 November 2026, red neon accent), the ROM's own drive
-    picture (amicradle-guest libraries/openicon/romicons/chrome_drives.py) in true colour, at rest and chosen, each
-    frame up to 255 colours of its own, colour 0 see-through. False when the guest checkout predates the chrome
-    drives (#704): the kind then keeps GFOpenIcons' def_disk."""
+# The tile look (Dale, 11 November 2026, and 12 November 11:46: "the same look" on the dock and the drives): the
+# picture of tile_glyphs.py on the dark tile, as the ROM's icon.library draws its own (#704). Kinds/Disk is the
+# tile hard disk; SYS:System/Shell (the dock's Shell) and the Work and Games volumes get their tile pictures.
+TILE_KINDS = {"Disk": "HARDDISK"}
+TILE_FACES = {"SYS:System/Shell": "SHELL"}
+# The volumes with a Disk.info of their own (amicradle's provisioning makes Work:, the card a Games: drive). The ROM
+# draws System, RAM Disk, USB sticks and the IDE drive by their device when the volume has no Disk.info (OLDLOOK
+# takes SYS:Disk.info out), so only these get a face; a machine without the volume is left alone.
+TILE_VOLUMES = {"Work:Disk": "WORK", "Games:Disk": "GAMES"}
+
+
+def tile_glyphs(guest: Path):
+    """amicradle-guest's tile_glyphs (libraries/openicon/romicons), or None before the tile look (#704)."""
     src = guest / "libraries" / "openicon" / "romicons"
-    if not (src / "chrome_drives.py").is_file():
-        return False
-    import numpy as np
+    if not (src / "tile_glyphs.py").is_file():
+        return None
     sys.path.insert(0, str(src))
     sys.path.insert(0, str(guest / "icons" / "openicons"))
-    import chrome_drives
-    from openicons import info as infofmt
+    import tile_glyphs
+    return tile_glyphs if hasattr(tile_glyphs, "frames") else None
+
+
+def tile_pictures(guest: Path, name: str, size: int = 64):
+    """NAME's two tile frames as GFOpenIcons' .info pictures: (colour images, planar images), each frame up to 255
+    colours of its own, colour 0 see-through; None before the tile look."""
+    tg = tile_glyphs(guest)
+    if tg is None or name not in tg.GRAPHICS:
+        return None
+    import numpy as np
     from openicons.render import planar_from
-    size = 64
     images, planar = [], []
-    for fr in chrome_drives.frames("HARDDISK", size):
+    for fr in tg.frames(name, size, "dark"):
         q = fr.convert("RGB").quantize(colors=255, method=0, dither=0)    # median cut, no dither
         idx = np.array(q, np.int32) + 1
         idx[np.array(fr)[..., 3] == 0] = 0
         pal = q.getpalette()[:255 * 3]
         pal = [(0, 0, 0)] + [tuple(pal[i:i + 3]) for i in range(0, len(pal), 3)]
-        used = int(idx.max()) + 1
-        pal = pal[:used]
+        pal = pal[:int(idx.max()) + 1]
         images.append((idx.reshape(-1).tolist(), pal))
         planar.append(planar_from(idx, pal))
-    icon = dict(type="disk", width=size, height=size, planar=planar, planar_depth=2,
-                colour=dict(images=images, transparent=0, frameless=True), default_tool=None, tooltypes=[],
-                stack=0, drawer=dict(left=80, top=60, width=520, height=300, flags=0, viewmodes=0))
+    return images, planar
+
+
+def tile_icon(guest: Path, name: str, wbtype: str, old: bytes | None = None) -> bytes | None:
+    """An icon file with NAME's tile picture. With old (an icon file's bytes) it keeps old's type, default tool,
+    tool types, stack, place and drawer window, as a face does; None before the tile look."""
+    pics = tile_pictures(guest, name)
+    if pics is None:
+        return None
+    from openicons import info as infofmt
+    images, planar = pics
+    was = infofmt.read_info(old) if old else {}
+    icon = dict(type=was.get("type", wbtype), width=64, height=64, planar=planar, planar_depth=2,
+                colour=dict(images=images, transparent=0, frameless=True), default_tool=was.get("default_tool"),
+                tooltypes=was.get("tooltypes") or [], stack=was.get("stack", 0))
+    if icon["type"] in ("disk", "drawer", "garbage") or was.get("drawer"):
+        icon["drawer"] = was.get("drawer") or dict(left=80, top=60, width=520, height=300, flags=0, viewmodes=0)
     data = infofmt.write_info(icon)
     errs = infofmt.validate(icon, data)
     if errs:
-        raise infofmt.InfoError("Kinds/Disk: " + "; ".join(errs))
-    path.write_bytes(data)
-    return True
+        raise infofmt.InfoError(f"tile {name}: " + "; ".join(errs))
+    if old:
+        data = bytearray(data)
+        data[58:66] = old[58:66]                # do_CurrentX, do_CurrentY: the icon's place
+        data = bytes(data)
+    return data
 
 
 def main(argv=None) -> int:

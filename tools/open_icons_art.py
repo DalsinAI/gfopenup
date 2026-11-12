@@ -1027,7 +1027,10 @@ def drawer_frames(badge) -> tuple[list[Image.Image], list[Image.Image]]:
 
 def main(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
+    from tile_icons_art import TILE         # drawn in the tile look by tools/tile_icons_art.py (12 November 2026)
     for name, fn in ICONS.items():
+        if name in TILE:
+            continue
         rest, chosen = finish([fn(False).render(), fn(True).render()])
         rest.save(out / f"{name}.png")
         chosen.save(out / f"{name}-selected.png")
