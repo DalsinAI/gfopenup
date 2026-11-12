@@ -163,7 +163,8 @@ a Part file that C/GFOpenUpTool reads:
                         Gamepads USE is in GFOpenPrefs APPLY (--openamigainput)
   GFOpenFiles/            GFOpenFiles, the two-pane file manager (gfopenfilemanager)
   GFOpenPlay/             GFOpenPlay, the media player for every datatype (gfopenmediaplayer)
-  GFOpenTitle/            GFOpenTitle: logo, free memory, clock and the settings cog on the title bar (gfopenprefs)
+  GFOpenTitle/            GFOpenTitle: logo, free memory, clock and the settings cog on the title bar, with
+                        GFOpenNetwork, the LAN and Wi-Fi icons in its row (gfopenprefs)
   GFOpenDateTime/         GFOpenPrefs's Date & Time page (since W48): no files of its own since the
                         no-ROM-volume design (24 October 2026); it archives its old name's stub in
                         SYS:Prefs
@@ -611,6 +612,7 @@ def build_parts(a):
     run(["sh", a.openamigaprefs / "Menus/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "Menus/engine/build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigaprefs / "TitleBar/build.sh"], env=env)
+    run(["sh", a.openamigaprefs / "Network/build.sh"], env=dict(env, OGT=str(a.opengadtools)))   # GFOpenNetwork
     run(["sh", a.openamigaprefs / "DateTime/build.sh"], env=env)     # GFOpenDateTime
     run(["sh", a.openamigaprefs / "Sound/build.sh"], env=env)
     # acaudio.audio, the AHI driver for the ACAHI board, and its modes file (amicradle's vendored guest tree)
@@ -2841,6 +2843,12 @@ def main() -> int:
               "GFOpenTitle: AmiCradle's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
     tb.add("C/GFOpenTitle", tbb, "SYS:C/GFOpenTitle")
     tb.line("startup Run >NIL: C:GFOpenTitle")
+    # GFOpenNetwork (gfopenprefs Network/, 0.8, Dale 12 Nov 2026 "make the sound and wifi and network commodities"):
+    # the LAN and Wi-Fi icons in GFOpenTitle's row, a commodity of its own. GFOpenTitle 0.8 leaves the network to it
+    # while it runs and draws its own icons again when it ends, so the two go together in this part.
+    tb.add("Tools/Commodities/GFOpenNetwork", (a.openamigaprefs / "Network/build/os3/GFOpenNetwork").read_bytes(),
+           "SYS:Tools/Commodities/GFOpenNetwork")
+    tb.line("startup Run >NIL: SYS:Tools/Commodities/GFOpenNetwork")
     tb.write()
 
     # GFOpenDateTime: the date, the time and the region (gfopenprefs DateTime). The time zone is a place, and
@@ -2875,12 +2883,13 @@ def main() -> int:
     # in SYS:Preferences/Sound (the OS's Sound goes to SYS:Prefs/Classic:
     # GFOpenUpTool RECONCILE), and GFOpenSpeaker on the menu bar (gfopenprefs).
     so = a.openamigaprefs / "Sound/build/os3"
-    snd = Part(top, "Sound", "0.2.3", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and GFOpenAHI on AmiCradle")
+    snd = Part(top, "Sound", "0.2.4", "Sound: the volume, Paula's and AHI's levels, a speaker on the menu bar, and GFOpenAHI on AmiCradle")
     snd.add("C/GFOpenSpeaker", (so / "GFOpenSpeaker").read_bytes(), "SYS:C/GFOpenSpeaker")   # the editor: GFOpenPrefs's Sound (W48)
     # started at boot by its own line (Dale, 11 Nov 2026, "where did the volume control go?"): on the open ROM the
     # prefs task applies Sound's levels and GFOpenPrefs APPLY no longer runs, so nothing else started it. It quits
     # at once when Sound says not to show it, and a second copy only tells the first to read its settings again.
     snd.line("startup Run >NIL: C:GFOpenSpeaker")
+    # 0.2.4: GFOpenSpeaker 0.2, the speaker an item in GFOpenTitle 0.8's row (gfopenprefs #193)
     # GFOpenAHI, folded into Sound (the user, 9 Oct 2026), is the Team's own AHI for the ACAHI board: ahi.device
     # (devices/ahi.device, MIT, no Aminet code), acaudio.audio and DEVS:AudioModes/ACAUDIO (amicradle's
     # vendor/amigachrome-guest/devices/acaudio.audio, built here) and AHI's settings on the board's Host mix

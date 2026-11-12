@@ -764,6 +764,13 @@ def main() -> int:
               'core.line("startup Run >NIL: C:GFOpenUpMenu")' in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
         check("GFOpenSpeaker, the menu bar's volume control, is started at boot by the Sound part (open ROM: no APPLY)",
               'snd.line("startup Run >NIL: C:GFOpenSpeaker")' in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
+        bp_src = (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")
+        check("GFOpenNetwork, the LAN and Wi-Fi icons in GFOpenTitle's row, is built and started at boot by the GFOpenTitle part",
+              '"Network/build.sh"' in bp_src
+              and 'tb.add("Tools/Commodities/GFOpenNetwork"' in bp_src
+              and 'tb.line("startup Run >NIL: SYS:Tools/Commodities/GFOpenNetwork")' in bp_src
+              and bp_src.index('tb.line("startup Run >NIL: C:GFOpenTitle")') < bp_src.index('tb.line("startup Run >NIL: SYS:Tools/Commodities/GFOpenNetwork")'))
+        check("the Sound part is 0.2.4 (GFOpenSpeaker 0.2 in GFOpenTitle's row)", 'Part(top, "Sound", "0.2.4",' in bp_src)
 
         gfoffice_checks(tmp, filt)
 
