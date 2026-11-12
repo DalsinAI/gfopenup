@@ -2261,7 +2261,7 @@ def main() -> int:
     if not a.no_openicons:
         sys.path.insert(0, str(ROOT / "tools"))
         import openicons_part
-        oi = Part(top, "GFOpenIcons", "0.2", "GFOpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
+        oi = Part(top, "GFOpenIcons", "0.3", "GFOpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
         for text in openicons_part.build(oi.dir, a.guest):
             oi.line(text)
         oi.write()
@@ -3076,7 +3076,7 @@ def main() -> int:
                     + ([(dm.dir / f"Utilities/GFOpenDemos/{n}.info", "page") for n in ("Boing", "Chrome Gears", "Copper Tunnel")]
                        + [(dm.dir / "Utilities/GFOpenDemos.info", None)] if dm else [])
                     + ([(tg.dir / "Utilities/UnofficialTelegram.info", "page")] if tg else [])
-                    # GFOpenCalc has no picture of its own in icons/open yet
+                    # GFOpenCalc's own picture comes from icons/open (open_icons, below)
                     + ([(gcalc.dir / "Utilities/GFOpenCalc/GFOpenCalc.info", "page"), (gcalc.dir / "Utilities/GFOpenCalc.info", None)]
                        if gcalc else [])
                     + ([(gpres.dir / "Utilities/GFOpenPresentation/GFOpenPresentation.info", "page"),
@@ -3105,6 +3105,10 @@ def main() -> int:
             (wr.dir / "Utilities/GFOpenWrite/GFOpenWrite.info", "GFOpenWrite"),
             (wr.dir / "Utilities/GFOpenWrite.info", "drawer-GFOpenWrite"),
             (od.dir / "Utilities/GFOpenDrawer.info", "GFOpenDrawer")]
+            # the dock's GFOpenCalc, GFOpenFTP and GFOpenPuTTY in the AOS drawer style (12 November 2026)
+            + ([(gcalc.dir / "Utilities/GFOpenCalc/GFOpenCalc.info", "GFOpenCalc")] if gcalc else [])
+            + ([(ftp.dir / "Utilities/GFOpenFTP/GFOpenFTP.info", "GFOpenFTP")] if ftp else [])
+            + ([(pt.dir / "Utilities/GFOpenPuTTY/GFOpenPuTTY.info", "GFOpenPuTTY")] if pt else [])
             # the icon library's GFOpenTata and Telegram (#104), when those parts are in the pack
             + ([(tt.dir / "Prefs/GFOpenTata.info", "GFOpenTata")] if tt else [])
             + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else []),

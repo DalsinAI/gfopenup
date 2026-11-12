@@ -51,14 +51,22 @@ one lit up. Something in the picture moves, so clicking an icon feels alive:
 | KindsGallery (gfopengadtools) | Three tiles: a slider, a button, check boxes (one ticked) | Knob slides on, button pressed, the other box ticked |
 | GFOpenMeters (gfopenbench) | A frosted panel: the date and time over three bars, partly filled, the middle one in the accent | A reading later: the bars move on, the last past 90 per cent in the warning colour, the clock's hand on |
 
-**The tile look (Dale, 12 November 2026, 11:46).** The dock's programs (GFOpenFiles, GFOpenView, GFOpenWrite,
-GFOpenEdit, GFOpenPlay, Install-GFOpenUp, GFOpenMonitor, GFOpenPrefs, GFOpenDrawer) are drawn in the ROM icons'
-tile look (amicradle-guest #704) by `tools/tile_icons_art.py`, from amicradle-guest's
-`libraries/openicon/romicons/tile_glyphs.py`: the graphic on the dark tile, something in it moving when chosen.
-`tools/open_icons_art.py` leaves those names alone. The Shell's icon (SYS:System/Shell) and the Work: and Games:
-volumes' Disk.info get tile pictures as GFOpenIcons faces (`tools/openicons_part.py`), and the Kinds drawer's disk
-is the tile hard disk. System, RAM Disk, USB sticks and the IDE drive have no Disk.info: the ROM draws each by its
-device.
+**The AOS drawer style (Dale, 12 November 2026: 13:52 "go with those", 15:04 "those work").** Our own drawing in
+the genre of today's Amiga icon sets, by `tools/aos_icons_art.py`. Drives and drawers are a chunky navy box seen
+from the front and a little above, the handle recess lit warm, with what it holds standing large in the opening
+(chosen, it rises out); the dock's programs are rendered objects with a sheen and a faint floor reflection (chosen,
+the object lifts off it). Every frame is a GlowIcon's: each pixel solid or see-through, at most 255 colours.
+
+- icons/open: GFOpenFiles, GFOpenView, GFOpenWrite, GFOpenEdit, GFOpenPlay, Install-GFOpenUp, GFOpenMonitor,
+  GFOpenPrefs, GFOpenDrawer, GFOpenCompress, Look, GFOpenCalc, GFOpenFTP and GFOpenPuTTY (`OPEN`);
+  `tools/open_icons_art.py` leaves those names alone.
+- GFOpenIcons (`tools/openicons_part.py`): faces for SYS:System/Shell and SYS:Trashcan, and for Work:Disk.info
+  and Games:Disk.info; AmiCradle's own GFOpenCalc, GFOpenClock, GFOpenFTP, GFOpenPuTTY, GFOpenLook,
+  GFOpenCompress and GFOpenFiles by name; Kinds/Disk and Kinds/Trashcan.
+- Drives with no Disk.info, by device: `ENVARC:Sys/def_DH0.info` (System, the boing ball) and
+  `ENVARC:Sys/def_RAM.info` (RAM Disk, a memory module), also put in `ENV:Sys`; OpenBench 0.1.47 and GFOpenIcon ask
+  for `def_<device>` first. A USB stick's and the IDE drive's device names differ from machine to machine, so those
+  keep the ROM's own picture for their device.
 
 ## 2. Format
 
