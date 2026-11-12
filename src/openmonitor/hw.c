@@ -3,7 +3,8 @@
  * Processor, Chips, Software, the AmiCradle machine and Memory in boxes, then the expansion boards (name,
  * maker and product, bus, address, size, driver, ROM). What the machine is made of comes from sysprobe
  * (amicradle-guest common/sysprobe), which ShowConfig and ACInfo read too, so the three say the same thing.
- * Read once when the view is first shown; F5 reads it again.
+ * Read once when the view is first shown; F5 reads it again. The AmiCradle box also shows the host's
+ * sensors (temperature, clock, throttling, fan, power level) when the host reports them, and nothing else.
  *
  * Board details... shows a board's AutoConfig record; Drives... the mounted devices and their sizes; Save a
  * report runs ShowConfig REPORT (ShowConfig's own layout, by ShowConfig itself).
@@ -37,7 +38,7 @@
 
 enum { B_CPU, B_CHIPS, B_SOFT, B_AC, B_MEM, B_N };
 static const char *const box_title[B_N] = { "Processor", "Chips", "Software", "AmiCradle", "Memory" };
-#define MAXLN 28
+#define MAXLN 36
 struct line { UBYTE box; char what[12]; char value[64]; };
 static struct line *lines;
 static int nlines, read_done;
@@ -55,6 +56,89 @@ static void add(int box, const char *what, const char *fmt, ...)
     va_start(ap, fmt);
     vsnprintf(l->value, sizeof l->value, fmt, ap);
     va_end(ap);
+}
+
+/* ---- the host's sensors (item 9) ---------------------------------------------------------------------
+ *
+ * The host's status carries "sensors" inside "host" with only what it really measured: temperature, the
+ * CPU's clock now and at most, the Pi's throttling flags, a fan and the power level. A key it did not
+ * measure is not there, and then its line is not shown: on a host without sensors, an older host, or a
+ * real 68k (no accontrol.device) the box shows none of them. Nothing here is made up. */
+
+/* The sensors object alone (it is flat: up to its first '}'), so a key is never found further on. */
+static int sensors_object(const char *st, char *out, int size)
+{
+    const char *p = st ? strstr(st, "\"sensors\"") : NULL, *q;
+    int n;
+    if (!p || !(p = strchr(p, '{')) || !(q = strchr(p, '}'))) return 0;
+    n = (int)(q - p) + 1;
+    if (n >= size) return 0;
+    memcpy(out, p, n);
+    out[n] = 0;
+    return 1;
+}
+
+/* A whole number: 1 when the value is one (digits after an optional minus). */
+static int number(const char *v, LONG *out)
+{
+    LONG n = 0;
+    int neg = *v == '-', any = 0;
+    if (neg) v++;
+    for (; *v >= '0' && *v <= '9'; v++, any = 1) n = n * 10 + (*v - '0');
+    if (!any || (*v && *v != ' ')) return 0;
+    *out = neg ? -n : n;
+    return 1;
+}
+
+static void mhz_text(LONG khz, char *out, int size)
+{
+    snprintf(out, size, "%ld MHz", (long)((khz + 500) / 1000));
+}
+
+static void add_sensors(const char *st)
+{
+    char obj[512], v[48], w[48];
+    LONG n, m;
+    if (!sensors_object(st, obj, sizeof obj)) return;
+    if (sp_json(obj, NULL, "tempMilliC", v, sizeof v) && number(v, &n))
+        add(B_AC, "Temp", "%ld.%ld \xb0" "C", (long)(n / 1000), (long)((n < 0 ? -n : n) % 1000 / 100));
+    if (sp_json(obj, NULL, "clockKHz", v, sizeof v) && number(v, &n)) {
+        mhz_text(n, v, sizeof v);
+        if (sp_json(obj, NULL, "clockMaxKHz", w, sizeof w) && number(w, &m)) {
+            mhz_text(m, w, sizeof w);
+            add(B_AC, "Clock", "%s of %s", v, w);
+        } else
+            add(B_AC, "Clock", "%s", v);
+    } else if (sp_json(obj, NULL, "clockMaxKHz", w, sizeof w) && number(w, &m)) {
+        mhz_text(m, w, sizeof w);
+        add(B_AC, "Clock", "at most %s", w);
+    }
+    if (sp_json(obj, NULL, "throttled", v, sizeof v)) {
+        ULONG t = 0;
+        const char *p = v;
+        if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) p += 2;
+        for (; *p; p++) {
+            int d = *p >= '0' && *p <= '9' ? *p - '0' : *p >= 'a' && *p <= 'f' ? *p - 'a' + 10 : *p >= 'A' && *p <= 'F' ? *p - 'A' + 10 : -1;
+            if (d < 0) break;
+            t = t << 4 | (ULONG)d;
+        }
+        if (!(t & 0xf))
+            add(B_AC, "Throttle", "%s", t & 0xf0000 ? "none now (it was since start)" : "none");
+        else {
+            static const char *const word[4] = { "low voltage", "clock capped", "throttled", "soft temperature limit" };
+            char tw[80];
+            int i, k = 0;
+            tw[0] = 0;
+            for (i = 0; i < 4; i++)
+                if ((t & (1u << i)) && k < (int)sizeof tw - 1)
+                    k += snprintf(tw + k, sizeof tw - k, "%s%s", k ? ", " : "", word[i]);
+            add(B_AC, "Throttle", "%s", tw);
+        }
+    }
+    if (sp_json(obj, NULL, "fanRPM", v, sizeof v) && number(v, &n))
+        add(B_AC, "Fan", "%ld rpm", (long)n);
+    if (sp_json(obj, NULL, "powerLevel", v, sizeof v) && v[0])
+        add(B_AC, "Power", "%s%s", v, sp_json(obj, NULL, "powerLevelCanSet", w, sizeof w) && !strcmp(w, "false") ? " (fixed)" : "");
 }
 
 /* ---- the boards --------------------------------------------------------------------------------------- */
@@ -240,6 +324,7 @@ static void take(void)
             add(B_AC, "Instance", "%s%s%s", v1, sp_json(st, "\"instance\"", "friendlyName", v2, sizeof v2) ? ", " : "",
                 sp_json(st, "\"instance\"", "friendlyName", v2, sizeof v2) ? v2 : "");
         add(B_AC, "Bridge", "accontrol.device %u.%u", ac.ver, ac.rev);
+        add_sensors(st);
     } else
         add(B_AC, "", "%s", ac.error == 40 ? "Not an AmiCradle machine (no ACBridge)." : "No accontrol.device in DEVS:.");
     if (st) FreeVec(st);
