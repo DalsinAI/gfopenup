@@ -1,5 +1,5 @@
 #!/bin/sh
-# GFOpenMonitor 1.0, the disk's (GFOpenUp's SYS:Utilities/GFOpenMonitor) and the open ROM's (amicradle-guest's
+# GFOpenMonitor 1.1, the disk's (GFOpenUp's SYS:Utilities/GFOpenMonitor) and the open ROM's (amicradle-guest's
 # trial-1m romprefs.sh builds the ROM's C/GFOpenMonitor with this script), with the os32-gcc16 stove:
 #   OGT=<gfopengadtools checkout> GUEST=<amicradle-guest checkout> sh src/openmonitor/build.sh [OUT]   (default build/os3/GFOpenMonitor)
 # The compiler: the os32-gcc16 stove at OS32_GCC16 (default ~/AmiCradle/stoves/os32-gcc16), GCC 16 or
