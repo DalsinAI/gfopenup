@@ -144,10 +144,11 @@
 #include "openup_lines.h"
 #include "openup_startupseq.h"
 #include "openup_kickset.h"
+#include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
 
 static int slim_rom(void);
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.19 (9.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.20 (13.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1563,10 +1564,13 @@ static void find_parts(const char *drawer, int depth)
     if (lock) UnLock(lock);
 }
 
+static int reinstalled;                             /* the parts REINSTALL put in again (UPDATE AUTO's log line) */
+
 static int reinstall(const char *parts)
 {
     static char wanted[MAXPARTS][48];
     int nwanted = 0, i, j, rc = RETURN_OK, done = 0;
+    reinstalled = 0;
     manifest_load();
     if (manifest_short) {
         manifest_save();                            /* says why */
@@ -1601,6 +1605,7 @@ static int reinstall(const char *parts)
         }
     }
     reinstalling = 0;
+    reinstalled = done;
     Printf((STRPTR)"GFOpenUp: reinstalled %ld part%s%s\n", (LONG)done, (LONG)(done == 1 ? "" : "s"),
            (LONG)(rc > RETURN_WARN ? "; see the messages above" : ""));
     return rc;
@@ -4163,33 +4168,64 @@ static int show_changes(void)
     return changes;
 }
 
-/* UPDATE [CHECK|YES]: CHECK only says (WARN when a newer pack is waiting);
- * plain UPDATE shows what will change and asks; YES doesn't ask (scripts).
+/* The unattended UPDATE's one line, in ENVARC:GFOpenUp/GFOpenUpTool.log and on the Shell; rc back. */
+static int update_logged(int by, const char *installed, const char *newer, int done, int rc)
+{
+    char line[200];
+    BPTR fh, l;
+    ou_log_line(line, sizeof line, by, installed, newer, done, rc);
+    say(line, NULL, NULL);
+    if (!exists("ENVARC:GFOpenUp") && (l = CreateDir((STRPTR)"ENVARC:GFOpenUp"))) UnLock(l);
+    if ((fh = Open((STRPTR)OU_LOG, MODE_READWRITE))) {
+        Seek(fh, 0, OFFSET_END);
+        FPuts(fh, (STRPTR)line);
+        FPutC(fh, '\n');
+        Close(fh);
+    }
+    return rc;
+}
+
+/* UPDATE [CHECK|YES|AUTO]: CHECK only says (WARN when a newer pack is waiting);
+ * plain UPDATE shows what will change and asks; YES doesn't ask (scripts) but
+ * runs the Installer. AUTO (openup_unattended.h; only AUTO, so the menu's
+ * plain UPDATE still asks on a card with the host flag) is unattended: no requester and no Installer,
+ * the installed parts reinstalled from the pack (the settings in place stay,
+ * no part added), the startup block written again, one line in the log.
  * It never runs on its own, and it never changes anything until asked. */
 static int update(const char *how)
 {
-    char newer[24], installed[24] = "";
+    char newer[24] = "", installed[24] = "";
     entry *e;
-    int check = how && same_word(how, "CHECK"), yes = how && same_word(how, "YES");
+    int by, mode = ou_update_mode(how, &by);
+    int check = mode == OU_CHECK, yes = mode == OU_INSTALLER, unattended = mode == OU_AUTO;
     manifest_load();
     if ((e = find_entry("part", "GFOpenUp")) != NULL)
         strlcpy(installed, e->b, sizeof installed);
     if (!installed[0]) {
         say("GFOpenUp isn't installed here, so there is nothing to update. Run Install-GFOpenUp to install it.", NULL, NULL);
-        return RETURN_WARN;
+        return unattended ? update_logged(by, installed, newer, -1, RETURN_WARN) : RETURN_WARN;
     }
     if (!cradle_version(newer, sizeof newer)) {
         say("GFOpenUp ", installed, " is installed. No newer GFOpenUp from Cradle: this Amiga isn't an AmiCradle instance with GFOpenUp's drawer (DH1:GFOpenUp).");
         say("On a real Amiga, newer packs are at " RELEASES ": unpack one and run its Install-GFOpenUp.", NULL, NULL);
-        return RETURN_OK;
+        newer[0] = 0;
+        return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
     }
     if (version_cmp(newer, installed) <= 0) {
         say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
-        return RETURN_OK;
+        return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
     }
     Printf((STRPTR)"GFOpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
     if (check) return RETURN_WARN;
     if (!show_changes()) say("  (the same parts, updated in place)", NULL, NULL);
+    if (unattended) {
+        int rc = reinstall(CRADLE_DRAWER "/Parts");
+        if (rc < RETURN_ERROR && !write_startup(0)) {
+            say("GFOpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL);
+            rc = RETURN_ERROR;
+        }
+        return update_logged(by, installed, newer, reinstalled, rc);
+    }
     if (!yes) {
         struct EasyStruct es = { sizeof(struct EasyStruct), 0, (UBYTE *)"GFOpenUp Update",
             (UBYTE *)"GFOpenUp %s is ready to install (%s is installed now).\n\n"
@@ -4937,7 +4973,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n");
+        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES|AUTO] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -5002,7 +5038,7 @@ static int real_main(void)
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
     else if (same_word(cmd, "OLDNAMES")) rc = args[1] && same_word((const char *)args[1], "DOCK") ? old_dock() : old_settings_copy();
-    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES|AUTO] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;

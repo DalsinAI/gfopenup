@@ -370,6 +370,17 @@ to `SYS:C/GFOpenUpMenu`) puts two sub-menus in Workbench's Tools menu:
   program as files to open (not GFOpenEdit's, which is an IconX script).
   "GFOpenUp Update..." runs `GFOpenUpTool UPDATE` in a window, where it shows
   what changes and asks first.
+- **Unattended (GFOpenUpTool 0.8.20, Dale's rule of 13 November 2026, amicradle-teams
+  `teams/DECISION-UNATTENDED-SETUP-20261113-1959.md`).** `UPDATE AUTO` asks nothing
+  and opens no Installer: the parts installed are reinstalled from the waiting pack
+  (REINSTALL, the settings in place stay, no part is added), the startup block is
+  written again (switched-off lines stay off), one line goes to
+  `ENVARC:GFOpenUp/GFOpenUpTool.log` and the Shell, and the code is the run's (0, 5
+  or 10). Only `AUTO`: the answers file and the host flag that make Setup's first
+  start unattended don't touch a plain `UPDATE`, which is the menu's "GFOpenUp
+  Update...", a person's choice that still asks (rule 5). `UPDATE CHECK` and
+  `UPDATE YES` are as before.
+  `src/openup_unattended.h`, tested by `tests/test_openup_unattended.c`.
 - **Starting.** A `startup Run >NIL: C:GFOpenUpMenu` line in GFOpenUp's block in
   `S:User-Startup`. That runs before `LoadWB`, so GFOpenUpMenu tries every two
   seconds until Workbench takes its entries, then only waits on its two
