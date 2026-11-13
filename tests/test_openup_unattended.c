@@ -12,18 +12,14 @@ int main(void)
 {
     int by;
     char buf[200];
-    /* how, answers, flag */
-    CHECK(ou_update_mode(NULL, 0, 0, &by) == OU_ASK && by == OU_BY_NONE, "plain UPDATE asks, as before");
-    CHECK(ou_update_mode("CHECK", 1, 1, &by) == OU_CHECK, "CHECK only says, flag or not");
-    CHECK(ou_update_mode("check", 0, 0, &by) == OU_CHECK, "CHECK any case");
-    CHECK(ou_update_mode("YES", 0, 1, &by) == OU_INSTALLER, "YES runs the Installer, as before");
-    CHECK(ou_update_mode("AUTO", 0, 0, &by) == OU_AUTO && by == OU_BY_SWITCH, "AUTO: unattended");
-    CHECK(ou_update_mode("Auto", 0, 0, &by) == OU_AUTO, "AUTO any case");
-    CHECK(ou_update_mode(NULL, 1, 0, &by) == OU_AUTO && by == OU_BY_ANSWERS, "answers file: unattended");
-    CHECK(ou_update_mode(NULL, 0, 1, &by) == OU_AUTO && by == OU_BY_FLAG, "host flag: unattended");
-    CHECK(ou_update_mode(NULL, 1, 1, &by) == OU_AUTO && by == OU_BY_ANSWERS, "both: the answers named");
-    CHECK(ou_update_mode("AUTOX", 0, 0, &by) == OU_ASK, "a word that only starts AUTO isn't AUTO");
-    CHECK(ou_update_mode("", 0, 0, &by) == OU_ASK, "empty word: asks");
+    CHECK(ou_update_mode(NULL, &by) == OU_ASK && by == OU_BY_NONE, "plain UPDATE asks, as before (the menu's Update, flag or not)");
+    CHECK(ou_update_mode("CHECK", &by) == OU_CHECK, "CHECK only says");
+    CHECK(ou_update_mode("check", &by) == OU_CHECK, "CHECK any case");
+    CHECK(ou_update_mode("YES", &by) == OU_INSTALLER, "YES runs the Installer, as before");
+    CHECK(ou_update_mode("AUTO", &by) == OU_AUTO && by == OU_BY_SWITCH, "AUTO: unattended");
+    CHECK(ou_update_mode("Auto", &by) == OU_AUTO, "AUTO any case");
+    CHECK(ou_update_mode("AUTOX", &by) == OU_ASK, "a word that only starts AUTO isn't AUTO");
+    CHECK(ou_update_mode("", &by) == OU_ASK, "empty word: asks");
 
     ou_log_line(buf, sizeof buf, OU_BY_FLAG, "0.8.28", "0.8.29", 14, 0);
     CHECK(!strcmp(buf, "GFOpenUpTool UPDATE: unattended (host flag) 0.8.28 to 0.8.29, 14 parts reinstalled: ok"), buf);

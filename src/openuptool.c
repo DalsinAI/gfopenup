@@ -144,7 +144,7 @@
 #include "openup_lines.h"
 #include "openup_startupseq.h"
 #include "openup_kickset.h"
-#include "openup_unattended.h"          /* UPDATE AUTO, the answers file and the host flag (0.8.20) */
+#include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
 
 static int slim_rom(void);
 
@@ -4187,8 +4187,8 @@ static int update_logged(int by, const char *installed, const char *newer, int d
 
 /* UPDATE [CHECK|YES|AUTO]: CHECK only says (WARN when a newer pack is waiting);
  * plain UPDATE shows what will change and asks; YES doesn't ask (scripts) but
- * runs the Installer. AUTO, or a plain UPDATE with the answers file or the host
- * flag (openup_unattended.h), is unattended: no requester and no Installer,
+ * runs the Installer. AUTO (openup_unattended.h; only AUTO, so the menu's
+ * plain UPDATE still asks on a card with the host flag) is unattended: no requester and no Installer,
  * the installed parts reinstalled from the pack (the settings in place stay,
  * no part added), the startup block written again, one line in the log.
  * It never runs on its own, and it never changes anything until asked. */
@@ -4196,7 +4196,7 @@ static int update(const char *how)
 {
     char newer[24] = "", installed[24] = "";
     entry *e;
-    int by, mode = ou_update_mode(how, exists(OU_ANSWERS), exists(OU_FLAG) || exists(OU_FLAG_ARC), &by);
+    int by, mode = ou_update_mode(how, &by);
     int check = mode == OU_CHECK, yes = mode == OU_INSTALLER, unattended = mode == OU_AUTO;
     manifest_load();
     if ((e = find_entry("part", "GFOpenUp")) != NULL)

@@ -1,12 +1,12 @@
 /* GFOpenUpTool's unattended mode (Dale, 13 Nov 2026: amicradle-teams
  * teams/DECISION-UNATTENDED-SETUP-20261113-1959.md, every installer), the same
- * switches as GFOpenUp Setup 0.1.9 (gfopenprefs Setup/src/setup_auto.h):
- *   - AUTO (GFOpenUpTool UPDATE AUTO);
- *   - the answers file ENVARC:GFOpenUp/Answers;
- *   - the host flag ENV:AmiCradle/Unattended or ENVARC:AmiCradle/Unattended,
- *     which the Cradle or the card writes for labs, test runs and fresh cards.
+ * switch as GFOpenUp Setup 0.1.9 (gfopenprefs Setup/src/setup_auto.h): AUTO
+ * (GFOpenUpTool UPDATE AUTO). Only AUTO: the answers file and the host flag
+ * stand for Setup's first start, but a plain UPDATE is a person's choice (the
+ * menu's "GFOpenUp Update..."), so it still asks, flag or not (rule 5; Legion's
+ * review of gfopenup #244).
  * UPDATE is the only command that waits for a person (its requester, then the
- * Installer, which waits for clicks even as a Novice). Unattended, UPDATE asks
+ * Installer, which waits for clicks even as a Novice). With AUTO, UPDATE asks
  * nothing and opens no Installer: it reinstalls the parts that are installed
  * from the waiting pack (REINSTALL: the settings in place stay, no new part is
  * added), writes the startup block again (STARTUP, which keeps the lines
@@ -19,9 +19,6 @@
 
 #include <string.h>
 
-#define OU_ANSWERS "ENVARC:GFOpenUp/Answers"
-#define OU_FLAG "ENV:AmiCradle/Unattended"
-#define OU_FLAG_ARC "ENVARC:AmiCradle/Unattended"
 #define OU_LOG "ENVARC:GFOpenUp/GFOpenUpTool.log"
 
 /* how UPDATE goes */
@@ -38,17 +35,14 @@ static int ou_word(const char *a, const char *b)
     return !*a && !*b;
 }
 
-/* UPDATE's argument (NULL, CHECK, YES or AUTO), whether the answers file and the host flag are there.
- * CHECK and YES say what they say whatever else is set (a script asked for them); AUTO, or a plain UPDATE
- * with the answers file or the host flag, is unattended; a plain UPDATE otherwise asks, as before. */
-static int ou_update_mode(const char *how, int answers, int flag, int *by)
+/* UPDATE's argument (NULL, CHECK, YES or AUTO). CHECK only says, YES runs the Installer without asking,
+ * AUTO is unattended, and a plain UPDATE asks, as before, whatever files are there. */
+static int ou_update_mode(const char *how, int *by)
 {
     *by = OU_BY_NONE;
     if (ou_word(how, "CHECK")) return OU_CHECK;
     if (ou_word(how, "YES")) return OU_INSTALLER;
     if (ou_word(how, "AUTO")) { *by = OU_BY_SWITCH; return OU_AUTO; }
-    if (answers) { *by = OU_BY_ANSWERS; return OU_AUTO; }
-    if (flag) { *by = OU_BY_FLAG; return OU_AUTO; }
     return OU_ASK;
 }
 
