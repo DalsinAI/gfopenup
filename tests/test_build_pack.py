@@ -507,6 +507,11 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_kickset.c"), "-o", str(ks)], check=True)
         r = subprocess.run([str(ks)], capture_output=True, text=True)
         check("GFOpenUpTool KICKSET bodies (tests/test_openup_kickset.c)", r.returncode == 0, r.stdout[-600:])
+        un = tmp / "test_openup_unattended"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_unattended.c"), "-o", str(un)], check=True)
+        r = subprocess.run([str(un)], capture_output=True, text=True)
+        check("GFOpenUpTool UPDATE unattended (tests/test_openup_unattended.c)", r.returncode == 0, r.stdout[-600:])
         inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
         check("the Installer offers the ROM's Startup-Sequence, never replacing it unasked",
               'STARTUPSEQ CHECK' in inst and 'STARTUPSEQ ROM' in inst and 'STARTUPSEQ KEEP' in inst)
