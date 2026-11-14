@@ -58,7 +58,8 @@ a Part file that C/GFOpenUpTool reads:
                         amicradle-guest checkout (--guest; tools/openicons_part.py)
   GFOpenTypes/            GFOpenPrefs's File Types page: no files of its own since the no-ROM-volume
                         design (24 October 2026); it archives its old name's stub in SYS:Prefs
-  GFOpenCompress/         GFOpenCompress, its window and command (gfopencompress)
+  GFOpenCompress/         GFOpenCompress, its window and command, and its two libraries in LIBS:
+                        (gfopencompress_archive and _crunch.library: RAR, 7z, bzip2, xz, crunchers)
   GFOpenService/          mitchy.device (with gfopenservice.device, its old name) and Nursery: services from boards and
                         paired Cradles; ServiceTest; MEDIA:, files decoded through
                         media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA); mitchy.library (gfopenservice)
@@ -364,6 +365,14 @@ def wbconfig_backdrop() -> bytes:
     prhd = b"\0" * 6
     body = b"PREF" + b"PRHD" + struct.pack(">I", len(prhd)) + prhd + b"WBCF" + struct.pack(">I", len(wbcf)) + wbcf
     return b"FORM" + struct.pack(">I", len(body)) + body
+
+
+def pack_version(v: str) -> str:
+    """--version: 0.8.29, or a release candidate 0.8.29-rc1 (DECISION-RELEASE-CYCLE-20261114-1302's numbering),
+    which binary_version reads back from the Installer's and uninstaller's $VER (Corwin's item 10)."""
+    if not re.fullmatch(r"[0-9]+(\.[0-9]+)+(-rc[0-9]+)?", v):
+        raise argparse.ArgumentTypeError(f"{v!r}: digits and dots, then -rcN for a release candidate (0.8.29-rc1)")
+    return v
 
 
 def first(*paths: Path) -> Path | None:
@@ -910,7 +919,7 @@ def binary_version(data: bytes, name: str) -> str | None:
     gives for name: "$VER: GFOpenDock 0.4 (...)" or "gfopengpu.library 0.9 (...)"."""
     n = re.escape(name.encode("latin-1"))
     idstr = rb" ([0-9]+\.[0-9][0-9.]*) \("
-    m = (re.search(rb"\$VER: ?" + n + rb" ([0-9][0-9.]*[0-9])", data) or re.search(rb"(?<![A-Za-z0-9_.])" + n + idstr, data)
+    m = (re.search(rb"\$VER: ?" + n + rb" ([0-9][0-9.]*[0-9](?:-rc[0-9]+)?)", data) or re.search(rb"(?<![A-Za-z0-9_.])" + n + idstr, data)
          # an ID string right after another constant's last byte (gfopeninput.library 1.3 in Corwin's 14 Nov
          # build had a letter before it): taken when no clean one is there
          or re.search(n + idstr, data))
@@ -2121,7 +2130,8 @@ def check_part_versions(parts: Path) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--version", default="0.1")
+    ap.add_argument("--version", default="0.1", type=pack_version,
+                    help="the pack's version: digits and dots, and a release candidate's -rcN (0.8.29-rc1)")
     ap.add_argument("--out", type=Path, default=ROOT / "build" / "pack")
     ap.add_argument("--amigachrome", type=Path, default=first(DEV / "amicradle", DEV / "wt-deploy"))
     ap.add_argument("--openamigaprint", type=Path, default=first(DEV / "gfopenprint", DEV / "review/gfopenprint"))
