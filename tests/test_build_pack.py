@@ -578,11 +578,34 @@ def versions_stoves_checks(tmp: Path) -> None:
     s2.write_text('#!/bin/sh\nSTOVE=${STOVE:-$HOME/AmiCradle/stoves/os32-gcc16}\n')
     s3 = tmp / "c.sh"
     s3.write_text('#!/bin/sh\nCC=m68k-amigaos-gcc\n')
+    g0 = tmp / "g0"
+    g0.mkdir()
     check("guest_stove: a missing open6 default gets GUEST_STOVE",
-          bp.guest_stove(s1, {"OUT": "x"}, home).get("STOVE") == str(bp.GUEST_STOVE))
-    check("guest_stove: a default the host has is left to the script", "STOVE" not in bp.guest_stove(s2, {}, home))
-    check("guest_stove: a script with no STOVE default is left alone", "STOVE" not in bp.guest_stove(s3, {}, home))
+          bp.guest_stove(s1, {"OUT": "x"}, home, g0).get("STOVE") == str(g0))
+    check("guest_stove: a default the host has is left to the script", "STOVE" not in bp.guest_stove(s2, {}, home, g0))
+    check("guest_stove: a script with no STOVE default is left alone", "STOVE" not in bp.guest_stove(s3, {}, home, g0))
     check("guest_stove: a STOVE given stays", bp.guest_stove(s1, {"STOVE": "/x"}, home)["STOVE"] == "/x")
+    # Londo's CHANGES on #254 (006e5a32): the guest scripts' real form names $STOVES, and GUEST_STOVE may be absent
+    s4 = tmp / "d.sh"
+    s4.write_text('#!/bin/sh\nSTOVES=${STOVES:-$HOME/AmiCradle/stoves}\n[ -d "$STOVES/os32-gcc16-open6" ] && '
+                  'STOVE=${STOVE:-$STOVES/os32-gcc16-open6}\nSTOVE=${STOVE:-$STOVES/os32-gcc16-16.2.0-open6}\n')
+    gstove = home / "AmiCradle/stoves/os32-gcc16-open6"
+    check("guest_stove: no GUEST_STOVE on this host: the script's own default stays",
+          "STOVE" not in bp.guest_stove(s1, {}, home, gstove) and "STOVE" not in bp.guest_stove(s4, {}, home, gstove))
+    gstove.mkdir(parents=True)
+    check("guest_stove: $STOVES form, its open6 default missing, GUEST_STOVE there: GUEST_STOVE",
+          bp.guest_stove(s4, {}, home, gstove).get("STOVE") == str(gstove))
+    (home / "AmiCradle/stoves/os32-gcc16-16.2.0-open6").mkdir(parents=True)
+    check("guest_stove: $STOVES form whose default this host has: left to the script",
+          "STOVE" not in bp.guest_stove(s4, {}, home, gstove))
+    other = tmp / "elsewhere"
+    (other / "os32-gcc16-16.2.0-open6").mkdir(parents=True)
+    gstove2 = tmp / "g2"
+    gstove2.mkdir()
+    check("guest_stove: $STOVES from env, where the default is: left to the script",
+          "STOVE" not in bp.guest_stove(s4, {"STOVES": str(other)}, tmp / "nohome", gstove2))
+    check("guest_stove: $STOVES from env, default missing there: GUEST_STOVE",
+          bp.guest_stove(s4, {"STOVES": str(tmp / "empty")}, home, gstove2).get("STOVE") == str(gstove2))
     gs = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
     check("every amicradle-guest script run with genv or accontrol/acrtg.gpu's env goes through guest_stove or names a STOVE",
           not re.search(r'run\(\["sh", (?:g|a\.guest) [^\n]*env=(?:env\)|dict\(genv, (?!STOVE)(?![^\n]*guest_stove))', gs))

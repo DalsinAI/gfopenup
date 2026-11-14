@@ -35,7 +35,7 @@ a Part file that C/GFOpenUpTool reads:
                         lowlevel.library, clipboard, serial and parallel.device (OPENKICK_DISK, the OpenKick
                         boot disk's files), and SYS:Classes/arexx.class, so programs' ARexx ports open
                         (OPENKICK_CLASSES: amicradle-guest's GFOpenReaction, with its licence)
-  GFOpenSocket/           bsdsocket.library 4.3 and its tools, built from gfopensocket
+  GFOpenSocket/           bsdsocket.library and its tools, built from gfopensocket
                         (--openamigasocket) and laid out by the manifest of amicradle's
                         vendored payload (vendor/opensocket-os32); without the checkout,
                         that vendored payload as it is
@@ -605,19 +605,23 @@ def late_combine_off(cc) -> list[str]:
 _STOVE_DEFAULT = re.compile(r'^\s*STOVE=\$\{STOVE:-"?([^"}]+)"?\}', re.M)
 
 
-def guest_stove(script: Path, env: dict, home: Path | None = None) -> dict:
+def guest_stove(script: Path, env: dict, home: Path | None = None, guest: Path | None = None) -> dict:
     """env for an amicradle-guest script: as given, but when the script's own STOVE default is a stove folder this
-    host doesn't have and its name is an open6 one (os32-gcc16-16.2.0-open6), GUEST_STOVE instead (Corwin's
-    14 Nov build: 13 guest scripts stopped on m68k-amigaos-gcc: not found). A STOVE already in env stays."""
+    host doesn't have and its name is an open6 one (os32-gcc16-16.2.0-open6), GUEST_STOVE instead, if this host has
+    that (Corwin's 14 Nov build: 13 guest scripts stopped on m68k-amigaos-gcc: not found). The default's $STOVES is
+    env's STOVES, else $HOME/AmiCradle/stoves, as the scripts read it (Londo, #254). A STOVE already in env stays."""
     if "STOVE" in env:
         return env
+    guest = guest or GUEST_STOVE
     m = _STOVE_DEFAULT.search(script.read_text(encoding="latin-1")) if script.is_file() else None
-    if not m:
+    if not m or not guest.is_dir():
         return env
-    d = Path(m.group(1).replace("$HOME", str(home or Path.home())))
+    h = str(home or Path.home())
+    stoves = env.get("STOVES") or f"{h}/AmiCradle/stoves"
+    d = Path(m.group(1).replace("$STOVES", stoves).replace("${STOVES}", stoves).replace("$HOME", h))
     if d.is_dir() or "open6" not in d.name:
         return env
-    return dict(env, STOVE=str(GUEST_STOVE))
+    return dict(env, STOVE=str(guest))
 
 
 def filemanager_env(a, env: dict) -> dict:
@@ -2296,7 +2300,7 @@ def main() -> int:
     payload = a.amigachrome / "vendor/opensocket-os32"
     m = json.loads((payload / "manifest.json").read_text())
     so_out = ROOT / "build/opensocket" if a.openamigasocket else None
-    sock = Part(top, "GFOpenSocket", None, "bsdsocket.library 4.3 through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
+    sock = Part(top, "GFOpenSocket", None, "bsdsocket.library through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
     sock.line("needs AmiCradle")
     sock.line('keep "SYS:Libs/bsdsocket.library" ' + " ".join(f'"{x}"' for x in OPENSOCKET_MARKERS))
     for f in m["files"]:
