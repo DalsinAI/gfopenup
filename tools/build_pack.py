@@ -2302,7 +2302,7 @@ def main() -> int:
     if not a.no_openicons:
         sys.path.insert(0, str(ROOT / "tools"))
         import openicons_part
-        oi = Part(top, "GFOpenIcons", "0.3", "GFOpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
+        oi = Part(top, "GFOpenIcons", "0.4", "GFOpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
         for text in openicons_part.build(oi.dir, a.guest):
             oi.line(text)
         oi.write()

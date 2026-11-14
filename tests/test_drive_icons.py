@@ -40,9 +40,27 @@ GUEST_KINDS = {"ram", "harddisk", "floppy", "cd", "rad", "card", "network", "acf
 kinds = part.AOS_DRIVE_KINDS
 check("every drive kind GFOpenIcon asks for that the set draws is installed",
       set(kinds) == GUEST_KINDS - {"rad", "card"}, str(sorted(set(kinds) ^ (GUEST_KINDS - {"rad", "card"}))))
-check("each kind's picture is drawn", all(v in art.PICTURES for v in kinds.values()), str(kinds))
+# Soft 3D since Dale's 14 Nov 15:18 "soft 3d sheet is cool, go with that": S3D:<kind> names
+import soft3d_drives_art as d3
+import soft3d_kinds_art as k3
+check("each kind's picture is drawn", all(v.startswith("S3D:") and v[4:] in d3.KINDS for v in kinds.values()), str(kinds))
 check("the USB stick, IDE partition, CD, floppy and network share each get their own picture",
-      [kinds[k] for k in ("usb", "ide", "cd", "floppy", "network")] == ["USB", "IDE", "CD", "FLOPPY", "NETWORK"])
+      [kinds[k] for k in ("usb", "ide", "cd", "floppy", "network")] == ["S3D:usb", "S3D:ide", "S3D:cd", "S3D:floppy", "S3D:network"])
+check("the boot drive and RAM disk by device are Soft 3D", part.AOS_DEVICES == {"DH0": "S3D:system", "RAM": "S3D:ram"})
+check("the five Kinds are Soft 3D, each with its Workbench type",
+      set(part.AOS_KINDS) == set(part.KINDS) == set(part.KIND_TYPES)
+      and all(v.startswith("S3D:") and v[4:] in d3.KINDS + k3.KINDS for v in part.AOS_KINDS.values()))
+check("the dock's faces and the Work:/Games: volumes keep their AOS pictures",
+      part.AOS_FACES["SYS:System/Shell"] in art.PICTURES and all(v in art.PICTURES for v in part.AOS_VOLUMES.values())
+      and all(v in art.PICTURES for v in part.AOS_BY_NAME.values()))
+fr = part.picture_frames("S3D:usb", 64)
+check("picture_frames gives S3D:<kind> at rest and chosen, 64 x 64", [f.size for f in fr] == [(64, 64)] * 2
+      and not np.array_equal(np.array(fr[0]), np.array(fr[1])))
+try:
+    part.picture_frames("S3D:nothing", 64)
+    check("an unknown S3D kind is refused", False)
+except KeyError:
+    check("an unknown S3D kind is refused", True)
 check("each def_drive_<kind>.info fits an FFS name (30)", all(len(f"def_drive_{k}.info") <= 30 for k in kinds))
 with tempfile.TemporaryDirectory() as d:
     out = os.path.join(d, "s.png")
