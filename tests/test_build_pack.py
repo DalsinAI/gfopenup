@@ -557,6 +557,11 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_kickset.c"), "-o", str(ks)], check=True)
         r = subprocess.run([str(ks)], capture_output=True, text=True)
         check("GFOpenUpTool KICKSET bodies (tests/test_openup_kickset.c)", r.returncode == 0, r.stdout[-600:])
+        sr = tmp / "test_openup_slimrom"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_slimrom.c"), "-o", str(sr)], check=True)
+        r = subprocess.run([str(sr)], capture_output=True, text=True)
+        check("GFOpenUpTool DETECT SlimROM (tests/test_openup_slimrom.c)", r.returncode == 0, r.stdout[-600:])
         vs = tmp / "test_openup_vers"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_vers.c"), "-o", str(vs)], check=True)
