@@ -662,9 +662,7 @@ def build_parts(a):
     # GFOpenMUI: the clean-room muimaster.library (gfopenmui muimaster/build-amiga.sh, GCC 16 open6, on GFOpenLayout
     # library 18 at the commit its script pins: GFOPENLAYOUT names the script's own deps folder, so it fetches that one)
     mui_out = a.openamigamui / "muimaster/build-amiga"
-    run(["sh", a.openamigamui / "muimaster/build-amiga.sh"],
-        env=dict(os.environ, STOVE=os.environ.get("OS32_GCC16_OPEN6", str(Path.home() / "AmiCradle/stoves/os32-gcc16-open6")),
-                 GFOPENLAYOUT=str(mui_out / "deps/gfopenlayout"), OUT=str(mui_out)))
+    run(["sh", a.openamigamui / "muimaster/build-amiga.sh"], env=gfopenmui_build_env(mui_out, os.environ))
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     # The GFOffice Suite (gfoffice) carries its own GFOpenGadTools copy and needs GCC 16 (its build-os3.sh stops on
     # the os32 stove's 6.5); GFOpenWrite's pages are GFOpenLayout's. Built on its four libraries (GFO_LIBRARY,
@@ -1952,6 +1950,14 @@ def akikoplus_part(top: Path, src: Path | None) -> Part | None:
 KICKSET_MAN_HEAD = "# GFOpenKickLoad manifest "
 
 
+def gfopenmui_build_env(mui_out: Path, base) -> dict:
+    """The environment for gfopenmui's muimaster/build-amiga.sh in a pack build: GCC 16 open6, GFOpenLayout in the
+    script's own deps folder, out to mui_out, and LAB_PROGRAMS=0, so the lab's AROS programs (APL, never packed) are
+    neither fetched nor built."""
+    return dict(base, STOVE=base.get("OS32_GCC16_OPEN6", str(Path.home() / "AmiCradle/stoves/os32-gcc16-open6")),
+                GFOPENLAYOUT=str(mui_out / "deps/gfopenlayout"), OUT=str(mui_out), LAB_PROGRAMS="0")
+
+
 def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
     """Parts/GFOpenMUI from gfopenmui main's clean-room muimaster.library (muimaster/build-amiga.sh, built by
     build_parts into muimaster/build-amiga/): the library, only where no muimaster.library is or GFOpenUp's own is
@@ -3181,7 +3187,7 @@ def main() -> int:
             + ([(tt.dir / "Prefs/GFOpenTata.info", "GFOpenTata")] if tt else [])
             + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else [])
             # GFOpenMUI's examples, when the part is in the pack
-            + ([(om.dir / f"Tools/GFOpenMUI/{ex}.info", "ZuneTest") for ex in ("MUIClasses", "MUIAddons", "MUITime")
+            + ([(om.dir / f"Tools/GFOpenMUI/{ex}.info", "MUIExample") for ex in ("MUIClasses", "MUIAddons", "MUITime")
                 if (om.dir / f"Tools/GFOpenMUI/{ex}.info").is_file()] if om else []),
             drawers={a.out / "GFOpenUp.info": [top / "Install-GFOpenUp.info", top / "Uninstall-GFOpenUp.info"],
                      core.dir / "Utilities/GFOpenUp.info": [core.dir / "Utilities/GFOpenUp/Uninstall-GFOpenUp.info"],

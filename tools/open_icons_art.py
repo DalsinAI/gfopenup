@@ -434,7 +434,7 @@ def setup(sel):
     return ic
 
 
-def zunetest(sel):
+def muiexample(sel):
     """A window of gadgets; chosen, a button is pressed and the box ticked."""
     ic = Icon()
     window(ic, 4, 6, 60, 56, active=True, title_h=6)
@@ -1002,7 +1002,7 @@ ICONS = {
     "GFOpenFiles": openfiles, "GFOpenView": openview, "GFOpenEdit": openedit, "GFOpenWrite": openwrite,
     "GFOpenPlay": openplay, "OpenBrowser": openbrowser, "GFOpenCompress": opencompress,
     "Printers and Queue": printer, "Install-GFOpenUp": install, "Uninstall-GFOpenUp": uninstall,
-    "GFOpenUp-Setup": setup, "ZuneTest": zunetest, "GFOpenMonitor": openmonitor, "GFOpenMeters": openmeters,
+    "GFOpenUp-Setup": setup, "MUIExample": muiexample, "GFOpenMonitor": openmonitor, "GFOpenMeters": openmeters,
     "Look": look, "Dock": dock, "Menus": menus, "Sound": sound, "TitleBar": titlebar, "Windows": windows, "GFOpenTypes": types,
     "Gamepads": gamepads, "KindsGallery": kindsgallery, "GFOpenTata": opentata, "Telegram": telegram,
     "GFOpenPrefs": openprefs, "ScreenMode": screenmode, "Pointer": pointer, "Fonts": fonts, "Colours": colours,

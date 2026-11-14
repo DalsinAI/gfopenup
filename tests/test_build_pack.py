@@ -574,6 +574,21 @@ def main() -> int:
               and not any("zune" in l.lower() for l in lines), "\n".join(lines))
         check("GFOpenMUI: left out, and said, when gfopenmui has no build",
               bp.gfopenmui_part(tmp / "muipack2", tmp / "nothing", None) is None)
+        # Koenig's CHANGES on #253 (2ff22b70): the packed readme says what the part is, and a release build of
+        # gfopenmui never builds the lab's AROS programs (LAB_PROGRAMS=0; they are APL and lab-only)
+        rd = (ROOT / "gfopenup.readme").read_text(encoding="latin-1")
+        mui = rd[rd.find("- GFOpenMUI"):]
+        mui = mui[:mui.find("\n- ", 1)]
+        check("the readme: GFOpenMUI is the clean-room muimaster.library and its examples, no Zune",
+              "zune" not in mui.lower() and "muimaster.library" in mui and "MUIClasses" in mui
+              and "zune" not in (ROOT / "README.md").read_text(encoding="utf-8").lower(), mui)
+        env = bp.gfopenmui_build_env(tmp / "mb", {"PATH": "/bin"})
+        check("a pack build of gfopenmui leaves the lab's AROS programs out (LAB_PROGRAMS=0)",
+              env.get("LAB_PROGRAMS") == "0" and env.get("OUT") == str(tmp / "mb")
+              and env.get("GFOPENLAYOUT") == str(tmp / "mb" / "deps/gfopenlayout") and env.get("PATH") == "/bin", env)
+        check("no icon art key or art named ZuneTest is left",
+              not any("zunetest" in (ROOT / f).read_text(encoding="utf-8").lower()
+                      for f in ("tools/build_pack.py", "tools/icon_library_art.py", "tools/open_icons_art.py")))
         inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
         check("the Installer: no Zune left, and GFOpenMUI installed only when its part is in the pack",
               "AROS's Zune" not in inst and "MUI from Zune" not in inst and "ZuneTest" not in inst

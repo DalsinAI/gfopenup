@@ -70,7 +70,7 @@ You choose the parts in the Installer. Among them:
   GFOpenFTP, GFOpenPuTTY, OpenBrowser Lite, OpenAmigaPython, Tata.
 - **Libraries:** GFOpenGPU (SDL 2, GL through Mesa), ogles3.library (OpenGL ES
   3.1, AmiCradle only), Warp3D 5.0 and MiniGL on GFOpenGPU,
-  GFOpenMUI (Zune as a muimaster.library where there is no MUI),
+  GFOpenMUI (our own muimaster.library on GFOpenLayout, where there is no MUI),
   GFOpenTLS and GFOpenCrypto, GFOpenFont, GFOpenMulticore, z.library and the
   open replacements of OS libraries.
 - **Developer files:** the GFOpenGPU SDK (headers and link libraries).
