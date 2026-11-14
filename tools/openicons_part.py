@@ -333,7 +333,9 @@ AOS_DEVICES = {"DH0": "S3D:system", "RAM": "S3D:ram"}
 # picture named S3D:<kind>. The dock's faces (Shell, Calc...) and the Work: and Games: volumes keep their AOS ones.
 AOS_DRIVE_KINDS = {"system": "S3D:system", "acfs": "S3D:harddisk", "harddisk": "S3D:harddisk", "ide": "S3D:ide",
                    "usb": "S3D:usb", "cd": "S3D:cd", "floppy": "S3D:floppy", "network": "S3D:network",
-                   "ram": "S3D:ram"}
+                   "ram": "S3D:ram", "nvme": "S3D:nvme"}
+# NVMe (Dale, 14 November 2026, 15:20: "ship the picture, no kind detection"): installed as def_drive_nvme.info so it
+# is there when GFOpenIcon learns the kind; today's icon.library never asks for it.
 ICON_SIZE = 64
 
 

@@ -39,7 +39,8 @@ import openicons_part as part
 GUEST_KINDS = {"ram", "harddisk", "floppy", "cd", "rad", "card", "network", "acfs", "system", "ide", "usb"}
 kinds = part.AOS_DRIVE_KINDS
 check("every drive kind GFOpenIcon asks for that the set draws is installed",
-      set(kinds) == GUEST_KINDS - {"rad", "card"}, str(sorted(set(kinds) ^ (GUEST_KINDS - {"rad", "card"}))))
+      set(kinds) == GUEST_KINDS - {"rad", "card"} | {"nvme"}, str(sorted(set(kinds) ^ (GUEST_KINDS - {"rad", "card"}))))
+check("the NVMe picture ships as def_drive_nvme ahead of GFOpenIcon's kind (Dale 15:20)", kinds.get("nvme") == "S3D:nvme")
 # Soft 3D since Dale's 14 Nov 15:18 "soft 3d sheet is cool, go with that": S3D:<kind> names
 import soft3d_drives_art as d3
 import soft3d_kinds_art as k3
