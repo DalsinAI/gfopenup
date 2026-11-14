@@ -4262,6 +4262,11 @@ static int update_logged(int by, const char *installed, const char *newer, int d
  * the installed parts reinstalled from the pack (the settings in place stay,
  * no part added), the startup block written again, one line in the log.
  * It never runs on its own, and it never changes anything until asked. */
+#ifndef KICKSET_DIR
+#define KICKSET_DIR "SYS:Kickstart/default/"
+#endif
+#define PACK_KICK_MANIFEST CRADLE_DRAWER "/Parts/KickstartSet/Kickstart/default/Manifest"   /* build_pack's */
+
 static int update(const char *how)
 {
     char newer[24] = "", installed[24] = "";
@@ -4282,8 +4287,23 @@ static int update(const char *how)
         return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
     }
     if (version_cmp(newer, installed) <= 0) {
-        say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
-        return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
+        int rc = RETURN_OK;
+        auto_kick = 0;
+        /* an older GFOpenUpTool did the update and left the Kickstart set out (ou_set_stale): the set now */
+        if (unattended && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
+            LONG nh = 0, np = 0;
+            char *have = read_file(KICKSET_DIR "Manifest", &nh), *pack = read_file(PACK_KICK_MANIFEST, &np);
+            int stale = ou_set_stale(have, nh, pack, np);
+            if (have) FreeVec(have);
+            if (pack) FreeVec(pack);
+            if (stale) {
+                int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
+                auto_kick = r > RETURN_WARN ? -1 : 1;
+                rc = r;
+            }
+        }
+        if (!auto_kick) say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
+        return unattended ? update_logged(by, installed, newer, -1, rc) : rc;
     }
     Printf((STRPTR)"GFOpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
     if (check) return RETURN_WARN;
@@ -4629,7 +4649,9 @@ static int old_dock(void)
  * ENV:GFOpenUp/KickstartSet says "ready" or "missing"; DETECT's ENV:GFOpenUp/SlimROM says whether this ROM is the
  * slim one (kickload in it and no workbench.library of its own), and the Installer then installs the part. Cradle
  * refuses to start an instance or build a card on the slim ROM without the set (amicradle openkick_rom.py). */
+#ifndef KICKSET_DIR
 #define KICKSET_DIR "SYS:Kickstart/default/"
+#endif
 
 static int in_rom_window(ULONG a)
 {
