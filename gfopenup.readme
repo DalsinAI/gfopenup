@@ -153,12 +153,13 @@ choose:
   the other cores of AmiCradle's cores board (music modules in GFOpenPlay
   do), or to the main CPU where there is no board; OMCTest checks it and
   OMCBench measures it (SYS:Tools);
-- GFOpenMUI (preview, off unless picked): zunemaster.library, MUI built from
-  AROS's Zune for OS 3.x, beside MUI, with ZuneTest (SYS:Tools). Where
-  LIBS:muimaster.library is absent it also installs a muimaster.library
-  (version 19, MUI 3.8's) that passes every call to Zune, so MUI programs
-  run; a MUI you installed is never touched, and the uninstaller removes the
-  face;
+- GFOpenMUI (preview, off unless picked): muimaster.library, the AmiCradle
+  Team's own MUI drawn by GFOpenLayout, so MUI programs run. It goes in only
+  where LIBS:muimaster.library is absent or is GFOpenMUI's own; a MUI you
+  installed is never touched, and the uninstaller removes it. The
+  gfopenlayout.library it opens goes in with it (the GFOpenLayout part).
+  Where the build has them, MUIClasses, MUIAddons and MUITime show it
+  (SYS:Tools/GFOpenMUI);
 - GFOpenRTG (new, off unless picked; ticked on the GFOpenKick ROM with an ACRTG
   board, since 0.8.7): Workbench on GFOpenRTG's own 16-bit screen
   on AmiCradle's graphics board, without Picasso96, whose monitor for that

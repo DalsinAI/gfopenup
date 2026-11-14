@@ -313,7 +313,8 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     top2 = tmp / "GF2/GFOpenUp"
     gf2, wr2, oc2 = bp.gfoffice_parts(top2, src, zlib, b"guest MIT licence\n", icons)
     check("without GFOpenCalc's program, no GFOpenCalc part, and GFOffice and GFOpenWrite as before",
-          oc2 is None and not (top2 / "Parts/GFOpenCalc").exists() and gf2.lines == gf.lines and wr2.lines == wr.lines)
+          oc2 is None and not (top2 / "Parts/GFOpenCalc").exists() and gf2.lines == gf.lines
+          and (wr2.write() or wr2.lines == wr.lines))
 
     # INSTALL and REMOVE through GFOpenUpTool's own code, from a lab with GFOpenUp's own part only
     fresh = "GFOpenUp\t0.1\npart\tGFOpenUp\t0.8.9\nnew\tSYS:C/GFOpenUpTool\n"
@@ -535,6 +536,163 @@ def kickstartset_checks(tmp: Path) -> None:
           and '(= (getenv "GFOpenUp/SlimROM") "yes")' in (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1"))
 
 
+def versions_stoves_checks(tmp: Path) -> None:
+    """Corwin's 14 Nov build (teams/team3/inbox/20261114-1222): versions from the programs, an ID string after a
+    letter, and the guest scripts' and Telegram's stoves."""
+    # an ID string with a letter right before it is still read; the clean one wins where both are there
+    check("binary_version: an ID string right after a letter is read (gfopeninput.library 1.3)",
+          bp.binary_version(b"\0\0Xgfopeninput.library 1.3 (17.10.2026)\r\n", "gfopeninput.library") == "1.3")
+    check("binary_version: a clean ID string is taken before one glued to a letter",
+          bp.binary_version(b"Xgfopeninput.library 9.9 (1.1.2026)\0gfopeninput.library 1.3 (17.10.2026)",
+                            "gfopeninput.library") == "1.3")
+    check("binary_version: $VER first, as before",
+          bp.binary_version(b"$VER: GFOpenFiles 0.5 (13.11.2026)\0", "GFOpenFiles") == "0.5")
+    # the seven parts that had fallen behind take their program's version
+    src = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
+    for name in ("GFOpenWrite", "GFOpenSocket", "GFOpenCompress", "GFOpenWindows", "GFOpenBlanker", "GFOpenUpSetup",
+                 "GFOpenFiles"):
+        check(f"{name}: the part's version is its program's (Part(..., None, ...)) and it has a PART_MAIN entry",
+              f'Part(top, "{name}", None,' in src and name in bp.PART_MAIN)
+    rel, vername = bp.PART_MAIN["GFOpenFiles"]
+    pf = bp.Part(tmp, "GFOpenFiles", None, "GFOpenFiles: test")
+    pf.add(rel, b"\0\0\x03\xf3$VER: GFOpenFiles 0.5 (13.11.2026)\0", "SYS:" + rel)
+    pf.write()
+    first = (tmp / "Parts/GFOpenFiles/Part").read_text(encoding="latin-1").split("\n")[0]
+    check("a part with no version given is written with its program's ($VER 0.5)", first == "part GFOpenFiles 0.5", first)
+    bp.check_part_versions(tmp / "Parts")
+    check("check_part_versions agrees with it", True)
+    nv = bp.Part(tmp, "GFOpenFiles", None, "GFOpenFiles: test")
+    nv.add(rel, b"\0\0\x03\xf3no version here", "SYS:" + rel)
+    try:
+        nv.write()
+        stopped = False
+    except SystemExit:
+        stopped = True
+    check("a part whose program has no version stops the build", stopped)
+    # the guest scripts: a STOVE default that this host lacks and names open6 -> GUEST_STOVE; else left alone
+    home = tmp / "home"
+    (home / "AmiCradle/stoves/os32-gcc16").mkdir(parents=True)
+    s1 = tmp / "a.sh"
+    s1.write_text('#!/bin/sh\nSTOVE=${STOVE:-"$HOME/AmiCradle/stoves/os32-gcc16-16.2.0-open6"}\n')
+    s2 = tmp / "b.sh"
+    s2.write_text('#!/bin/sh\nSTOVE=${STOVE:-$HOME/AmiCradle/stoves/os32-gcc16}\n')
+    s3 = tmp / "c.sh"
+    s3.write_text('#!/bin/sh\nCC=m68k-amigaos-gcc\n')
+    g0 = tmp / "g0"
+    g0.mkdir()
+    check("guest_stove: a missing open6 default gets GUEST_STOVE",
+          bp.guest_stove(s1, {"OUT": "x"}, home, g0).get("STOVE") == str(g0))
+    check("guest_stove: a default the host has is left to the script", "STOVE" not in bp.guest_stove(s2, {}, home, g0))
+    check("guest_stove: a script with no STOVE default is left alone", "STOVE" not in bp.guest_stove(s3, {}, home, g0))
+    check("guest_stove: a STOVE given stays", bp.guest_stove(s1, {"STOVE": "/x"}, home)["STOVE"] == "/x")
+    # Londo's CHANGES on #254 (006e5a32): the guest scripts' real form names $STOVES, and GUEST_STOVE may be absent
+    s4 = tmp / "d.sh"
+    s4.write_text('#!/bin/sh\nSTOVES=${STOVES:-$HOME/AmiCradle/stoves}\n[ -d "$STOVES/os32-gcc16-open6" ] && '
+                  'STOVE=${STOVE:-$STOVES/os32-gcc16-open6}\nSTOVE=${STOVE:-$STOVES/os32-gcc16-16.2.0-open6}\n')
+    gstove = home / "AmiCradle/stoves/os32-gcc16-open6"
+    check("guest_stove: no GUEST_STOVE on this host: the script's own default stays",
+          "STOVE" not in bp.guest_stove(s1, {}, home, gstove) and "STOVE" not in bp.guest_stove(s4, {}, home, gstove))
+    gstove.mkdir(parents=True)
+    check("guest_stove: $STOVES form, its open6 default missing, GUEST_STOVE there: GUEST_STOVE",
+          bp.guest_stove(s4, {}, home, gstove).get("STOVE") == str(gstove))
+    (home / "AmiCradle/stoves/os32-gcc16-16.2.0-open6").mkdir(parents=True)
+    check("guest_stove: $STOVES form whose default this host has: left to the script",
+          "STOVE" not in bp.guest_stove(s4, {}, home, gstove))
+    other = tmp / "elsewhere"
+    (other / "os32-gcc16-16.2.0-open6").mkdir(parents=True)
+    gstove2 = tmp / "g2"
+    gstove2.mkdir()
+    check("guest_stove: $STOVES from env, where the default is: left to the script",
+          "STOVE" not in bp.guest_stove(s4, {"STOVES": str(other)}, tmp / "nohome", gstove2))
+    check("guest_stove: $STOVES from env, default missing there: GUEST_STOVE",
+          bp.guest_stove(s4, {"STOVES": str(tmp / "empty")}, home, gstove2).get("STOVE") == str(gstove2))
+    gs = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
+    check("every amicradle-guest script run with genv or accontrol/acrtg.gpu's env goes through guest_stove or names a STOVE",
+          not re.search(r'run\(\["sh", (?:g|a\.guest) [^\n]*env=(?:env\)|dict\(genv, (?!STOVE)(?![^\n]*guest_stove))', gs))
+    check("UnofficialTelegram is built with the GCC 16 stove (OS32_GCC16)",
+          re.search(r'openamigatelegram / "build-os3.sh"\], env=dict\(os.environ, STOVE=gcc16_root, OS32_GCC16=gcc16_root\)', gs)
+          is not None)
+
+
+def compress_files_checks(tmp: Path) -> None:
+    """Legion's 14 Nov note: GFOpenCompress's two run-time libraries in its part; GFOpenFiles' build given the
+    checkouts (OC, FTP, MEDIA) this build has."""
+    oc = tmp / "gfopencompress"
+    b = oc / "build/os3"
+    b.mkdir(parents=True)
+    (b / "GFOpenCompress").write_bytes(b"\0\0\x03\xf3$VER: GFOpenCompress 0.4.0 (13.11.2026)\0")
+    for lib in bp.COMPRESS_LIBS:
+        (b / lib).write_bytes(b"\0\0\x03\xf3" + lib.encode() + b" 1.0 (6.11.2026)\0")
+    top = tmp / "top"
+    part = bp.compress_part(top, oc, FakeIcons())
+    lines = (part.dir / "Part").read_text(encoding="latin-1").splitlines()
+    check("GFOpenCompress: its program's version (0.4.0)", lines[0] == "part GFOpenCompress 0.4.0", lines[0])
+    check("GFOpenCompress: both run-time libraries go to LIBS: (add)",
+          all(f'add "Libs/{lib}" "LIBS:{lib}"' in lines for lib in bp.COMPRESS_LIBS)
+          and bp.COMPRESS_LIBS == ("gfopencompress_archive.library", "gfopencompress_crunch.library"), str(lines))
+    check("GFOpenCompress: the program in SYS:Utilities as before",
+          'copy "Utilities/GFOpenCompress" "SYS:Utilities/GFOpenCompress"' in lines)
+    (b / bp.COMPRESS_LIBS[1]).unlink()
+    try:
+        bp.compress_part(tmp / "top2", oc, FakeIcons())
+        stopped = False
+    except SystemExit:
+        stopped = True
+    check("GFOpenCompress: a library not built stops the build", stopped)
+
+    class A:
+        pass
+    a = A()
+    a.opengadtools, a.guest, a.openamigacompress = Path("/g"), Path("/u"), Path("/oc")
+    a.openamigaftp, a.openamigamedia = Path("/ftp"), Path("/media")
+    e = bp.filemanager_env(a, {"PATH": "x"})
+    check("GFOpenFiles' build gets OGT, GUEST, OC, FTP and MEDIA from this build's checkouts",
+          (e["OGT"], e["GUEST"], e["OC"], e["FTP"], e["MEDIA"], e["PATH"]) == ("/g", "/u", "/oc", "/ftp", "/media", "x"), str(e))
+    a.openamigaftp = a.openamigamedia = None
+    e = bp.filemanager_env(a, {})
+    check("without gfopenftp or gfopenmedia the build's own defaults stay", "FTP" not in e and "MEDIA" not in e)
+    src = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
+    check("build_pack runs GFOpenFiles' build with filemanager_env and has --openamigamedia",
+          'openamigafilemanager / "build.sh"], env=filemanager_env(a, env))' in src and '"--openamigamedia"' in src)
+
+
+def icon_step_checks() -> None:
+    """Ivanova's pack lab (bundle A, 14 Nov): after UPDATE 7 of 12 dock icons were generic. compress_part's part was
+    never kept (oc.dir: NameError), MUIExample.png was missing, and both icon steps caught the error and went on."""
+    src = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
+    check("the GFOpenCompress part is kept for the icon steps (oc = compress_part)", "oc = compress_part(" in src)
+    block = src[src.index("        open_icons(a.amigachrome, ["):]
+    block = block[:block.index("drawers=")]
+    keys = set(re.findall(r'\.info", "([^"]+)"\)', block)) | {art for _, _, art in bp.PREFERENCES_PAGES}
+    missing = sorted(k for k in keys if not (bp.OPEN_ART / f"{k}.png").is_file())
+    check("every picture the Open apps' icons ask for is in icons/open", not missing and len(keys) > 20, str(missing))
+    check("an icon step that fails stops the build (no 'icons not made' and carry on)",
+          "icons not made" not in src and "the ones above stay" not in src and "the classic ones stay)" not in src)
+
+
+def rc_version_checks() -> None:
+    """Corwin's item 10 and the daily release cycle's numbering: a pack can be 0.8.29-rc1."""
+    import argparse
+    check("pack_version: 0.8.29 and 0.8.29-rc1 are taken",
+          bp.pack_version("0.8.29") == "0.8.29" and bp.pack_version("0.8.29-rc1") == "0.8.29-rc1")
+    bad = []
+    for v in ("0.8.29-t5build", "rc1", "0.8", "0.8.29-rc", "0.8.29 rc1", "0.8.29-rc0", "0.8.29-rc01"):
+        try:
+            bp.pack_version(v)
+            bad.append(v)
+        except argparse.ArgumentTypeError:
+            pass
+    # -rc0 compares equal to the release in GFOpenUpTool (ouv_cmp: no rc number is 0), so it is refused (Team 5,
+    # 14 Nov 16:12); -rc01 too, which ouv_cmp reads as rc1
+    check("pack_version: other suffixes, -rc0, -rc01, a lone number and spaces are refused (0.8 is taken: two numbers)",
+          bad == ["0.8"], str(bad))
+    check("binary_version reads a release candidate's $VER whole",
+          bp.binary_version(b"; $VER: Uninstall-GFOpenUp 0.8.29-rc1 (14.11.2026)\n", "Uninstall-GFOpenUp") == "0.8.29-rc1")
+    check("binary_version: a plain $VER as before, and no -rc taken from a following word",
+          bp.binary_version(b"$VER: GFOpenFiles 0.5 (13.11.2026)", "GFOpenFiles") == "0.5"
+          and bp.binary_version(b"$VER: X 1.2-beta (1.1.2026)", "X") == "1.2")
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -592,6 +750,120 @@ def main() -> int:
         pl = (tmp / "clash" / "PACK-LIST.txt").read_text(encoding="latin-1").splitlines()
         check("PACK-LIST.txt: every installed file with its part, size and SHA-256", n == 9 and len(pl) == 10
               and "GFOpenRTG\tLIBS:gfopenrtg.library\t3\t" in "\n".join(pl), "\n".join(pl))
+        # GFOpenMUI from gfopenmui main's clean-room muimaster.library (muimaster/build-amiga.sh; Zune is gone from
+        # main since 9bf57d2): the library and its examples, or the part left out, said (Corwin, 14 Nov 2026)
+        mb = tmp / "gfopenmui" / "muimaster" / "build-amiga"
+        (mb / "lib").mkdir(parents=True)
+        (mb / "tests").mkdir(parents=True)
+        (mb / "lib/muimaster.library").write_bytes(b"\0\x4a\xfcmuimaster.library\0\0$VER: muimaster.library 19.0 (10.11.2026) "
+                                                   b"GFOpenMUI, AmiCradle Team\0")
+        for ex in ("MUIClasses", "MUIAddons", "MUITime"):
+            (mb / "tests" / ex).write_bytes(b"\0\0\x03\xf3" + ex.encode())
+        # Ivanova's lab, bundle C row 10 (Team 5's 16:57 note): muimaster.library 19.0 opens gfopenlayout.library,
+        # which nothing packed. The GFOpenLayout part brings it, GFOpenMUI needs that part, and a build without it stops
+        try:
+            bp.gfopenlayout_part(tmp / "olpack0", tmp / "gfopenmui")
+            no_oll = None
+        except SystemExit as e:
+            no_oll = str(e)
+        check("a GFOpenMUI build without gfopenlayout.library stops the pack build, said",
+              no_oll is not None and "gfopenlayout.library" in no_oll, no_oll)
+        check("no gfopenmui build: no GFOpenLayout part either", bp.gfopenlayout_part(tmp / "olpack1", tmp / "nothing") is None)
+        (mb / "deps/gfopenlayout/build-amiga/lib").mkdir(parents=True)
+        (mb / "deps/gfopenlayout/build-amiga/lib/gfopenlayout.library").write_bytes(
+            b"\0\x4a\xfcgfopenlayout.library\0\0$VER: gfopenlayout.library 18.0 (10.11.2026) GFOpenLayout 0.18\0")
+        ol = bp.gfopenlayout_part(tmp / "muipack", tmp / "gfopenmui")
+        ol_lines = (ol.dir / "Part").read_text(encoding="latin-1").splitlines() if ol else []
+        check("the GFOpenLayout part: gfopenlayout.library 18.0 to LIBS: (copy: an older one kept, a newer one stays)",
+              ol_lines[:1] == ["part GFOpenLayout 18.0"] and 'copy "Libs/gfopenlayout.library" "LIBS:gfopenlayout.library"' in ol_lines
+              and bp.PART_MAIN.get("GFOpenLayout") == ("Libs/gfopenlayout.library", "gfopenlayout.library"), "\n".join(ol_lines))
+        ts = tmp / "thinsup"
+        (ts / "Libs").mkdir(parents=True)
+        (ts / "Libs/gfopenlayout.library").write_bytes(b"\0\0$VER: gfopenlayout.library 19.0 (12.11.2026) GFOpenLayout 0.19\0")
+        ol2 = bp.gfopenlayout_part(tmp / "olpack2", tmp / "gfopenmui", ts)
+        check("with a thin build's gfopenlayout.library, the GFOpenLayout part carries those bytes (KickstartSet's own)",
+              ol2 is not None and (ol2.dir / "Libs/gfopenlayout.library").read_bytes() == (ts / "Libs/gfopenlayout.library").read_bytes()
+              and (ol2.dir / "Part").read_text(encoding="latin-1").startswith("part GFOpenLayout 19.0"))
+        om = bp.gfopenmui_part(tmp / "muipack", tmp / "gfopenmui", None)
+        lines = (om.dir / "Part").read_text(encoding="latin-1").splitlines() if om else []
+        check("GFOpenMUI needs the GFOpenLayout part", "needs part GFOpenLayout" in lines, "\n".join(lines))
+        inst0 = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("the Installer puts GFOpenLayout in before GFOpenMUI",
+              0 < inst0.find("INSTALL Parts/GFOpenLayout") < inst0.find("INSTALL Parts/GFOpenMUI"))
+        check("the packed libraries' gf* libraries: muimaster.library's gfopenlayout.library is in the pack",
+              bp.unpacked_opened_libraries(tmp / "muipack") == [], bp.unpacked_opened_libraries(tmp / "muipack"))
+        lone = tmp / "lonepack" / "GFOpenMUI" / "Libs"
+        lone.mkdir(parents=True)
+        (lone / "muimaster.library").write_bytes(b"\0\0$VER: muimaster.library 19.0\0gfopenlayout.library\0exec.library\0"
+                                                 b"xgfnot.library\0")
+        check("a packed library opening a gf* library nothing packs is named; OS and other names aren't ours",
+              bp.unpacked_opened_libraries(tmp / "lonepack") == ["GFOpenMUI/Libs/muimaster.library opens gfopenlayout.library"],
+              bp.unpacked_opened_libraries(tmp / "lonepack"))
+        check("the ROM's own count as there", bp.unpacked_opened_libraries(tmp / "lonepack", {"gfopenlayout.library"}) == [])
+        try:
+            bp.check_opened_libraries(tmp / "lonepack")
+            stopped = None
+        except SystemExit as e:
+            stopped = str(e)
+        check("the pack build stops on it", stopped is not None and "opens gfopenlayout.library" in stopped, stopped)
+        check("the pack build runs that check", "check_opened_libraries(top / \"Parts\")" in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
+        oenv = bp.gfopenlayout_build_env(tmp / "mb", {"PATH": "/bin"}, tmp / "nogadtools")
+        check("gfopenlayout.library is built from the muimaster script's own deps checkout, into its build-amiga",
+              oenv.get("OUT") == str(tmp / "mb/deps/gfopenlayout/build-amiga") and "GFOPENLAYOUT" not in oenv
+              and "OGT_ROOT" not in oenv and oenv.get("STOVE") == bp.gfopenmui_build_env(tmp / "mb", {})["STOVE"], oenv)
+        bsrc = (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")
+        check("build_parts builds gfopenlayout.library after muimaster.library",
+              bsrc.find('"deps/gfopenlayout/build-library.sh"') > bsrc.find('"muimaster/build-amiga.sh"], env=gfopenmui_build_env') > 0)
+        check("GFOpenMUI: the clean-room muimaster.library 19.0, where no MUI is (add), and its examples",
+              lines[:1] == ["part GFOpenMUI 19.0"] and 'add "Libs/muimaster.library" "LIBS:muimaster.library"' in lines
+              and 'copy "Tools/GFOpenMUI/MUIClasses" "SYS:Tools/GFOpenMUI/MUIClasses"' in lines
+              and not any("zune" in l.lower() for l in lines), "\n".join(lines))
+        check("GFOpenMUI: left out, and said, when gfopenmui has no build",
+              bp.gfopenmui_part(tmp / "muipack2", tmp / "nothing", None) is None)
+        # Koenig's CHANGES on #253 (2ff22b70): the packed readme says what the part is, and a release build of
+        # gfopenmui never builds the lab's AROS programs (LAB_PROGRAMS=0; they are APL and lab-only)
+        rd = (ROOT / "gfopenup.readme").read_text(encoding="latin-1")
+        mui = rd[rd.find("- GFOpenMUI"):]
+        mui = mui[:mui.find("\n- ", 1)]
+        check("the readme: GFOpenMUI is the clean-room muimaster.library and its examples, no Zune",
+              "zune" not in mui.lower() and "muimaster.library" in mui and "MUIClasses" in mui
+              and "zune" not in (ROOT / "README.md").read_text(encoding="utf-8").lower(), mui)
+        env = bp.gfopenmui_build_env(tmp / "mb", {"PATH": "/bin"})
+        check("a pack build of gfopenmui leaves the lab's AROS programs out (LAB_PROGRAMS=0)",
+              env.get("LAB_PROGRAMS") == "0" and env.get("OUT") == str(tmp / "mb")
+              and env.get("GFOPENLAYOUT") == str(tmp / "mb" / "deps/gfopenlayout") and env.get("PATH") == "/bin", env)
+        check("no icon art key or art named ZuneTest is left",
+              not any("zunetest" in (ROOT / f).read_text(encoding="utf-8").lower()
+                      for f in ("tools/build_pack.py", "tools/icon_library_art.py", "tools/open_icons_art.py")))
+        inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("the Installer: no Zune left, and GFOpenMUI installed only when its part is in the pack",
+              "AROS's Zune" not in inst and "MUI from Zune" not in inst and "ZuneTest" not in inst
+              and '(and (bitand #parts 65536) (exists "Parts/GFOpenMUI/Part"))' in inst)
+        sr = tmp / "test_openup_slimrom"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_slimrom.c"), "-o", str(sr)], check=True)
+        r = subprocess.run([str(sr)], capture_output=True, text=True)
+        check("GFOpenUpTool DETECT SlimROM (tests/test_openup_slimrom.c)", r.returncode == 0, r.stdout[-600:])
+        vs = tmp / "test_openup_vers"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_vers.c"), "-o", str(vs)], check=True)
+        r = subprocess.run([str(vs)], capture_output=True, text=True)
+        check("GFOpenUpTool keeps a newer file (tests/test_openup_vers.c)", r.returncode == 0, r.stdout[-600:])
+        lf = tmp / "test_openup_left"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_left.c"), "-o", str(lf)], check=True)
+        r = subprocess.run([str(lf)], capture_output=True, text=True)
+        check("GFOpenUpTool REINSTALL's list of parts the pack hasn't got (tests/test_openup_left.c)", r.returncode == 0,
+              r.stdout[-600:])
+        # Ivanova's pack lab b (14 Nov): a part the pack hasn't got was only named in T:GFOpenUp.log; REINSTALL sets
+        # ENV:GFOpenUp/Left and the Installer's last screen names those parts
+        tl = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
+        inst2 = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("REINSTALL sets GFOpenUp/Left, and the Installer's reinstall screen names the parts in it",
+              'oul_left_add(' in tl and '"GFOpenUp/Left"' in tl and '(getenv "GFOpenUp/Left")' in inst2
+              # Talkie Toaster's nit 1: cleared first, so an early return never leaves an earlier run's list
+              and 'set_env("GFOpenUp/Left", "");' in tl[tl.index("static int reinstall("):][:tl[tl.index("static int reinstall("):].index("manifest_load();")]
+              and "aren't in this pack" in inst2, "")
         un = tmp / "test_openup_unattended"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_unattended.c"), "-o", str(un)], check=True)
@@ -922,7 +1194,7 @@ def main() -> int:
         check("gfopenrtg's make_sdk.py pins the same gfopenphysfs commit",
               f'PHYSFS_COMMIT = "{bp.GFOPENPHYSFS["commit"]}"' in rtg_sdk.read_text(encoding="utf-8"))
     # GFOpenWindows 0.12.2 (0.8.23): the snapshot pin is a toggle (gfopenprefs #184); 0.12.1, none on system requesters
-    check("the GFOpenWindows part is 0.12.2", 'Part(top, "GFOpenWindows", "0.12.2",' in src)
+    check("the GFOpenWindows part takes its program's version", 'Part(top, "GFOpenWindows", None,' in src)
     # OGLES3 (0.8.20): ogles3.library on GFOpenGPU (gfopenrtg #190), as Install-ogles3 has it: AmiCradle only, with
     # the GFOpenGPU part, never over another ogles3.library; its version is the library's
     with tempfile.TemporaryDirectory() as t:
@@ -968,7 +1240,7 @@ def main() -> int:
     inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
     gpu_block = inst[inst.index('(working "Installing GFOpenGPU")'):inst.index("; Warp3D, as it always has")]
     check("Install-GFOpenUp installs Parts/OGLES3 with GFOpenGPU", "INSTALL Parts/OGLES3" in gpu_block)
-    check("the GFOpenCompress part is 0.3.3 (z.library at run time)", 'Part(top, "GFOpenCompress", "0.3.3",' in src)
+    check("the GFOpenCompress part takes its program's version", 'Part(top, "GFOpenCompress", None,' in src)
     check("the GFOpenImage part is 0.6 (gfopensound-decoders.library)", 'Part(top, "GFOpenImage", "0.6",' in src)
     check("GFOpenImage without the pack builder: Datatypes/out/Libs's libraries go to LIBS:",
           'img.add(f"Libs/{lib.name}", lib.read_bytes(), f"LIBS:{lib.name}")' in src)
@@ -1014,6 +1286,12 @@ def main() -> int:
     openprinter_checks()
     with tempfile.TemporaryDirectory() as ktmp:
         kickstartset_checks(Path(ktmp))
+    with tempfile.TemporaryDirectory() as vtmp:
+        versions_stoves_checks(Path(vtmp))
+    with tempfile.TemporaryDirectory() as ctmp:
+        compress_files_checks(Path(ctmp))
+    rc_version_checks()
+    icon_step_checks()
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
     return 1 if fails else 0

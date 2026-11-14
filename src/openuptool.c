@@ -2,7 +2,8 @@
  *
  *   GFOpenUpTool DETECT                 what this machine is; ENV:GFOpenUp/... (ROM: GFOpenKick or Kickstart,
  *                                     0.8.7; GFOpenRTG: where gfopenrtg.library is, 0.8.7)
- *   GFOpenUpTool INSTALL <part drawer>  installs one part, as its Part file says
+ *   GFOpenUpTool INSTALL <part drawer>  installs one part, as its Part file says; a file on the disk whose $VER is
+ *                                     newer than the pack's stays, and is said (FORCE puts the pack's in; 14 Nov 2026)
  *   GFOpenUpTool REMOVE <part drawer>   takes one part out, putting back what it replaced (0.8.0)
  *   GFOpenUpTool REINSTALL <Parts drawer>  every part the manifest lists, in again from the pack: missing or
  *                                     changed files put back, the settings in ENVARC: and ENV: kept (9 Nov 2026)
@@ -144,9 +145,13 @@
 #include "openup_lines.h"
 #include "openup_startupseq.h"
 #include "openup_kickset.h"
+#include "openup_slimrom.h"            /* DETECT SlimROM (0.8.x) */
+#include "openup_vers.h"               /* an older file never over a newer one */
+#include "openup_left.h"               /* REINSTALL: the parts the pack hasn't got, for the Installer */
 #include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
 
 static int slim_rom(void);
+static int kickset(const char *a1, const char *a2);
 
 static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.20 (13.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
@@ -928,6 +933,18 @@ static int clear_way(const char *dest)
 }
 
 static int reinstalling;                            /* REINSTALL (below): the settings in place stay */
+static int force_older;                             /* INSTALL/REINSTALL ... FORCE: an older file may go over a newer */
+static int kept_newer;                              /* files left because the disk's were newer (said, and counted) */
+
+/* The file's version from its $VER string into out: 1, else 0 */
+static int file_ver(const char *path, char *out, int size)
+{
+    LONG len = 0;
+    char *buf = read_file(path, &len);
+    int ok = buf ? ouv_ver(buf, len, out, size) : 0;
+    if (buf) FreeVec(buf);
+    return ok;
+}
 
 /* 1 when dest is a setting: in ENVARC: or ENV: */
 static int env_setting(const char *dest)
@@ -963,6 +980,15 @@ static int install_file(const char *from, const char *dest, int only_if_missing)
         if (!e) add_entry("same", dest, NULL);
         else note_mark(e);                          /* GFOpenUp's bytes: a line from before marks gets its mark */
         return 0;
+    }
+    if (exists(dest) && !force_older) {             /* an older file never goes over a newer one (14 Nov 2026) */
+        char fv[24], tv[24];
+        if (file_ver(from, fv, sizeof fv) && file_ver(dest, tv, sizeof tv) && ouv_keep_newer(fv, tv, 0)) {
+            Printf((STRPTR)"GFOpenUp: kept %s %s, newer than the pack's %s (FORCE puts the pack's in)\n", (LONG)dest,
+                   (LONG)tv, (LONG)fv);
+            kept_newer++;
+            return 0;
+        }
     }
     if (exists(dest) && (!e || !strcmp(e->kind, "same") || theirs)) {
         /* The first time GFOpenUp replaces this file: keep the original. */
@@ -1566,11 +1592,46 @@ static void find_parts(const char *drawer, int depth)
 
 static int reinstalled;                             /* the parts REINSTALL put in again (UPDATE AUTO's log line) */
 
+/* Before REINSTALL puts part j in: each part its Part file needs ("needs part") that the disk hasn't got and the pack
+ * has goes in first, else INSTALL would leave part j out. GFOpenMUI 19.0 needs the GFOpenLayout part, which no earlier
+ * pack had (Ivanova's lab, bundle C, 14 Nov 2026); before, an update kept the old GFOpenMUI. One level: a needed part's
+ * own needs are its Part file's business, as on a first install. */
+static void reinstall_needs(int j, int *rc, int *done)
+{
+    char path[200], need[48];
+    LONG n = 0;
+    char *text;
+    int k, m;
+    strcpy(path, part_drawers[j]);
+    AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
+    if (!(text = read_file(path, &n)))
+        return;
+    for (k = 0; oul_part_needs(text, k, need, sizeof need); k++) {
+        if (oul_installed(ents, nents, need))
+            continue;
+        for (m = 0; m < nparts && strcmp(part_names[m], need); m++)
+            ;
+        if (m == nparts)
+            continue;                               /* not in the pack: INSTALL says so, and leaves part j out */
+        Printf((STRPTR)"GFOpenUp: %s needs the %s part, which this pack brings: it goes in first\n",
+               (LONG)part_names[j], (LONG)need);
+        {
+            int r = install(part_drawers[m]);
+            if (r > *rc) *rc = r;
+            (*done)++;
+        }
+    }
+    FreeVec(text);
+}
+
 static int reinstall(const char *parts)
 {
     static char wanted[MAXPARTS][48];
+    char left[200] = "";                            /* the installed parts the pack hasn't got (ENV:GFOpenUp/Left) */
     int nwanted = 0, i, j, rc = RETURN_OK, done = 0;
     reinstalled = 0;
+    kept_newer = 0;
+    set_env("GFOpenUp/Left", "");                   /* an early return never leaves an earlier run's list */
     manifest_load();
     if (manifest_short) {
         manifest_save();                            /* says why */
@@ -1595,9 +1656,11 @@ static int reinstall(const char *parts)
             ;
         if (j == nparts) {
             say("GFOpenUp: ", wanted[i], " is installed, but this pack hasn't got it; it was left as it is.");
+            oul_left_add(left, sizeof left, wanted[i]);
             if (rc < RETURN_WARN) rc = RETURN_WARN;
             continue;
         }
+        reinstall_needs(j, &rc, &done);
         {
             int r = install(part_drawers[j]);
             if (r > rc) rc = r;
@@ -1606,8 +1669,12 @@ static int reinstall(const char *parts)
     }
     reinstalling = 0;
     reinstalled = done;
+    set_env("GFOpenUp/Left", left);                 /* "" when every installed part was in the pack */
     Printf((STRPTR)"GFOpenUp: reinstalled %ld part%s%s\n", (LONG)done, (LONG)(done == 1 ? "" : "s"),
            (LONG)(rc > RETURN_WARN ? "; see the messages above" : ""));
+    if (kept_newer)
+        Printf((STRPTR)"GFOpenUp: %ld file%s on the disk %s newer than the pack's and stayed (FORCE puts the pack's in)\n",
+               (LONG)kept_newer, (LONG)(kept_newer == 1 ? "" : "s"), (LONG)(kept_newer == 1 ? "was" : "were"));
     return rc;
 }
 
@@ -4098,18 +4165,11 @@ static int list(void)
 #define CRADLE_PACK "DH1:GFOpenUp/Cradle-Pack"
 #define RELEASES "https://github.com/DalsinAI/gfopenup/releases"
 
-/* Versions compare as numbers, dot by dot: 0.6.14 is newer than 0.6.9. */
+/* Versions compare as numbers, dot by dot: 0.6.14 is newer than 0.6.9, and a release candidate is older than
+ * its release (0.8.29-rc1 < 0.8.29-rc2 < 0.8.29): openup_vers.h's ouv_cmp, so UPDATE offers each day's candidate. */
 static int version_cmp(const char *a, const char *b)
 {
-    while (*a || *b) {
-        char *ea, *eb;
-        long x = strtol(a, &ea, 10), y = strtol(b, &eb, 10);
-        if (x != y) return x < y ? -1 : 1;
-        a = *ea == '.' ? ea + 1 : ea;
-        b = *eb == '.' ? eb + 1 : eb;
-        if (a == ea && b == eb) break;          /* neither moved on: the rest isn't a number */
-    }
-    return 0;
+    return ouv_cmp(a, b);
 }
 
 /* "version 0.6.14" from Cradle-Pack (key value lines, ";" comments). */
@@ -4169,11 +4229,13 @@ static int show_changes(void)
 }
 
 /* The unattended UPDATE's one line, in ENVARC:GFOpenUp/GFOpenUpTool.log and on the Shell; rc back. */
+static int auto_kick;                               /* UPDATE AUTO's Kickstart set: 1 in, -1 failed, 0 not tried */
+
 static int update_logged(int by, const char *installed, const char *newer, int done, int rc)
 {
     char line[200];
     BPTR fh, l;
-    ou_log_line(line, sizeof line, by, installed, newer, done, rc);
+    ou_log_line(line, sizeof line, auto_kick, by, installed, newer, done, rc);
     say(line, NULL, NULL);
     if (!exists("ENVARC:GFOpenUp") && (l = CreateDir((STRPTR)"ENVARC:GFOpenUp"))) UnLock(l);
     if ((fh = Open((STRPTR)OU_LOG, MODE_READWRITE))) {
@@ -4192,6 +4254,11 @@ static int update_logged(int by, const char *installed, const char *newer, int d
  * the installed parts reinstalled from the pack (the settings in place stay,
  * no part added), the startup block written again, one line in the log.
  * It never runs on its own, and it never changes anything until asked. */
+#ifndef KICKSET_DIR
+#define KICKSET_DIR "SYS:Kickstart/default/"
+#endif
+#define PACK_KICK_MANIFEST CRADLE_DRAWER "/Parts/KickstartSet/Kickstart/default/Manifest"   /* build_pack's */
+
 static int update(const char *how)
 {
     char newer[24] = "", installed[24] = "";
@@ -4212,14 +4279,35 @@ static int update(const char *how)
         return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
     }
     if (version_cmp(newer, installed) <= 0) {
-        say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
-        return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
+        int rc = RETURN_OK;
+        auto_kick = 0;
+        /* an older GFOpenUpTool did the update and left the Kickstart set out (ou_set_stale): the set now */
+        if (unattended && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
+            LONG nh = 0, np = 0;
+            char *have = read_file(KICKSET_DIR "Manifest", &nh), *pack = read_file(PACK_KICK_MANIFEST, &np);
+            int stale = ou_set_stale(have, nh, pack, np);
+            if (have) FreeVec(have);
+            if (pack) FreeVec(pack);
+            if (stale) {
+                int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
+                auto_kick = r > RETURN_WARN ? -1 : 1;
+                rc = r;
+            }
+        }
+        if (!auto_kick) say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
+        return unattended ? update_logged(by, installed, newer, -1, rc) : rc;
     }
     Printf((STRPTR)"GFOpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
     if (check) return RETURN_WARN;
     if (!show_changes()) say("  (the same parts, updated in place)", NULL, NULL);
     if (unattended) {
         int rc = reinstall(CRADLE_DRAWER "/Parts");
+        auto_kick = 0;
+        if (rc < RETURN_ERROR && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
+            int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
+            auto_kick = r > RETURN_WARN ? -1 : 1;
+            if (r > rc) rc = r;
+        }
         if (rc < RETURN_ERROR && !write_startup(0)) {
             say("GFOpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL);
             rc = RETURN_ERROR;
@@ -4552,14 +4640,17 @@ static int old_dock(void)
  * ENV:GFOpenUp/KickstartSet says "ready" or "missing"; DETECT's ENV:GFOpenUp/SlimROM says whether this ROM is the
  * slim one (kickload in it and no workbench.library of its own), and the Installer then installs the part. Cradle
  * refuses to start an instance or build a card on the slim ROM without the set (amicradle openkick_rom.py). */
+#ifndef KICKSET_DIR
 #define KICKSET_DIR "SYS:Kickstart/default/"
+#endif
 
 static int in_rom_window(ULONG a)
 {
     return (a >= 0x00F80000UL && a < 0x01000000UL) || (a >= 0x00E00000UL && a < 0x00E80000UL);
 }
 
-/* 1 on the slim ROM: kickload in the ROM, and workbench.library not a RomTag of the ROM (none, or the set's in RAM) */
+/* 1 on the slim ROM: kickload there, and the ROM's own header says the thin profile (openup_slimrom.h); a ROM of
+ * ours without that header: kickload in the ROM, and workbench.library not a RomTag of the ROM */
 static int slim_rom(void)
 {
     struct Resident *k, *wb;
@@ -4567,7 +4658,8 @@ static int slim_rom(void)
     k = FindResident((STRPTR)"kickload");
     wb = FindResident((STRPTR)"workbench.library");
     Permit();
-    return k && in_rom_window((ULONG)k) && (!wb || !in_rom_window((ULONG)wb));
+    return ous_slim_rom(k != NULL, (const unsigned char *)0x00F80000UL, k && in_rom_window((ULONG)k), wb != NULL,
+                        wb && in_rom_window((ULONG)wb));
 }
 
 /* The file's size, or -1 when it isn't a file there */
@@ -4966,7 +5058,7 @@ static int real_main(void)
     const char *cmd;
     int rc;
     if (!rda) {
-        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES|AUTO] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n");
+        PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> [FORCE] | REMOVE <part drawer> | REINSTALL <Parts drawer> [FORCE] | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES|AUTO] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n");
         return RETURN_FAIL;
     }
     if (!(ExpansionBase = (struct ExpansionBase *)OpenLibrary((STRPTR)"expansion.library", 37))) {
@@ -4975,9 +5067,15 @@ static int real_main(void)
     }
     cmd = (const char *)args[0];
     if (same_word(cmd, "DETECT")) rc = detect();
-    else if (same_word(cmd, "INSTALL") && args[1]) rc = install((const char *)args[1]);
+    else if (same_word(cmd, "INSTALL") && args[1]) {
+        force_older = args[2] && same_word((const char *)args[2], "FORCE");
+        rc = install((const char *)args[1]);
+    }
     else if (same_word(cmd, "REMOVE") && args[1]) rc = remove_part((const char *)args[1]);
-    else if (same_word(cmd, "REINSTALL") && args[1]) rc = reinstall((const char *)args[1]);
+    else if (same_word(cmd, "REINSTALL") && args[1]) {
+        force_older = args[2] && same_word((const char *)args[2], "FORCE");
+        rc = reinstall((const char *)args[1]);
+    }
     else if (same_word(cmd, "STARTUP")) rc = write_startup(0) ? RETURN_OK : (say("GFOpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL), RETURN_ERROR);
     else if (same_word(cmd, "UNINSTALL")) rc = uninstall();
     else if (same_word(cmd, "FIXTOOLS") && args[1]) rc = fix_tools((const char *)args[1], args[2] && same_word((const char *)args[2], "ALL"));
@@ -5031,7 +5129,7 @@ static int real_main(void)
     }
     else if (same_word(cmd, "UNPLACE") && args[1]) rc = unplace((const char *)args[1]);
     else if (same_word(cmd, "OLDNAMES")) rc = args[1] && same_word((const char *)args[1], "DOCK") ? old_dock() : old_settings_copy();
-    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> | REMOVE <part drawer> | REINSTALL <Parts drawer> | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES|AUTO] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n"); rc = RETURN_FAIL; }
+    else { PutStr((STRPTR)"Usage: GFOpenUpTool DETECT | INSTALL <part drawer> [FORCE] | REMOVE <part drawer> | REINSTALL <Parts drawer> [FORCE] | STARTUP | UNINSTALL | FIXTOOLS <table> [ALL] | LIST | SETTING <dest> <text> | THEME <name> <look> | BACKDROP <prefix> [KEEP] | FONT <font> <size> | TITLEBARS <screen> <window> | WBBACKDROP | WBGAUGE | OLDLOOK | RECONCILE [CHECK|APPLY [ONCE]|UNDO] | TIDY [ONCE] | ICONS [CHECK|APPLY] | ICONSIG <icon or drawer> [<fields icon>] | UPDATE [CHECK|YES|AUTO] | UNPLACE <program> | OLDNAMES [DOCK] | KICKSET [CHECK] [<part drawer>] | STARTUPSEQ [CHECK|COMPARE|KEEP|ROM]\n"); rc = RETURN_FAIL; }
     CloseLibrary((struct Library *)ExpansionBase);
     FreeArgs(rda);
     (void)version;

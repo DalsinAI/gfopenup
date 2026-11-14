@@ -148,6 +148,17 @@ static int need_checks(void)
           && !strcmp(name, "GFOpenWrite"), 1);
     truth("part name: partial is no part line", oul_part_name("partial x\n", name, sizeof name), 0);
     truth("part name: one too long for the buffer", oul_part_name("part ABCDEFGHIJKLMNOPQRSTUVWXYZ 1\n", name, sizeof name), 0);
+    /* REINSTALL's needs first (Ivanova's bundle C, 14 Nov 2026): GFOpenMUI 19.0 needs the GFOpenLayout part */
+    {
+        static const char mui[] = "part GFOpenMUI 19.0\r\nadd \"Libs/muimaster.library\" \"LIBS:muimaster.library\"\n"
+                                  "needs part GFOpenLayout\n; needs part Commented\n\tneeds\tpart\tGFOffice\n";
+        char nd[48];
+        truth("part needs: the first", oul_part_needs(mui, 0, nd, sizeof nd) && !strcmp(nd, "GFOpenLayout"), 1);
+        truth("part needs: the second, with tabs (a commented one isn't)", oul_part_needs(mui, 1, nd, sizeof nd) && !strcmp(nd, "GFOffice"), 1);
+        truth("part needs: no third", oul_part_needs(mui, 2, nd, sizeof nd), 0);
+        truth("part needs: none in a part without", oul_part_needs("part GFOpenLayout 18.0\ncopy \"a\" \"b\"\n", 0, nd, sizeof nd), 0);
+        truth("part needs: a name too long for the buffer", oul_part_needs("needs part GFOpenLayout\n", 0, nd, 8), 0);
+    }
     return way_checks();
 }
 

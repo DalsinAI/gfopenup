@@ -5,7 +5,7 @@ archive (DESIGN.md sections 3 and 4).
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
         [--guest DIR] [--openamigaservice DIR] [--opendatatypes DIR] [--openamigartg DIR]
-        [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
+        [--openamigafilemanager DIR] [--openamigamedia DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--gfoffice DIR] [--openamigalayout DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
@@ -35,7 +35,7 @@ a Part file that C/GFOpenUpTool reads:
                         lowlevel.library, clipboard, serial and parallel.device (OPENKICK_DISK, the OpenKick
                         boot disk's files), and SYS:Classes/arexx.class, so programs' ARexx ports open
                         (OPENKICK_CLASSES: amicradle-guest's GFOpenReaction, with its licence)
-  GFOpenSocket/           bsdsocket.library 4.3 and its tools, built from gfopensocket
+  GFOpenSocket/           bsdsocket.library and its tools, built from gfopensocket
                         (--openamigasocket) and laid out by the manifest of amicradle's
                         vendored payload (vendor/opensocket-os32); without the checkout,
                         that vendored payload as it is
@@ -58,7 +58,8 @@ a Part file that C/GFOpenUpTool reads:
                         amicradle-guest checkout (--guest; tools/openicons_part.py)
   GFOpenTypes/            GFOpenPrefs's File Types page: no files of its own since the no-ROM-volume
                         design (24 October 2026); it archives its old name's stub in SYS:Prefs
-  GFOpenCompress/         GFOpenCompress, its window and command (gfopencompress)
+  GFOpenCompress/         GFOpenCompress, its window and command, and its two libraries in LIBS:
+                        (gfopencompress_archive and _crunch.library: RAR, 7z, bzip2, xz, crunchers)
   GFOpenService/          mitchy.device (with gfopenservice.device, its old name) and Nursery: services from boards and
                         paired Cradles; ServiceTest; MEDIA:, files decoded through
                         media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA); mitchy.library (gfopenservice)
@@ -200,7 +201,11 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenPresentation/     GFOpenPresentation, the GFOffice Suite's slides (ODP, PPTX in, PDF, print, show, the
                         GFOPENPRESENTATION ARexx port), libowf linked in; it needs GFOffice (z.library). Left out
                         when gfoffice's linked build didn't make it; no Installer choice yet
-  GFOpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (gfopenmui)
+  GFOpenMUI/              muimaster.library, the Team's own MUI on GFOpenLayout (only where no MUI is), and its
+                        examples in SYS:Tools/GFOpenMUI (gfopenmui muimaster/; left out without a build); it
+                        needs GFOpenLayout
+  GFOpenLayout/           gfopenlayout.library, which GFOpenMUI's muimaster.library opens (built from the
+                        gfopenlayout commit gfopenmui's muimaster script pins)
   GFOpenMulticore/        gfopenmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (gfopenmulticore)
   GFOpenMail/             GFOpenMail, the mail reader, and C:GFOpenMailCheck; needs GFOpenTLS (gfopenmail)
@@ -242,6 +247,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEV = ROOT.parent
 STOVE = Path(os.environ.get("STOVE", Path.home() / "AmiCradle/stoves/os32"))
+# amicradle-guest's scripts: the GCC 16 open6 stove by the name the Cradle hosts give it (the scripts' own default,
+# os32-gcc16-16.2.0-open6, is a folder daletop doesn't have: Corwin's 14 Nov build)
+GUEST_STOVE = Path(os.environ.get("OS32_GCC16_OPEN6", Path.home() / "AmiCradle/stoves/os32-gcc16-open6"))
 CC = STOVE / "prefix/bin/m68k-amigaos-gcc"
 # soft float: -m68040 links libnix's libm020, not libm881 (specs/m68k-soft-m68040.specs)
 SOFT_SPECS = Path(__file__).resolve().parent.parent / "specs/m68k-soft-m68040.specs"
@@ -363,6 +371,14 @@ def wbconfig_backdrop() -> bytes:
     return b"FORM" + struct.pack(">I", len(body)) + body
 
 
+def pack_version(v: str) -> str:
+    """--version: 0.8.29, or a release candidate 0.8.29-rc1 (DECISION-RELEASE-CYCLE-20261114-1302's numbering),
+    which binary_version reads back from the Installer's and uninstaller's $VER (Corwin's item 10)."""
+    if not re.fullmatch(r"[0-9]+(\.[0-9]+)+(-rc[1-9][0-9]*)?", v):
+        raise argparse.ArgumentTypeError(f"{v!r}: digits and dots, then -rcN (N from 1) for a release candidate (0.8.29-rc1)")
+    return v
+
+
 def first(*paths: Path) -> Path | None:
     for p in paths:
         if p and p.is_dir():
@@ -373,12 +389,15 @@ def first(*paths: Path) -> Path | None:
 class Part:
     """A part's drawer: its files and its Part file's lines."""
 
-    def __init__(self, top: Path, name: str, version: str, title: str):
+    def __init__(self, top: Path, name: str, version: str | None, title: str):
+        """version None: the part's version is its main program's own (PART_MAIN), read when the part is
+        written, so a part can't fall behind its program (Corwin's 14 Nov build: seven had)."""
         self.dir = top / "Parts" / name
         if self.dir.exists():
             shutil.rmtree(self.dir)
         self.dir.mkdir(parents=True)
-        self.lines = [f"part {name} {version}", f'; {title}']
+        self.name = name
+        self.lines = [f"part {name} {version}" if version else "", f'; {title}']
 
     def add(self, rel: str, data: bytes, dest: str, default: bool = False, own: bool = False, cond: str = ""):
         """default: only where nothing is (the user's settings); own: where
@@ -399,7 +418,21 @@ class Part:
         self.lines.append(f"needs part {name}")
 
     def write(self):
+        if not self.lines[0]:
+            self.lines[0] = f"part {self.name} {program_version(self.dir, self.name)}"
         (self.dir / "Part").write_text("\n".join(self.lines) + "\n", encoding="latin-1")
+
+
+def program_version(part_dir: Path, name: str) -> str:
+    """A part's version from its main program's $VER (PART_MAIN); stops the build when it has none."""
+    if name not in PART_MAIN:
+        raise SystemExit(f"{name}: no main binary in PART_MAIN to take the version from")
+    rel, vername = PART_MAIN[name]
+    f = part_dir / rel
+    got = binary_version(f.read_bytes(), vername) if f.is_file() else None
+    if not got:
+        raise SystemExit(f"{name}: {rel} says no version, so the part has none")
+    return got
 
 
 def icon_maker(openamigaprint: Path):
@@ -573,6 +606,60 @@ def late_combine_off(cc) -> list[str]:
     return ["-fno-late-combine-instructions"] if r.returncode == 0 else []
 
 
+_STOVE_DEFAULT = re.compile(r'^\s*STOVE=\$\{STOVE:-"?([^"}]+)"?\}', re.M)
+
+
+def guest_stove(script: Path, env: dict, home: Path | None = None, guest: Path | None = None) -> dict:
+    """env for an amicradle-guest script: as given, but when the script's own STOVE default is a stove folder this
+    host doesn't have and its name is an open6 one (os32-gcc16-16.2.0-open6), GUEST_STOVE instead, if this host has
+    that (Corwin's 14 Nov build: 13 guest scripts stopped on m68k-amigaos-gcc: not found). The default's $STOVES is
+    env's STOVES, else $HOME/AmiCradle/stoves, as the scripts read it (Londo, #254). A STOVE already in env stays."""
+    if "STOVE" in env:
+        return env
+    guest = guest or GUEST_STOVE
+    m = _STOVE_DEFAULT.search(script.read_text(encoding="latin-1")) if script.is_file() else None
+    if not m or not guest.is_dir():
+        return env
+    h = str(home or Path.home())
+    stoves = env.get("STOVES") or f"{h}/AmiCradle/stoves"
+    d = Path(m.group(1).replace("$STOVES", stoves).replace("${STOVES}", stoves).replace("$HOME", h))
+    if d.is_dir() or "open6" not in d.name:
+        return env
+    return dict(env, STOVE=str(guest))
+
+
+def filemanager_env(a, env: dict) -> dict:
+    """GFOpenFiles' build.sh: GFOpenGadTools and the guest, and GFOpenCompress, GFOpenFTP and GFOpenMedia by the
+    checkouts this build was given, not whatever sits beside gfopenfilemanager (Corwin's 14 Nov build: no MEDIA)."""
+    e = dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest), OC=str(a.openamigacompress))
+    if getattr(a, "openamigaftp", None):
+        e["FTP"] = str(a.openamigaftp)
+    if getattr(a, "openamigamedia", None):
+        e["MEDIA"] = str(a.openamigamedia)
+    return e
+
+
+# GFOpenCompress's run-time libraries (gfopencompress build-os3.sh since 6 Nov 2026): RAR, 7z, bzip2 and xz, and
+# crunched files (PowerPacker, Imploder, XPK...). GFOpenCompress's part owns them; GFOpenFiles opens the same ones.
+COMPRESS_LIBS = ("gfopencompress_archive.library", "gfopencompress_crunch.library")
+
+
+def compress_part(top: Path, oc_dir: Path, icons) -> "Part":
+    """Parts/GFOpenCompress: the program in SYS:Utilities and its two libraries in LIBS:; the build stops when one
+    of the three wasn't built."""
+    b = oc_dir / "build/os3"
+    oc = Part(top, "GFOpenCompress", None, "GFOpenCompress: archives and disk images, from its window or the Shell")
+    for f in ("GFOpenCompress",) + COMPRESS_LIBS:
+        if not (b / f).is_file():
+            raise SystemExit(f"GFOpenCompress: {b / f} wasn't built (gfopencompress build-os3.sh)")
+    oc.add("Utilities/GFOpenCompress", (b / "GFOpenCompress").read_bytes(), "SYS:Utilities/GFOpenCompress")
+    oc.add("Utilities/GFOpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenCompress.info")
+    for lib in COMPRESS_LIBS:
+        oc.add(f"Libs/{lib}", (b / lib).read_bytes(), f"LIBS:{lib}", own=True)
+    oc.write()
+    return oc
+
+
 def build_parts(a):
     """Each part's own build, into its own build folder."""
     env = dict(os.environ, AMIGA_CC=str(CC), PATH=f"{CC.parent}:{os.environ['PATH']}")
@@ -596,12 +683,12 @@ def build_parts(a):
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
     g = a.guest
     out = g / "build/guest/os32"
-    run(["sh", g / "devices/accontrol.device/build.sh", out], env=env)
+    run(["sh", g / "devices/accontrol.device/build.sh", out], env=guest_stove(g / "devices/accontrol.device/build.sh", env))
     inc = g / "devices/accontrol.device/include"
     run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-O2", NULL_OK, *late, "-Wall", f"-I{inc}", g / "tools/acclip/acclip.c", "-o", out / "ACClip"], env=env)
     run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-O2", NULL_OK, *late, "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
-    run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=env)        # GFOpenGPU's driver for the ACRTG board
+    run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=guest_stove(g / "libraries/acrtg.gpu/build.sh", env))        # GFOpenGPU's driver for the ACRTG board
     # gfopengfx.library 1.2: the stub that sends gfopengfx.library's calls to gfopengpu.library 0.6 (GCC 16)
     run(["sh", g / "libraries/opengfx/build-amiga.sh"], env=dict(os.environ, STOVE=gcc16_root))
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
@@ -656,9 +743,16 @@ def build_parts(a):
             env=dict(os.environ, RTG=str(a.openamigartg), CROSS="mesa/cross/m68k-amigaos.ini", GL_OUT=str(gl_out),
                      PATH=f"{stove16 / 'bin'}:{os.environ['PATH']}"))
     # GFOpenFiles' zlib is our openzlib, from the guest checkout (GUEST), not a libz.a beside it
-    run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest)))
+    run(["sh", a.openamigafilemanager / "build.sh"], env=filemanager_env(a, env))
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
-    run(["sh", a.openamigamui / "os3/build.sh"], env=env)
+    # GFOpenMUI: the clean-room muimaster.library (gfopenmui muimaster/build-amiga.sh, GCC 16 open6, on GFOpenLayout
+    # library 18 at the commit its script pins: GFOPENLAYOUT names the script's own deps folder, so it fetches that one)
+    mui_out = a.openamigamui / "muimaster/build-amiga"
+    run(["sh", a.openamigamui / "muimaster/build-amiga.sh"], env=gfopenmui_build_env(mui_out, os.environ))
+    # gfopenlayout.library 18, which muimaster.library 19.0 opens by name at its first open (gfopenmui
+    # muimaster/library/mui_lib.c): from the same deps checkout the muimaster script built on, so the two match.
+    # Nothing else packs it and the slim ROM hasn't it, so no MUI program started (Ivanova's lab, bundle C, row 10)
+    run(["sh", mui_out / "deps/gfopenlayout/build-library.sh"], env=gfopenlayout_build_env(mui_out, os.environ, a.opengadtools))
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     # The GFOffice Suite (gfoffice) carries its own GFOpenGadTools copy and needs GCC 16 (its build-os3.sh stops on
     # the os32 stove's 6.5); GFOpenWrite's pages are GFOpenLayout's. Built on its four libraries (GFO_LIBRARY,
@@ -702,7 +796,7 @@ def build_parts(a):
                                                              FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
     # Unofficial Telegram for Amiga (Open): the Amiga program (os32 stove)
     if a.openamigatelegram:
-        run(["sh", a.openamigatelegram / "build-os3.sh"], env=dict(os.environ, STOVE=str(STOVE)))
+        run(["sh", a.openamigatelegram / "build-os3.sh"], env=dict(os.environ, STOVE=gcc16_root, OS32_GCC16=gcc16_root))
     # The GFOpenGPU developer files: gfopenrtg's kit, from this build's libraries
     # GFOpenInput (gfopeninput): gfopeninput.library and OIList (os32 stove), and
     # GFOpenPrefs Gamepads, its editor (gfopenprefs, with GFOpenInput's headers)
@@ -717,11 +811,11 @@ def build_parts(a):
     ol = ROOT / "build/openlibs"
     g = a.guest / "libraries"
     genv = {k: v for k, v in os.environ.items() if k not in ("STOVE", "CC")}
-    run(["sh", g / "openutility/build-amiga.sh", "module"], env=dict(genv, OUT=str(ol / "openutility")))
-    run(["sh", g / "openmathieee/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openmathieee")))
+    run(["sh", g / "openutility/build-amiga.sh", "module"], env=guest_stove(g / "openutility/build-amiga.sh", dict(genv, OUT=str(ol / "openutility"))))
+    run(["sh", g / "openmathieee/build-amiga.sh"], env=guest_stove(g / "openmathieee/build-amiga.sh", dict(genv, OUT=str(ol / "openmathieee"))))
     # OpenRexx (amicradle-guest libraries/openrexx, its default os32-gcc16 stove): rexxsyslib.library,
     # rexxsupport.library and RexxMast
-    run(["sh", g / "openrexx/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openrexx")))
+    run(["sh", g / "openrexx/build-amiga.sh"], env=guest_stove(g / "openrexx/build-amiga.sh", dict(genv, OUT=str(ol / "openrexx"))))
     # z.library 53.15 (amicradle-guest libraries/openzlib, GCC 16; the Aminet jump table since #632; since #643, 0.8.23,
     # CRC-32, Adler-32 and its copies and clears through AC090's helpers, plain 68k code on any other machine; since
     # #677/#690, 53.15, a block's codes and a whole-input deflate as hostlib calls, ZLIB_MIN_FOR_PHYSFS): the
@@ -735,21 +829,21 @@ def build_parts(a):
     if a.openamigaphysfs:
         build_physfs(a.openamigaphysfs, ROOT / "build/physfs", gcc16_root)
     # softfpu.library (amicradle-guest libraries/opensoftfpu, its default os32-gcc16 stove): the GFOpenUp part's
-    run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
+    run(["sh", g / "opensoftfpu/build-amiga.sh"], env=guest_stove(g / "opensoftfpu/build-amiga.sh", dict(genv, OUT=str(ROOT / "build/opensoftfpu"))))
     # The disk libraries and devices the open ROM leaves to a disk (the OpenKick boot disk's, gfopenkick
     # disks/openkick-boot/manifest.json): the GFOpenUp part's, on the GFOpenKick ROM, where none is (OPENKICK_DISK)
     for name, (src, _out, _dest) in OPENKICK_DISK.items():
-        run(["sh", a.guest / src / "build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openkickdisk" / name)))
+        run(["sh", a.guest / src / "build-amiga.sh"], env=guest_stove(a.guest / src / "build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openkickdisk" / name))))
     # GFOpenReaction's classes GFOS lacks (OPENKICK_CLASSES: arexx.class), each with its own script, the same way
     for name, (src, _out, _dest) in OPENKICK_CLASSES.items():
-        run(["sh", a.guest / src / "build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openkickclasses" / name)))
+        run(["sh", a.guest / src / "build-amiga.sh"], env=guest_stove(a.guest / src / "build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openkickclasses" / name))))
     # ACROMFix (amicradle-guest tools/acromfix, the os32 stove as its build.sh): the GFOpenUp part's
     run(["sh", a.guest / "tools/acromfix/build-amiga.sh"], env=dict(genv, STOVE=str(STOVE), OUT=str(ROOT / "build/acromfix")))
     # HostClock (amicradle-guest resources/openbattclock.resource built -DOBC_INSTALL, its default os32-gcc16 stove):
     # the HostClock part's
-    run(["sh", a.guest / "resources/openbattclock.resource/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/hostclock")))
+    run(["sh", a.guest / "resources/openbattclock.resource/build-amiga.sh"], env=guest_stove(a.guest / "resources/openbattclock.resource/build-amiga.sh", dict(genv, OUT=str(ROOT / "build/hostclock"))))
     # printer.device (amicradle-guest devices/openprinter.device, its default os32-gcc16 stove): the GFOpenPrinter part's
-    run(["sh", a.guest / "devices/openprinter.device/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openprinter")))
+    run(["sh", a.guest / "devices/openprinter.device/build-amiga.sh"], env=guest_stove(a.guest / "devices/openprinter.device/build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openprinter"))))
     if a.openamigainput:
         run(["sh", a.openamigainput / "device/build.sh", ol / "input"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
@@ -839,7 +933,11 @@ def binary_version(data: bytes, name: str) -> str | None:
     """The version a program's $VER (or a library's or device's ID string)
     gives for name: "$VER: GFOpenDock 0.4 (...)" or "gfopengpu.library 0.9 (...)"."""
     n = re.escape(name.encode("latin-1"))
-    m = re.search(rb"\$VER: ?" + n + rb" ([0-9][0-9.]*[0-9])", data) or re.search(rb"(?<![A-Za-z0-9_.])" + n + rb" ([0-9]+\.[0-9][0-9.]*) \(", data)
+    idstr = rb" ([0-9]+\.[0-9][0-9.]*) \("
+    m = (re.search(rb"\$VER: ?" + n + rb" ([0-9][0-9.]*[0-9](?:-rc[0-9]+)?)", data) or re.search(rb"(?<![A-Za-z0-9_.])" + n + idstr, data)
+         # an ID string right after another constant's last byte (gfopeninput.library 1.3 in Corwin's 14 Nov
+         # build had a letter before it): taken when no clean one is there
+         or re.search(n + idstr, data))
     return m.group(1).decode() if m else None
 
 
@@ -1082,7 +1180,7 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
 
     # GFOpenWrite: the word processor, as its 1.0 release laid it out, on owf.library
     # 2.0.26 (0.8.28): gfoffice main since #124 (ARexx return codes, no requesters during a command)
-    wr = Part(top, "GFOpenWrite", "2.0.26", "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr = Part(top, "GFOpenWrite", None, "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.needs_part("GFOffice")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite", (onlib / "GFOpenWrite").read_bytes(), "SYS:Utilities/GFOpenWrite/GFOpenWrite")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/GFOpenWrite/GFOpenWrite.info")
@@ -1158,6 +1256,8 @@ PART_MAIN = {
     "GFOpenMulticore": ("Libs/gfopenmulticore.library", "gfopenmulticore.library"),
     "GFOpenRTG": ("Libs/gfopenrtg.library", "gfopenrtg.library"),
     "GFOpenGPU": ("Libs/gfopengpu.library", "gfopengpu.library"),
+    "GFOpenMUI": ("Libs/muimaster.library", "muimaster.library"),
+    "GFOpenLayout": ("Libs/gfopenlayout.library", "gfopenlayout.library"),
     "OGLES3": ("Libs/ogles3.library", "ogles3.library"),
     "AkikoPlus": ("Libs/akikoplus.library", "akikoplus.library"),
     "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
@@ -1190,9 +1290,7 @@ PART_MAIN = {
 }
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read. GFOpenPrint 0.4 is GFOpenPrint (0.3) with
-# GFOpenView 0.5 and the copy at SYS:Utilities/MultiView; GFOpenMUI 0.2.1 is
-# zunemaster.library (0.1, with the datatypes cache's Stricmp fix of 12 October 2026) with the
-# muimaster.library face (19.1). Sound 0.2.2 is GFOpenSpeaker (0.1.4; the editor is GFOpenPrefs's since W48) with GFOpenAHI's
+# GFOpenView 0.5 and the copy at SYS:Utilities/MultiView. Sound 0.2.2 is GFOpenSpeaker (0.1.4; the editor is GFOpenPrefs's since W48) with GFOpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmiCradle machines only). GFOpenImage 0.4 adds
 # opentga.datatype (47.1). GFOpenService 1.3 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:),
 # mitchy.library (1.0) and ServiceTest (0.2); 1.4 is mitchy.device (2.0), with gfopenservice.device (2.0) its old name
@@ -1202,7 +1300,7 @@ PART_MAIN = {
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
 # binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
 PART_OWN_VERSION = {"KickstartSet", "GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "GFOpenService", "Backdrops", "GFOpenIcons", "GFOpenDemos", "GFOpenGPUDev",
-                    "GFOpenPrint", "GFOpenMUI", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon", "GFOSFonts",
+                    "GFOpenPrint", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon", "GFOSFonts",
                     # pages of GFOpenPrefs with no files of their own since the no-ROM-volume design: GFOpenPrefs's version
                     "GFOpenTypes", "GFOpenDateTime"}
 
@@ -1947,6 +2045,88 @@ def akikoplus_part(top: Path, src: Path | None) -> Part | None:
 KICKSET_MAN_HEAD = "# GFOpenKickLoad manifest "
 
 
+def gfopenmui_build_env(mui_out: Path, base) -> dict:
+    """The environment for gfopenmui's muimaster/build-amiga.sh in a pack build: GCC 16 open6, GFOpenLayout in the
+    script's own deps folder, out to mui_out, and LAB_PROGRAMS=0, so the lab's AROS programs (APL, never packed) are
+    neither fetched nor built."""
+    return dict(base, STOVE=base.get("OS32_GCC16_OPEN6", str(Path.home() / "AmiCradle/stoves/os32-gcc16-open6")),
+                GFOPENLAYOUT=str(mui_out / "deps/gfopenlayout"), OUT=str(mui_out), LAB_PROGRAMS="0")
+
+
+def gfopenlayout_build_env(mui_out: Path, base, opengadtools: Path | None) -> dict:
+    """The environment for gfopenlayout's build-library.sh in a pack build: gfopenlayout.library from the checkout
+    gfopenmui's muimaster script fetched (mui_out/deps/gfopenlayout, the commit it pins), with the same stove,
+    into that checkout's build-amiga/, and GFOpenGadTools' theme reader where the pack's gfopengadtools has it."""
+    env = dict(gfopenmui_build_env(mui_out, base), OUT=str(mui_out / "deps/gfopenlayout/build-amiga"))
+    env.pop("GFOPENLAYOUT", None)
+    env.pop("LAB_PROGRAMS", None)
+    if opengadtools and (opengadtools / "lib/ogt_theme.c").is_file():
+        env["OGT_ROOT"] = str(opengadtools)
+    return env
+
+
+def gfopenlayout_part(top: Path, gfopenmui: Path, support: Path | None = None) -> Part | None:
+    """Parts/GFOpenLayout: gfopenlayout.library, which GFOpenMUI's muimaster.library opens by name at its first open
+    (gfopenmui muimaster/library/mui_lib.c), built by build_parts from the gfopenlayout checkout gfopenmui's muimaster
+    script fetched (the commit it pins, so the two match). Nothing else packed it and the slim ROM hasn't it, so no MUI
+    program started (Ivanova's lab, bundle C, row 10). "copy": an older one on the disk is kept in SYS:Storage and
+    replaced, a newer one stays (the newer-file rule). None, and GFOpenMUI with it, when gfopenmui has no build; a
+    muimaster.library built without it stops the build."""
+    b = gfopenmui / "muimaster" / "build-amiga"
+    if not (b / "lib" / "muimaster.library").is_file():
+        return None
+    oll = b / "deps" / "gfopenlayout" / "build-amiga" / "lib" / "gfopenlayout.library"
+    # The ROM build's own copy, when the thin build has one (thin-support/Libs, the guest build given OLAY=): the
+    # KickstartSet part puts the same file on a slim-ROM disk, so the two parts carry the same bytes, and other
+    # machines get it here (Team 5's 17:10 correction)
+    if support and (support / "Libs" / "gfopenlayout.library").is_file():
+        oll = support / "Libs" / "gfopenlayout.library"
+    if not oll.is_file():
+        raise SystemExit(f"GFOpenLayout: no {oll}; GFOpenMUI's muimaster.library cannot open without it "
+                         "(build_parts builds it with gfopenlayout's build-library.sh)")
+    data = oll.read_bytes()
+    ver = binary_version(data, "gfopenlayout.library")
+    if not ver:
+        raise SystemExit(f"GFOpenLayout: {oll} has no gfopenlayout.library version string")
+    ol = Part(top, "GFOpenLayout", ver, f"GFOpenLayout: gfopenlayout.library {ver}, the layout and drawing library "
+                                        "GFOpenMUI draws with")
+    ol.add("Libs/gfopenlayout.library", data, "LIBS:gfopenlayout.library")
+    ol.write()
+    return ol
+
+
+def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
+    """Parts/GFOpenMUI from gfopenmui main's clean-room muimaster.library (muimaster/build-amiga.sh, built by
+    build_parts into muimaster/build-amiga/): the library, only where no muimaster.library is or GFOpenUp's own is
+    ("add": a real MUI stays), and its three examples in SYS:Tools/GFOpenMUI. Zune (AROS Public License) left
+    gfopenmui main at 9bf57d2; it is on reference/zune only, and nothing of it is packed. Without a build the part
+    is left out, said in one line. The part's version is the library's."""
+    b = gfopenmui / "muimaster" / "build-amiga"
+    lib = b / "lib" / "muimaster.library"
+    if not lib.is_file():
+        print(f"  GFOpenMUI: left out, no {lib} (build gfopenmui's muimaster/build-amiga.sh)")
+        return None
+    data = lib.read_bytes()
+    ver = binary_version(data, "muimaster.library")
+    if not ver:
+        raise SystemExit(f"GFOpenMUI: {lib} has no muimaster.library version string")
+    om = Part(top, "GFOpenMUI", ver, f"GFOpenMUI: muimaster.library {ver}, the AmiCradle Team's own MUI on GFOpenLayout, "
+                                     "where no MUI is, and its examples")
+    om.add("Libs/muimaster.library", data, "LIBS:muimaster.library", own=True)
+    # the gfopenlayout.library it opens is the GFOpenLayout part's (gfopenlayout_part): INSTALL leaves GFOpenMUI out
+    # without it, and REINSTALL puts it in first (Team 5 on Ivanova's bundle C, row 10)
+    om.needs_part("GFOpenLayout")
+    for ex in ("MUIClasses", "MUIAddons", "MUITime"):
+        f = b / "tests" / ex
+        if f.is_file():
+            om.add(f"Tools/GFOpenMUI/{ex}", f.read_bytes(), f"SYS:Tools/GFOpenMUI/{ex}")
+            if icons:
+                om.add(f"Tools/GFOpenMUI/{ex}.info", icons.icon(icons.WBTOOL, "install", stack=16384),
+                       f"SYS:Tools/GFOpenMUI/{ex}.info")
+    om.write()
+    return om
+
+
 def kickstartset_part(top: Path, support: Path | None) -> Part | None:
     """Parts/KickstartSet from a thin build's thin-support/. The set's modules are copied over whatever is there (a
     set is one unit: kickload refuses a set whose files aren't its Manifest's), the Manifest last, so a copy cut
@@ -2075,6 +2255,36 @@ def write_pack_list(parts: Path, out: Path) -> int:
     return len(rows)
 
 
+# Our own libraries resident in a ROM the pack runs on without being in the pack (none yet: the slim ROM has no gf*
+# library; the KickstartSet part's are in the pack and count as packed)
+ROM_GF_LIBRARIES: frozenset = frozenset()
+
+
+def unpacked_opened_libraries(parts: Path, rom=ROM_GF_LIBRARIES) -> list:
+    """Each of our own libraries (gf*.library) that a packed library names, so opens, and that neither the pack nor
+    the ROM has: "<packed> opens <name>". GFOpenMUI's muimaster.library 19.0 opened gfopenlayout.library, which nothing
+    packed, and no MUI program started (Ivanova's lab, bundle C, 14 Nov 2026). Only gf* names: another library's name
+    in a binary (an OS one, a third party's it tries) is not ours to pack."""
+    packed = {f.name.lower() for f in parts.rglob("*.library") if f.is_file()} | {n.lower() for n in rom}
+    missing = []
+    for f in sorted(parts.rglob("*.library")):
+        if not f.is_file():
+            continue
+        for m in sorted(set(re.findall(rb"(?<![A-Za-z0-9_.-])(gf[a-z0-9_]+\.library)", f.read_bytes()))):
+            name = m.decode("latin-1")
+            if name.lower() != f.name.lower() and name.lower() not in packed:
+                missing.append(f"{f.relative_to(parts)} opens {name}")
+    return missing
+
+
+def check_opened_libraries(parts: Path) -> None:
+    """Stops the build when a packed library opens one of our own libraries the pack and the ROM haven't got."""
+    missing = unpacked_opened_libraries(parts)
+    if missing:
+        raise SystemExit("libraries opened but not in the pack or the ROM:\n  " + "\n  ".join(missing))
+    print("  opened libraries: every gf*.library a packed library opens is in the pack")
+
+
 def check_part_versions(parts: Path) -> None:
     """Stops the build when a part's declared version is not its main
     binary's $VER, or when a part says neither which binary that is nor
@@ -2107,7 +2317,8 @@ def check_part_versions(parts: Path) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--version", default="0.1")
+    ap.add_argument("--version", default="0.1", type=pack_version,
+                    help="the pack's version: digits and dots, and a release candidate's -rcN (0.8.29-rc1)")
     ap.add_argument("--out", type=Path, default=ROOT / "build" / "pack")
     ap.add_argument("--amigachrome", type=Path, default=first(DEV / "amicradle", DEV / "wt-deploy"))
     ap.add_argument("--openamigaprint", type=Path, default=first(DEV / "gfopenprint", DEV / "review/gfopenprint"))
@@ -2122,6 +2333,8 @@ def main() -> int:
     ap.add_argument("--openamigartg", type=Path, default=first(DEV / "gfopenrtg", DEV.parent / "gfopenrtg"))
     ap.add_argument("--openamigafilemanager", type=Path,
                     default=first(DEV / "gfopenfilemanager", DEV.parent / "gfopenfilemanager"))
+    ap.add_argument("--openamigamedia", type=Path, default=first(DEV / "gfopenmedia", DEV.parent / "gfopenmedia"),
+                    help="gfopenmedia, which GFOpenFiles' build needs (its MEDIA)")
     ap.add_argument("--openamigamediaplayer", type=Path,
                     default=first(DEV / "gfopenmediaplayer", DEV.parent / "gfopenmediaplayer"))
     ap.add_argument("--openamigamui", type=Path, default=first(DEV / "gfopenmui", DEV.parent / "gfopenmui"))
@@ -2270,7 +2483,7 @@ def main() -> int:
     payload = a.amigachrome / "vendor/opensocket-os32"
     m = json.loads((payload / "manifest.json").read_text())
     so_out = ROOT / "build/opensocket" if a.openamigasocket else None
-    sock = Part(top, "GFOpenSocket", "4.4", "bsdsocket.library 4.3 through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
+    sock = Part(top, "GFOpenSocket", None, "bsdsocket.library through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
     sock.line("needs AmiCradle")
     sock.line('keep "SYS:Libs/bsdsocket.library" ' + " ".join(f'"{x}"' for x in OPENSOCKET_MARKERS))
     for f in m["files"]:
@@ -2362,7 +2575,7 @@ def main() -> int:
     if not a.no_openicons:
         sys.path.insert(0, str(ROOT / "tools"))
         import openicons_part
-        oi = Part(top, "GFOpenIcons", "0.3", "GFOpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
+        oi = Part(top, "GFOpenIcons", "0.4", "GFOpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
         for text in openicons_part.build(oi.dir, a.guest):
             oi.line(text)
         oi.write()
@@ -2388,10 +2601,7 @@ def main() -> int:
     # GFOpenCompress: one program, the window from Workbench and the command in
     # the Shell (SYS:Utilities is in the Shell's path)
     # 0.3.3 (0.8.19): inflate through z.library at run time (gfopencompress #24), 53.12 refused
-    oc = Part(top, "GFOpenCompress", "0.3.3", "GFOpenCompress: archives and disk images, from its window or the Shell")
-    oc.add("Utilities/GFOpenCompress", (a.openamigacompress / "build/os3/GFOpenCompress").read_bytes(), "SYS:Utilities/GFOpenCompress")
-    oc.add("Utilities/GFOpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenCompress.info")
-    oc.write()
+    oc = compress_part(top, a.openamigacompress, icons)
 
     # GFOpenService: the services device and Nursery (gfopenservice). It
     # does nothing on the LAN until ENV:GFOpenService/Paired lists a Cradle.
@@ -2470,7 +2680,7 @@ def main() -> int:
     # GFOpenWindows: the commodity, started at boot, and its editor (gfopenprefs)
     # 0.12.2 (0.8.23): no snapshot pin on system requesters (gfopenprefs #181, 0.12.1), and the pin is a toggle: a click
     # on a pushed-in pin unsnaps the window (#184)
-    ow = Part(top, "GFOpenWindows", "0.12.2", "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel scrolls the list last clicked, "
+    ow = Part(top, "GFOpenWindows", None, "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel scrolls the list last clicked, "
                                             "window places, new windows centred until snapped and a snapshot gadget (both on unless switched off in Prefs/Windows)")
     ow.add("Tools/Commodities/GFOpenWindows", (a.openamigaprefs / "Windows/build/os3/GFOpenWindows").read_bytes(),
            "SYS:Tools/Commodities/GFOpenWindows")
@@ -2482,7 +2692,7 @@ def main() -> int:
     # and Angels, AmiCradle's homage to the Amiga's makers and keepers
     # 1.4 (0.8.16): CGTriumvirate and CGTimes, OS 3.2's, else DejaVu Sans and DejaVu Serif (blanker_fonts): the open
     # ROM's disk has no CGTriumvirate or CGTimes
-    bl = Part(top, "GFOpenBlanker", "1.4", "GFOpenBlanker: the screen blanker, and its show, Gods and Angels")
+    bl = Part(top, "GFOpenBlanker", None, "GFOpenBlanker: the screen blanker, and its show, Gods and Angels")
     bl.add("Tools/Commodities/GFOpenBlanker", (a.openamigaprefs / "Blanker/build/os3/GFOpenBlanker").read_bytes(),
            "SYS:Tools/Commodities/GFOpenBlanker")
     bl.add("Tools/Commodities/GFOpenBlanker.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Tools/Commodities/GFOpenBlanker.info")
@@ -2572,7 +2782,7 @@ def main() -> int:
 
     # GFOpenUp Setup: the first-start wizard (gfopenprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:GFOpenAmiga/Setup.done.
-    setup = Part(top, "GFOpenUpSetup", "0.1.8", "GFOpenUp Setup: the first-start wizard, with the startup switches")
+    setup = Part(top, "GFOpenUpSetup", None, "GFOpenUp Setup: the first-start wizard, with the startup switches")
     setup.add("Prefs/GFOpenUp-Setup", (a.openamigaprefs / "Setup/build/os3/GFOpenUp-Setup").read_bytes(), "SYS:Prefs/GFOpenUp-Setup")
     setup.add("Prefs/GFOpenUp-Setup.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/GFOpenUp-Setup.info")
     setup.add("WBStartup/GFOpenUp-Setup", b"", "SYS:WBStartup/GFOpenUp-Setup")
@@ -2929,7 +3139,7 @@ def main() -> int:
 
     # GFOpenFiles: the file manager (gfopenfilemanager). Double-click opens
     # files with their icon's program, else GFOpenView (the GFOpenPrint part).
-    of = Part(top, "GFOpenFiles", "0.4.2", "GFOpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
+    of = Part(top, "GFOpenFiles", None, "GFOpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
     of.add("Utilities/GFOpenFiles", (a.openamigafilemanager / "build/os3/GFOpenFiles").read_bytes(), "SYS:Utilities/GFOpenFiles")
     of.add("Utilities/GFOpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenFiles.info")
     of.write()
@@ -2945,7 +3155,7 @@ def main() -> int:
     tbo = a.openamigaprefs / "TitleBar/build/os3"
     tbb = (tbo / "GFOpenTitle").read_bytes()
     tb = Part(top, "GFOpenTitle", binary_version(tbb, "GFOpenTitle") or "0.7",
-              "GFOpenTitle: AmiCradle's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
+              "GFOpenTitle: the GFOS mark, free memory, a clock, the settings cog and the taskspace on the title bar")
     tb.add("C/GFOpenTitle", tbb, "SYS:C/GFOpenTitle")
     tb.line("startup Run >NIL: C:GFOpenTitle")
     # GFOpenNetwork (gfopenprefs Network/, 0.8, Dale 12 Nov 2026 "make the sound and wifi and network commodities"):
@@ -3058,20 +3268,9 @@ def main() -> int:
         if p:
             p.write()
 
-    # GFOpenMUI: zunemaster.library, MUI from Zune for OS 3.x (gfopenmui), a
-    # preview beside MUI, which it doesn't replace; ZuneTest shows it working.
-    # muimaster.library (0.2) is the face MUI programs open, a forwarder to
-    # zunemaster.library at MUI 3.8's version. It goes only where
-    # LIBS:muimaster.library is absent ("add": a real MUI, or any other
-    # program's file, stays; GFOpenUp's own copy is kept up to date and the
-    # uninstaller removes it).
-    mui = a.openamigamui / "build/os3"
-    om = Part(top, "GFOpenMUI", "0.2.1", "GFOpenMUI: zunemaster.library, a muimaster.library face where there is no MUI (preview), and ZuneTest")
-    om.add("Libs/zunemaster.library", (mui / "zunemaster.library").read_bytes(), "LIBS:zunemaster.library")
-    om.add("Libs/muimaster.library", (mui / "muimaster.library").read_bytes(), "LIBS:muimaster.library", own=True)
-    om.add("Tools/ZuneTest", (mui / "ZuneTest").read_bytes(), "SYS:Tools/ZuneTest")
-    om.add("Tools/ZuneTest.info", icons.icon(icons.WBTOOL, "install", stack=16384), "SYS:Tools/ZuneTest.info")
-    om.write()
+    # GFOpenMUI: the clean-room muimaster.library and its examples (gfopenmui_part), or left out
+    ol = gfopenlayout_part(top, a.openamigamui, a.thinsupport)
+    om = gfopenmui_part(top, a.openamigamui, icons) if ol else None
 
     # GFOpenMulticore: gfopenmulticore.library runs a 68k job on another core of a
     # cores board (gfopenservice.device's cpu.m68k/1), or on the main CPU when
@@ -3191,8 +3390,8 @@ def main() -> int:
                        + [(oin.dir / f"Utilities/GFOpenUp/Docs/{n}.info", "page") for n in ("GFOpenInput.txt", "Design-GFOpenInput.txt", "Gamepads.txt")]
                        if oin else []))
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
-    except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
-        print(f"  (OS 3.2-style icons not made: {e}; the classic ones stay)")
+    except Exception as e:                  # never carry on with the classic icons: the pack's look is wrong without these
+        raise SystemExit(f"the OS 3.2-style icons weren't made: {e!r}")
     try:
         open_icons(a.amigachrome, [
             (a.out / "GFOpenUp.info", "drawer-GFOpenUp"), (top / "Install-GFOpenUp.info", "Install-GFOpenUp"),
@@ -3206,7 +3405,7 @@ def main() -> int:
             + [(setup.dir / "Prefs/GFOpenUp-Setup.info", "GFOpenUp-Setup"),
             (setup.dir / "WBStartup/GFOpenUp-Setup.info", "GFOpenUp-Setup"), (oc.dir / "Utilities/GFOpenCompress.info", "GFOpenCompress"),
             (of.dir / "Utilities/GFOpenFiles.info", "GFOpenFiles"), (op.dir / "Utilities/GFOpenPlay.info", "GFOpenPlay"),
-            (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/GFOpenEdit.info", "GFOpenEdit"),
+            (ed.dir / "Tools/GFOpenEdit.info", "GFOpenEdit"),
             (wr.dir / "Utilities/GFOpenWrite/GFOpenWrite.info", "GFOpenWrite"),
             (wr.dir / "Utilities/GFOpenWrite.info", "drawer-GFOpenWrite"),
             (od.dir / "Utilities/GFOpenDrawer.info", "GFOpenDrawer")]
@@ -3216,7 +3415,10 @@ def main() -> int:
             + ([(pt.dir / "Utilities/GFOpenPuTTY/GFOpenPuTTY.info", "GFOpenPuTTY")] if pt else [])
             # the icon library's GFOpenTata and Telegram (#104), when those parts are in the pack
             + ([(tt.dir / "Prefs/GFOpenTata.info", "GFOpenTata")] if tt else [])
-            + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else []),
+            + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else [])
+            # GFOpenMUI's examples, when the part is in the pack
+            + ([(om.dir / f"Tools/GFOpenMUI/{ex}.info", "MUIExample") for ex in ("MUIClasses", "MUIAddons", "MUITime")
+                if (om.dir / f"Tools/GFOpenMUI/{ex}.info").is_file()] if om else []),
             drawers={a.out / "GFOpenUp.info": [top / "Install-GFOpenUp.info", top / "Uninstall-GFOpenUp.info"],
                      core.dir / "Utilities/GFOpenUp.info": [core.dir / "Utilities/GFOpenUp/Uninstall-GFOpenUp.info"],
                      opp.dir / "Preferences.info": [opp.dir / "Preferences/GFOpenPrefs.info"]
@@ -3224,8 +3426,8 @@ def main() -> int:
                      pr.dir / "Icons/GFOpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info")),
                      wr.dir / "Utilities/GFOpenWrite.info": [wr.dir / "Utilities/GFOpenWrite/GFOpenWrite.info"]},
             )
-    except Exception as e:                  # an amicradle checkout without amiga_icon (before #153): the icons above stay
-        print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
+    except Exception as e:                  # never carry on: a dock of generic icons (Ivanova's pack lab, 14 Nov 2026)
+        raise SystemExit(f"the Open apps' icons weren't made: {e!r}")
     # GFOpenUp's own drawers as GFOpenIcons look B drawers with their program's motif (W78, 18 October 2026, Dale:
     # "we need to fix those older icons to our new style"), over the Gorilla-era drawer-NAME and Boxie drawers
     # above; each keeps its window and place. The apps' own animated icons stay as ICONS.md section 1 has them.
@@ -3239,6 +3441,7 @@ def main() -> int:
         print(f"  GFOpenUp's own drawers in GFOpenIcons look B: {n}")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
     check_part_versions(top / "Parts")
+    check_opened_libraries(top / "Parts")
     if browser_top:
         check_part_versions(browser_top / "Parts")
     for t in [top] + ([browser_top] if browser_top else []):
