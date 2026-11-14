@@ -557,6 +557,41 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_kickset.c"), "-o", str(ks)], check=True)
         r = subprocess.run([str(ks)], capture_output=True, text=True)
         check("GFOpenUpTool KICKSET bodies (tests/test_openup_kickset.c)", r.returncode == 0, r.stdout[-600:])
+        # one part owns each file (Team 5, 14 Nov 2026, fault 4): two parts writing one path stop the pack
+        cp = tmp / "clash" / "Parts"
+        def part(name, files, sub=""):
+            d = cp / sub / name if sub else cp / name
+            d.mkdir(parents=True, exist_ok=True)
+            lines = [f"part {name} 1.0", "; test"]
+            for rel, data, dest, how in files:
+                (d / rel).parent.mkdir(parents=True, exist_ok=True)
+                (d / rel).write_bytes(data)
+                lines.append(f'{how} "{rel}" "{dest}"')
+            (d / "Part").write_text("\n".join(lines) + "\n", encoding="latin-1")
+        part("GFOpenRTG", [("Libs/gfopengpu.library", b"rtg build", "LIBS:gfopengpu.library", "add"),
+                           ("Libs/gfopenrtg.library", b"rtg", "LIBS:gfopenrtg.library", "add")])
+        part("GFOpenGPU", [("Libs/gfopengpu.library", b"gpu build", "LIBS:gfopengpu.library", "add"),
+                           ("Libs/z.library", b"zlib", "LIBS:z.library", "copy")])
+        part("GFOffice", [("Libs/z.library", b"zlib", "LIBS:z.library", "copy")])
+        part("Sound", [("Devs/AHI/acaudio.audio", b"one", "DEVS:AHI/acaudio.audio", "copy")])
+        part("GFOpenLibs-rexx", [("Libs/rexx.library", b"r", "LIBS:rexx.library", "copy")], sub="GFOpenLibs")
+        part("KickstartSet", [("Devs/AHI/acaudio.audio", b"one", "devs:ahi/acaudio.audio", "unless GFOpenKick copy"),
+                              ("Libs/rexx.library", b"r", "LIBS:rexx.library", "copy")])
+        got = bp.check_clashes(cp)
+        check("two parts, one path, different bytes: stops the pack",
+              any(g.startswith("libs:gfopengpu.library: written by GFOpenGPU, GFOpenRTG with different bytes") for g in got),
+              "\n".join(got))
+        check("a SHARED_PATHS path with the same bytes is allowed", not any(g.startswith("libs:z.library") for g in got),
+              "\n".join(got))
+        check("the same bytes but not in SHARED_PATHS still stop it (a condition, another case, a drawer below)",
+              any(g.startswith("devs:ahi/acaudio.audio: written by KickstartSet, Sound (the same bytes") for g in got)
+              and any(g.startswith("libs:rexx.library: written by GFOpenLibs-rexx, KickstartSet") for g in got),
+              "\n".join(got))
+        check("nothing else is called a clash", len(got) == 3, "\n".join(got))
+        n = bp.write_pack_list(cp, tmp / "clash" / "PACK-LIST.txt")
+        pl = (tmp / "clash" / "PACK-LIST.txt").read_text(encoding="latin-1").splitlines()
+        check("PACK-LIST.txt: every installed file with its part, size and SHA-256", n == 9 and len(pl) == 10
+              and "GFOpenRTG\tLIBS:gfopenrtg.library\t3\t" in "\n".join(pl), "\n".join(pl))
         un = tmp / "test_openup_unattended"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_unattended.c"), "-o", str(un)], check=True)
