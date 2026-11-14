@@ -781,6 +781,12 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_unattended.c"), "-o", str(un)], check=True)
         r = subprocess.run([str(un)], capture_output=True, text=True)
         check("GFOpenUpTool UPDATE unattended (tests/test_openup_unattended.c)", r.returncode == 0, r.stdout[-600:])
+        tk = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
+        rs = tk[tk.find("static int reinstall(const char *parts)"):]
+        rs = rs[:rs.find("\n}\n")]
+        check("REINSTALL runs KickstartSet through KICKSET (prune, other CPU's bodies, status), so AUTO's skip loses "
+              "nothing (Mamet's CHANGES on #263)",
+              "kickset(part_drawers[j], NULL)" in rs and "ou_auto_kickset_after(" in tk, rs[-900:])
         inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
         check("the Installer offers the ROM's Startup-Sequence, never replacing it unasked",
               'STARTUPSEQ CHECK' in inst and 'STARTUPSEQ ROM' in inst and 'STARTUPSEQ KEEP' in inst)

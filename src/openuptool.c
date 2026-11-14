@@ -1632,10 +1632,14 @@ static int reinstall(const char *parts)
             continue;
         }
         {
-            int r = install(part_drawers[j]);
+            /* KickstartSet through KICKSET, as AUTO and the Installer run it: install, then the older set's modules
+             * the new Manifest doesn't list to .retired (kickload refuses the set with them), another CPU's bodies
+             * out, and ENV:GFOpenUp/KickstartSet's status (Mamet's CHANGES on #263) */
+            int ks = !strcmp(part_names[j], "KickstartSet");
+            int r = ks ? kickset(part_drawers[j], NULL) : install(part_drawers[j]);
             if (r > rc) rc = r;
             done++;
-            if (!strcmp(part_names[j], "KickstartSet")) kickset_reinstalled = r > RETURN_WARN ? -1 : 1;
+            if (ks) kickset_reinstalled = r > RETURN_WARN ? -1 : 1;
         }
     }
     reinstalling = 0;
