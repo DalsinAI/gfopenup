@@ -1592,6 +1592,8 @@ static void find_parts(const char *drawer, int depth)
 
 static int reinstalled;                             /* the parts REINSTALL put in again (UPDATE AUTO's log line) */
 
+static int kickset_reinstalled;   /* REINSTALL's KickstartSet in this run: 1 in, -1 failed, 0 not (ou_auto_kickset_after) */
+
 /* Before REINSTALL puts part j in: each part its Part file needs ("needs part") that the disk hasn't got and the pack
  * has goes in first, else INSTALL would leave part j out. GFOpenMUI 19.0 needs the GFOpenLayout part, which no earlier
  * pack had (Ivanova's lab, bundle C, 14 Nov 2026); before, an update kept the old GFOpenMUI. One level: a needed part's
@@ -1631,6 +1633,7 @@ static int reinstall(const char *parts)
     int nwanted = 0, i, j, rc = RETURN_OK, done = 0;
     reinstalled = 0;
     kept_newer = 0;
+    kickset_reinstalled = 0;
     set_env("GFOpenUp/Left", "");                   /* an early return never leaves an earlier run's list */
     manifest_load();
     if (manifest_short) {
@@ -1662,9 +1665,14 @@ static int reinstall(const char *parts)
         }
         reinstall_needs(j, &rc, &done);
         {
-            int r = install(part_drawers[j]);
+            /* KickstartSet through KICKSET, as AUTO and the Installer run it: install, then the older set's modules
+             * the new Manifest doesn't list to .retired (kickload refuses the set with them), another CPU's bodies
+             * out, and ENV:GFOpenUp/KickstartSet's status (Mamet's CHANGES on #263) */
+            int ks = !strcmp(part_names[j], "KickstartSet");
+            int r = ks ? kickset(part_drawers[j], NULL) : install(part_drawers[j]);
             if (r > rc) rc = r;
             done++;
+            if (ks) kickset_reinstalled = r > RETURN_WARN ? -1 : 1;
         }
     }
     reinstalling = 0;
@@ -4302,8 +4310,9 @@ static int update(const char *how)
     if (!show_changes()) say("  (the same parts, updated in place)", NULL, NULL);
     if (unattended) {
         int rc = reinstall(CRADLE_DRAWER "/Parts");
-        auto_kick = 0;
-        if (rc < RETURN_ERROR && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
+        auto_kick = kickset_reinstalled;            /* REINSTALL's own KickstartSet, when the manifest lists it */
+        if (rc < RETURN_ERROR && ou_auto_kickset_after(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"),
+                                                       kickset_reinstalled)) {
             int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
             auto_kick = r > RETURN_WARN ? -1 : 1;
             if (r > rc) rc = r;
