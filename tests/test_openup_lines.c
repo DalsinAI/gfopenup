@@ -400,7 +400,7 @@ static int install_part(const char *part, const char *manifest, int fail)
                 if (!oul_installed(ents, nents, need)) { printf("missing %s\n", need); refused = 1; }
             } else if (pass == 1 && (need = oul_needs_part(w, n))) {
                 add(OUL_NEEDPART, partname, need);
-            } else if (pass == 1 && !strcmp(w[0], "drop") && n >= 2) {
+            } else if (pass == 1 && !strcmp(w[0], "drop") && n == 2) {   /* with <text> it reads the file: not here */
                 /* openuptool.c drop_file: a listed file leaves the manifest (here taken as still GFOpenUp's bytes) */
                 for (i = 0; i < nents; i++)
                     if (ents[i].kind[0] && !strcmp(ents[i].a, w[1])) {

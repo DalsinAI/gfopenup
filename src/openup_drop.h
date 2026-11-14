@@ -27,4 +27,18 @@ static int oud_action(const char *kind, int ours)
     return OUD_NONE;                        /* dir, startup, part...: not a file this takes out */
 }
 
+/* "drop <dest> <text>": 1 when the file's bytes (n of them, NULs and all) hold text, so only that file goes (GFOpenMUI
+ * 0.2.1's muimaster.library, "a face over zunemaster.library", 19.1, which INSTALL's newer-file rule kept over the
+ * clean-room 19.0 and which needs the zunemaster.library the same part drops: Ivanova's lab, 14 Nov 2026). No text:
+ * any file; nothing read: no. */
+static inline int oud_has_text(const char *buf, long n, const char *text)
+{
+    long i, t = (long)strlen(text);
+    if (!t) return 1;
+    if (!buf || n < t) return 0;
+    for (i = 0; i + t <= n; i++)
+        if (buf[i] == text[0] && !memcmp(buf + i, text, (size_t)t)) return 1;
+    return 0;
+}
+
 #endif

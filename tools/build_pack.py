@@ -1975,6 +1975,9 @@ def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
         raise SystemExit(f"GFOpenMUI: {lib} has no muimaster.library version string")
     om = Part(top, "GFOpenMUI", ver, f"GFOpenMUI: muimaster.library {ver}, the AmiCradle Team's own MUI on GFOpenLayout, "
                                      "where no MUI is, and its examples")
+    # 0.2.1's muimaster.library, the face over zunemaster.library (19.1), out first where GFOpenUp put it: the newer-
+    # file rule would keep it over this 19.0, and it needs the zunemaster.library dropped below (Ivanova's lab, 14 Nov)
+    om.line('drop "LIBS:muimaster.library" "a face over zunemaster.library"')
     om.add("Libs/muimaster.library", data, "LIBS:muimaster.library", own=True)
     for ex in ("MUIClasses", "MUIAddons", "MUITime"):
         f = b / "tests" / ex

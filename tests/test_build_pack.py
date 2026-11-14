@@ -592,6 +592,10 @@ def main() -> int:
               and "zunetest" not in (ROOT / "tools/open_icons_art.py").read_text(encoding="utf-8").lower())
         # Lorien's note on #253: an upgrade from GFOpenMUI 0.2.1 takes out GFOpenUp's own zunemaster.library and
         # ZuneTest ("drop": only a file the manifest lists as GFOpenUp's; src/openup_drop.h)
+        face = 'drop "LIBS:muimaster.library" "a face over zunemaster.library"'
+        check("GFOpenMUI drops 0.2.1's muimaster.library face (only that file) before it adds its own (Ivanova's lab)",
+              face in lines and lines.index(face) < lines.index('add "Libs/muimaster.library" "LIBS:muimaster.library"'),
+              "\n".join(lines))
         check("GFOpenMUI drops 0.2.1's zunemaster.library and ZuneTest, where GFOpenUp put them",
               all(f'drop "{d}"' in lines for d in ("LIBS:zunemaster.library", "SYS:Tools/ZuneTest", "SYS:Tools/ZuneTest.info")),
               "\n".join(lines))
