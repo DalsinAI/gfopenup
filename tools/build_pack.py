@@ -2114,6 +2114,9 @@ def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
         raise SystemExit(f"GFOpenMUI: {lib} has no muimaster.library version string")
     om = Part(top, "GFOpenMUI", ver, f"GFOpenMUI: muimaster.library {ver}, the AmiCradle Team's own MUI on GFOpenLayout, "
                                      "where no MUI is, and its examples")
+    # 0.2.1's muimaster.library, the face over zunemaster.library (19.1), out first where GFOpenUp put it: the newer-
+    # file rule would keep it over this 19.0, and it needs the zunemaster.library dropped below (Ivanova's lab, 14 Nov)
+    om.line('drop "LIBS:muimaster.library" "a face over zunemaster.library"')
     om.add("Libs/muimaster.library", data, "LIBS:muimaster.library", own=True)
     # the gfopenlayout.library it opens is the GFOpenLayout part's (gfopenlayout_part): INSTALL leaves GFOpenMUI out
     # without it, and REINSTALL puts it in first (Team 5 on Ivanova's bundle C, row 10)
@@ -2125,6 +2128,13 @@ def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
             if icons:
                 om.add(f"Tools/GFOpenMUI/{ex}.info", icons.icon(icons.WBTOOL, "install", stack=16384),
                        f"SYS:Tools/GFOpenMUI/{ex}.info")
+    # GFOpenMUI 0.2.1's Zune files out of an upgraded disk, where GFOpenUp put them (its manifest says so): a user's
+    # own copy stays (Lorien's note on #253, 14 Nov 2026)
+    # zunemaster.library stays while a face over it is still in LIBS: (one the user changed, which the drop above
+    # leaves: Flibble's note, Ivanova's lab bundle C row 13)
+    om.line('drop "LIBS:zunemaster.library" unless "LIBS:muimaster.library" "a face over zunemaster.library"')
+    for d in ("SYS:Tools/ZuneTest", "SYS:Tools/ZuneTest.info"):
+        om.line(f'drop "{d}"')
     om.write()
     return om
 

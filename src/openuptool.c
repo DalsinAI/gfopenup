@@ -99,6 +99,12 @@
  *                                        put it there; another program's stays)
  *   retire <dest>                       (moved to SYS:Storage/GFOpenUp-Superseded,
  *                                        so it no longer runs; UNINSTALL puts it back)
+ *   drop <dest> [<text>] [unless <path> <text>]
+ *                                       (14 Nov 2026: a file an earlier version of the part put there that
+ *                                        it no longer has; taken out as REMOVE would, only where the
+ *                                        manifest lists it as GFOpenUp's; with <text>, only when the
+ *                                        file holds it; with unless, it stays while the file at <path>
+ *                                        holds that text; src/openup_drop.h)
  *   face <icon in the drawer> <dest .info>  (0.6: the icon's picture only; dest keeps
  *                                        its type, tools, tool types and window;
  *                                        left alone when the machine hasn't got it)
@@ -147,6 +153,7 @@
 #include "openup_kickset.h"
 #include "openup_slimrom.h"            /* DETECT SlimROM (0.8.x) */
 #include "openup_vers.h"               /* an older file never over a newer one */
+#include "openup_drop.h"               /* REMOVE's and INSTALL's drop: one listed file taken out */
 #include "openup_left.h"               /* REINSTALL: the parts the pack hasn't got, for the Installer */
 #include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
 
@@ -536,7 +543,7 @@ static entry *find_entry(const char *kind, const char *a)
 {
     int i;
     for (i = 0; i < nents; i++)
-        if (!strcmp(ents[i].a, a) && (!kind || !strcmp(ents[i].kind, kind)))
+        if (oud_match(ents[i].kind, ents[i].a, kind, a))   /* a cleared entry has left the list (openup_drop.h) */
             return &ents[i];
     return NULL;
 }
@@ -1281,6 +1288,79 @@ static void mark_startup(const char *part)
             strcpy(ents[i].kind, "ostartup");
 }
 
+/* One file the manifest lists taken out, as REMOVE does (src/openup_drop.h): GFOpenUp's own bytes deleted, a file
+ * it put over another's gets that original back, one changed since stays; the entry leaves the list either way,
+ * and the drawers GFOpenUp made for it go while empty. Counts into removed and restored; 1 when the file went or
+ * came back, 0 when there was nothing to do, -1 on a problem (said). */
+static int take_out(entry *e, const char *dest, int *removed, int *restored)
+{
+    char dir[ENTRY_PATH];
+    int r = 1;
+    switch (oud_action(e ? e->kind : NULL, e && !strcmp(e->kind, "new") ? still_ours(e) : 0)) {
+    case OUD_STAYS:
+        /* other bytes than GFOpenUp wrote (its mark): someone else's file now, so it stays, and leaves the list */
+        say("GFOpenUp: ", e->a, " has changed since GFOpenUp put it there, so it stays.");
+        e->kind[0] = 0;
+        return 0;
+    case OUD_DELETE:
+        if (DeleteFile((STRPTR)e->a) || !exists(e->a)) { (*removed)++; e->kind[0] = 0; }
+        else { say("GFOpenUp: can't delete ", e->a, "; is it in use?"); return -1; }
+        break;
+    case OUD_RESTORE:
+        if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); (*restored)++; e->kind[0] = 0; }
+        else { say("GFOpenUp: can't put back ", e->a, "; its original is in SYS:Storage/GFOpenUp-Superseded."); return -1; }
+        break;
+    case OUD_FORGET:
+        e->kind[0] = 0;
+        return 0;
+    default:
+        return 0;
+    }
+    /* the directories GFOpenUp made for it, deepest first, while empty */
+    parent_of(dest, dir, sizeof dir);
+    while (dir[0] && dir[strlen(dir) - 1] != ':') {
+        char up[ENTRY_PATH];
+        entry *d = find_entry("dir", dir), *f;
+        if (!d || !DeleteFile((STRPTR)dir)) break;
+        d->kind[0] = 0;
+        /* a file that was where the drawer went (INSTALL's clear_way, 25 Oct 2026) comes back now it's gone */
+        if ((f = find_entry("replaced", dir))) {
+            if (copy_file(f->b, f->a, 0)) { DeleteFile((STRPTR)f->b); (*restored)++; f->kind[0] = 0; }
+            else { say("GFOpenUp: can't put back ", f->a, "; it is in SYS:Storage/GFOpenUp-Superseded."); r = -1; }
+        }
+        parent_of(dir, up, sizeof up);
+        strcpy(dir, up);
+    }
+    return r;
+}
+
+/* INSTALL's "drop <dest>": a file an earlier version of the part put there that this one no longer has (GFOpenMUI
+ * 0.2.1's zunemaster.library and ZuneTest). Only one the manifest lists is touched; the user's own stays. */
+static int file_has_text(const char *path, const char *text)
+{
+    LONG n = 0;
+    char *b = read_file(path, &n);
+    int has = oud_has_text(b, b ? n : 0, text);
+    if (b) FreeVec(b);
+    return has;
+}
+
+static int drop_file(const char *dest, const char *text, const char *upath, const char *utext)
+{
+    int removed = 0, restored = 0, r;
+    if (!find_entry(NULL, dest))
+        return 0;                                   /* not listed: the user's own, or never there */
+    if (text && *text && !file_has_text(dest, text))
+        return 0;                                   /* only the file holding that text (oud_has_text) */
+    if (upath && utext && exists(upath) && file_has_text(upath, utext)) {
+        say("GFOpenUp: ", dest, " stays: a file that needs it is still there.");
+        return 0;                                   /* "unless <path> <text>": still needed (oud_words) */
+    }
+    r = take_out(find_entry(NULL, dest), dest, &removed, &restored);
+    if (r > 0) Printf((STRPTR)"GFOpenUp: %s taken out (the part no longer has it)\n", (LONG)dest);
+    return r;
+}
+
 static unsigned kickset_host(void);
 
 static int install(const char *drawer)
@@ -1391,6 +1471,10 @@ static int install(const char *drawer)
                 case 1: files++; break;
                 case -1: errors++; break;
                 }
+            } else if (pass == 1 && !strcmp(w[0], "drop") && n >= 2) {
+                const char *dt, *up, *ut;
+                oud_words(w, n, &dt, &up, &ut);
+                if (drop_file(w[1], dt, up, ut) < 0) errors++;  /* a file taken out isn't one installed: not in files */
             } else if (pass == 1 && (!strcmp(w[0], "copy") || !strcmp(w[0], "default") || !strcmp(w[0], "add"))
                        && n >= 3) {
                 /* A body for another CPU is not this machine's. It stays in the pack and is not copied. */
@@ -1507,7 +1591,7 @@ static int remove_part(const char *drawer)
         }
     }
     for (p = text; *p; ) {
-        char *w[12], dir[ENTRY_PATH];
+        char *w[12];
         const char *dest = NULL;
         entry *e;
         int n;
@@ -1537,36 +1621,7 @@ static int remove_part(const char *drawer)
             Printf((STRPTR)"GFOpenUp: %s stays: %s, which is installed, has it too.\n", (LONG)e->a, (LONG)by);
             continue;
         }
-        if (!strcmp(e->kind, "new") && !still_ours(e)) {
-            /* other bytes than GFOpenUp wrote (its mark): someone else's file now, so it stays, and leaves the list */
-            say("GFOpenUp: ", e->a, " has changed since GFOpenUp put it there, so it stays.");
-            e->kind[0] = 0;
-            continue;
-        } else if (!strcmp(e->kind, "new")) {
-            if (DeleteFile((STRPTR)e->a) || !exists(e->a)) { removed++; e->kind[0] = 0; }
-            else { say("GFOpenUp: can't delete ", e->a, "; is it in use?"); problems++; continue; }
-        } else if (!strcmp(e->kind, "replaced")) {
-            if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; e->kind[0] = 0; }
-            else { say("GFOpenUp: can't put back ", e->a, "; its original is in SYS:Storage/GFOpenUp-Superseded."); problems++; continue; }
-        } else if (!strcmp(e->kind, "same")) {
-            e->kind[0] = 0;
-            continue;
-        } else continue;
-        /* the directories GFOpenUp made for it, deepest first, while empty */
-        parent_of(dest, dir, sizeof dir);
-        while (dir[0] && dir[strlen(dir) - 1] != ':') {
-            char up[ENTRY_PATH];
-            entry *d = find_entry("dir", dir), *f;
-            if (!d || !DeleteFile((STRPTR)dir)) break;
-            d->kind[0] = 0;
-            /* a file that was where the drawer went (INSTALL's clear_way, 25 Oct 2026) comes back now it's gone */
-            if ((f = find_entry("replaced", dir))) {
-                if (copy_file(f->b, f->a, 0)) { DeleteFile((STRPTR)f->b); restored++; f->kind[0] = 0; }
-                else { say("GFOpenUp: can't put back ", f->a, "; it is in SYS:Storage/GFOpenUp-Superseded."); problems++; }
-            }
-            parent_of(dir, up, sizeof up);
-            strcpy(dir, up);
-        }
+        if (take_out(e, dest, &removed, &restored) < 0) problems++;
     }
     FreeVec(text);
     for (i = 0; i < nparts; i++)
@@ -1630,6 +1685,8 @@ static void find_parts(const char *drawer, int depth)
 
 static int reinstalled;                             /* the parts REINSTALL put in again (UPDATE AUTO's log line) */
 
+static int kickset_reinstalled;   /* REINSTALL's KickstartSet in this run: 1 in, -1 failed, 0 not (ou_auto_kickset_after) */
+
 /* Before REINSTALL puts part j in: each part its Part file needs ("needs part") that the disk hasn't got and the pack
  * has goes in first, else INSTALL would leave part j out. GFOpenMUI 19.0 needs the GFOpenLayout part, which no earlier
  * pack had (Ivanova's lab, bundle C, 14 Nov 2026); before, an update kept the old GFOpenMUI. One level: a needed part's
@@ -1669,6 +1726,7 @@ static int reinstall(const char *parts)
     int nwanted = 0, i, j, rc = RETURN_OK, done = 0;
     reinstalled = 0;
     kept_newer = 0;
+    kickset_reinstalled = 0;
     set_env("GFOpenUp/Left", "");                   /* an early return never leaves an earlier run's list */
     manifest_load();
     if (manifest_short) {
@@ -1700,9 +1758,14 @@ static int reinstall(const char *parts)
         }
         reinstall_needs(j, &rc, &done);
         {
-            int r = install(part_drawers[j]);
+            /* KickstartSet through KICKSET, as AUTO and the Installer run it: install, then the older set's modules
+             * the new Manifest doesn't list to .retired (kickload refuses the set with them), another CPU's bodies
+             * out, and ENV:GFOpenUp/KickstartSet's status (Mamet's CHANGES on #263) */
+            int ks = !strcmp(part_names[j], "KickstartSet");
+            int r = ks ? kickset(part_drawers[j], NULL) : install(part_drawers[j]);
             if (r > rc) rc = r;
             done++;
+            if (ks) kickset_reinstalled = r > RETURN_WARN ? -1 : 1;
         }
     }
     reinstalling = 0;
@@ -4292,6 +4355,11 @@ static int update_logged(int by, const char *installed, const char *newer, int d
  * the installed parts reinstalled from the pack (the settings in place stay,
  * no part added), the startup block written again, one line in the log.
  * It never runs on its own, and it never changes anything until asked. */
+#ifndef KICKSET_DIR
+#define KICKSET_DIR "SYS:Kickstart/default/"
+#endif
+#define PACK_KICK_MANIFEST CRADLE_DRAWER "/Parts/KickstartSet/Kickstart/default/Manifest"   /* build_pack's */
+
 static int update(const char *how)
 {
     char newer[24] = "", installed[24] = "";
@@ -4312,16 +4380,32 @@ static int update(const char *how)
         return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
     }
     if (version_cmp(newer, installed) <= 0) {
-        say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
-        return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
+        int rc = RETURN_OK;
+        auto_kick = 0;
+        /* an older GFOpenUpTool did the update and left the Kickstart set out (ou_set_stale): the set now */
+        if (unattended && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
+            LONG nh = 0, np = 0;
+            char *have = read_file(KICKSET_DIR "Manifest", &nh), *pack = read_file(PACK_KICK_MANIFEST, &np);
+            int stale = ou_set_stale(have, nh, pack, np);
+            if (have) FreeVec(have);
+            if (pack) FreeVec(pack);
+            if (stale) {
+                int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
+                auto_kick = r > RETURN_WARN ? -1 : 1;
+                rc = r;
+            }
+        }
+        if (!auto_kick) say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
+        return unattended ? update_logged(by, installed, newer, -1, rc) : rc;
     }
     Printf((STRPTR)"GFOpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
     if (check) return RETURN_WARN;
     if (!show_changes()) say("  (the same parts, updated in place)", NULL, NULL);
     if (unattended) {
         int rc = reinstall(CRADLE_DRAWER "/Parts");
-        auto_kick = 0;
-        if (rc < RETURN_ERROR && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
+        auto_kick = kickset_reinstalled;            /* REINSTALL's own KickstartSet, when the manifest lists it */
+        if (rc < RETURN_ERROR && ou_auto_kickset_after(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"),
+                                                       kickset_reinstalled)) {
             int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
             auto_kick = r > RETURN_WARN ? -1 : 1;
             if (r > rc) rc = r;
@@ -4658,7 +4742,9 @@ static int old_dock(void)
  * ENV:GFOpenUp/KickstartSet says "ready" or "missing"; DETECT's ENV:GFOpenUp/SlimROM says whether this ROM is the
  * slim one (kickload in it and no workbench.library of its own), and the Installer then installs the part. Cradle
  * refuses to start an instance or build a card on the slim ROM without the set (amicradle openkick_rom.py). */
+#ifndef KICKSET_DIR
 #define KICKSET_DIR "SYS:Kickstart/default/"
+#endif
 
 static int in_rom_window(ULONG a)
 {
