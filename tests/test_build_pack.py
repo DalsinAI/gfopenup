@@ -615,6 +615,8 @@ def main() -> int:
         inst2 = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
         check("REINSTALL sets GFOpenUp/Left, and the Installer's reinstall screen names the parts in it",
               'oul_left_add(' in tl and '"GFOpenUp/Left"' in tl and '(getenv "GFOpenUp/Left")' in inst2
+              # Talkie Toaster's nit 1: cleared first, so an early return never leaves an earlier run's list
+              and 'set_env("GFOpenUp/Left", "");' in tl[tl.index("static int reinstall("):][:tl[tl.index("static int reinstall("):].index("manifest_load();")]
               and "aren't in this pack" in inst2, "")
         un = tmp / "test_openup_unattended"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",

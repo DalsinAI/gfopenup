@@ -1599,6 +1599,7 @@ static int reinstall(const char *parts)
     int nwanted = 0, i, j, rc = RETURN_OK, done = 0;
     reinstalled = 0;
     kept_newer = 0;
+    set_env("GFOpenUp/Left", "");                   /* an early return never leaves an earlier run's list */
     manifest_load();
     if (manifest_short) {
         manifest_save();                            /* says why */
