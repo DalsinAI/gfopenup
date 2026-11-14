@@ -849,6 +849,30 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_vers.c"), "-o", str(vs)], check=True)
         r = subprocess.run([str(vs)], capture_output=True, text=True)
         check("GFOpenUpTool keeps a newer file (tests/test_openup_vers.c)", r.returncode == 0, r.stdout[-600:])
+        sf = tmp / "test_openup_sysfont"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_sysfont.c"), "-o", str(sf)], check=True)
+        r = subprocess.run([str(sf)], capture_output=True, text=True)
+        check("GFOpenUpTool moves Font prefs' DejaVuSansMono 11 to GFOSMono 11, nothing else (tests/test_openup_sysfont.c)",
+              r.returncode == 0, r.stdout[-600:])
+        tl_sf = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
+        check("GFOpenUpTool moves the system font when it installs GFOSFonts",
+              'if (!strcmp(partname, "GFOSFonts")) move_sysfont();' in tl_sf and "ous_migrate(d, len," in tl_sf and "OUS_KEEP" in tl_sf)
+        ms = tl_sf[tl_sf.index("static int move_sysfont(void)\n{"):]
+        ms = ms[:ms.index("\n}\n")]
+        # Ivanova's lab (14 Nov, LAB: FAIL f11c4ee2): at UPDATE AUTO, reinstalling kept ENVARC:Sys/Font.prefs as it was
+        # while the tool said it had moved the font. The move clears reinstalling for its one write, reads the file
+        # back before it says so, and logs the move.
+        check("GFOpenUpTool's font move writes at UPDATE too, reads it back and logs it",
+              "reinstalling = 0;" in ms and "reinstalling = was;" in ms and "ous_landed(back, blen)" in ms
+              and "log_append(OUS_LOG_LINE);" in ms and ms.index("ous_landed") < ms.index("now GFOS Mono 11"))
+        up = tl_sf[tl_sf.index("static int update(const char *how)\n{"):]
+        up = up[:up.index("\n}\n")]
+        # Dale 19:17 ("Yes, update adds GFOS Fonts"): UPDATE AUTO adds GFOSFonts once where it isn't, after the
+        # reinstall, and also when an older tool did the update (the pack's version already installed)
+        check("GFOpenUpTool UPDATE AUTO adds GFOSFonts where it isn't (ou_auto_gfosfonts)",
+              "static int auto_gfosfonts(void)" in tl_sf and "ou_auto_gfosfonts(find_entry(\"part\", \"GFOSFonts\")" in tl_sf
+              and up.count("auto_gfosfonts()") == 2 and up.index("reinstall(CRADLE_DRAWER") < up.rindex("auto_gfosfonts()"))
         lf = tmp / "test_openup_left"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_left.c"), "-o", str(lf)], check=True)
