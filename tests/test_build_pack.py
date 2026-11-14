@@ -831,6 +831,13 @@ def main() -> int:
         check("GFOpenUpTool's font move writes at UPDATE too, reads it back and logs it",
               "reinstalling = 0;" in ms and "reinstalling = was;" in ms and "ous_landed(back, blen)" in ms
               and "log_append(OUS_LOG_LINE);" in ms and ms.index("ous_landed") < ms.index("now GFOS Mono 11"))
+        up = tl_sf[tl_sf.index("static int update(const char *how)\n{"):]
+        up = up[:up.index("\n}\n")]
+        # Dale 19:17 ("Yes, update adds GFOS Fonts"): UPDATE AUTO adds GFOSFonts once where it isn't, after the
+        # reinstall, and also when an older tool did the update (the pack's version already installed)
+        check("GFOpenUpTool UPDATE AUTO adds GFOSFonts where it isn't (ou_auto_gfosfonts)",
+              "static int auto_gfosfonts(void)" in tl_sf and "ou_auto_gfosfonts(find_entry(\"part\", \"GFOSFonts\")" in tl_sf
+              and up.count("auto_gfosfonts()") == 2 and up.index("reinstall(CRADLE_DRAWER") < up.rindex("auto_gfosfonts()"))
         lf = tmp / "test_openup_left"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_left.c"), "-o", str(lf)], check=True)

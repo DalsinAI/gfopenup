@@ -43,6 +43,9 @@ int main(void)
     CHECK(ou_auto_kickset(1, 1) == 1, "slim ROM, the pack has KickstartSet: AUTO installs it");
     CHECK(ou_auto_kickset(1, 0) == 0, "slim ROM, no KickstartSet in the pack: nothing");
     CHECK(ou_auto_kickset(0, 1) == 0, "another ROM: not installed (the Installer's rule)");
+    CHECK(ou_auto_gfosfonts(0, 1) == 1, "GFOSFonts not installed, in the pack: AUTO adds it (Dale 19:17)");
+    CHECK(ou_auto_gfosfonts(1, 1) == 0, "GFOSFonts installed: the reinstall has it already");
+    CHECK(ou_auto_gfosfonts(0, 0) == 0, "not in the pack: nothing");
     ou_log_line(buf, sizeof buf, 1, OU_BY_FLAG, "0.8.28", "0.8.29", 14, 0);
     CHECK(!strcmp(buf, "GFOpenUpTool UPDATE: unattended (host flag) 0.8.28 to 0.8.29, 14 parts reinstalled, "
                        "the Kickstart set installed: ok"), buf);

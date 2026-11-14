@@ -102,6 +102,14 @@ static int ou_auto_kickset(int slim_rom, int in_pack)
     return slim_rom && in_pack;
 }
 
+/* The other part AUTO adds (Dale, 14 Nov 2026 19:17, "Yes, update adds GFOS Fonts"): GFOSFonts, once, when the
+ * manifest doesn't list it and the pack has it, so the update itself moves the system font to GFOS Mono 11
+ * (openup_sysfont.h). listed: the manifest has the part. 1: install it. */
+static int ou_auto_gfosfonts(int listed, int in_pack)
+{
+    return !listed && in_pack;
+}
+
 /* AUTO with nothing newer to install (14 Nov 2026): an instance's older GFOpenUpTool reinstalled the pack but never
  * installed its Kickstart set, so the next run, by the new tool, finds nothing to do. With ou_auto_kickset's
  * conditions it installs the set still when the disk's SYS:Kickstart/default/Manifest isn't the pack's: missing, or

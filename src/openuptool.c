@@ -4291,6 +4291,17 @@ static int show_changes(void)
     return changes;
 }
 
+/* UPDATE AUTO's GFOSFonts (ou_auto_gfosfonts): installed once when it isn't, which moves the system font
+ * (move_sysfont, from install()). The return code, or RETURN_OK when there was nothing to add. */
+#define PACK_GFOSFONTS CRADLE_DRAWER "/Parts/GFOSFonts"
+static int auto_gfosfonts(void)
+{
+    manifest_load();
+    if (!ou_auto_gfosfonts(find_entry("part", "GFOSFonts") != NULL, exists(PACK_GFOSFONTS "/Part"))) return RETURN_OK;
+    say("GFOpenUp: adding GFOSFonts (GFOS's own fonts; the system font moves to GFOS Mono 11)", NULL, NULL);
+    return install(PACK_GFOSFONTS);
+}
+
 /* The unattended UPDATE's one line, in ENVARC:GFOpenUp/GFOpenUpTool.log and on the Shell; rc back. */
 static int auto_kick;                               /* UPDATE AUTO's Kickstart set: 1 in, -1 failed, 0 not tried */
 
@@ -4308,7 +4319,7 @@ static int update_logged(int by, const char *installed, const char *newer, int d
  * runs the Installer. AUTO (openup_unattended.h; only AUTO, so the menu's
  * plain UPDATE still asks on a card with the host flag) is unattended: no requester and no Installer,
  * the installed parts reinstalled from the pack (the settings in place stay,
- * no part added), the startup block written again, one line in the log.
+ * no part added but GFOSFonts once, Dale 14 Nov: ou_auto_gfosfonts), the startup block written again, one line in the log.
  * It never runs on its own, and it never changes anything until asked. */
 #ifndef KICKSET_DIR
 #define KICKSET_DIR "SYS:Kickstart/default/"
@@ -4350,7 +4361,11 @@ static int update(const char *how)
                 rc = r;
             }
         }
-        if (!auto_kick) say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
+        if (unattended && !find_entry("part", "GFOSFonts") && exists(PACK_GFOSFONTS "/Part")) {
+            int r = auto_gfosfonts();               /* an older GFOpenUpTool did the update, without GFOSFonts */
+            if (r > rc) rc = r;
+        } else if (!auto_kick)
+            say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
         return unattended ? update_logged(by, installed, newer, -1, rc) : rc;
     }
     Printf((STRPTR)"GFOpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
@@ -4359,6 +4374,10 @@ static int update(const char *how)
     if (unattended) {
         int rc = reinstall(CRADLE_DRAWER "/Parts");
         auto_kick = 0;
+        if (rc < RETURN_ERROR) {
+            int r = auto_gfosfonts();
+            if (r > rc) rc = r;
+        }
         if (rc < RETURN_ERROR && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
             int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
             auto_kick = r > RETURN_WARN ? -1 : 1;
