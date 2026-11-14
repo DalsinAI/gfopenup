@@ -1450,10 +1450,7 @@ static int install(const char *drawer)
                 case -1: errors++; break;
                 }
             } else if (pass == 1 && !strcmp(w[0], "drop") && n >= 2) {
-                switch (drop_file(w[1])) {
-                case 1: files++; break;
-                case -1: errors++; break;
-                }
+                if (drop_file(w[1]) < 0) errors++;  /* a file taken out isn't one installed: not in files */
             } else if (pass == 1 && (!strcmp(w[0], "copy") || !strcmp(w[0], "default") || !strcmp(w[0], "add"))
                        && n >= 3) {
                 /* A body for another CPU is not this machine's. It stays in the pack and is not copied. */

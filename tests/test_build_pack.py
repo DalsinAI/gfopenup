@@ -595,6 +595,19 @@ def main() -> int:
         check("GFOpenMUI drops 0.2.1's zunemaster.library and ZuneTest, where GFOpenUp put them",
               all(f'drop "{d}"' in lines for d in ("LIBS:zunemaster.library", "SYS:Tools/ZuneTest", "SYS:Tools/ZuneTest.info")),
               "\n".join(lines))
+        # Londo's note on #257: through INSTALL's own line handling (test_openup_lines install): 0.2.1's files the
+        # manifest lists as GFOpenUp's leave it, a file it doesn't list is left alone, and the rest stays
+        old = ("GFOpenUp\t0.1\npart\tGFOpenMUI\t0.2.1\nnew\tLIBS:zunemaster.library\nnew\tSYS:Tools/ZuneTest\n"
+               "replaced\tLIBS:muimaster.library\tSYS:Storage/GFOpenUp-Superseded/muimaster.library\n"
+               "new\tSYS:C/GFOpenUpTool\n")
+        rc, mo = manifest_run(filt, "install", om.dir / "Part", old, tmp)
+        mo_lines = [x for x in mo.splitlines() if not x.startswith("GFOpenUp\t")]
+        check("INSTALL of GFOpenMUI over 0.2.1: its Zune files leave the manifest, the rest stays, the part is 19.0",
+              rc == 0 and "new\tLIBS:zunemaster.library" not in mo_lines and "new\tSYS:Tools/ZuneTest" not in mo_lines
+              and "new\tSYS:C/GFOpenUpTool" in mo_lines and "part\tGFOpenMUI\t19.0" in mo_lines
+              and any(x.startswith("replaced\tLIBS:muimaster.library") for x in mo_lines), mo)
+        rc, mo2 = manifest_run(filt, "install", om.dir / "Part", mo, tmp)
+        check("INSTALL again: nothing more goes (the drop lines find nothing listed)", rc == 0 and [x for x in mo2.splitlines() if not x.startswith("GFOpenUp\t")] == mo_lines, mo2)
         dr = tmp / "test_openup_drop"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_drop.c"), "-o", str(dr)], check=True)

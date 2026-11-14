@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "openup_drop.h"
 #include "openup_lines.h"
 
 static int fails;
@@ -399,6 +400,13 @@ static int install_part(const char *part, const char *manifest, int fail)
                 if (!oul_installed(ents, nents, need)) { printf("missing %s\n", need); refused = 1; }
             } else if (pass == 1 && (need = oul_needs_part(w, n))) {
                 add(OUL_NEEDPART, partname, need);
+            } else if (pass == 1 && !strcmp(w[0], "drop") && n >= 2) {
+                /* openuptool.c drop_file: a listed file leaves the manifest (here taken as still GFOpenUp's bytes) */
+                for (i = 0; i < nents; i++)
+                    if (ents[i].kind[0] && !strcmp(ents[i].a, w[1])) {
+                        if (oud_action(ents[i].kind, 1) != OUD_NONE) ents[i].kind[0] = 0;
+                        break;
+                    }
             }
         }
         free(copy);
