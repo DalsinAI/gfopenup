@@ -5,7 +5,7 @@ archive (DESIGN.md sections 3 and 4).
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
         [--guest DIR] [--openamigaservice DIR] [--opendatatypes DIR] [--openamigartg DIR]
-        [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
+        [--openamigafilemanager DIR] [--openamigamedia DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--gfoffice DIR] [--openamigalayout DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
@@ -611,6 +611,38 @@ def guest_stove(script: Path, env: dict, home: Path | None = None) -> dict:
     return dict(env, STOVE=str(GUEST_STOVE))
 
 
+def filemanager_env(a, env: dict) -> dict:
+    """GFOpenFiles' build.sh: GFOpenGadTools and the guest, and GFOpenCompress, GFOpenFTP and GFOpenMedia by the
+    checkouts this build was given, not whatever sits beside gfopenfilemanager (Corwin's 14 Nov build: no MEDIA)."""
+    e = dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest), OC=str(a.openamigacompress))
+    if getattr(a, "openamigaftp", None):
+        e["FTP"] = str(a.openamigaftp)
+    if getattr(a, "openamigamedia", None):
+        e["MEDIA"] = str(a.openamigamedia)
+    return e
+
+
+# GFOpenCompress's run-time libraries (gfopencompress build-os3.sh since 6 Nov 2026): RAR, 7z, bzip2 and xz, and
+# crunched files (PowerPacker, Imploder, XPK...). GFOpenCompress's part owns them; GFOpenFiles opens the same ones.
+COMPRESS_LIBS = ("gfopencompress_archive.library", "gfopencompress_crunch.library")
+
+
+def compress_part(top: Path, oc_dir: Path, icons) -> "Part":
+    """Parts/GFOpenCompress: the program in SYS:Utilities and its two libraries in LIBS:; the build stops when one
+    of the three wasn't built."""
+    b = oc_dir / "build/os3"
+    oc = Part(top, "GFOpenCompress", None, "GFOpenCompress: archives and disk images, from its window or the Shell")
+    for f in ("GFOpenCompress",) + COMPRESS_LIBS:
+        if not (b / f).is_file():
+            raise SystemExit(f"GFOpenCompress: {b / f} wasn't built (gfopencompress build-os3.sh)")
+    oc.add("Utilities/GFOpenCompress", (b / "GFOpenCompress").read_bytes(), "SYS:Utilities/GFOpenCompress")
+    oc.add("Utilities/GFOpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenCompress.info")
+    for lib in COMPRESS_LIBS:
+        oc.add(f"Libs/{lib}", (b / lib).read_bytes(), f"LIBS:{lib}", own=True)
+    oc.write()
+    return oc
+
+
 def build_parts(a):
     """Each part's own build, into its own build folder."""
     env = dict(os.environ, AMIGA_CC=str(CC), PATH=f"{CC.parent}:{os.environ['PATH']}")
@@ -694,7 +726,7 @@ def build_parts(a):
             env=dict(os.environ, RTG=str(a.openamigartg), CROSS="mesa/cross/m68k-amigaos.ini", GL_OUT=str(gl_out),
                      PATH=f"{stove16 / 'bin'}:{os.environ['PATH']}"))
     # GFOpenFiles' zlib is our openzlib, from the guest checkout (GUEST), not a libz.a beside it
-    run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest)))
+    run(["sh", a.openamigafilemanager / "build.sh"], env=filemanager_env(a, env))
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamui / "os3/build.sh"], env=env)
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
@@ -2104,6 +2136,8 @@ def main() -> int:
     ap.add_argument("--openamigartg", type=Path, default=first(DEV / "gfopenrtg", DEV.parent / "gfopenrtg"))
     ap.add_argument("--openamigafilemanager", type=Path,
                     default=first(DEV / "gfopenfilemanager", DEV.parent / "gfopenfilemanager"))
+    ap.add_argument("--openamigamedia", type=Path, default=first(DEV / "gfopenmedia", DEV.parent / "gfopenmedia"),
+                    help="gfopenmedia, which GFOpenFiles' build needs (its MEDIA)")
     ap.add_argument("--openamigamediaplayer", type=Path,
                     default=first(DEV / "gfopenmediaplayer", DEV.parent / "gfopenmediaplayer"))
     ap.add_argument("--openamigamui", type=Path, default=first(DEV / "gfopenmui", DEV.parent / "gfopenmui"))
@@ -2370,10 +2404,7 @@ def main() -> int:
     # GFOpenCompress: one program, the window from Workbench and the command in
     # the Shell (SYS:Utilities is in the Shell's path)
     # 0.3.3 (0.8.19): inflate through z.library at run time (gfopencompress #24), 53.12 refused
-    oc = Part(top, "GFOpenCompress", None, "GFOpenCompress: archives and disk images, from its window or the Shell")
-    oc.add("Utilities/GFOpenCompress", (a.openamigacompress / "build/os3/GFOpenCompress").read_bytes(), "SYS:Utilities/GFOpenCompress")
-    oc.add("Utilities/GFOpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenCompress.info")
-    oc.write()
+    compress_part(top, a.openamigacompress, icons)
 
     # GFOpenService: the services device and Nursery (gfopenservice). It
     # does nothing on the LAN until ENV:GFOpenService/Paired lists a Cradle.
