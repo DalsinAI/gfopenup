@@ -1594,6 +1594,38 @@ static int reinstalled;                             /* the parts REINSTALL put i
 
 static int kickset_reinstalled;   /* REINSTALL's KickstartSet in this run: 1 in, -1 failed, 0 not (ou_auto_kickset_after) */
 
+/* Before REINSTALL puts part j in: each part its Part file needs ("needs part") that the disk hasn't got and the pack
+ * has goes in first, else INSTALL would leave part j out. GFOpenMUI 19.0 needs the GFOpenLayout part, which no earlier
+ * pack had (Ivanova's lab, bundle C, 14 Nov 2026); before, an update kept the old GFOpenMUI. One level: a needed part's
+ * own needs are its Part file's business, as on a first install. */
+static void reinstall_needs(int j, int *rc, int *done)
+{
+    char path[200], need[48];
+    LONG n = 0;
+    char *text;
+    int k, m;
+    strcpy(path, part_drawers[j]);
+    AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
+    if (!(text = read_file(path, &n)))
+        return;
+    for (k = 0; oul_part_needs(text, k, need, sizeof need); k++) {
+        if (oul_installed(ents, nents, need))
+            continue;
+        for (m = 0; m < nparts && strcmp(part_names[m], need); m++)
+            ;
+        if (m == nparts)
+            continue;                               /* not in the pack: INSTALL says so, and leaves part j out */
+        Printf((STRPTR)"GFOpenUp: %s needs the %s part, which this pack brings: it goes in first\n",
+               (LONG)part_names[j], (LONG)need);
+        {
+            int r = install(part_drawers[m]);
+            if (r > *rc) *rc = r;
+            (*done)++;
+        }
+    }
+    FreeVec(text);
+}
+
 static int reinstall(const char *parts)
 {
     static char wanted[MAXPARTS][48];
@@ -1631,6 +1663,7 @@ static int reinstall(const char *parts)
             if (rc < RETURN_WARN) rc = RETURN_WARN;
             continue;
         }
+        reinstall_needs(j, &rc, &done);
         {
             /* KickstartSet through KICKSET, as AUTO and the Installer run it: install, then the older set's modules
              * the new Manifest doesn't list to .retired (kickload refuses the set with them), another CPU's bodies

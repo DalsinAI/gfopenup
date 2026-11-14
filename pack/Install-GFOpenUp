@@ -912,8 +912,13 @@
         (if (> (run (cat #tool " INSTALL Parts/GFOpenPlay >>T:GFOpenUp.log")) 5)
             (message "GFOpenPlay didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
 
+; GFOpenMUI needs the GFOpenLayout part, the gfopenlayout.library its muimaster.library opens: GFOpenUpTool leaves
+; GFOpenMUI out without it ("needs part GFOpenLayout"), so it goes first
 (if (and (bitand #parts 65536) (exists "Parts/GFOpenMUI/Part"))
     (
+        (working "Installing GFOpenLayout")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenLayout >>T:GFOpenUp.log")) 5)
+            (message "GFOpenLayout didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
         (working "Installing GFOpenMUI")
         (if (> (run (cat #tool " INSTALL Parts/GFOpenMUI >>T:GFOpenUp.log")) 5)
             (message "GFOpenMUI didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
