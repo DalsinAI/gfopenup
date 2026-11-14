@@ -36,9 +36,10 @@ volume), and own_drawers(), which build_pack.py runs on GFOpenUp's own drawer
 icons (GFOpenUp, GFOpenPrint, GFOpenWrite, GFOpenDemos, Developer...) so they are look
 B drawers with their program's motif, not the Gorilla-era or Boxie drawers.
 
-OUT_DIR/Kinds holds the hard disk and trashcan in the AOS drawer style (Dale, 12 November 2026: tools/aos_icons_art.py)
-and GFOpenIcons' drawer, tool and project; SYS:System/Shell (the dock's Shell) and the Work: and Games: volumes'
-Disk.info get their AOS pictures as faces (AOS_FACES, AOS_VOLUMES); OUT_DIR/Drives the System and RAM Disk drives'
+OUT_DIR/Kinds holds the hard disk, trashcan, drawer, tool and project in the Soft 3D style (Dale, 14 November 2026:
+tools/soft3d_drives_art.py, soft3d_kinds_art.py), as do the drives (AOS_DEVICES, AOS_DRIVE_KINDS) and the
+trashcan's face; SYS:System/Shell (the dock's Shell) and the Work: and Games: volumes'
+Disk.info get their AOS pictures (tools/aos_icons_art.py) as faces (AOS_FACES, AOS_VOLUMES); OUT_DIR/Drives the System and RAM Disk drives'
 ENV:Sys/def_<device>.info (AOS_DEVICES) and every other drive's by kind, def_drive_<kind>.info
 (AOS_DRIVE_KINDS); and
 OUT_DIR/Icons AmiCradle's own (GFOpenCalc, GFOpenClock...), with no face line:
@@ -299,7 +300,7 @@ def build(out: Path, guest: Path) -> list[str]:
     by_name = {e["name"]: e for e in rows if e["group"] == "os32"}
     for kind, name in KINDS.items():
         if kind in AOS_KINDS:
-            (out / "Kinds" / f"{kind}.info").write_bytes(aos_icon(AOS_KINDS[kind], "garbage" if kind == "Trashcan" else "disk"))
+            (out / "Kinds" / f"{kind}.info").write_bytes(aos_icon(AOS_KINDS[kind], KIND_TYPES[kind]))
             continue
         if name in by_name:
             write_entry(by_name[name], picture(by_name[name]), str(out / "Kinds" / f"{kind}.info"))
@@ -310,8 +311,10 @@ def build(out: Path, guest: Path) -> list[str]:
 # Kinds/Disk and Kinds/Trashcan; SYS:System/Shell (the dock's Shell) and AmiCradle's own programs GFOpenUpTool
 # gives a picture by name (the dock's Calc, Clock, FTP, PuTTY, Look, Compress and Files) keep what they are and take
 # its picture.
-AOS_KINDS = {"Disk": "HARDDISK", "Trashcan": "TRASHCAN"}
-AOS_FACES = {"SYS:System/Shell": "SHELL", "SYS:Trashcan": "TRASHCAN"}
+AOS_KINDS = {"Disk": "S3D:harddisk", "Trashcan": "S3D:trashcan", "Drawer": "S3D:drawer", "Tool": "S3D:tool",
+             "Project": "S3D:project"}
+KIND_TYPES = {"Disk": "disk", "Trashcan": "garbage", "Drawer": "drawer", "Tool": "tool", "Project": "project"}
+AOS_FACES = {"SYS:System/Shell": "SHELL", "SYS:Trashcan": "S3D:trashcan"}
 AOS_BY_NAME = {"GFOpenCalc": "CALC", "GFOpenClock": "CLOCK", "GFOpenFTP": "FTP", "GFOpenPuTTY": "PUTTY",
                "GFOpenLook": "LOOK", "GFOpenCompress": "COMPRESS", "GFOpenFiles": "FILES"}
 # The volumes with a Disk.info of their own (amicradle's provisioning makes Work:, the card a Games: drive); a
@@ -320,24 +323,43 @@ AOS_VOLUMES = {"Work:Disk": "WORK", "Games:Disk": "GAMES"}
 # The drives with no Disk.info (OLDLOOK takes SYS:Disk.info out), by device: the boot drive and the RAM disk. A USB
 # stick's or the IDE drive's device name differs from machine to machine, so those keep the ROM's picture for their
 # device (GFOpenIcon's built-in).
-AOS_DEVICES = {"DH0": "SYSTEM", "RAM": "RAM"}
+AOS_DEVICES = {"DH0": "S3D:system", "RAM": "S3D:ram"}
 # Every other drive by its kind (Dale, 14 November 2026: "lets go with these"): GFOpenIcon asks for
 # ENV:Sys/def_drive_<kind>.info when a disk has no def_<device>.info and no def_disk.info (amicradle-guest
 # libraries/openicon ic_drive_default), so a USB stick or an IDE partition gets its picture whatever its device is
 # called. An icon.library without it never asks for these files.
-AOS_DRIVE_KINDS = {"system": "SYSTEM", "acfs": "HARDDISK", "harddisk": "HARDDISK", "ide": "IDE", "usb": "USB",
-                   "cd": "CD", "floppy": "FLOPPY", "network": "NETWORK", "ram": "RAM"}
+# The drives, the disk and trashcan kinds and the drawer, tool and project kinds are in the Soft 3D style (Dale, 14
+# November 2026, 15:18: "soft 3d sheet is cool, go with that"; tools/soft3d_drives_art.py, soft3d_kinds_art.py): a
+# picture named S3D:<kind>. The dock's faces (Shell, Calc...) and the Work: and Games: volumes keep their AOS ones.
+AOS_DRIVE_KINDS = {"system": "S3D:system", "acfs": "S3D:harddisk", "harddisk": "S3D:harddisk", "ide": "S3D:ide",
+                   "usb": "S3D:usb", "cd": "S3D:cd", "floppy": "S3D:floppy", "network": "S3D:network",
+                   "ram": "S3D:ram", "nvme": "S3D:nvme"}
+# NVMe (Dale, 14 November 2026, 15:20: "ship the picture, no kind detection"): installed as def_drive_nvme.info so it
+# is there when GFOpenIcon learns the kind; today's icon.library never asks for it.
 ICON_SIZE = 64
+
+
+def picture_frames(name: str, size: int):
+    """NAME's picture at rest and chosen, size x size: S3D:<kind> from the Soft 3D drives or kinds, else the AOS
+    drawer style's picture NAME."""
+    if name.startswith("S3D:"):
+        kind = name[4:]
+        import soft3d_drives_art, soft3d_kinds_art
+        mod = soft3d_drives_art if kind in soft3d_drives_art.KINDS else soft3d_kinds_art
+        if kind not in mod.KINDS:
+            raise KeyError(name)
+        return [mod.frames(kind, size, c) for c in (False, True)]
+    import aos_icons_art
+    return aos_icons_art.frames(name, size)
 
 
 def aos_pictures(name: str):
     """NAME's two AOS frames as GFOpenIcons' .info pictures: (colour images, planar images), each frame up to 255
     colours of its own, colour 0 see-through (a pixel under 110 of 255 alpha), as a GlowIcon holds it."""
     import numpy as np
-    import aos_icons_art
     from openicons.render import planar_from
     images, planar = [], []
-    for fr in aos_icons_art.frames(name, ICON_SIZE):
+    for fr in picture_frames(name, ICON_SIZE):
         q = fr.convert("RGB").quantize(colors=255, method=0, dither=0)    # median cut, no dither
         idx = np.array(q, np.int32) + 1
         idx[np.array(fr)[..., 3] < 110] = 0
@@ -377,7 +399,7 @@ def main(argv=None) -> int:
     ap.add_argument("--guest", type=Path, required=True, help="the amicradle-guest checkout (icons/openicons)")
     a = ap.parse_args(argv)
     lines = build(a.out, a.guest)
-    (a.out / "Part").write_text("part GFOpenIcons 0.3\n" + "\n".join(lines) + "\n")
+    (a.out / "Part").write_text("part GFOpenIcons 0.4\n" + "\n".join(lines) + "\n")
     print(f"{len(lines) - 1} faces in {a.out}")
     return 0
 
