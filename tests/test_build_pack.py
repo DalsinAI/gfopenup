@@ -742,6 +742,13 @@ def main() -> int:
         check("the GFOpenLayout part: gfopenlayout.library 18.0 to LIBS: (copy: an older one kept, a newer one stays)",
               ol_lines[:1] == ["part GFOpenLayout 18.0"] and 'copy "Libs/gfopenlayout.library" "LIBS:gfopenlayout.library"' in ol_lines
               and bp.PART_MAIN.get("GFOpenLayout") == ("Libs/gfopenlayout.library", "gfopenlayout.library"), "\n".join(ol_lines))
+        ts = tmp / "thinsup"
+        (ts / "Libs").mkdir(parents=True)
+        (ts / "Libs/gfopenlayout.library").write_bytes(b"\0\0$VER: gfopenlayout.library 19.0 (12.11.2026) GFOpenLayout 0.19\0")
+        ol2 = bp.gfopenlayout_part(tmp / "olpack2", tmp / "gfopenmui", ts)
+        check("with a thin build's gfopenlayout.library, the GFOpenLayout part carries those bytes (KickstartSet's own)",
+              ol2 is not None and (ol2.dir / "Libs/gfopenlayout.library").read_bytes() == (ts / "Libs/gfopenlayout.library").read_bytes()
+              and (ol2.dir / "Part").read_text(encoding="latin-1").startswith("part GFOpenLayout 19.0"))
         om = bp.gfopenmui_part(tmp / "muipack", tmp / "gfopenmui", None)
         lines = (om.dir / "Part").read_text(encoding="latin-1").splitlines() if om else []
         check("GFOpenMUI needs the GFOpenLayout part", "needs part GFOpenLayout" in lines, "\n".join(lines))

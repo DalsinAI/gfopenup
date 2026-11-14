@@ -2065,7 +2065,7 @@ def gfopenlayout_build_env(mui_out: Path, base, opengadtools: Path | None) -> di
     return env
 
 
-def gfopenlayout_part(top: Path, gfopenmui: Path) -> Part | None:
+def gfopenlayout_part(top: Path, gfopenmui: Path, support: Path | None = None) -> Part | None:
     """Parts/GFOpenLayout: gfopenlayout.library, which GFOpenMUI's muimaster.library opens by name at its first open
     (gfopenmui muimaster/library/mui_lib.c), built by build_parts from the gfopenlayout checkout gfopenmui's muimaster
     script fetched (the commit it pins, so the two match). Nothing else packed it and the slim ROM hasn't it, so no MUI
@@ -2076,6 +2076,11 @@ def gfopenlayout_part(top: Path, gfopenmui: Path) -> Part | None:
     if not (b / "lib" / "muimaster.library").is_file():
         return None
     oll = b / "deps" / "gfopenlayout" / "build-amiga" / "lib" / "gfopenlayout.library"
+    # The ROM build's own copy, when the thin build has one (thin-support/Libs, the guest build given OLAY=): the
+    # KickstartSet part puts the same file on a slim-ROM disk, so the two parts carry the same bytes, and other
+    # machines get it here (Team 5's 17:10 correction)
+    if support and (support / "Libs" / "gfopenlayout.library").is_file():
+        oll = support / "Libs" / "gfopenlayout.library"
     if not oll.is_file():
         raise SystemExit(f"GFOpenLayout: no {oll}; GFOpenMUI's muimaster.library cannot open without it "
                          "(build_parts builds it with gfopenlayout's build-library.sh)")
@@ -3205,7 +3210,7 @@ def main() -> int:
             p.write()
 
     # GFOpenMUI: the clean-room muimaster.library and its examples (gfopenmui_part), or left out
-    ol = gfopenlayout_part(top, a.openamigamui)
+    ol = gfopenlayout_part(top, a.openamigamui, a.thinsupport)
     om = gfopenmui_part(top, a.openamigamui, icons) if ol else None
 
     # GFOpenMulticore: gfopenmulticore.library runs a 68k job on another core of a
