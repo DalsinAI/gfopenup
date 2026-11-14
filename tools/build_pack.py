@@ -200,7 +200,8 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenPresentation/     GFOpenPresentation, the GFOffice Suite's slides (ODP, PPTX in, PDF, print, show, the
                         GFOPENPRESENTATION ARexx port), libowf linked in; it needs GFOffice (z.library). Left out
                         when gfoffice's linked build didn't make it; no Installer choice yet
-  GFOpenMUI/              zunemaster.library, the muimaster.library face (only where no MUI is), and ZuneTest (gfopenmui)
+  GFOpenMUI/              muimaster.library, the Team's own MUI on GFOpenLayout (only where no MUI is), and its
+                        examples in SYS:Tools/GFOpenMUI (gfopenmui muimaster/; left out without a build)
   GFOpenMulticore/        gfopenmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (gfopenmulticore)
   GFOpenMail/             GFOpenMail, the mail reader, and C:GFOpenMailCheck; needs GFOpenTLS (gfopenmail)
@@ -658,7 +659,10 @@ def build_parts(a):
     # GFOpenFiles' zlib is our openzlib, from the guest checkout (GUEST), not a libz.a beside it
     run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest)))
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
-    run(["sh", a.openamigamui / "os3/build.sh"], env=env)
+    # GFOpenMUI: the clean-room muimaster.library (gfopenmui muimaster/build-amiga.sh, GCC 16 open6, on GFOpenLayout
+    # library 18 at the commit its script pins: GFOPENLAYOUT names the script's own deps folder, so it fetches that one)
+    mui_out = a.openamigamui / "muimaster/build-amiga"
+    run(["sh", a.openamigamui / "muimaster/build-amiga.sh"], env=gfopenmui_build_env(mui_out, os.environ))
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     # The GFOffice Suite (gfoffice) carries its own GFOpenGadTools copy and needs GCC 16 (its build-os3.sh stops on
     # the os32 stove's 6.5); GFOpenWrite's pages are GFOpenLayout's. Built on its four libraries (GFO_LIBRARY,
@@ -1158,6 +1162,7 @@ PART_MAIN = {
     "GFOpenMulticore": ("Libs/gfopenmulticore.library", "gfopenmulticore.library"),
     "GFOpenRTG": ("Libs/gfopenrtg.library", "gfopenrtg.library"),
     "GFOpenGPU": ("Libs/gfopengpu.library", "gfopengpu.library"),
+    "GFOpenMUI": ("Libs/muimaster.library", "muimaster.library"),
     "OGLES3": ("Libs/ogles3.library", "ogles3.library"),
     "AkikoPlus": ("Libs/akikoplus.library", "akikoplus.library"),
     "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
@@ -1190,9 +1195,7 @@ PART_MAIN = {
 }
 # Parts with a version of their own: bundles of several programs, or files
 # without a binary of their own to read. GFOpenPrint 0.4 is GFOpenPrint (0.3) with
-# GFOpenView 0.5 and the copy at SYS:Utilities/MultiView; GFOpenMUI 0.2.1 is
-# zunemaster.library (0.1, with the datatypes cache's Stricmp fix of 12 October 2026) with the
-# muimaster.library face (19.1). Sound 0.2.2 is GFOpenSpeaker (0.1.4; the editor is GFOpenPrefs's since W48) with GFOpenAHI's
+# GFOpenView 0.5 and the copy at SYS:Utilities/MultiView. Sound 0.2.2 is GFOpenSpeaker (0.1.4; the editor is GFOpenPrefs's since W48) with GFOpenAHI's
 # ahi.device (6.1.1), acaudio.audio and modes (AmiCradle machines only). GFOpenImage 0.4 adds
 # opentga.datatype (47.1). GFOpenService 1.3 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:),
 # mitchy.library (1.0) and ServiceTest (0.2); 1.4 is mitchy.device (2.0), with gfopenservice.device (2.0) its old name
@@ -1202,7 +1205,7 @@ PART_MAIN = {
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
 # binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
 PART_OWN_VERSION = {"KickstartSet", "GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "GFOpenService", "Backdrops", "GFOpenIcons", "GFOpenDemos", "GFOpenGPUDev",
-                    "GFOpenPrint", "GFOpenMUI", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon", "GFOSFonts",
+                    "GFOpenPrint", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon", "GFOSFonts",
                     # pages of GFOpenPrefs with no files of their own since the no-ROM-volume design: GFOpenPrefs's version
                     "GFOpenTypes", "GFOpenDateTime"}
 
@@ -1945,6 +1948,43 @@ def akikoplus_part(top: Path, src: Path | None) -> Part | None:
 # OUT/thin-support/ from the same build as the ROM (tools/openkickrom/thinsupport.py), with MANIFEST.txt (path, bytes,
 # SHA-256, version, build output) and Kickstart/default/Manifest (kickload's). --thinsupport is that folder.
 KICKSET_MAN_HEAD = "# GFOpenKickLoad manifest "
+
+
+def gfopenmui_build_env(mui_out: Path, base) -> dict:
+    """The environment for gfopenmui's muimaster/build-amiga.sh in a pack build: GCC 16 open6, GFOpenLayout in the
+    script's own deps folder, out to mui_out, and LAB_PROGRAMS=0, so the lab's AROS programs (APL, never packed) are
+    neither fetched nor built."""
+    return dict(base, STOVE=base.get("OS32_GCC16_OPEN6", str(Path.home() / "AmiCradle/stoves/os32-gcc16-open6")),
+                GFOPENLAYOUT=str(mui_out / "deps/gfopenlayout"), OUT=str(mui_out), LAB_PROGRAMS="0")
+
+
+def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
+    """Parts/GFOpenMUI from gfopenmui main's clean-room muimaster.library (muimaster/build-amiga.sh, built by
+    build_parts into muimaster/build-amiga/): the library, only where no muimaster.library is or GFOpenUp's own is
+    ("add": a real MUI stays), and its three examples in SYS:Tools/GFOpenMUI. Zune (AROS Public License) left
+    gfopenmui main at 9bf57d2; it is on reference/zune only, and nothing of it is packed. Without a build the part
+    is left out, said in one line. The part's version is the library's."""
+    b = gfopenmui / "muimaster" / "build-amiga"
+    lib = b / "lib" / "muimaster.library"
+    if not lib.is_file():
+        print(f"  GFOpenMUI: left out, no {lib} (build gfopenmui's muimaster/build-amiga.sh)")
+        return None
+    data = lib.read_bytes()
+    ver = binary_version(data, "muimaster.library")
+    if not ver:
+        raise SystemExit(f"GFOpenMUI: {lib} has no muimaster.library version string")
+    om = Part(top, "GFOpenMUI", ver, f"GFOpenMUI: muimaster.library {ver}, the AmiCradle Team's own MUI on GFOpenLayout, "
+                                     "where no MUI is, and its examples")
+    om.add("Libs/muimaster.library", data, "LIBS:muimaster.library", own=True)
+    for ex in ("MUIClasses", "MUIAddons", "MUITime"):
+        f = b / "tests" / ex
+        if f.is_file():
+            om.add(f"Tools/GFOpenMUI/{ex}", f.read_bytes(), f"SYS:Tools/GFOpenMUI/{ex}")
+            if icons:
+                om.add(f"Tools/GFOpenMUI/{ex}.info", icons.icon(icons.WBTOOL, "install", stack=16384),
+                       f"SYS:Tools/GFOpenMUI/{ex}.info")
+    om.write()
+    return om
 
 
 def kickstartset_part(top: Path, support: Path | None) -> Part | None:
@@ -2886,7 +2926,7 @@ def main() -> int:
     tbo = a.openamigaprefs / "TitleBar/build/os3"
     tbb = (tbo / "GFOpenTitle").read_bytes()
     tb = Part(top, "GFOpenTitle", binary_version(tbb, "GFOpenTitle") or "0.7",
-              "GFOpenTitle: AmiCradle's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
+              "GFOpenTitle: the GFOS mark, free memory, a clock, the settings cog and the taskspace on the title bar")
     tb.add("C/GFOpenTitle", tbb, "SYS:C/GFOpenTitle")
     tb.line("startup Run >NIL: C:GFOpenTitle")
     # GFOpenNetwork (gfopenprefs Network/, 0.8, Dale 12 Nov 2026 "make the sound and wifi and network commodities"):
@@ -2999,20 +3039,8 @@ def main() -> int:
         if p:
             p.write()
 
-    # GFOpenMUI: zunemaster.library, MUI from Zune for OS 3.x (gfopenmui), a
-    # preview beside MUI, which it doesn't replace; ZuneTest shows it working.
-    # muimaster.library (0.2) is the face MUI programs open, a forwarder to
-    # zunemaster.library at MUI 3.8's version. It goes only where
-    # LIBS:muimaster.library is absent ("add": a real MUI, or any other
-    # program's file, stays; GFOpenUp's own copy is kept up to date and the
-    # uninstaller removes it).
-    mui = a.openamigamui / "build/os3"
-    om = Part(top, "GFOpenMUI", "0.2.1", "GFOpenMUI: zunemaster.library, a muimaster.library face where there is no MUI (preview), and ZuneTest")
-    om.add("Libs/zunemaster.library", (mui / "zunemaster.library").read_bytes(), "LIBS:zunemaster.library")
-    om.add("Libs/muimaster.library", (mui / "muimaster.library").read_bytes(), "LIBS:muimaster.library", own=True)
-    om.add("Tools/ZuneTest", (mui / "ZuneTest").read_bytes(), "SYS:Tools/ZuneTest")
-    om.add("Tools/ZuneTest.info", icons.icon(icons.WBTOOL, "install", stack=16384), "SYS:Tools/ZuneTest.info")
-    om.write()
+    # GFOpenMUI: the clean-room muimaster.library and its examples (gfopenmui_part), or left out
+    om = gfopenmui_part(top, a.openamigamui, icons)
 
     # GFOpenMulticore: gfopenmulticore.library runs a 68k job on another core of a
     # cores board (gfopenservice.device's cpu.m68k/1), or on the main CPU when
@@ -3147,7 +3175,7 @@ def main() -> int:
             + [(setup.dir / "Prefs/GFOpenUp-Setup.info", "GFOpenUp-Setup"),
             (setup.dir / "WBStartup/GFOpenUp-Setup.info", "GFOpenUp-Setup"), (oc.dir / "Utilities/GFOpenCompress.info", "GFOpenCompress"),
             (of.dir / "Utilities/GFOpenFiles.info", "GFOpenFiles"), (op.dir / "Utilities/GFOpenPlay.info", "GFOpenPlay"),
-            (om.dir / "Tools/ZuneTest.info", "ZuneTest"), (ed.dir / "Tools/GFOpenEdit.info", "GFOpenEdit"),
+            (ed.dir / "Tools/GFOpenEdit.info", "GFOpenEdit"),
             (wr.dir / "Utilities/GFOpenWrite/GFOpenWrite.info", "GFOpenWrite"),
             (wr.dir / "Utilities/GFOpenWrite.info", "drawer-GFOpenWrite"),
             (od.dir / "Utilities/GFOpenDrawer.info", "GFOpenDrawer")]
@@ -3157,7 +3185,10 @@ def main() -> int:
             + ([(pt.dir / "Utilities/GFOpenPuTTY/GFOpenPuTTY.info", "GFOpenPuTTY")] if pt else [])
             # the icon library's GFOpenTata and Telegram (#104), when those parts are in the pack
             + ([(tt.dir / "Prefs/GFOpenTata.info", "GFOpenTata")] if tt else [])
-            + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else []),
+            + ([(tg.dir / "Utilities/UnofficialTelegram.info", "Telegram")] if tg else [])
+            # GFOpenMUI's examples, when the part is in the pack
+            + ([(om.dir / f"Tools/GFOpenMUI/{ex}.info", "MUIExample") for ex in ("MUIClasses", "MUIAddons", "MUITime")
+                if (om.dir / f"Tools/GFOpenMUI/{ex}.info").is_file()] if om else []),
             drawers={a.out / "GFOpenUp.info": [top / "Install-GFOpenUp.info", top / "Uninstall-GFOpenUp.info"],
                      core.dir / "Utilities/GFOpenUp.info": [core.dir / "Utilities/GFOpenUp/Uninstall-GFOpenUp.info"],
                      opp.dir / "Preferences.info": [opp.dir / "Preferences/GFOpenPrefs.info"]
