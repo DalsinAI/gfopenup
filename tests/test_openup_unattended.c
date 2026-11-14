@@ -46,6 +46,12 @@ int main(void)
     CHECK(ou_auto_gfosfonts(0, 1) == 1, "GFOSFonts not installed, in the pack: AUTO adds it (Dale 19:17)");
     CHECK(ou_auto_gfosfonts(1, 1) == 0, "GFOSFonts installed: the reinstall has it already");
     CHECK(ou_auto_gfosfonts(0, 0) == 0, "not in the pack: nothing");
+    /* once a run (Lorien's note on #250; Ivanova's bundle C row 7: "installed (5 files changed)", then "(0 files
+     * changed)") */
+    CHECK(ou_auto_kickset_after(1, 1, 1) == 0, "REINSTALL just installed the set: AUTO doesn't run it again");
+    CHECK(ou_auto_kickset_after(1, 1, -1) == 0, "REINSTALL's set failed: not tried twice, the log says it failed");
+    CHECK(ou_auto_kickset_after(1, 1, 0) == 1, "not in the manifest: AUTO installs it, as before");
+    CHECK(ou_auto_kickset_after(0, 1, 0) == 0 && ou_auto_kickset_after(1, 0, 0) == 0, "and only where it did before");
     ou_log_line(buf, sizeof buf, 1, OU_BY_FLAG, "0.8.28", "0.8.29", 14, 0);
     CHECK(!strcmp(buf, "GFOpenUpTool UPDATE: unattended (host flag) 0.8.28 to 0.8.29, 14 parts reinstalled, "
                        "the Kickstart set installed: ok"), buf);
