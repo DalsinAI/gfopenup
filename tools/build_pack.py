@@ -371,8 +371,8 @@ def wbconfig_backdrop() -> bytes:
 def pack_version(v: str) -> str:
     """--version: 0.8.29, or a release candidate 0.8.29-rc1 (DECISION-RELEASE-CYCLE-20261114-1302's numbering),
     which binary_version reads back from the Installer's and uninstaller's $VER (Corwin's item 10)."""
-    if not re.fullmatch(r"[0-9]+(\.[0-9]+)+(-rc[0-9]+)?", v):
-        raise argparse.ArgumentTypeError(f"{v!r}: digits and dots, then -rcN for a release candidate (0.8.29-rc1)")
+    if not re.fullmatch(r"[0-9]+(\.[0-9]+)+(-rc[1-9][0-9]*)?", v):
+        raise argparse.ArgumentTypeError(f"{v!r}: digits and dots, then -rcN (N from 1) for a release candidate (0.8.29-rc1)")
     return v
 
 

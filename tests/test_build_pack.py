@@ -662,13 +662,15 @@ def rc_version_checks() -> None:
     check("pack_version: 0.8.29 and 0.8.29-rc1 are taken",
           bp.pack_version("0.8.29") == "0.8.29" and bp.pack_version("0.8.29-rc1") == "0.8.29-rc1")
     bad = []
-    for v in ("0.8.29-t5build", "rc1", "0.8", "0.8.29-rc", "0.8.29 rc1"):
+    for v in ("0.8.29-t5build", "rc1", "0.8", "0.8.29-rc", "0.8.29 rc1", "0.8.29-rc0", "0.8.29-rc01"):
         try:
             bp.pack_version(v)
             bad.append(v)
         except argparse.ArgumentTypeError:
             pass
-    check("pack_version: other suffixes, a lone number and spaces are refused (0.8 is taken: two numbers)",
+    # -rc0 compares equal to the release in GFOpenUpTool (ouv_cmp: no rc number is 0), so it is refused (Team 5,
+    # 14 Nov 16:12); -rc01 too, which ouv_cmp reads as rc1
+    check("pack_version: other suffixes, -rc0, -rc01, a lone number and spaces are refused (0.8 is taken: two numbers)",
           bad == ["0.8"], str(bad))
     check("binary_version reads a release candidate's $VER whole",
           bp.binary_version(b"; $VER: Uninstall-GFOpenUp 0.8.29-rc1 (14.11.2026)\n", "Uninstall-GFOpenUp") == "0.8.29-rc1")
