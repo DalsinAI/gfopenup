@@ -39,7 +39,8 @@ B drawers with their program's motif, not the Gorilla-era or Boxie drawers.
 OUT_DIR/Kinds holds the hard disk and trashcan in the AOS drawer style (Dale, 12 November 2026: tools/aos_icons_art.py)
 and GFOpenIcons' drawer, tool and project; SYS:System/Shell (the dock's Shell) and the Work: and Games: volumes'
 Disk.info get their AOS pictures as faces (AOS_FACES, AOS_VOLUMES); OUT_DIR/Drives the System and RAM Disk drives'
-ENV:Sys/def_<device>.info (AOS_DEVICES); and
+ENV:Sys/def_<device>.info (AOS_DEVICES) and every other drive's by kind, def_drive_<kind>.info
+(AOS_DRIVE_KINDS); and
 OUT_DIR/Icons AmiCradle's own (GFOpenCalc, GFOpenClock...), with no face line:
 GFOpenUpTool ICONS, and OLDLOOK for a Gorilla picture GFOpenUp's list doesn't name,
 give an icon its picture by name, else the one of its kind.
@@ -278,7 +279,9 @@ def build(out: Path, guest: Path) -> list[str]:
         lines.append(f'face "Icons/{n}" "{dest}.info"')
     # the drives with no Disk.info, by their device: OpenBench (0.1.47) and GFOpenIcon ask for def_<device> first
     (out / "Drives").mkdir(parents=True, exist_ok=True)
-    for dev, name in AOS_DEVICES.items():
+    drives = dict(AOS_DEVICES)
+    drives.update({f"drive_{k}": v for k, v in AOS_DRIVE_KINDS.items()})
+    for dev, name in drives.items():
         (out / "Drives" / f"def_{dev}.info").write_bytes(aos_icon(name, "disk"))
         for where in ("ENVARC:Sys", "ENV:Sys"):         # ENV: too, so it shows before the next start
             lines.append(f'add "Drives/def_{dev}.info" "{where}/def_{dev}.info"')
@@ -318,6 +321,12 @@ AOS_VOLUMES = {"Work:Disk": "WORK", "Games:Disk": "GAMES"}
 # stick's or the IDE drive's device name differs from machine to machine, so those keep the ROM's picture for their
 # device (GFOpenIcon's built-in).
 AOS_DEVICES = {"DH0": "SYSTEM", "RAM": "RAM"}
+# Every other drive by its kind (Dale, 14 November 2026: "lets go with these"): GFOpenIcon asks for
+# ENV:Sys/def_drive_<kind>.info when a disk has no def_<device>.info and no def_disk.info (amicradle-guest
+# libraries/openicon ic_drive_default), so a USB stick or an IDE partition gets its picture whatever its device is
+# called. An icon.library without it never asks for these files.
+AOS_DRIVE_KINDS = {"system": "SYSTEM", "acfs": "HARDDISK", "harddisk": "HARDDISK", "ide": "IDE", "usb": "USB",
+                   "cd": "CD", "floppy": "FLOPPY", "network": "NETWORK", "ram": "RAM"}
 ICON_SIZE = 64
 
 

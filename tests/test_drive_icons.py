@@ -34,6 +34,16 @@ for n in DRIVES:
 names = list(pics)
 same = [(x, y) for i, x in enumerate(names) for y in names[i + 1:] if np.array_equal(pics[x], pics[y])]
 check("each drive its own picture (the ACFS hard disk no longer the IDE drive's)", not same, str(same))
+import openicons_part as part
+# GFOpenIcon's kinds (amicradle-guest libraries/openicon ic_drive_default): the files it asks for by kind
+GUEST_KINDS = {"ram", "harddisk", "floppy", "cd", "rad", "card", "network", "acfs", "system", "ide", "usb"}
+kinds = part.AOS_DRIVE_KINDS
+check("every drive kind GFOpenIcon asks for that the set draws is installed",
+      set(kinds) == GUEST_KINDS - {"rad", "card"}, str(sorted(set(kinds) ^ (GUEST_KINDS - {"rad", "card"}))))
+check("each kind's picture is drawn", all(v in art.PICTURES for v in kinds.values()), str(kinds))
+check("the USB stick, IDE partition, CD, floppy and network share each get their own picture",
+      [kinds[k] for k in ("usb", "ide", "cd", "floppy", "network")] == ["USB", "IDE", "CD", "FLOPPY", "NETWORK"])
+check("each def_drive_<kind>.info fits an FFS name (30)", all(len(f"def_drive_{k}.info") <= 30 for k in kinds))
 with tempfile.TemporaryDirectory() as d:
     out = os.path.join(d, "s.png")
     sheet.sheet(out)
