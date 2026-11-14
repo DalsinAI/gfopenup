@@ -747,7 +747,8 @@ def main() -> int:
               zm in lines and lines.index(face) < lines.index(zm), "\n".join(lines))
         # Londo's note on #257: through INSTALL's own line handling (test_openup_lines install): 0.2.1's files the
         # manifest lists as GFOpenUp's leave it, a file it doesn't list is left alone, and the rest stays
-        old = ("GFOpenUp\t0.1\npart\tGFOpenMUI\t0.2.1\nnew\tLIBS:zunemaster.library\nnew\tSYS:Tools/ZuneTest\n"
+        # (part GFOpenLayout: with #262 GFOpenMUI needs it, and REINSTALL or the Installer puts it in first)
+        old = ("GFOpenUp\t0.1\npart\tGFOpenLayout\t18.0\npart\tGFOpenMUI\t0.2.1\nnew\tLIBS:zunemaster.library\nnew\tSYS:Tools/ZuneTest\n"
                "replaced\tLIBS:muimaster.library\tSYS:Storage/GFOpenUp-Superseded/muimaster.library\n"
                "new\tSYS:C/GFOpenUpTool\n")
         rc, mo = manifest_run(filt, "install", om.dir / "Part", old, tmp)
