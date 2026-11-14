@@ -219,6 +219,52 @@ static int oul_part_needs(const char *text, int k, char *name, int size)
     return 0;
 }
 
+/* 1 when a Part file's text puts a file at dest (a copy, add, default or face line, whatever its condition), AmigaDOS's
+ * way: case doesn't count. REMOVE leaves a file another installed part puts there too: SYS:Libs/gfopenlayout.library
+ * is the GFOpenLayout part's and the KickstartSet part's, one manifest line, and REMOVE GFOpenLayout took it from
+ * the set (Ivanova's lab, bundle D row 8, 14 Nov 2026). */
+static int oul_lower(int c) { return c >= 'A' && c <= 'Z' ? c + 32 : c; }
+
+static int oul_part_writes(const char *text, const char *dest)
+{
+    const char *s = text;
+    while (*s) {
+        char line[320], *w[6];
+        const char *r;
+        int len = 0, n;
+        while (s[len] && s[len] != '\n') len++;
+        if (len < (int)sizeof line) {
+            memcpy(line, s, (size_t)len);
+            line[len] = 0;
+            if (len && line[len - 1] == '\r') line[len - 1] = 0;
+            r = oul_strip(line, 0, 1);
+            if (r != line) memmove(line, r, strlen(r) + 1);
+            n = oul_words(line, w, 6);
+            if (n >= 3 && (oul_same(w[0], "copy") || oul_same(w[0], "add") || oul_same(w[0], "default") ||
+                           oul_same(w[0], "face"))) {
+                const char *a = w[2], *b = dest;
+                while (*a && oul_lower(*a) == oul_lower(*b)) a++, b++;
+                if (!*a && !*b) return 1;
+            }
+        }
+        s += len;
+        if (*s) s++;
+    }
+    return 0;
+}
+
+/* REMOVE's check for each file: another part the manifest lists as installed whose Part file (texts[i], the pack's
+ * part names[i]) puts the file at dest too; NULL when none does, and the file can go. */
+static const char *oul_kept_by(const oul_entry *e, int n, const char *self, const char *const *names,
+                               const char *const *texts, int nparts, const char *dest)
+{
+    int i;
+    for (i = 0; i < nparts; i++)
+        if (texts[i] && !oul_same(names[i], self) && oul_installed(e, n, names[i]) && oul_part_writes(texts[i], dest))
+            return names[i];
+    return 0;
+}
+
 /* ---- INSTALL's way and its end (25 October 2026) ----
  * A file where a part's drawer goes is in its way: Instance-32 has a calculator of its own at SYS:Utilities/GFOpenCalc,
  * where the GFOffice Suite's GFOpenCalc drawer goes. INSTALL keeps that file in SYS:Storage/GFOpenUp-Superseded, as it

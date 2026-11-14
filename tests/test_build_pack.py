@@ -739,8 +739,8 @@ def main() -> int:
             b"\0\x4a\xfcgfopenlayout.library\0\0$VER: gfopenlayout.library 18.0 (10.11.2026) GFOpenLayout 0.18\0")
         ol = bp.gfopenlayout_part(tmp / "muipack", tmp / "gfopenmui")
         ol_lines = (ol.dir / "Part").read_text(encoding="latin-1").splitlines() if ol else []
-        check("the GFOpenLayout part: gfopenlayout.library 18.0 to LIBS: (copy: an older one kept, a newer one stays)",
-              ol_lines[:1] == ["part GFOpenLayout 18.0"] and 'copy "Libs/gfopenlayout.library" "LIBS:gfopenlayout.library"' in ol_lines
+        check("the GFOpenLayout part: gfopenlayout.library 18.0 to SYS:Libs, KickstartSet's spelling (copy: an older one kept, a newer one stays)",
+              ol_lines[:1] == ["part GFOpenLayout 18.0"] and 'copy "Libs/gfopenlayout.library" "SYS:Libs/gfopenlayout.library"' in ol_lines
               and bp.PART_MAIN.get("GFOpenLayout") == ("Libs/gfopenlayout.library", "gfopenlayout.library"), "\n".join(ol_lines))
         ts = tmp / "thinsup"
         (ts / "Libs").mkdir(parents=True)

@@ -2090,7 +2090,9 @@ def gfopenlayout_part(top: Path, gfopenmui: Path, support: Path | None = None) -
         raise SystemExit(f"GFOpenLayout: {oll} has no gfopenlayout.library version string")
     ol = Part(top, "GFOpenLayout", ver, f"GFOpenLayout: gfopenlayout.library {ver}, the layout and drawing library "
                                         "GFOpenMUI draws with")
-    ol.add("Libs/gfopenlayout.library", data, "LIBS:gfopenlayout.library")
+    # SYS:Libs, as the KickstartSet part spells its copy of the same file: one manifest entry for one file, whichever
+    # part put it there (Talkie's note on 21c5bb10)
+    ol.add("Libs/gfopenlayout.library", data, "SYS:Libs/gfopenlayout.library")
     ol.write()
     return ol
 
@@ -2231,7 +2233,8 @@ def check_opened_libraries(parts: Path) -> None:
     """Stops the build when a packed library opens one of our own libraries the pack and the ROM haven't got."""
     missing = unpacked_opened_libraries(parts)
     if missing:
-        raise SystemExit("libraries opened but not in the pack or the ROM:\n  " + "\n  ".join(missing))
+        raise SystemExit("libraries a packed library opens or names, but not in the pack or the ROM (pack it, add it to "
+                         "ROM_GF_LIBRARIES, or take the name out):\n  " + "\n  ".join(missing))
     print("  opened libraries: every gf*.library a packed library opens is in the pack")
 
 
