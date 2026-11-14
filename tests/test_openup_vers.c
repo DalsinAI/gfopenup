@@ -31,6 +31,15 @@ int main(void)
     CHECK(ouv_cmp("2.0.35", "2.0.26") > 0, "2.0.35 over 2.0.26");
     CHECK(ouv_cmp("1.3", "1.3.0") == 0, "1.3 is 1.3.0");
     CHECK(ouv_cmp("0.4.0", "0.3.3") > 0, "0.4.0 over 0.3.3");
+    /* the daily release cycle (14 Nov 2026): 0.8.29-rc1 < -rc2 < 0.8.29 < 0.8.30-rc1 */
+    CHECK(ouv_cmp("0.8.29-rc2", "0.8.29-rc1") > 0, "rc2 is newer than rc1");
+    CHECK(ouv_cmp("0.8.29", "0.8.29-rc2") > 0, "the release is newer than its candidates");
+    CHECK(ouv_cmp("0.8.29-rc1", "0.8.29") < 0, "a candidate is older than its release");
+    CHECK(ouv_cmp("0.8.30-rc1", "0.8.29") > 0, "the next day's candidate is newer than the release");
+    CHECK(ouv_cmp("0.8.29-rc10", "0.8.29-rc9") > 0, "rc10 over rc9, as numbers");
+    CHECK(ouv_cmp("0.8.29-rc1", "0.8.29-rc1") == 0, "the same candidate");
+    CHECK(ouv_cmp("0.8.28", "0.8.29-rc1") < 0, "yesterday's release is older than today's candidate");
+    CHECK(ouv_cmp("0.8.29-x", "0.8.29") == 0, "another suffix is ignored, as before");
 
     CHECK(ouv_keep_newer("0.1.58", "0.1.62", 0), "REINSTALL: an older GFOpenBench stays out");
     CHECK(!ouv_keep_newer("0.1.58", "0.1.62", 1), "FORCE puts it in");
