@@ -4683,8 +4683,11 @@ static void kickset_retire_bodies(unsigned host)
                 const char *fn = (const char *)fib->fib_FileName;
                 if (fib->fib_DirEntryType <= 0) continue;
                 if (!ouk_u(fn, &cpu) || !ouk_retire_drawer(cpu, host)) continue;
-                strncpy(names[count], fn, 31);
-                names[count][31] = 0;
+                {   /* copied by hand: GCC 16's -Wstringop-truncation refuses strncpy into 32 from FileName[108] */
+                    int i;
+                    for (i = 0; i < 31 && fn[i]; i++) names[count][i] = fn[i];
+                    names[count][i] = 0;
+                }
                 count++;
             }
         }
