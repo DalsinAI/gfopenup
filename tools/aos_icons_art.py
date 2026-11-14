@@ -410,6 +410,71 @@ def ram_obj(): return ram()
 def usb_obj(): return usb()
 
 
+def cd_obj():
+    """a compact disc, silver with a rainbow sheen round its hub, lying a little tilted towards us"""
+    y, x = np.mgrid[0:B, 0:B].astype(np.float32)
+    cx, cy, R, ry = 256, 270, 210, 150                      # an ellipse: the disc seen from a little above
+    dx, dy = (x - cx) / R, (y - cy) / ry
+    r = np.sqrt(dx * dx + dy * dy)
+    ang = np.arctan2(dy, dx)
+    hue = (ang / (2 * math.pi) + 0.5 + r * 0.35) % 1.0
+    k = np.clip(1 - np.abs(r - 0.62) * 3.2, 0, 1) * 0.55   # the rainbow band, strongest mid-way out
+    rain = np.stack([0.5 + 0.5 * np.cos(2 * math.pi * (hue - t)) for t in (0, 1 / 3, 2 / 3)], -1) * 255
+    silver = (200 + 40 * np.clip(-dy * 0.6 + 0.3, -1, 1))[..., None] * np.ones(3, np.float32)
+    col = silver * (1 - k[..., None]) + rain * k[..., None]
+    a = np.clip((1 - r) * R * 0.5, 0, 1) * np.clip((r - 0.17) * R * 0.5, 0, 1)
+    im = Image.fromarray(np.clip(col, 0, 255).astype(np.uint8)).convert("RGBA")
+    im.putalpha(Image.fromarray((a * 255).astype(np.uint8)))
+    disc = im.getchannel("A")
+    out = shadow(Image.new("RGBA", (B, B)), disc, 14, 16, 0.45)
+    out = Image.alpha_composite(out, im)
+    hub = ell((cx - 70, cy - 50, cx + 70, cy + 50))
+    out = paint(out, (226, 230, 238), ImageChops.multiply(hub, disc))
+    out = rim(out, disc, (255, 255, 255), 0.6, 3)
+    return paint(out, (255, 255, 255), ell((120, 150, 300, 230)).filter(ImageFilter.GaussianBlur(22)).point(lambda v: int(v * .5)))
+
+
+def floppy_obj():
+    """a 3.5-inch disk from the front: dark body, metal shutter at the top, white label below"""
+    img = Image.new("RGBA", (B, B))
+    body = sub(rr((86, 66, 426, 446), 18), poly([(386, 66), (426, 66), (426, 106)]))   # the cut corner
+    img = shadow(img, body, 16, 18, 0.42)
+    img = paint(img, grad((70, 78, 96), (34, 38, 50), 66, 446), body)
+    img = emboss(img, body, 6, 0.4)
+    shutter = rr((166, 66, 346, 196), 6)
+    img = paint(img, grad((236, 238, 244), (160, 166, 178), 66, 196), shutter)
+    img = paint(img, (40, 44, 56), rr((276, 92, 316, 176), 6))                    # the window in it
+    img = paint(img, (255, 255, 255), sub(shutter, ImageChops.offset(shutter, 0, 4)).point(lambda v: v // 3))
+    label = rr((126, 252, 386, 430), 12)
+    img = paint(img, grad((250, 250, 252), (222, 226, 234), 252, 430), label)
+    img = paint(img, RED, rr((126, 252, 386, 276), 6))
+    for i, y in enumerate((304, 340, 376)):
+        img = paint(img, (150, 156, 170), rr((150, y, 362 - i * 50, y + 10), 5))
+    return img
+
+
+def net_obj():
+    """a network share: a small server box with two links running out to other machines"""
+    img = Image.new("RGBA", (B, B))
+    links = add(line([(256, 250), (110, 400)], 16), line([(256, 250), (402, 400)], 16))
+    img = shadow(img, links, 6, 8, 0.35)
+    img = paint(img, (60, 130, 230), links)
+    for cx in (110, 402):
+        node = rr((cx - 62, 360, cx + 62, 446), 14)
+        img = shadow(img, node, 8, 10, 0.4)
+        img = paint(img, grad((236, 238, 244), (170, 176, 190), 360, 446), node)
+        img = paint(img, grad((70, 120, 210), (40, 80, 170), 372, 420), rr((cx - 46, 372, cx + 46, 420), 6))
+    box = rr((150, 60, 362, 290), 22)
+    img = shadow(img, box, 14, 16, 0.45)
+    img = paint(img, grad((86, 92, 110), (40, 44, 56), 60, 290), box)
+    img = emboss(img, box, 6, 0.4)
+    for y in (100, 162, 224):
+        bay = rr((176, y, 336, y + 44), 8)
+        img = paint(img, (28, 30, 40), bay)
+        img = paint(img, (90, 220, 120), ell((304, y + 16, 318, y + 30)))
+    return img
+
+
 # ---- the dock's objects ---------------------------------------------------------------------------
 
 def clock():
@@ -516,6 +581,12 @@ def ide_drive():
     return drive(body=(58, 64, 78), label=(232, 84, 52), led=(80, 160, 255))
 
 
+def acfs_drive():
+    """a hard disk held in a folder on the host (ACFS): a light drive with a blue label, told apart from the
+    A1200's own dark IDE drive"""
+    return drive(label=(70, 110, 200))
+
+
 def held(emblem, scale):
     """a drawer holding EMBLEM; chosen, it rises out of it"""
     return lambda chosen: drawer(emblem, scale, lift=LIFT if chosen else 0)
@@ -550,7 +621,8 @@ PICTURES = {
     # the drives, each its own picture
     "SYSTEM": held(boing_obj, .62), "WORK": held(doc_obj, .64), "GAMES": held(pad_icon, .74),
     "RAM": held(ram_obj, .78), "USB": held(usb_obj, .78), "IDE": held(ide_drive, .74),
-    "HARDDISK": held(ide_drive, .74),
+    "HARDDISK": held(acfs_drive, .74),
+    "CD": held(cd_obj, .80), "FLOPPY": held(floppy_obj, .72), "NETWORK": held(net_obj, .76),
 }
 
 # icons/open NAME: picture (the pack's own programs; open_icons() in build_pack.py gives each its icon)
