@@ -8,8 +8,9 @@
  * UPDATE is the only command that waits for a person (its requester, then the
  * Installer, which waits for clicks even as a Novice). With AUTO, UPDATE asks
  * nothing and opens no Installer: it reinstalls the parts that are installed
- * from the waiting pack (REINSTALL: the settings in place stay, no new part is
- * added), writes the startup block again (STARTUP, which keeps the lines
+ * from the waiting pack (REINSTALL: the settings in place stay), installs the
+ * pack's KickstartSet on the slim ROM as the Installer does (ou_auto_kickset;
+ * no other new part is added), writes the startup block again (STARTUP, which keeps the lines
  * switched off), writes one line to ENVARC:GFOpenUp/GFOpenUpTool.log and
  * returns the run's code. CHECK still only says; YES still runs the Installer.
  * The parts here have no Amiga calls, for tests/test_openup_unattended.c.
@@ -67,8 +68,9 @@ static void ou_catn(char *buf, int size, int v)
 /* The log's one line, without its newline:
  *   GFOpenUpTool UPDATE: unattended (host flag) 0.8.28 to 0.8.29, 14 parts reinstalled: ok
  * installed "" (not installed), newer "" (no newer pack), newer not above installed (nothing to do):
- * what was found, and done < 0 when nothing was tried. rc is the run's return code. */
-static void ou_log_line(char *buf, int size, int by, const char *installed, const char *newer, int done, int rc)
+ * what was found, and done < 0 when nothing was tried. rc is the run's return code. kick: 1 the Kickstart set
+ * installed, -1 it failed, 0 not tried (ou_auto_kickset). */
+static void ou_log_line(char *buf, int size, int kick, int by, const char *installed, const char *newer, int done, int rc)
 {
     static const char *const why[] = { "?", "AUTO", "answers", "host flag" };
     if (size <= 0) return;
@@ -83,9 +85,18 @@ static void ou_log_line(char *buf, int size, int by, const char *installed, cons
         ou_cat(buf, size, installed); ou_cat(buf, size, " to "); ou_cat(buf, size, newer);
         ou_cat(buf, size, ", "); ou_catn(buf, size, done);
         ou_cat(buf, size, done == 1 ? " part reinstalled" : " parts reinstalled");
+        if (kick) ou_cat(buf, size, kick > 0 ? ", the Kickstart set installed" : ", the Kickstart set failed");
     }
     ou_cat(buf, size, ": ");
     ou_cat(buf, size, rc == 0 ? "ok" : rc < 10 ? "done, with warnings" : "failed");
+}
+
+/* The part AUTO installs though the manifest may not list it: the one the Installer installs on this machine
+ * whatever was chosen. KickstartSet on the slim ROM (Install-GFOpenUp: without its module set the slim ROM boots
+ * to its rescue Shell), through KICKSET, as the Installer does. 1: install it. */
+static int ou_auto_kickset(int slim_rom, int in_pack)
+{
+    return slim_rom && in_pack;
 }
 
 #endif

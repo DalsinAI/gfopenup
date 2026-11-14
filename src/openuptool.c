@@ -145,10 +145,12 @@
 #include "openup_lines.h"
 #include "openup_startupseq.h"
 #include "openup_kickset.h"
+#include "openup_slimrom.h"            /* DETECT SlimROM (0.8.x) */
 #include "openup_vers.h"               /* an older file never over a newer one */
 #include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
 
 static int slim_rom(void);
+static int kickset(const char *a1, const char *a2);
 
 static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.20 (13.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
@@ -4196,11 +4198,13 @@ static int show_changes(void)
 }
 
 /* The unattended UPDATE's one line, in ENVARC:GFOpenUp/GFOpenUpTool.log and on the Shell; rc back. */
+static int auto_kick;                               /* UPDATE AUTO's Kickstart set: 1 in, -1 failed, 0 not tried */
+
 static int update_logged(int by, const char *installed, const char *newer, int done, int rc)
 {
     char line[200];
     BPTR fh, l;
-    ou_log_line(line, sizeof line, by, installed, newer, done, rc);
+    ou_log_line(line, sizeof line, auto_kick, by, installed, newer, done, rc);
     say(line, NULL, NULL);
     if (!exists("ENVARC:GFOpenUp") && (l = CreateDir((STRPTR)"ENVARC:GFOpenUp"))) UnLock(l);
     if ((fh = Open((STRPTR)OU_LOG, MODE_READWRITE))) {
@@ -4247,6 +4251,12 @@ static int update(const char *how)
     if (!show_changes()) say("  (the same parts, updated in place)", NULL, NULL);
     if (unattended) {
         int rc = reinstall(CRADLE_DRAWER "/Parts");
+        auto_kick = 0;
+        if (rc < RETURN_ERROR && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
+            int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
+            auto_kick = r > RETURN_WARN ? -1 : 1;
+            if (r > rc) rc = r;
+        }
         if (rc < RETURN_ERROR && !write_startup(0)) {
             say("GFOpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL);
             rc = RETURN_ERROR;
@@ -4586,7 +4596,8 @@ static int in_rom_window(ULONG a)
     return (a >= 0x00F80000UL && a < 0x01000000UL) || (a >= 0x00E00000UL && a < 0x00E80000UL);
 }
 
-/* 1 on the slim ROM: kickload in the ROM, and workbench.library not a RomTag of the ROM (none, or the set's in RAM) */
+/* 1 on the slim ROM: kickload there, and the ROM's own header says the thin profile (openup_slimrom.h); a ROM of
+ * ours without that header: kickload in the ROM, and workbench.library not a RomTag of the ROM */
 static int slim_rom(void)
 {
     struct Resident *k, *wb;
@@ -4594,7 +4605,8 @@ static int slim_rom(void)
     k = FindResident((STRPTR)"kickload");
     wb = FindResident((STRPTR)"workbench.library");
     Permit();
-    return k && in_rom_window((ULONG)k) && (!wb || !in_rom_window((ULONG)wb));
+    return ous_slim_rom(k != NULL, (const unsigned char *)0x00F80000UL, k && in_rom_window((ULONG)k), wb != NULL,
+                        wb && in_rom_window((ULONG)wb));
 }
 
 /* The file's size, or -1 when it isn't a file there */

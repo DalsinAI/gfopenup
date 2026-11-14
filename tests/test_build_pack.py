@@ -593,6 +593,11 @@ def main() -> int:
         check("the Installer: no Zune left, and GFOpenMUI installed only when its part is in the pack",
               "AROS's Zune" not in inst and "MUI from Zune" not in inst and "ZuneTest" not in inst
               and '(and (bitand #parts 65536) (exists "Parts/GFOpenMUI/Part"))' in inst)
+        sr = tmp / "test_openup_slimrom"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_slimrom.c"), "-o", str(sr)], check=True)
+        r = subprocess.run([str(sr)], capture_output=True, text=True)
+        check("GFOpenUpTool DETECT SlimROM (tests/test_openup_slimrom.c)", r.returncode == 0, r.stdout[-600:])
         vs = tmp / "test_openup_vers"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_vers.c"), "-o", str(vs)], check=True)
