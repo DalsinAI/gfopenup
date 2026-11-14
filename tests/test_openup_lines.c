@@ -156,6 +156,35 @@ static int need_checks(void)
         truth("part needs: the first", oul_part_needs(mui, 0, nd, sizeof nd) && !strcmp(nd, "GFOpenLayout"), 1);
         truth("part needs: the second, with tabs (a commented one isn't)", oul_part_needs(mui, 1, nd, sizeof nd) && !strcmp(nd, "GFOffice"), 1);
         truth("part needs: no third", oul_part_needs(mui, 2, nd, sizeof nd), 0);
+        {
+            const char *ks = "part KickstartSet 47.100\n; the set\nadd \"Libs/gfopenlayout.library\" \"SYS:Libs/gfopenlayout.library\"\r\n"
+                             "unless GFOpenKick copy \"Devs/AHI/acaudio.audio\" \"DEVS:AHI/acaudio.audio\"\n"
+                             "; copy \"Libs/x.library\" \"LIBS:x.library\"\nretire \"LIBS:old.library\"\n";
+            truth("part writes: an add line's destination", oul_part_writes(ks, "SYS:Libs/gfopenlayout.library"), 1);
+            truth("part writes: case doesn't count", oul_part_writes(ks, "sys:libs/GFOpenLayout.library"), 1);
+            truth("part writes: a line with a condition counts", oul_part_writes(ks, "DEVS:AHI/acaudio.audio"), 1);
+            truth("part writes: a commented line doesn't", oul_part_writes(ks, "LIBS:x.library"), 0);
+            truth("part writes: retire isn't a write", oul_part_writes(ks, "LIBS:old.library"), 0);
+            truth("part writes: another spelling is another path", oul_part_writes(ks, "LIBS:gfopenlayout.library"), 0);
+            truth("part writes: a longer path isn't it", oul_part_writes(ks, "SYS:Libs/gfopenlayout.library.bak"), 0);
+            {
+                const char *ol = "part GFOpenLayout 19.0\ncopy \"Libs/gfopenlayout.library\" \"SYS:Libs/gfopenlayout.library\"\n";
+                const char *names[3] = { "GFOpenLayout", "KickstartSet", "GFOpenMUI" }, *texts[3] = { ol, ks, 0 };
+                char k1[] = "part", a1[] = "GFOpenLayout", b1[] = "19.0", k2[] = "part", a2[] = "KickstartSet", b2[] = "47.100";
+                oul_entry inst[2] = { { "", a1, b1 }, { "", a2, b2 } };
+                strcpy(inst[0].kind, k1);
+                strcpy(inst[1].kind, k2);
+                truth("REMOVE GFOpenLayout: the installed KickstartSet keeps SYS:Libs/gfopenlayout.library",
+                      oul_kept_by(inst, 2, "GFOpenLayout", names, texts, 3, "SYS:Libs/gfopenlayout.library") == names[1], 1);
+                truth("REMOVE KickstartSet: the installed GFOpenLayout keeps it",
+                      oul_kept_by(inst, 2, "KickstartSet", names, texts, 3, "SYS:Libs/gfopenlayout.library") == names[0], 1);
+                truth("a file only the part itself writes goes",
+                      oul_kept_by(inst, 2, "KickstartSet", names, texts, 3, "DEVS:AHI/acaudio.audio") != 0, 0);
+                inst[1].kind[0] = 0;
+                truth("a part in the pack but not installed keeps nothing",
+                      oul_kept_by(inst, 2, "GFOpenLayout", names, texts, 3, "SYS:Libs/gfopenlayout.library") != 0, 0);
+            }
+        }
         truth("part needs: none in a part without", oul_part_needs("part GFOpenLayout 18.0\ncopy \"a\" \"b\"\n", 0, nd, sizeof nd), 0);
         truth("part needs: a name too long for the buffer", oul_part_needs("needs part GFOpenLayout\n", 0, nd, 8), 0);
     }
