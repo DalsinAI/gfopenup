@@ -1596,6 +1596,38 @@ static void find_parts(const char *drawer, int depth)
 
 static int reinstalled;                             /* the parts REINSTALL put in again (UPDATE AUTO's log line) */
 
+/* Before REINSTALL puts part j in: each part its Part file needs ("needs part") that the disk hasn't got and the pack
+ * has goes in first, else INSTALL would leave part j out. GFOpenMUI 19.0 needs the GFOpenLayout part, which no earlier
+ * pack had (Ivanova's lab, bundle C, 14 Nov 2026); before, an update kept the old GFOpenMUI. One level: a needed part's
+ * own needs are its Part file's business, as on a first install. */
+static void reinstall_needs(int j, int *rc, int *done)
+{
+    char path[200], need[48];
+    LONG n = 0;
+    char *text;
+    int k, m;
+    strcpy(path, part_drawers[j]);
+    AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
+    if (!(text = read_file(path, &n)))
+        return;
+    for (k = 0; oul_part_needs(text, k, need, sizeof need); k++) {
+        if (oul_installed(ents, nents, need))
+            continue;
+        for (m = 0; m < nparts && strcmp(part_names[m], need); m++)
+            ;
+        if (m == nparts)
+            continue;                               /* not in the pack: INSTALL says so, and leaves part j out */
+        Printf((STRPTR)"GFOpenUp: %s needs the %s part, which this pack brings: it goes in first\n",
+               (LONG)part_names[j], (LONG)need);
+        {
+            int r = install(part_drawers[m]);
+            if (r > *rc) *rc = r;
+            (*done)++;
+        }
+    }
+    FreeVec(text);
+}
+
 static int reinstall(const char *parts)
 {
     static char wanted[MAXPARTS][48];
@@ -1632,6 +1664,7 @@ static int reinstall(const char *parts)
             if (rc < RETURN_WARN) rc = RETURN_WARN;
             continue;
         }
+        reinstall_needs(j, &rc, &done);
         {
             int r = install(part_drawers[j]);
             if (r > rc) rc = r;
@@ -4277,6 +4310,11 @@ static int update_logged(int by, const char *installed, const char *newer, int d
  * the installed parts reinstalled from the pack (the settings in place stay,
  * no part added), the startup block written again, one line in the log.
  * It never runs on its own, and it never changes anything until asked. */
+#ifndef KICKSET_DIR
+#define KICKSET_DIR "SYS:Kickstart/default/"
+#endif
+#define PACK_KICK_MANIFEST CRADLE_DRAWER "/Parts/KickstartSet/Kickstart/default/Manifest"   /* build_pack's */
+
 static int update(const char *how)
 {
     char newer[24] = "", installed[24] = "";
@@ -4297,8 +4335,23 @@ static int update(const char *how)
         return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
     }
     if (version_cmp(newer, installed) <= 0) {
-        say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
-        return unattended ? update_logged(by, installed, newer, -1, RETURN_OK) : RETURN_OK;
+        int rc = RETURN_OK;
+        auto_kick = 0;
+        /* an older GFOpenUpTool did the update and left the Kickstart set out (ou_set_stale): the set now */
+        if (unattended && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
+            LONG nh = 0, np = 0;
+            char *have = read_file(KICKSET_DIR "Manifest", &nh), *pack = read_file(PACK_KICK_MANIFEST, &np);
+            int stale = ou_set_stale(have, nh, pack, np);
+            if (have) FreeVec(have);
+            if (pack) FreeVec(pack);
+            if (stale) {
+                int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
+                auto_kick = r > RETURN_WARN ? -1 : 1;
+                rc = r;
+            }
+        }
+        if (!auto_kick) say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
+        return unattended ? update_logged(by, installed, newer, -1, rc) : rc;
     }
     Printf((STRPTR)"GFOpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
     if (check) return RETURN_WARN;
@@ -4643,7 +4696,9 @@ static int old_dock(void)
  * ENV:GFOpenUp/KickstartSet says "ready" or "missing"; DETECT's ENV:GFOpenUp/SlimROM says whether this ROM is the
  * slim one (kickload in it and no workbench.library of its own), and the Installer then installs the part. Cradle
  * refuses to start an instance or build a card on the slim ROM without the set (amicradle openkick_rom.py). */
+#ifndef KICKSET_DIR
 #define KICKSET_DIR "SYS:Kickstart/default/"
+#endif
 
 static int in_rom_window(ULONG a)
 {

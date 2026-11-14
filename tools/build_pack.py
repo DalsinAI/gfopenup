@@ -202,7 +202,10 @@ a Part file that C/GFOpenUpTool reads:
                         GFOPENPRESENTATION ARexx port), libowf linked in; it needs GFOffice (z.library). Left out
                         when gfoffice's linked build didn't make it; no Installer choice yet
   GFOpenMUI/              muimaster.library, the Team's own MUI on GFOpenLayout (only where no MUI is), and its
-                        examples in SYS:Tools/GFOpenMUI (gfopenmui muimaster/; left out without a build)
+                        examples in SYS:Tools/GFOpenMUI (gfopenmui muimaster/; left out without a build); it
+                        needs GFOpenLayout
+  GFOpenLayout/           gfopenlayout.library, which GFOpenMUI's muimaster.library opens (built from the
+                        gfopenlayout commit gfopenmui's muimaster script pins)
   GFOpenMulticore/        gfopenmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (gfopenmulticore)
   GFOpenMail/             GFOpenMail, the mail reader, and C:GFOpenMailCheck; needs GFOpenTLS (gfopenmail)
@@ -746,6 +749,10 @@ def build_parts(a):
     # library 18 at the commit its script pins: GFOPENLAYOUT names the script's own deps folder, so it fetches that one)
     mui_out = a.openamigamui / "muimaster/build-amiga"
     run(["sh", a.openamigamui / "muimaster/build-amiga.sh"], env=gfopenmui_build_env(mui_out, os.environ))
+    # gfopenlayout.library 18, which muimaster.library 19.0 opens by name at its first open (gfopenmui
+    # muimaster/library/mui_lib.c): from the same deps checkout the muimaster script built on, so the two match.
+    # Nothing else packs it and the slim ROM hasn't it, so no MUI program started (Ivanova's lab, bundle C, row 10)
+    run(["sh", mui_out / "deps/gfopenlayout/build-library.sh"], env=gfopenlayout_build_env(mui_out, os.environ, a.opengadtools))
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     # The GFOffice Suite (gfoffice) carries its own GFOpenGadTools copy and needs GCC 16 (its build-os3.sh stops on
     # the os32 stove's 6.5); GFOpenWrite's pages are GFOpenLayout's. Built on its four libraries (GFO_LIBRARY,
@@ -1250,6 +1257,7 @@ PART_MAIN = {
     "GFOpenRTG": ("Libs/gfopenrtg.library", "gfopenrtg.library"),
     "GFOpenGPU": ("Libs/gfopengpu.library", "gfopengpu.library"),
     "GFOpenMUI": ("Libs/muimaster.library", "muimaster.library"),
+    "GFOpenLayout": ("Libs/gfopenlayout.library", "gfopenlayout.library"),
     "OGLES3": ("Libs/ogles3.library", "ogles3.library"),
     "AkikoPlus": ("Libs/akikoplus.library", "akikoplus.library"),
     "Warp3D": ("Libs/Warp3D.library", "Warp3D.library"),
@@ -2045,6 +2053,48 @@ def gfopenmui_build_env(mui_out: Path, base) -> dict:
                 GFOPENLAYOUT=str(mui_out / "deps/gfopenlayout"), OUT=str(mui_out), LAB_PROGRAMS="0")
 
 
+def gfopenlayout_build_env(mui_out: Path, base, opengadtools: Path | None) -> dict:
+    """The environment for gfopenlayout's build-library.sh in a pack build: gfopenlayout.library from the checkout
+    gfopenmui's muimaster script fetched (mui_out/deps/gfopenlayout, the commit it pins), with the same stove,
+    into that checkout's build-amiga/, and GFOpenGadTools' theme reader where the pack's gfopengadtools has it."""
+    env = dict(gfopenmui_build_env(mui_out, base), OUT=str(mui_out / "deps/gfopenlayout/build-amiga"))
+    env.pop("GFOPENLAYOUT", None)
+    env.pop("LAB_PROGRAMS", None)
+    if opengadtools and (opengadtools / "lib/ogt_theme.c").is_file():
+        env["OGT_ROOT"] = str(opengadtools)
+    return env
+
+
+def gfopenlayout_part(top: Path, gfopenmui: Path, support: Path | None = None) -> Part | None:
+    """Parts/GFOpenLayout: gfopenlayout.library, which GFOpenMUI's muimaster.library opens by name at its first open
+    (gfopenmui muimaster/library/mui_lib.c), built by build_parts from the gfopenlayout checkout gfopenmui's muimaster
+    script fetched (the commit it pins, so the two match). Nothing else packed it and the slim ROM hasn't it, so no MUI
+    program started (Ivanova's lab, bundle C, row 10). "copy": an older one on the disk is kept in SYS:Storage and
+    replaced, a newer one stays (the newer-file rule). None, and GFOpenMUI with it, when gfopenmui has no build; a
+    muimaster.library built without it stops the build."""
+    b = gfopenmui / "muimaster" / "build-amiga"
+    if not (b / "lib" / "muimaster.library").is_file():
+        return None
+    oll = b / "deps" / "gfopenlayout" / "build-amiga" / "lib" / "gfopenlayout.library"
+    # The ROM build's own copy, when the thin build has one (thin-support/Libs, the guest build given OLAY=): the
+    # KickstartSet part puts the same file on a slim-ROM disk, so the two parts carry the same bytes, and other
+    # machines get it here (Team 5's 17:10 correction)
+    if support and (support / "Libs" / "gfopenlayout.library").is_file():
+        oll = support / "Libs" / "gfopenlayout.library"
+    if not oll.is_file():
+        raise SystemExit(f"GFOpenLayout: no {oll}; GFOpenMUI's muimaster.library cannot open without it "
+                         "(build_parts builds it with gfopenlayout's build-library.sh)")
+    data = oll.read_bytes()
+    ver = binary_version(data, "gfopenlayout.library")
+    if not ver:
+        raise SystemExit(f"GFOpenLayout: {oll} has no gfopenlayout.library version string")
+    ol = Part(top, "GFOpenLayout", ver, f"GFOpenLayout: gfopenlayout.library {ver}, the layout and drawing library "
+                                        "GFOpenMUI draws with")
+    ol.add("Libs/gfopenlayout.library", data, "LIBS:gfopenlayout.library")
+    ol.write()
+    return ol
+
+
 def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
     """Parts/GFOpenMUI from gfopenmui main's clean-room muimaster.library (muimaster/build-amiga.sh, built by
     build_parts into muimaster/build-amiga/): the library, only where no muimaster.library is or GFOpenUp's own is
@@ -2063,6 +2113,9 @@ def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
     om = Part(top, "GFOpenMUI", ver, f"GFOpenMUI: muimaster.library {ver}, the AmiCradle Team's own MUI on GFOpenLayout, "
                                      "where no MUI is, and its examples")
     om.add("Libs/muimaster.library", data, "LIBS:muimaster.library", own=True)
+    # the gfopenlayout.library it opens is the GFOpenLayout part's (gfopenlayout_part): INSTALL leaves GFOpenMUI out
+    # without it, and REINSTALL puts it in first (Team 5 on Ivanova's bundle C, row 10)
+    om.needs_part("GFOpenLayout")
     for ex in ("MUIClasses", "MUIAddons", "MUITime"):
         f = b / "tests" / ex
         if f.is_file():
@@ -2140,6 +2193,36 @@ def kickstartset_part(top: Path, support: Path | None) -> Part | None:
     ks.write()
     print(f"  KickstartSet {version}: {len(modules)} modules and {files} files on demand{' (' + rom_id + ')' if rom_id else ''}")
     return ks
+
+
+# Our own libraries resident in a ROM the pack runs on without being in the pack (none yet: the slim ROM has no gf*
+# library; the KickstartSet part's are in the pack and count as packed)
+ROM_GF_LIBRARIES: frozenset = frozenset()
+
+
+def unpacked_opened_libraries(parts: Path, rom=ROM_GF_LIBRARIES) -> list:
+    """Each of our own libraries (gf*.library) that a packed library names, so opens, and that neither the pack nor
+    the ROM has: "<packed> opens <name>". GFOpenMUI's muimaster.library 19.0 opened gfopenlayout.library, which nothing
+    packed, and no MUI program started (Ivanova's lab, bundle C, 14 Nov 2026). Only gf* names: another library's name
+    in a binary (an OS one, a third party's it tries) is not ours to pack."""
+    packed = {f.name.lower() for f in parts.rglob("*.library") if f.is_file()} | {n.lower() for n in rom}
+    missing = []
+    for f in sorted(parts.rglob("*.library")):
+        if not f.is_file():
+            continue
+        for m in sorted(set(re.findall(rb"(?<![A-Za-z0-9_.-])(gf[a-z0-9_]+\.library)", f.read_bytes()))):
+            name = m.decode("latin-1")
+            if name.lower() != f.name.lower() and name.lower() not in packed:
+                missing.append(f"{f.relative_to(parts)} opens {name}")
+    return missing
+
+
+def check_opened_libraries(parts: Path) -> None:
+    """Stops the build when a packed library opens one of our own libraries the pack and the ROM haven't got."""
+    missing = unpacked_opened_libraries(parts)
+    if missing:
+        raise SystemExit("libraries opened but not in the pack or the ROM:\n  " + "\n  ".join(missing))
+    print("  opened libraries: every gf*.library a packed library opens is in the pack")
 
 
 def check_part_versions(parts: Path) -> None:
@@ -3127,7 +3210,8 @@ def main() -> int:
             p.write()
 
     # GFOpenMUI: the clean-room muimaster.library and its examples (gfopenmui_part), or left out
-    om = gfopenmui_part(top, a.openamigamui, icons)
+    ol = gfopenlayout_part(top, a.openamigamui, a.thinsupport)
+    om = gfopenmui_part(top, a.openamigamui, icons) if ol else None
 
     # GFOpenMulticore: gfopenmulticore.library runs a 68k job on another core of a
     # cores board (gfopenservice.device's cpu.m68k/1), or on the main CPU when
@@ -3298,6 +3382,7 @@ def main() -> int:
         print(f"  GFOpenUp's own drawers in GFOpenIcons look B: {n}")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
     check_part_versions(top / "Parts")
+    check_opened_libraries(top / "Parts")
     if browser_top:
         check_part_versions(browser_top / "Parts")
     if a.lha:

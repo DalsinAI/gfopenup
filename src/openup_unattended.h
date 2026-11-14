@@ -80,7 +80,10 @@ static void ou_log_line(char *buf, int size, int kick, int by, const char *insta
     ou_cat(buf, size, ") ");
     if (!installed || !*installed) ou_cat(buf, size, "GFOpenUp not installed, nothing to update");
     else if (!newer || !*newer) { ou_cat(buf, size, installed); ou_cat(buf, size, " installed, no newer pack from Cradle"); }
-    else if (done < 0) { ou_cat(buf, size, installed); ou_cat(buf, size, " installed, the newest Cradle has"); }
+    else if (done < 0) {
+        ou_cat(buf, size, installed); ou_cat(buf, size, " installed, the newest Cradle has");
+        if (kick) ou_cat(buf, size, kick > 0 ? ", the Kickstart set installed" : ", the Kickstart set failed");
+    }
     else {
         ou_cat(buf, size, installed); ou_cat(buf, size, " to "); ou_cat(buf, size, newer);
         ou_cat(buf, size, ", "); ou_catn(buf, size, done);
@@ -97,6 +100,17 @@ static void ou_log_line(char *buf, int size, int kick, int by, const char *insta
 static int ou_auto_kickset(int slim_rom, int in_pack)
 {
     return slim_rom && in_pack;
+}
+
+/* AUTO with nothing newer to install (14 Nov 2026): an instance's older GFOpenUpTool reinstalled the pack but never
+ * installed its Kickstart set, so the next run, by the new tool, finds nothing to do. With ou_auto_kickset's
+ * conditions it installs the set still when the disk's SYS:Kickstart/default/Manifest isn't the pack's: missing, or
+ * other bytes. have/pack are the two files (NULL when absent). 1: install it. */
+static int ou_set_stale(const char *have, long nhave, const char *pack, long npack)
+{
+    if (!pack) return 0;
+    if (!have || nhave != npack) return 1;
+    return memcmp(have, pack, (size_t)npack) != 0;
 }
 
 #endif
