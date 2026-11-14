@@ -2015,6 +2015,66 @@ def kickstartset_part(top: Path, support: Path | None) -> Part | None:
     return ks
 
 
+# Paths two parts may both write, on purpose and only with the same bytes (Team 5, 14 Nov 2026: one part owns each
+# file; the pack builder stops on two parts writing one path). Each needs its reason.
+SHARED_PATHS = {
+    "libs:z.library": "GFOpenZlib, the one file GFOffice, GFOpenGPU (physfs.library inflates through it) and "
+                      "GFOpenImage each need, whichever is installed alone",
+}
+
+_PART_LINE = re.compile(r'^(?:(?:when|unless) \S+ )?(?:copy|add|default) "([^"]*)" "([^"]*)"\s*$')
+
+
+def check_clashes(parts: Path) -> list[str]:
+    """Every Part file under parts (Parts/<name>/Part and one level of drawers below, as GFOpenUpTool finds them):
+    the paths two or more parts write. A path in SHARED_PATHS is allowed when every part's file has the same bytes.
+    Returns the problems, one line each (empty: none)."""
+    by_dest: dict[str, list[tuple[str, bytes]]] = {}
+    for pf in sorted(list(parts.glob("*/Part")) + list(parts.glob("*/*/Part"))):
+        lines = pf.read_text(encoding="latin-1").splitlines()
+        if not lines or not lines[0].startswith("part "):
+            continue
+        name = lines[0].split()[1]
+        for line in lines[1:]:
+            m = _PART_LINE.match(line)
+            if not m:
+                continue
+            rel, dest = m.groups()
+            f = pf.parent / rel
+            by_dest.setdefault(dest.lower(), []).append((name, f.read_bytes() if f.is_file() else b""))
+    problems = []
+    for dest, owners in sorted(by_dest.items()):
+        names = sorted({n for n, _ in owners})
+        if len(names) < 2:
+            continue
+        same = len({d for _, d in owners}) == 1
+        if dest in SHARED_PATHS and same:
+            continue
+        problems.append(f"{dest}: written by {', '.join(names)}"
+                        f"{' (the same bytes, but not in SHARED_PATHS)' if same else ' with different bytes'}")
+    return problems
+
+
+def write_pack_list(parts: Path, out: Path) -> int:
+    """PACK-LIST.txt beside the parts: one line per file a Part file installs, "<part>\t<dest>\t<size>\t<sha256>",
+    sorted. Returns how many lines."""
+    import hashlib
+    rows = []
+    for pf in sorted(list(parts.glob("*/Part")) + list(parts.glob("*/*/Part"))):
+        lines = pf.read_text(encoding="latin-1").splitlines()
+        if not lines or not lines[0].startswith("part "):
+            continue
+        name = lines[0].split()[1]
+        for line in lines[1:]:
+            m = _PART_LINE.match(line)
+            if m and (pf.parent / m.group(1)).is_file():
+                data = (pf.parent / m.group(1)).read_bytes()
+                rows.append(f"{name}\t{m.group(2)}\t{len(data)}\t{hashlib.sha256(data).hexdigest()}")
+    rows.sort()
+    out.write_text("# part\tinstalled as\tbytes\tSHA-256\n" + "\n".join(rows) + "\n", encoding="latin-1")
+    return len(rows)
+
+
 def check_part_versions(parts: Path) -> None:
     """Stops the build when a part's declared version is not its main
     binary's $VER, or when a part says neither which binary that is nor
@@ -2524,9 +2584,10 @@ def main() -> int:
     # AmiCradle's ACRTG board. LoadMonDrvs runs its monitor driver; the
     # Picasso96 monitor for the same board is moved aside (UNINSTALL puts it
     # back), and Workbench's screen mode becomes GFOpenRTG.1 800x600 16-bit.
-    # gfopengpu.library and ACRTG.gpu come with it, so GFOpenRTG's drawing goes
-    # to the board's ring without the GFOpenGPU part; that part has the same
-    # files, and whichever installs last leaves the same bytes.
+    # It draws through gfopengpu.library and ACRTG.gpu, which the GFOpenGPU part
+    # owns (one part owns each file, 14 Nov 2026): the Installer brings GFOpenGPU
+    # when GFOpenRTG is picked. No "needs part" line: the Installer puts
+    # GFOpenRTG in before GFOpenGPU, and INSTALL would leave it out.
     rtg = a.openamigartg / "build"
     acrtg_gpu = (a.guest / "build/guest/os32/ACRTG.gpu").read_bytes()
     # amicradle-guest keeps an ACRTG.gpu in git, and on 12 October 2026 that one was 1.1 (8.10.2026) while the
@@ -2544,8 +2605,6 @@ def main() -> int:
     rt.line('retire "DEVS:Monitors/acrtg"')
     rt.line('retire "DEVS:Monitors/acrtg.info"')
     rt.add("Libs/gfopenrtg.library", (rtg / "gfopenrtg.library").read_bytes(), "LIBS:gfopenrtg.library")
-    rt.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
-    rt.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
     rt.add("Libs/GFOpenRTG/cybergraphics.library", (rtg / "cybergraphics.library").read_bytes(), "LIBS:GFOpenRTG/cybergraphics.library")
     rt.add("C/GFOpenRTG", (rtg / "GFOpenRTG").read_bytes(), "C:GFOpenRTG")
     rt.add("Devs/Monitors/GFOpenRTG", (rtg / "GFOpenRTG-Monitor").read_bytes(), "DEVS:Monitors/GFOpenRTG")
@@ -3182,6 +3241,12 @@ def main() -> int:
     check_part_versions(top / "Parts")
     if browser_top:
         check_part_versions(browser_top / "Parts")
+    for t in [top] + ([browser_top] if browser_top else []):
+        clashes = check_clashes(t / "Parts")
+        if clashes:
+            raise SystemExit("two parts write one path (one part owns each file; SHARED_PATHS for same-byte sharing):\n  "
+                             + "\n  ".join(clashes))
+        print(f"  {t / 'PACK-LIST.txt'}: {write_pack_list(t / 'Parts', t / 'PACK-LIST.txt')} files, no two parts on one path")
     if a.lha:
         arc = a.out / f"GFOpenUp-{a.version}.lha"
         arc.unlink(missing_ok=True)
