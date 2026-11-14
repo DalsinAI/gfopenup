@@ -247,9 +247,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEV = ROOT.parent
 STOVE = Path(os.environ.get("STOVE", Path.home() / "AmiCradle/stoves/os32"))
-# amicradle-guest's scripts: the GCC 16 open6 stove by the name the Cradle hosts give it (the scripts' own default,
-# os32-gcc16-16.2.0-open6, is a folder daletop doesn't have: Corwin's 14 Nov build)
-GUEST_STOVE = Path(os.environ.get("OS32_GCC16_OPEN6", Path.home() / "AmiCradle/stoves/os32-gcc16-open6"))
+# amicradle-guest's scripts: the GCC 16 open8 stove by the name the Cradle hosts give it (the scripts' own default,
+# os32-gcc16-16.2.0-open8, is a folder daletop doesn't have: Corwin's 14 Nov build)
+GUEST_STOVE = Path(os.environ.get("OS32_GCC16_OPEN6", Path.home() / "AmiCradle/stoves/os32-gcc16-open8"))
 CC = STOVE / "prefix/bin/m68k-amigaos-gcc"
 # soft float: -m68040 links libnix's libm020, not libm881 (specs/m68k-soft-m68040.specs)
 SOFT_SPECS = Path(__file__).resolve().parent.parent / "specs/m68k-soft-m68040.specs"
@@ -611,7 +611,7 @@ _STOVE_DEFAULT = re.compile(r'^\s*STOVE=\$\{STOVE:-"?([^"}]+)"?\}', re.M)
 
 def guest_stove(script: Path, env: dict, home: Path | None = None, guest: Path | None = None) -> dict:
     """env for an amicradle-guest script: as given, but when the script's own STOVE default is a stove folder this
-    host doesn't have and its name is an open6 one (os32-gcc16-16.2.0-open6), GUEST_STOVE instead, if this host has
+    host doesn't have and its name is an open8 one (os32-gcc16-16.2.0-open8), GUEST_STOVE instead, if this host has
     that (Corwin's 14 Nov build: 13 guest scripts stopped on m68k-amigaos-gcc: not found). The default's $STOVES is
     env's STOVES, else $HOME/AmiCradle/stoves, as the scripts read it (Londo, #254). A STOVE already in env stays."""
     if "STOVE" in env:
@@ -623,7 +623,7 @@ def guest_stove(script: Path, env: dict, home: Path | None = None, guest: Path |
     h = str(home or Path.home())
     stoves = env.get("STOVES") or f"{h}/AmiCradle/stoves"
     d = Path(m.group(1).replace("$STOVES", stoves).replace("${STOVES}", stoves).replace("$HOME", h))
-    if d.is_dir() or "open6" not in d.name:
+    if d.is_dir() or "open8" not in d.name:
         return env
     return dict(env, STOVE=str(guest))
 
@@ -725,9 +725,9 @@ def build_parts(a):
     run(["sh", a.opendatatypes / "Datatypes/build.sh"], env=dict(os.environ))   # os32-gcc16 too
     run(["sh", a.openamigartg / "library/build.sh"], env=env)   # also Warp3D and, with the GCC 16 stove, SDL2.module
     run(["sh", a.openamigartg / "tools/build.sh"], env=env)     # GFOpenGPUCheck
-    # ogles3.library on GFOpenGPU and OGLES3Check (gfopenrtg #190), with the GCC 16 open6 stove its script asks for
+    # ogles3.library on GFOpenGPU and OGLES3Check (gfopenrtg #190), with the GCC 16 open8 stove its script asks for
     run(["sh", a.openamigartg / "library/ogles3/build-amiga.sh", a.openamigartg / "build/ogles3"],
-        env=dict(os.environ, STOVE=os.environ.get("OS32_GCC16_OPEN6", str(Path.home() / "AmiCradle/stoves/os32-gcc16-open6"))))
+        env=dict(os.environ, STOVE=os.environ.get("OS32_GCC16_OPEN6", str(Path.home() / "AmiCradle/stoves/os32-gcc16-open8"))))
     # GL.module (Mesa) with the GCC 16 stove, which its script puts first on PATH; then GFOpenDemos on it
     gl_out = a.openamigartg / "build/gl"
     run(["sh", a.openamigartg / "library/modules/gl/module/build.sh", gl_out], env=dict(os.environ))
@@ -745,7 +745,7 @@ def build_parts(a):
     # GFOpenFiles' zlib is our openzlib, from the guest checkout (GUEST), not a libz.a beside it
     run(["sh", a.openamigafilemanager / "build.sh"], env=filemanager_env(a, env))
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
-    # GFOpenMUI: the clean-room muimaster.library (gfopenmui muimaster/build-amiga.sh, GCC 16 open6, on GFOpenLayout
+    # GFOpenMUI: the clean-room muimaster.library (gfopenmui muimaster/build-amiga.sh, GCC 16 open8, on GFOpenLayout
     # library 18 at the commit its script pins: GFOPENLAYOUT names the script's own deps folder, so it fetches that one)
     mui_out = a.openamigamui / "muimaster/build-amiga"
     run(["sh", a.openamigamui / "muimaster/build-amiga.sh"], env=gfopenmui_build_env(mui_out, os.environ))
@@ -2046,10 +2046,10 @@ KICKSET_MAN_HEAD = "# GFOpenKickLoad manifest "
 
 
 def gfopenmui_build_env(mui_out: Path, base) -> dict:
-    """The environment for gfopenmui's muimaster/build-amiga.sh in a pack build: GCC 16 open6, GFOpenLayout in the
+    """The environment for gfopenmui's muimaster/build-amiga.sh in a pack build: GCC 16 open8, GFOpenLayout in the
     script's own deps folder, out to mui_out, and LAB_PROGRAMS=0, so the lab's AROS programs (APL, never packed) are
     neither fetched nor built."""
-    return dict(base, STOVE=base.get("OS32_GCC16_OPEN6", str(Path.home() / "AmiCradle/stoves/os32-gcc16-open6")),
+    return dict(base, STOVE=base.get("OS32_GCC16_OPEN6", str(Path.home() / "AmiCradle/stoves/os32-gcc16-open8")),
                 GFOPENLAYOUT=str(mui_out / "deps/gfopenlayout"), OUT=str(mui_out), LAB_PROGRAMS="0")
 
 
