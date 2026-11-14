@@ -5,7 +5,7 @@ archive (DESIGN.md sections 3 and 4).
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
         [--guest DIR] [--openamigaservice DIR] [--opendatatypes DIR] [--openamigartg DIR]
-        [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
+        [--openamigafilemanager DIR] [--gfopenmedia DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--gfoffice DIR] [--openamigalayout DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
@@ -58,7 +58,9 @@ a Part file that C/GFOpenUpTool reads:
                         amicradle-guest checkout (--guest; tools/openicons_part.py)
   GFOpenTypes/            GFOpenPrefs's File Types page: no files of its own since the no-ROM-volume
                         design (24 October 2026); it archives its old name's stub in SYS:Prefs
-  GFOpenCompress/         GFOpenCompress, its window and command (gfopencompress)
+  GFOpenCompress/         GFOpenCompress, its window and command, and its helper libraries in LIBS:
+                        (gfopencompress_archive.library: RAR, 7z, bzip2, xz; gfopencompress_crunch.library:
+                        crunched files), which GFOpenFiles opens too (gfopencompress)
   GFOpenService/          mitchy.device (with gfopenservice.device, its old name) and Nursery: services from boards and
                         paired Cradles; ServiceTest; MEDIA:, files decoded through
                         media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA); mitchy.library (gfopenservice)
@@ -370,6 +372,29 @@ def first(*paths: Path) -> Path | None:
     return None
 
 
+
+# GFOpenCompress's helper libraries (gfopencompress DESIGN.md 4i, since 6 November 2026): its build-os3.sh makes them
+# beside the program, which opens them for RAR, 7z, bzip2 and xz (archive) and crunched files (crunch). GFOpenFiles is
+# built with the same engine (gfopenfilemanager tools/oc_engine_files.sh) and opens the same two. The GFOpenCompress
+# part owns them. A checkout from before the split (no extra/oc_extra_stub.c) has neither.
+OC_HELPER_LIBS = ("gfopencompress_archive.library", "gfopencompress_crunch.library")
+
+
+def compress_helper_libs(part: "Part", oc: Path) -> list[str]:
+    """Adds GFOpenCompress's helper libraries to its part (LIBS:); stops the pack when the checkout has the stub that
+    opens them but its build made none. Returns the libraries added."""
+    if not (oc / "extra/oc_extra_stub.c").is_file():
+        return []
+    added = []
+    for lib in OC_HELPER_LIBS:
+        f = oc / "build/os3" / lib
+        if not f.is_file():
+            sys.exit(f"GFOpenCompress: no {f} (its build-os3.sh makes it; without it RAR, 7z, bzip2, xz or crunched "
+                     f"files don't open in GFOpenCompress or GFOpenFiles)")
+        part.add(f"Libs/{lib}", f.read_bytes(), f"LIBS:{lib}")
+        added.append(lib)
+    return added
+
 class Part:
     """A part's drawer: its files and its Part file's lines."""
 
@@ -656,7 +681,14 @@ def build_parts(a):
             env=dict(os.environ, RTG=str(a.openamigartg), CROSS="mesa/cross/m68k-amigaos.ini", GL_OUT=str(gl_out),
                      PATH=f"{stove16 / 'bin'}:{os.environ['PATH']}"))
     # GFOpenFiles' zlib is our openzlib, from the guest checkout (GUEST), not a libz.a beside it
-    run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest)))
+    # and GFOpenCompress's engine, GFOpenFTP's and GFOpenMedia's headers from the checkouts given here (OC, FTP, MEDIA;
+    # without them build.sh looks beside its own checkout)
+    fm_env = dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest), OC=str(a.openamigacompress))
+    if a.openamigaftp:
+        fm_env["FTP"] = str(a.openamigaftp)
+    if a.gfopenmedia:
+        fm_env["MEDIA"] = str(a.gfopenmedia)
+    run(["sh", a.openamigafilemanager / "build.sh"], env=fm_env)
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     run(["sh", a.openamigamui / "os3/build.sh"], env=env)
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
@@ -2062,6 +2094,8 @@ def main() -> int:
     ap.add_argument("--openamigartg", type=Path, default=first(DEV / "gfopenrtg", DEV.parent / "gfopenrtg"))
     ap.add_argument("--openamigafilemanager", type=Path,
                     default=first(DEV / "gfopenfilemanager", DEV.parent / "gfopenfilemanager"))
+    ap.add_argument("--gfopenmedia", type=Path, default=first(DEV / "gfopenmedia", DEV.parent / "gfopenmedia"),
+                    help="gfopenmedia, its headers only, for GFOpenFiles' build (MEDIA; its Information window)")
     ap.add_argument("--openamigamediaplayer", type=Path,
                     default=first(DEV / "gfopenmediaplayer", DEV.parent / "gfopenmediaplayer"))
     ap.add_argument("--openamigamui", type=Path, default=first(DEV / "gfopenmui", DEV.parent / "gfopenmui"))
@@ -2331,6 +2365,7 @@ def main() -> int:
     oc = Part(top, "GFOpenCompress", "0.3.3", "GFOpenCompress: archives and disk images, from its window or the Shell")
     oc.add("Utilities/GFOpenCompress", (a.openamigacompress / "build/os3/GFOpenCompress").read_bytes(), "SYS:Utilities/GFOpenCompress")
     oc.add("Utilities/GFOpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenCompress.info")
+    compress_helper_libs(oc, a.openamigacompress)
     oc.write()
 
     # GFOpenService: the services device and Nursery (gfopenservice). It

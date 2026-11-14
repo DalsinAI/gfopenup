@@ -465,6 +465,44 @@ def gfos_fonts_checks() -> None:
               bp.gfos_fonts_part(Path(t), half) is None and not (Path(t) / "Parts/GFOSFonts").exists())
 
 
+def compress_helper_checks() -> None:
+    """GFOpenCompress's helper libraries (14 November 2026): with the stub that opens them, both go to LIBS: in the
+    GFOpenCompress part, and a build without them stops the pack; a checkout from before the split adds none. GFOpenFiles
+    is built with the pack's GFOpenCompress (OC), GFOpenFTP (FTP) and GFOpenMedia (MEDIA)."""
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        oc = t / "gfopencompress"
+        (oc / "extra").mkdir(parents=True)
+        (oc / "extra/oc_extra_stub.c").write_text("/* stub */\n")
+        (oc / "build/os3").mkdir(parents=True)
+        for lib in bp.OC_HELPER_LIBS:
+            (oc / "build/os3" / lib).write_bytes(b"\0\0\x03\xf3" + lib.encode())
+        p = bp.Part(t / "top", "GFOpenCompress", "0.4.0", "GFOpenCompress")
+        added = bp.compress_helper_libs(p, oc)
+        check("GFOpenCompress: both helper libraries added", added == list(bp.OC_HELPER_LIBS), str(added))
+        check("GFOpenCompress: the libraries go to LIBS:, copied",
+              all(f'copy "Libs/{lib}" "LIBS:{lib}"' in p.lines for lib in bp.OC_HELPER_LIBS), str(p.lines))
+        check("GFOpenCompress: the libraries' bytes are the build's",
+              all((p.dir / "Libs" / lib).read_bytes() == (oc / "build/os3" / lib).read_bytes() for lib in bp.OC_HELPER_LIBS))
+        (oc / "build/os3" / bp.OC_HELPER_LIBS[1]).unlink()
+        try:
+            bp.compress_helper_libs(bp.Part(t / "top2", "GFOpenCompress", "0.4.0", "GFOpenCompress"), oc)
+            stopped = ""
+        except SystemExit as e:
+            stopped = str(e)
+        check("GFOpenCompress: a build without its crunch library stops the pack", bp.OC_HELPER_LIBS[1] in stopped, stopped)
+        old = t / "old"
+        old.mkdir()
+        check("GFOpenCompress: a checkout from before the split adds none",
+              bp.compress_helper_libs(bp.Part(t / "top3", "GFOpenCompress", "0.3.3", "GFOpenCompress"), old) == [])
+    src = (ROOT / "tools/build_pack.py").read_text()
+    check("the GFOpenCompress part takes its helper libraries", "compress_helper_libs(oc, a.openamigacompress)" in src)
+    check("GFOpenFiles is built with the pack's GFOpenCompress, GFOpenFTP and GFOpenMedia",
+          'OC=str(a.openamigacompress)' in src and 'fm_env["FTP"]' in src and 'fm_env["MEDIA"] = str(a.gfopenmedia)' in src
+          and 'env=fm_env' in src)
+    check("--gfopenmedia is in the usage", "[--gfopenmedia DIR]" in src and '"--gfopenmedia"' in src)
+
+
 def kickstartset_checks(tmp: Path) -> None:
     """The slim ROM's disk part (9 November 2026): Parts/KickstartSet from a thin build's thin-support/: the set's
     modules copied, its Manifest last, the files on demand added (a disk's own stays), the ROM's version; a module
@@ -976,6 +1014,7 @@ def main() -> int:
 
     amisans_checks()
     gfos_fonts_checks()
+    compress_helper_checks()
     openprinter_checks()
     with tempfile.TemporaryDirectory() as ktmp:
         kickstartset_checks(Path(ktmp))
