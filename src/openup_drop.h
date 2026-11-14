@@ -41,4 +41,24 @@ static inline int oud_has_text(const char *buf, long n, const char *text)
     return 0;
 }
 
+/* A manifest entry another step cleared (kind[0] = 0: taken out, dropped, retired) has left the list, as
+ * manifest_save leaves it out, so a lookup passes it by. Before, find_entry still returned it: after drop took 0.2.1's
+ * muimaster.library face out, the clean-room 19.0's add found that cleared entry, wrote the file and listed nothing
+ * (Ivanova's lab, bundle C, row 11). kind NULL: any kind. */
+static inline int oud_match(const char *ekind, const char *ea, const char *kind, const char *a)
+{
+    return ekind[0] && !strcmp(ea, a) && (!kind || !strcmp(ekind, kind));
+}
+
+/* A drop line's words after "drop <dest>": [<text>] [unless <path> <text>]. The unless guard keeps dest while the
+ * file at path still holds that text: GFOpenMUI's zunemaster.library stays while a muimaster.library face over it is
+ * still there (one the user changed, which the face drop leaves: Flibble's note, Ivanova's lab bundle C row 13). */
+static inline void oud_words(char **w, int n, const char **text, const char **upath, const char **utext)
+{
+    int i = 2;
+    *text = *upath = *utext = NULL;
+    if (i < n && strcmp(w[i], "unless")) *text = w[i++];
+    if (i + 2 < n && !strcmp(w[i], "unless")) { *upath = w[i + 1]; *utext = w[i + 2]; }
+}
+
 #endif

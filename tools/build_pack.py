@@ -2075,7 +2075,10 @@ def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
                        f"SYS:Tools/GFOpenMUI/{ex}.info")
     # GFOpenMUI 0.2.1's Zune files out of an upgraded disk, where GFOpenUp put them (its manifest says so): a user's
     # own copy stays (Lorien's note on #253, 14 Nov 2026)
-    for d in ("LIBS:zunemaster.library", "SYS:Tools/ZuneTest", "SYS:Tools/ZuneTest.info"):
+    # zunemaster.library stays while a face over it is still in LIBS: (one the user changed, which the drop above
+    # leaves: Flibble's note, Ivanova's lab bundle C row 13)
+    om.line('drop "LIBS:zunemaster.library" unless "LIBS:muimaster.library" "a face over zunemaster.library"')
+    for d in ("SYS:Tools/ZuneTest", "SYS:Tools/ZuneTest.info"):
         om.line(f'drop "{d}"')
     om.write()
     return om

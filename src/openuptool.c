@@ -99,10 +99,12 @@
  *                                        put it there; another program's stays)
  *   retire <dest>                       (moved to SYS:Storage/GFOpenUp-Superseded,
  *                                        so it no longer runs; UNINSTALL puts it back)
- *   drop <dest> [<text>]                (14 Nov 2026: a file an earlier version of the part put there that
+ *   drop <dest> [<text>] [unless <path> <text>]
+ *                                       (14 Nov 2026: a file an earlier version of the part put there that
  *                                        it no longer has; taken out as REMOVE would, only where the
  *                                        manifest lists it as GFOpenUp's; with <text>, only when the
- *                                        file holds it; src/openup_drop.h)
+ *                                        file holds it; with unless, it stays while the file at <path>
+ *                                        holds that text; src/openup_drop.h)
  *   face <icon in the drawer> <dest .info>  (0.6: the icon's picture only; dest keeps
  *                                        its type, tools, tool types and window;
  *                                        left alone when the machine hasn't got it)
@@ -541,7 +543,7 @@ static entry *find_entry(const char *kind, const char *a)
 {
     int i;
     for (i = 0; i < nents; i++)
-        if (!strcmp(ents[i].a, a) && (!kind || !strcmp(ents[i].kind, kind)))
+        if (oud_match(ents[i].kind, ents[i].a, kind, a))   /* a cleared entry has left the list (openup_drop.h) */
             return &ents[i];
     return NULL;
 }
@@ -1334,15 +1336,25 @@ static int take_out(entry *e, const char *dest, int *removed, int *restored)
 
 /* INSTALL's "drop <dest>": a file an earlier version of the part put there that this one no longer has (GFOpenMUI
  * 0.2.1's zunemaster.library and ZuneTest). Only one the manifest lists is touched; the user's own stays. */
-static int drop_file(const char *dest, const char *text)
+static int file_has_text(const char *path, const char *text)
+{
+    LONG n = 0;
+    char *b = read_file(path, &n);
+    int has = oud_has_text(b, b ? n : 0, text);
+    if (b) FreeVec(b);
+    return has;
+}
+
+static int drop_file(const char *dest, const char *text, const char *upath, const char *utext)
 {
     int removed = 0, restored = 0, r;
-    if (text && *text) {                            /* only the file holding that text (oud_has_text) */
-        LONG n = 0;
-        char *b = read_file(dest, &n);
-        int has = oud_has_text(b, b ? n : 0, text);
-        if (b) FreeVec(b);
-        if (!has) return 0;
+    if (!find_entry(NULL, dest))
+        return 0;                                   /* not listed: the user's own, or never there */
+    if (text && *text && !file_has_text(dest, text))
+        return 0;                                   /* only the file holding that text (oud_has_text) */
+    if (upath && utext && exists(upath) && file_has_text(upath, utext)) {
+        say("GFOpenUp: ", dest, " stays: a file that needs it is still there.");
+        return 0;                                   /* "unless <path> <text>": still needed (oud_words) */
     }
     r = take_out(find_entry(NULL, dest), dest, &removed, &restored);
     if (r > 0) Printf((STRPTR)"GFOpenUp: %s taken out (the part no longer has it)\n", (LONG)dest);
@@ -1460,7 +1472,9 @@ static int install(const char *drawer)
                 case -1: errors++; break;
                 }
             } else if (pass == 1 && !strcmp(w[0], "drop") && n >= 2) {
-                if (drop_file(w[1], n >= 3 ? w[2] : NULL) < 0) errors++;  /* a file taken out isn't one installed: not in files */
+                const char *dt, *up, *ut;
+                oud_words(w, n, &dt, &up, &ut);
+                if (drop_file(w[1], dt, up, ut) < 0) errors++;  /* a file taken out isn't one installed: not in files */
             } else if (pass == 1 && (!strcmp(w[0], "copy") || !strcmp(w[0], "default") || !strcmp(w[0], "add"))
                        && n >= 3) {
                 /* A body for another CPU is not this machine's. It stays in the pack and is not copied. */

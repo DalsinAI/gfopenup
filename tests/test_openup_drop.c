@@ -29,6 +29,35 @@ int main(void)
         CHECK(oud_has_text(face, 0, "a face") == 0 && oud_has_text(NULL, 9, "a") == 0, "nothing read: no");
         CHECK(oud_has_text(face, (long)sizeof face, "") == 1, "no text asked: any file");
     }
+    /* a cleared entry has left the list (Ivanova's bundle C, row 11): the 19.0's add after the face drop must find
+     * none, so it lists its own file as "new" */
+    {
+        struct { char kind[12]; const char *a; } m[] = { { "", "LIBS:muimaster.library" }, { "new", "LIBS:muimaster.library" },
+                                                         { "dir", "SYS:Tools/GFOpenMUI" } };
+        CHECK(!oud_match(m[0].kind, m[0].a, NULL, "LIBS:muimaster.library"), "a cleared entry isn't found");
+        CHECK(oud_match(m[1].kind, m[1].a, NULL, "LIBS:muimaster.library"), "the live one after it is");
+        CHECK(oud_match(m[2].kind, m[2].a, "dir", "SYS:Tools/GFOpenMUI") && !oud_match(m[2].kind, m[2].a, "new", m[2].a),
+              "a kind asked for: only that kind");
+    }
+    /* drop <dest> [<text>] [unless <path> <text>] (Flibble; bundle C row 13) */
+    {
+        char *a[] = { "drop", "LIBS:zunemaster.library", "unless", "LIBS:muimaster.library", "a face over zunemaster.library" };
+        char *b[] = { "drop", "LIBS:muimaster.library", "a face over zunemaster.library" };
+        char *c[] = { "drop", "SYS:Tools/ZuneTest" };
+        char *d[] = { "drop", "X", "t", "unless", "P", "u" };
+        char *e[] = { "drop", "X", "unless", "P" };
+        const char *t, *up, *ut;
+        oud_words(a, 5, &t, &up, &ut);
+        CHECK(!t && up && !strcmp(up, "LIBS:muimaster.library") && !strcmp(ut, "a face over zunemaster.library"), "unless alone");
+        oud_words(b, 3, &t, &up, &ut);
+        CHECK(t && !strcmp(t, "a face over zunemaster.library") && !up && !ut, "a text alone");
+        oud_words(c, 2, &t, &up, &ut);
+        CHECK(!t && !up && !ut, "the plain drop");
+        oud_words(d, 6, &t, &up, &ut);
+        CHECK(!strcmp(t, "t") && !strcmp(up, "P") && !strcmp(ut, "u"), "a text and unless");
+        oud_words(e, 4, &t, &up, &ut);
+        CHECK(!t && !up && !ut, "unless without its text: no guard read past the line");
+    }
     printf("%d checks, %d failed\n", checks, fails);
     return fails != 0;
 }

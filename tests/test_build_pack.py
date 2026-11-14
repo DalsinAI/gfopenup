@@ -740,9 +740,11 @@ def main() -> int:
         check("GFOpenMUI drops 0.2.1's muimaster.library face (only that file) before it adds its own (Ivanova's lab)",
               face in lines and lines.index(face) < lines.index('add "Libs/muimaster.library" "LIBS:muimaster.library"'),
               "\n".join(lines))
-        check("GFOpenMUI drops 0.2.1's zunemaster.library and ZuneTest, where GFOpenUp put them",
-              all(f'drop "{d}"' in lines for d in ("LIBS:zunemaster.library", "SYS:Tools/ZuneTest", "SYS:Tools/ZuneTest.info")),
-              "\n".join(lines))
+        check("GFOpenMUI drops 0.2.1's ZuneTest, where GFOpenUp put them",
+              all(f'drop "{d}"' in lines for d in ("SYS:Tools/ZuneTest", "SYS:Tools/ZuneTest.info")), "\n".join(lines))
+        zm = 'drop "LIBS:zunemaster.library" unless "LIBS:muimaster.library" "a face over zunemaster.library"'
+        check("GFOpenMUI drops zunemaster.library only when no face over it is left (Flibble; Ivanova's bundle C, row 13)",
+              zm in lines and lines.index(face) < lines.index(zm), "\n".join(lines))
         # Londo's note on #257: through INSTALL's own line handling (test_openup_lines install): 0.2.1's files the
         # manifest lists as GFOpenUp's leave it, a file it doesn't list is left alone, and the rest stays
         old = ("GFOpenUp\t0.1\npart\tGFOpenMUI\t0.2.1\nnew\tLIBS:zunemaster.library\nnew\tSYS:Tools/ZuneTest\n"
