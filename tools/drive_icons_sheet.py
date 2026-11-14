@@ -33,6 +33,13 @@ def shipped(name, w, h):
     return art.glowicon(art.frames(name, 512)[0].resize((w, h), Image.LANCZOS))
 
 
+def blow(im, kx, ky):
+    """each pixel kx across and ky down, by numpy (some Pillows fail a NEAREST resize of these GlowIcons)"""
+    import numpy as np
+    a = np.array(im.convert("RGBA"))
+    return Image.fromarray(np.repeat(np.repeat(a, ky, axis=0), kx, axis=1), "RGBA")
+
+
 def label(d, xy, text, f, centre=True):
     x, y = xy
     if centre:
@@ -64,7 +71,7 @@ def sheet(out, backdrop=None):
     label(d, (20, y), "2x (each pixel doubled, to judge the drawing)", f16, False)
     for i, (n, t) in enumerate(DRIVES):
         x = 20 + i * col + (col - 2 * ICON) // 2
-        im.alpha_composite(shipped(n, ICON, ICON).resize((2 * ICON, 2 * ICON), Image.NEAREST), (x, y + 30))
+        im.alpha_composite(blow(shipped(n, ICON, ICON), 2, 2), (x, y + 30))
     y = 400
     label(d, (20, y), "Chosen (the object rises out of the drawer), 1x", f16, False)
     for i, (n, t) in enumerate(DRIVES):
@@ -78,7 +85,7 @@ def sheet(out, backdrop=None):
         for i, (n, t) in enumerate(DRIVES[:4] + DRIVES[6:8]):
             ic = shipped(n, w, h)
             if h < w:                                       # tall pixels: each row shown twice
-                ic = ic.resize((w, 2 * h), Image.NEAREST)
+                ic = blow(ic, 1, 2)
             im.alpha_composite(ic, (420 + i * 90, y + (64 - ic.height) // 2))
         y += 80
     im.convert("RGB").save(out)
