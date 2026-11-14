@@ -724,8 +724,29 @@ def main() -> int:
                                                    b"GFOpenMUI, AmiCradle Team\0")
         for ex in ("MUIClasses", "MUIAddons", "MUITime"):
             (mb / "tests" / ex).write_bytes(b"\0\0\x03\xf3" + ex.encode())
+        # Ivanova's lab, bundle C row 10: muimaster.library 19.0 opens gfopenlayout.library, which nothing packed: a
+        # GFOpenMUI without it fails the build
+        try:
+            bp.gfopenmui_part(tmp / "muipack0", tmp / "gfopenmui", None)
+            no_oll = None
+        except SystemExit as e:
+            no_oll = str(e)
+        check("GFOpenMUI without gfopenlayout.library stops the build, said", no_oll is not None and "gfopenlayout.library" in no_oll, no_oll)
+        (mb / "deps/gfopenlayout/build-amiga/lib").mkdir(parents=True)
+        (mb / "deps/gfopenlayout/build-amiga/lib/gfopenlayout.library").write_bytes(
+            b"\0\x4a\xfcgfopenlayout.library\0\0$VER: gfopenlayout.library 18.0 (10.11.2026) GFOpenLayout 0.18\0")
         om = bp.gfopenmui_part(tmp / "muipack", tmp / "gfopenmui", None)
         lines = (om.dir / "Part").read_text(encoding="latin-1").splitlines() if om else []
+        check("GFOpenMUI packs the gfopenlayout.library its muimaster.library opens (add: a newer one stays)",
+              'add "Libs/gfopenlayout.library" "LIBS:gfopenlayout.library"' in lines
+              and (om.dir / "Libs/gfopenlayout.library").read_bytes().find(b"gfopenlayout.library 18.0") > 0, "\n".join(lines))
+        oenv = bp.gfopenlayout_build_env(tmp / "mb", {"PATH": "/bin"}, tmp / "nogadtools")
+        check("gfopenlayout.library is built from the muimaster script's own deps checkout, into its build-amiga",
+              oenv.get("OUT") == str(tmp / "mb/deps/gfopenlayout/build-amiga") and "GFOPENLAYOUT" not in oenv
+              and "OGT_ROOT" not in oenv and oenv.get("STOVE") == bp.gfopenmui_build_env(tmp / "mb", {})["STOVE"], oenv)
+        bsrc = (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")
+        check("build_parts builds gfopenlayout.library after muimaster.library",
+              bsrc.find('"deps/gfopenlayout/build-library.sh"') > bsrc.find('"muimaster/build-amiga.sh"], env=gfopenmui_build_env') > 0)
         check("GFOpenMUI: the clean-room muimaster.library 19.0, where no MUI is (add), and its examples",
               lines[:1] == ["part GFOpenMUI 19.0"] and 'add "Libs/muimaster.library" "LIBS:muimaster.library"' in lines
               and 'copy "Tools/GFOpenMUI/MUIClasses" "SYS:Tools/GFOpenMUI/MUIClasses"' in lines

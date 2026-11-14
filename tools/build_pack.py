@@ -746,6 +746,10 @@ def build_parts(a):
     # library 18 at the commit its script pins: GFOPENLAYOUT names the script's own deps folder, so it fetches that one)
     mui_out = a.openamigamui / "muimaster/build-amiga"
     run(["sh", a.openamigamui / "muimaster/build-amiga.sh"], env=gfopenmui_build_env(mui_out, os.environ))
+    # gfopenlayout.library 18, which muimaster.library 19.0 opens by name at its first open (gfopenmui
+    # muimaster/library/mui_lib.c): from the same deps checkout the muimaster script built on, so the two match.
+    # Nothing else packs it and the slim ROM hasn't it, so no MUI program started (Ivanova's lab, bundle C, row 10)
+    run(["sh", mui_out / "deps/gfopenlayout/build-library.sh"], env=gfopenlayout_build_env(mui_out, os.environ, a.opengadtools))
     run(["sh", a.openamigaedit / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     # The GFOffice Suite (gfoffice) carries its own GFOpenGadTools copy and needs GCC 16 (its build-os3.sh stops on
     # the os32 stove's 6.5); GFOpenWrite's pages are GFOpenLayout's. Built on its four libraries (GFO_LIBRARY,
@@ -2045,6 +2049,18 @@ def gfopenmui_build_env(mui_out: Path, base) -> dict:
                 GFOPENLAYOUT=str(mui_out / "deps/gfopenlayout"), OUT=str(mui_out), LAB_PROGRAMS="0")
 
 
+def gfopenlayout_build_env(mui_out: Path, base, opengadtools: Path | None) -> dict:
+    """The environment for gfopenlayout's build-library.sh in a pack build: gfopenlayout.library from the checkout
+    gfopenmui's muimaster script fetched (mui_out/deps/gfopenlayout, the commit it pins), with the same stove,
+    into that checkout's build-amiga/, and GFOpenGadTools' theme reader where the pack's gfopengadtools has it."""
+    env = dict(gfopenmui_build_env(mui_out, base), OUT=str(mui_out / "deps/gfopenlayout/build-amiga"))
+    env.pop("GFOPENLAYOUT", None)
+    env.pop("LAB_PROGRAMS", None)
+    if opengadtools and (opengadtools / "lib/ogt_theme.c").is_file():
+        env["OGT_ROOT"] = str(opengadtools)
+    return env
+
+
 def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
     """Parts/GFOpenMUI from gfopenmui main's clean-room muimaster.library (muimaster/build-amiga.sh, built by
     build_parts into muimaster/build-amiga/): the library, only where no muimaster.library is or GFOpenUp's own is
@@ -2063,6 +2079,11 @@ def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
     om = Part(top, "GFOpenMUI", ver, f"GFOpenMUI: muimaster.library {ver}, the AmiCradle Team's own MUI on GFOpenLayout, "
                                      "where no MUI is, and its examples")
     om.add("Libs/muimaster.library", data, "LIBS:muimaster.library", own=True)
+    # the gfopenlayout.library it opens (library 18 or newer), where none is or GFOpenUp's own is: a newer one stays
+    oll = b / "deps" / "gfopenlayout" / "build-amiga" / "lib" / "gfopenlayout.library"
+    if not oll.is_file():
+        raise SystemExit(f"GFOpenMUI: no {oll}; muimaster.library {ver} cannot open without it (build_parts builds it)")
+    om.add("Libs/gfopenlayout.library", oll.read_bytes(), "LIBS:gfopenlayout.library", own=True)
     for ex in ("MUIClasses", "MUIAddons", "MUITime"):
         f = b / "tests" / ex
         if f.is_file():
