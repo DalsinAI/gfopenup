@@ -160,6 +160,25 @@ int main(void)
     is("CHECK: a 68k does not warn that other bodies are absent", missing_bodies(V2, h68), 0);
     is("CHECK: a version 1 set does not warn", missing_bodies(V1, h62), 0);
 
+    /* the prune (14 Nov 2026): Instance-32's Kickstart/default/ held a gfopenfiles.module the new Manifest didn't
+     * list, and kickload refused the set for it */
+    {
+        static const char man[] = "# GFOpenKickLoad manifest 2\nmanifest 2\nicon.module icon.library 47.5 4 aaaa 4\n"
+                                  "workbench.module\tworkbench.library 47.42 9 bbbb 4\n"
+                                  ".bodies/62/icon.module icon.library 47.5 5 cccc 62\n";
+        is("prune: a module the Manifest lists stays", ouk_listed(man, "icon.module"), 1);
+        is("prune: listed with a tab stays", ouk_listed(man, "workbench.module"), 1);
+        is("prune: listed, other case, stays", ouk_listed(man, "ICON.Module"), 1);
+        is("prune: Instance-32's stray gfopenfiles.module is not listed", ouk_listed(man, "gfopenfiles.module"), 0);
+        is("prune: a name that is only the start of a listed one is not listed", ouk_listed(man, "icon"), 0);
+        is("prune: a longer name is not listed", ouk_listed(man, "icon.module.old"), 0);
+        is("prune: the stray is moved", ouk_prunable("gfopenfiles.module") && !ouk_listed(man, "gfopenfiles.module"), 1);
+        is("prune: the Manifest itself stays", ouk_prunable("Manifest"), 0);
+        is("prune: an icon stays", ouk_prunable("icon.module.info"), 0);
+        is("prune: a dot name stays (.resident, .lastgood)", ouk_prunable(".resident"), 0);
+        is("prune: no Manifest, nothing is listed", ouk_listed(0, "icon.module"), 0);
+    }
+
     printf(fails ? "%d failed\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }

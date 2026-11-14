@@ -103,4 +103,36 @@ static int ouk_manifest(int n, char **w, int v2, unsigned *cpu, const char **byt
     return OUK_FILE;
 }
 
+/* KICKSET's prune (14 Nov 2026, Team 5: a gfopenfiles.module left in Instance-32's SYS:Kickstart/default/ that the
+ * new Manifest doesn't list made kickload refuse the whole set, so the update never took). A file there is pruned
+ * (moved to SYS:Kickstart/.retired/) when it isn't the Manifest, an icon, a dot name (kickload passes over those),
+ * and no Manifest line starts with its name and a blank. Names compare without case, as AmigaDOS does. */
+static int ouk_prunable(const char *fn)
+{
+    unsigned k = 0;
+    if (!fn || !fn[0] || fn[0] == '.') return 0;
+    while (fn[k]) k++;
+    if (k == 8 && (fn[0] | 0x20) == 'm' && (fn[1] | 0x20) == 'a' && (fn[2] | 0x20) == 'n' && (fn[3] | 0x20) == 'i' &&
+        (fn[4] | 0x20) == 'f' && (fn[5] | 0x20) == 'e' && (fn[6] | 0x20) == 's' && (fn[7] | 0x20) == 't') return 0;
+    if (k > 5 && fn[k - 5] == '.' && (fn[k - 4] | 0x20) == 'i' && (fn[k - 3] | 0x20) == 'n' && (fn[k - 2] | 0x20) == 'f' &&
+        (fn[k - 1] | 0x20) == 'o') return 0;
+    return 1;
+}
+
+static int ouk_listed(const char *manifest, const char *fn)
+{
+    const char *p = manifest;
+    unsigned k = 0;
+    if (!p || !fn) return 0;
+    while (fn[k]) k++;
+    while (*p) {
+        unsigned i;
+        for (i = 0; i < k && p[i] && (p[i] | 0x20) == (fn[i] | 0x20); i++) ;
+        if (i == k && (p[k] == ' ' || p[k] == '\t')) return 1;
+        while (*p && *p != '\n') p++;
+        if (*p) p++;
+    }
+    return 0;
+}
+
 #endif

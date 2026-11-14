@@ -4788,19 +4788,9 @@ static void kickset_prune(void)
     if ((fib = AllocDosObject(DOS_FIB, NULL))) {
         if (Examine(l, fib)) {
             while (ExNext(l, fib)) {
-                const char *p, *fn = (const char *)fib->fib_FileName;
-                int listed = 0, k = strlen(fn);
-                if (fib->fib_DirEntryType >= 0 || fn[0] == '.' || !strcmp(fn, "Manifest") ||
-                    (k > 5 && same_word(fn + k - 5, ".info")))
+                const char *fn = (const char *)fib->fib_FileName;
+                if (fib->fib_DirEntryType >= 0 || !ouk_prunable(fn) || ouk_listed(text, fn))
                     continue;
-                for (p = text; *p; ) {              /* the line starts with the name and a blank */
-                    int i;
-                    for (i = 0; i < k && p[i] && (p[i] | 0x20) == (fn[i] | 0x20); i++) ;
-                    if (i == k && (p[k] == ' ' || p[k] == '\t')) { listed = 1; break; }
-                    while (*p && *p != '\n') p++;
-                    if (*p) p++;
-                }
-                if (listed) continue;
                 strncpy(name, fn, sizeof name - 1);
                 name[sizeof name - 1] = 0;
                 strcpy(from, KICKSET_DIR);
