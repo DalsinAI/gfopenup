@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 AmiCradle Team. MIT licence.
 """The drive icons by kind in the Soft 3D style (tools/soft3d_drives_art.py): nine kinds at 64 and 32 px, at rest
-and chosen, the 16-colour chipset set, and Dale's sheet.
+and chosen, the 16-colour chipset set, and Dale's sheet; and the drawer, project, tool and trashcan
+(tools/soft3d_kinds_art.py).
     python3 tests/test_soft3d_drives.py"""
 import os, sys, tempfile
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
@@ -76,5 +77,22 @@ with tempfile.TemporaryDirectory() as t:
     art.main(["--sheet", os.path.join(t, "s.png")])
     w, h = Image.open(os.path.join(t, "s.png")).size
     check("the sheet: all nine across, a light and a dark desktop", w > 9 * 140 and h > 1000, f"{w} x {h}")
+# the kinds (tools/soft3d_kinds_art.py): drawer, project, tool and trashcan the same way
+import soft3d_kinds_art as kinds
+check("the kinds: drawer, project, tool, trashcan", kinds.KINDS == ["drawer", "project", "tool", "trashcan"])
+kp = {}
+for kind in kinds.KINDS:
+    for n in (64, 32):
+        rest, chosen = (np.array(kinds.frames(kind, n, c)) for c in (False, True))
+        kp[(kind, n)] = rest
+        alpha = set(np.unique(rest[..., 3]).tolist()) | set(np.unique(chosen[..., 3]).tolist())
+        x0, y0, x1, y1 = bbox(rest)
+        check(f"{kind} {n}: {n} x {n}, hard alpha, chosen differs, fills its icon",
+              rest.shape == (n, n, 4) and alpha <= {0, 255} and not np.array_equal(rest, chosen)
+              and max(x1 - x0 + 1, y1 - y0 + 1) >= 0.8 * n)
+names = list(kp)
+check("every kind's picture its own, and none a drive's",
+      not [(x, y) for i, x in enumerate(names) for y in names[i + 1:] if np.array_equal(kp[x], kp[y])]
+      and not any(np.array_equal(kp[(k, n)], pics[(d, n)]) for k, n in kp for d in art.KINDS))
 print("FAILED" if fails else "all good", f"({fails} failed)")
 sys.exit(1 if fails else 0)
