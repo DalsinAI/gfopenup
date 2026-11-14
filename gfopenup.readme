@@ -156,8 +156,8 @@ choose:
 - GFOpenMUI (preview, off unless picked): muimaster.library, the AmiCradle
   Team's own MUI drawn by GFOpenLayout, so MUI programs run. It goes in only
   where LIBS:muimaster.library is absent or is GFOpenMUI's own; a MUI you
-  installed is never touched, and the uninstaller removes it. It brings the
-  gfopenlayout.library it opens (LIBS:, where none is or a newer one isn't).
+  installed is never touched, and the uninstaller removes it. The
+  gfopenlayout.library it opens goes in with it (the GFOpenLayout part).
   Where the build has them, MUIClasses, MUIAddons and MUITime show it
   (SYS:Tools/GFOpenMUI);
 - GFOpenRTG (new, off unless picked; ticked on the GFOpenKick ROM with an ACRTG

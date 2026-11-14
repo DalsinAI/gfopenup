@@ -724,22 +724,47 @@ def main() -> int:
                                                    b"GFOpenMUI, AmiCradle Team\0")
         for ex in ("MUIClasses", "MUIAddons", "MUITime"):
             (mb / "tests" / ex).write_bytes(b"\0\0\x03\xf3" + ex.encode())
-        # Ivanova's lab, bundle C row 10: muimaster.library 19.0 opens gfopenlayout.library, which nothing packed: a
-        # GFOpenMUI without it fails the build
+        # Ivanova's lab, bundle C row 10 (Team 5's 16:57 note): muimaster.library 19.0 opens gfopenlayout.library,
+        # which nothing packed. The GFOpenLayout part brings it, GFOpenMUI needs that part, and a build without it stops
         try:
-            bp.gfopenmui_part(tmp / "muipack0", tmp / "gfopenmui", None)
+            bp.gfopenlayout_part(tmp / "olpack0", tmp / "gfopenmui")
             no_oll = None
         except SystemExit as e:
             no_oll = str(e)
-        check("GFOpenMUI without gfopenlayout.library stops the build, said", no_oll is not None and "gfopenlayout.library" in no_oll, no_oll)
+        check("a GFOpenMUI build without gfopenlayout.library stops the pack build, said",
+              no_oll is not None and "gfopenlayout.library" in no_oll, no_oll)
+        check("no gfopenmui build: no GFOpenLayout part either", bp.gfopenlayout_part(tmp / "olpack1", tmp / "nothing") is None)
         (mb / "deps/gfopenlayout/build-amiga/lib").mkdir(parents=True)
         (mb / "deps/gfopenlayout/build-amiga/lib/gfopenlayout.library").write_bytes(
             b"\0\x4a\xfcgfopenlayout.library\0\0$VER: gfopenlayout.library 18.0 (10.11.2026) GFOpenLayout 0.18\0")
+        ol = bp.gfopenlayout_part(tmp / "muipack", tmp / "gfopenmui")
+        ol_lines = (ol.dir / "Part").read_text(encoding="latin-1").splitlines() if ol else []
+        check("the GFOpenLayout part: gfopenlayout.library 18.0 to LIBS: (copy: an older one kept, a newer one stays)",
+              ol_lines[:1] == ["part GFOpenLayout 18.0"] and 'copy "Libs/gfopenlayout.library" "LIBS:gfopenlayout.library"' in ol_lines
+              and bp.PART_MAIN.get("GFOpenLayout") == ("Libs/gfopenlayout.library", "gfopenlayout.library"), "\n".join(ol_lines))
         om = bp.gfopenmui_part(tmp / "muipack", tmp / "gfopenmui", None)
         lines = (om.dir / "Part").read_text(encoding="latin-1").splitlines() if om else []
-        check("GFOpenMUI packs the gfopenlayout.library its muimaster.library opens (add: a newer one stays)",
-              'add "Libs/gfopenlayout.library" "LIBS:gfopenlayout.library"' in lines
-              and (om.dir / "Libs/gfopenlayout.library").read_bytes().find(b"gfopenlayout.library 18.0") > 0, "\n".join(lines))
+        check("GFOpenMUI needs the GFOpenLayout part", "needs part GFOpenLayout" in lines, "\n".join(lines))
+        inst0 = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("the Installer puts GFOpenLayout in before GFOpenMUI",
+              0 < inst0.find("INSTALL Parts/GFOpenLayout") < inst0.find("INSTALL Parts/GFOpenMUI"))
+        check("the packed libraries' gf* libraries: muimaster.library's gfopenlayout.library is in the pack",
+              bp.unpacked_opened_libraries(tmp / "muipack") == [], bp.unpacked_opened_libraries(tmp / "muipack"))
+        lone = tmp / "lonepack" / "GFOpenMUI" / "Libs"
+        lone.mkdir(parents=True)
+        (lone / "muimaster.library").write_bytes(b"\0\0$VER: muimaster.library 19.0\0gfopenlayout.library\0exec.library\0"
+                                                 b"xgfnot.library\0")
+        check("a packed library opening a gf* library nothing packs is named; OS and other names aren't ours",
+              bp.unpacked_opened_libraries(tmp / "lonepack") == ["GFOpenMUI/Libs/muimaster.library opens gfopenlayout.library"],
+              bp.unpacked_opened_libraries(tmp / "lonepack"))
+        check("the ROM's own count as there", bp.unpacked_opened_libraries(tmp / "lonepack", {"gfopenlayout.library"}) == [])
+        try:
+            bp.check_opened_libraries(tmp / "lonepack")
+            stopped = None
+        except SystemExit as e:
+            stopped = str(e)
+        check("the pack build stops on it", stopped is not None and "opens gfopenlayout.library" in stopped, stopped)
+        check("the pack build runs that check", "check_opened_libraries(top / \"Parts\")" in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
         oenv = bp.gfopenlayout_build_env(tmp / "mb", {"PATH": "/bin"}, tmp / "nogadtools")
         check("gfopenlayout.library is built from the muimaster script's own deps checkout, into its build-amiga",
               oenv.get("OUT") == str(tmp / "mb/deps/gfopenlayout/build-amiga") and "GFOPENLAYOUT" not in oenv

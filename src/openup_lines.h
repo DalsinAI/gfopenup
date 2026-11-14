@@ -24,6 +24,8 @@
 #ifndef OPENUP_LINES_H
 #define OPENUP_LINES_H
 
+#include <string.h>
+
 #define OUL_AMICRADLE 1u          /* an AmiCradle instance (its ACBridge or ACStorage board) */
 #define OUL_OPENKICK    2u          /* the open ROM that applies the boot's settings (oul_prefs_task) */
 
@@ -184,6 +186,34 @@ static int oul_part_name(const char *text, char *name, int size)
             return 1;
         }
         while (*s && *s != '\n') s++;
+        if (*s) s++;
+    }
+    return 0;
+}
+
+/* The k-th (from 0) "needs part <name>" line of a Part file's text, into name: 1, or 0 when there is none. REINSTALL
+ * puts a part's needed part in first when the disk hasn't got it yet: GFOpenMUI 19.0 needs the GFOpenLayout part,
+ * which no earlier pack had (Ivanova's lab, bundle C, 14 Nov 2026), and INSTALL leaves a part out without its needs. */
+static int oul_part_needs(const char *text, int k, char *name, int size)
+{
+    const char *s = text;
+    while (*s) {
+        char line[160], *w[4];
+        int len = 0, n;
+        while (s[len] && s[len] != '\n') len++;
+        if (len < (int)sizeof line) {
+            const char *need;
+            memcpy(line, s, (size_t)len);
+            line[len] = 0;
+            if (len && line[len - 1] == '\r') line[len - 1] = 0;
+            n = oul_words(line, w, 4);
+            if ((need = oul_needs_part(w, n)) && k-- == 0) {
+                if ((int)strlen(need) >= size) return 0;
+                strcpy(name, need);
+                return 1;
+            }
+        }
+        s += len;
         if (*s) s++;
     }
     return 0;
