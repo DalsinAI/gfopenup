@@ -129,7 +129,8 @@
 (set #rtgwas (or (and (exists "LIBS:gfopenrtg.library") (exists "ENVARC:GFOpenAmiga/GFOpenUp.manifest")) (= #rtgwhere "GFOpenUp")))
 (if #rtgwas (set #default (bitor #default 512)))
 (if (and #openkick (= (getenv "GFOpenUp/RTG") "ACRTG")) (set #default (bitor #default 512)))
-(if (exists "LIBS:zunemaster.library") (set #default (bitor #default 65536)))
+; GFOpenMUI: its examples' drawer, or GFOpenMUI 0.2.1's library from before (an upgrade keeps it ticked)
+(if (or (exists "SYS:Tools/GFOpenMUI") (exists "LIBS:zunemaster.library")) (set #default (bitor #default 65536)))
 (if (exists "SYS:Utilities/GFOpenMail/GFOpenMail") (set #default (bitor #default 2097152)))
 (if (exists "SYS:Utilities/OpenBrowser/OpenBrowser") (set #default (bitor #default 4194304)))
 (if (exists "SYS:Utilities/GFOpenDemos/GFOpenDemos") (set #default (bitor #default 134217728)))
@@ -228,10 +229,10 @@
               "on their own disk, and Undo puts things back. In SYS:Utilities.\n\n"
               "GFOpenPlay: a media player for everything the datatypes open (new): pictures as "
               "a slideshow, sounds, tunes and films, with a playlist. In SYS:Utilities.\n\n"
-              "GFOpenMUI: zunemaster.library, MUI built from AROS's Zune for OS 3.x (a preview, "
-              "off unless picked). It sits beside MUI and replaces nothing: where there is no "
-              "muimaster.library it adds one that passes every call to Zune, so MUI programs "
-              "run, and an installed MUI is never touched. ZuneTest in SYS:Tools shows it working.\n\n"
+              "GFOpenMUI: muimaster.library, the AmiCradle Team's own MUI, drawn with GFOpenLayout "
+              "(a preview, off unless picked). It goes in only where there is no muimaster.library, "
+              "so MUI programs run, and an installed MUI is never touched. MUIClasses, MUIAddons and "
+              "MUITime in SYS:Tools/GFOpenMUI show it working.\n\n"
               "GFOpenTitle: AmiCradle's logo at the title bar's left, the free chip and "
               "fast memory after Workbench's title, and the day, date and time at the right "
               "(new). Title bar in SYS:Prefs switches each, and a black border around the screen.")
@@ -242,7 +243,7 @@
                  "GFOpenMenus: menus, and right-click menus"
                  "GFOpenFiles: a file manager"
                  "GFOpenPlay: a media player"
-                 "GFOpenMUI: MUI from Zune (preview)"
+                 "GFOpenMUI: our own MUI (preview)"
                  "GFOpenTitle: logo, memory and clock")
         (default (bitand (shiftright #default 9) 511))))
 (set #g3
@@ -905,7 +906,7 @@
         (if (> (run (cat #tool " INSTALL Parts/GFOpenPlay >>T:GFOpenUp.log")) 5)
             (message "GFOpenPlay didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
 
-(if (bitand #parts 65536)
+(if (and (bitand #parts 65536) (exists "Parts/GFOpenMUI/Part"))
     (
         (working "Installing GFOpenMUI")
         (if (> (run (cat #tool " INSTALL Parts/GFOpenMUI >>T:GFOpenUp.log")) 5)

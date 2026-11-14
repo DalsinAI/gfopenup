@@ -576,7 +576,8 @@ def main() -> int:
               bp.gfopenmui_part(tmp / "muipack2", tmp / "nothing", None) is None)
         inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
         check("the Installer: no Zune left, and GFOpenMUI installed only when its part is in the pack",
-              "zune" not in inst.lower() and '(and (bitand #parts 65536) (exists "Parts/GFOpenMUI/Part"))' in inst)
+              "AROS's Zune" not in inst and "MUI from Zune" not in inst and "ZuneTest" not in inst
+              and '(and (bitand #parts 65536) (exists "Parts/GFOpenMUI/Part"))' in inst)
         un = tmp / "test_openup_unattended"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_unattended.c"), "-o", str(un)], check=True)
