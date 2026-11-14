@@ -80,6 +80,8 @@
                              (all)))
                 (working "Reinstalling GFOpenUp: every installed part's files")
                 (set #rc (run (cat #tool " REINSTALL Parts >>T:GFOpenUp.log")))
+                ; the installed parts this pack hasn't got, left as they were (REINSTALL's ENV:GFOpenUp/Left)
+                (set #left (getenv "GFOpenUp/Left"))
                 (if (> (run (cat #tool " STARTUP >>T:GFOpenUp.log")) 5)
                     (set #rc 10))
                 (if (exists "SYS:C/GFOpenUpMenu")
@@ -88,6 +90,10 @@
                     (cat (if (> #rc 5)
                              "GFOpenUp was reinstalled, but some files couldn't be put back: T:GFOpenUp.log says which.\n\n"
                              (cat "GFOpenUp is reinstalled: every installed part's files are back, from " #version ".\n\n"))
+                         (if (> (strlen #left) 0)
+                             (cat "These installed parts aren't in this pack, so they were left as they were: " #left
+                                  ". A pack that has them puts them back.\n\n")
+                             "")
                          "Reboot the Amiga to start everything.")
                     (quiet))))))
 

@@ -152,6 +152,7 @@
 #include "openup_slimrom.h"            /* DETECT SlimROM (0.8.x) */
 #include "openup_vers.h"               /* an older file never over a newer one */
 #include "openup_drop.h"               /* REMOVE's and INSTALL's drop: one listed file taken out */
+#include "openup_left.h"               /* REINSTALL: the parts the pack hasn't got, for the Installer */
 #include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
 
 static int slim_rom(void);
@@ -1635,9 +1636,11 @@ static int reinstalled;                             /* the parts REINSTALL put i
 static int reinstall(const char *parts)
 {
     static char wanted[MAXPARTS][48];
+    char left[200] = "";                            /* the installed parts the pack hasn't got (ENV:GFOpenUp/Left) */
     int nwanted = 0, i, j, rc = RETURN_OK, done = 0;
     reinstalled = 0;
     kept_newer = 0;
+    set_env("GFOpenUp/Left", "");                   /* an early return never leaves an earlier run's list */
     manifest_load();
     if (manifest_short) {
         manifest_save();                            /* says why */
@@ -1662,6 +1665,7 @@ static int reinstall(const char *parts)
             ;
         if (j == nparts) {
             say("GFOpenUp: ", wanted[i], " is installed, but this pack hasn't got it; it was left as it is.");
+            oul_left_add(left, sizeof left, wanted[i]);
             if (rc < RETURN_WARN) rc = RETURN_WARN;
             continue;
         }
@@ -1673,6 +1677,7 @@ static int reinstall(const char *parts)
     }
     reinstalling = 0;
     reinstalled = done;
+    set_env("GFOpenUp/Left", left);                 /* "" when every installed part was in the pack */
     Printf((STRPTR)"GFOpenUp: reinstalled %ld part%s%s\n", (LONG)done, (LONG)(done == 1 ? "" : "s"),
            (LONG)(rc > RETURN_WARN ? "; see the messages above" : ""));
     if (kept_newer)
