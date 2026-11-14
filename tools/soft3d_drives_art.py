@@ -37,12 +37,12 @@ LABELS = {"system": "Boot", "harddisk": "Hard disk", "nvme": "NVMe", "ide": "IDE
           "cd": "CD/DVD", "floppy": "Floppy", "ram": "RAM disk", "network": "Network"}
 GLOW = (74, 163, 255)                   # #4aa3ff, the chosen glow
 EDGE = (22, 26, 36)                     # the thin dark edge
-LOGO_ARC, LOGO_DOT = (13, 148, 136), (245, 158, 11)    # the Cradle mark's colours (logo concept 3)
+LOGO_ARC, LOGO_DOT = (11, 94, 215), (255, 122, 26)     # the Deep cradle mark: arc #0b5ed7, dot #ff7a1a (Dale 12:41)
 
 # the chipset set: one 16-colour palette for every drive (transparent, then these 15): a grey ramp of five for the
 # bodies, the edge and the light, and the accents, two shades where a drive's light runs across one
 PAL15 = [(22, 26, 36), (70, 76, 90), (130, 138, 152), (196, 202, 212), (246, 248, 251),
-         (40, 64, 120), (60, 120, 220), (74, 163, 255), (214, 92, 36), (246, 150, 84), (200, 56, 52),
+         (40, 64, 120), (11, 94, 215), (74, 163, 255), (214, 92, 36), (255, 122, 26), (200, 56, 52),
          (226, 182, 72), (30, 120, 70), (13, 118, 110), (52, 170, 156)]
 
 
@@ -114,15 +114,16 @@ def dark(c, k):
 
 
 def cradle_mark(f, cx, cy, r, small):
-    """the Cradle mark (logo concept 3): an open arc holding a dot"""
-    w = 34 if small else 22
+    """the Deep cradle mark (logo concept 3, refinement 4): a deep arc, open about 124 degrees at the top, holding
+    a dot"""
+    w = 26 if small else 22
     m = Image.new("L", (f.S, f.S), 0)
     d = ImageDraw.Draw(m)
     b = f.box([cx - r, cy - r, cx + r, cy + r])
-    d.arc(b, 20, 160, fill=255, width=max(2, int(f.k(w))))
+    d.arc(b, -28, 208, fill=255, width=max(2, int(f.k(w))))
     f.fill(LOGO_ARC, m)
     dr = r * 0.36
-    f.ell([cx - dr, cy - dr + r * 0.28, cx + dr, cy + dr + r * 0.28], LOGO_DOT, light(LOGO_DOT, 0.35))
+    f.ell([cx - dr, cy - dr + r * 0.12, cx + dr, cy + dr + r * 0.12], LOGO_DOT, light(LOGO_DOT, 0.35))
 
 
 # ---- the nine drives, flat. small: the 32 px drawing (fewer, bigger features). Returns (Flat, thickness) --
@@ -137,7 +138,7 @@ def hd_body(f, col=(196, 202, 212), small=False):
 
 def draw_system(f, small):
     hd_body(f, small=small)
-    cradle_mark(f, 256, 200, 150 if small else 120, small)
+    cradle_mark(f, 256, 240, 140 if small else 120, small)
     return 70
 
 
