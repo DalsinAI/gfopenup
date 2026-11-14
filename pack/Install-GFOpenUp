@@ -603,6 +603,13 @@
         (working "Installing the Shell's font")
         (if (> (run (cat #tool " INSTALL Parts/ShellFont >>T:GFOpenUp.log")) 5)
             (message "The Shell's font didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+; GFOS's own fonts (14 Nov 2026), with every install: GFOS Sans, GFOS Sans Bold and GFOS Mono, 11, 13 and 16 pixels, in
+; FONTS:, so Font prefs lists them. Like the Shell's font, they change no Font prefs here.
+(if (exists "Parts/GFOSFonts/Part")
+    (
+        (working "Installing the GFOS fonts")
+        (if (> (run (cat #tool " INSTALL Parts/GFOSFonts >>T:GFOpenUp.log")) 5)
+            (message "The GFOS fonts didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
 ; A real AGA Amiga with Picasso96's library left behind and no Picasso96 board
 ; running: SDL games hang at their video start. Ask to set it aside (6 Oct 2026).
 (if (= (run (cat #tool " P96LEFTOVER")) 5)
