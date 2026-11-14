@@ -557,6 +557,26 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_kickset.c"), "-o", str(ks)], check=True)
         r = subprocess.run([str(ks)], capture_output=True, text=True)
         check("GFOpenUpTool KICKSET bodies (tests/test_openup_kickset.c)", r.returncode == 0, r.stdout[-600:])
+        # GFOpenMUI from gfopenmui main's clean-room muimaster.library (muimaster/build-amiga.sh; Zune is gone from
+        # main since 9bf57d2): the library and its examples, or the part left out, said (Corwin, 14 Nov 2026)
+        mb = tmp / "gfopenmui" / "muimaster" / "build-amiga"
+        (mb / "lib").mkdir(parents=True)
+        (mb / "tests").mkdir(parents=True)
+        (mb / "lib/muimaster.library").write_bytes(b"\0\x4a\xfcmuimaster.library\0\0$VER: muimaster.library 19.0 (10.11.2026) "
+                                                   b"GFOpenMUI, AmiCradle Team\0")
+        for ex in ("MUIClasses", "MUIAddons", "MUITime"):
+            (mb / "tests" / ex).write_bytes(b"\0\0\x03\xf3" + ex.encode())
+        om = bp.gfopenmui_part(tmp / "muipack", tmp / "gfopenmui", None)
+        lines = (om.dir / "Part").read_text(encoding="latin-1").splitlines() if om else []
+        check("GFOpenMUI: the clean-room muimaster.library 19.0, where no MUI is (add), and its examples",
+              lines[:1] == ["part GFOpenMUI 19.0"] and 'add "Libs/muimaster.library" "LIBS:muimaster.library"' in lines
+              and 'copy "Tools/GFOpenMUI/MUIClasses" "SYS:Tools/GFOpenMUI/MUIClasses"' in lines
+              and not any("zune" in l.lower() for l in lines), "\n".join(lines))
+        check("GFOpenMUI: left out, and said, when gfopenmui has no build",
+              bp.gfopenmui_part(tmp / "muipack2", tmp / "nothing", None) is None)
+        inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("the Installer: no Zune left, and GFOpenMUI installed only when its part is in the pack",
+              "zune" not in inst.lower() and '(and (bitand #parts 65536) (exists "Parts/GFOpenMUI/Part"))' in inst)
         un = tmp / "test_openup_unattended"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_unattended.c"), "-o", str(un)], check=True)
