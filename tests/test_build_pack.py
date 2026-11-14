@@ -761,6 +761,15 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_vers.c"), "-o", str(vs)], check=True)
         r = subprocess.run([str(vs)], capture_output=True, text=True)
         check("GFOpenUpTool keeps a newer file (tests/test_openup_vers.c)", r.returncode == 0, r.stdout[-600:])
+        sf = tmp / "test_openup_sysfont"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_sysfont.c"), "-o", str(sf)], check=True)
+        r = subprocess.run([str(sf)], capture_output=True, text=True)
+        check("GFOpenUpTool moves Font prefs' DejaVuSansMono 11 to GFOSMono 11, nothing else (tests/test_openup_sysfont.c)",
+              r.returncode == 0, r.stdout[-600:])
+        tl_sf = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
+        check("GFOpenUpTool moves the system font when it installs GFOSFonts",
+              'if (!strcmp(partname, "GFOSFonts")) move_sysfont();' in tl_sf and "ous_move(d, len)" in tl_sf)
         lf = tmp / "test_openup_left"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_left.c"), "-o", str(lf)], check=True)

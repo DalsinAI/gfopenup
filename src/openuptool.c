@@ -147,13 +147,14 @@
 #include "openup_kickset.h"
 #include "openup_slimrom.h"            /* DETECT SlimROM (0.8.x) */
 #include "openup_vers.h"               /* an older file never over a newer one */
+#include "openup_sysfont.h"            /* Font prefs' system font: DejaVuSansMono 11 to GFOSMono 11 */
 #include "openup_left.h"               /* REINSTALL: the parts the pack hasn't got, for the Installer */
 #include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
 
 static int slim_rom(void);
 static int kickset(const char *a1, const char *a2);
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.20 (13.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.21 (14.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1283,6 +1284,8 @@ static void mark_startup(const char *part)
 
 static unsigned kickset_host(void);
 
+static int move_sysfont(void);
+
 static int install(const char *drawer)
 {
     char path[220], from[260], *text, *p, *line, partname[64] = "", partver[32] = "";
@@ -1432,6 +1435,7 @@ static int install(const char *drawer)
         return RETURN_ERROR;
     }
     Printf((STRPTR)"GFOpenUp: %s %s installed (%ld file%s changed)\n", (LONG)partname, (LONG)partver, files, (LONG)(files == 1 ? "" : "s"));
+    if (!strcmp(partname, "GFOSFonts")) move_sysfont();     /* GFOS Mono is in FONTS: now (openup_sysfont.h) */
     return RETURN_OK;
 }
 
@@ -2453,6 +2457,28 @@ static int install_prefs(const char *name, const UBYTE *data, LONG len)
          && install_file("T:GFOpenUp-prefs", envarc, 0) >= 0
          && manifest_save();
     DeleteFile((STRPTR)"T:GFOpenUp-prefs");
+    return ok;
+}
+
+/* Font prefs' system default text: DejaVuSansMono.font 11 becomes GFOSMono.font 11, that one setting only (Dale,
+ * 14 November 2026: openup_sysfont.h), in ENVARC: and, while Workbench isn't open yet, ENV:. 1 moved, 0 nothing. */
+static int move_sysfont(void)
+{
+    LONG len = 0;
+    UBYTE *d;
+    int ok;
+    struct MsgPort *wbport;
+    if (!exists("FONTS:" OUS_NEW_FONT)) return 0;
+    if (!(d = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &len))) return 0;
+    if (!ous_move(d, len)) { FreeVec(d); return 0; }
+    ok = install_prefs("Font.prefs", d, len);
+    Forbid();
+    wbport = FindPort((STRPTR)"WORKBENCH");
+    Permit();
+    if (ok && !wbport) write_file("ENV:Sys/Font.prefs", (const char *)d, len);
+    FreeVec(d);
+    if (ok) say("GFOpenUp: the system font (Font prefs) is now GFOS Mono 11, was DejaVu Sans Mono 11",
+                " (GFOS Mono keeps every letter whole in OS 3.2's lists; from the next reboot)", NULL);
     return ok;
 }
 
