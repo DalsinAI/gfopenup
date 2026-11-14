@@ -48,6 +48,19 @@ int main(void)
                        "the Kickstart set installed: ok"), buf);
     ou_log_line(buf, sizeof buf, -1, OU_BY_SWITCH, "0.8.28", "0.8.29", 3, 10);
     CHECK(strstr(buf, "3 parts reinstalled, the Kickstart set failed: failed") != NULL, buf);
+    /* Ivanova's pack lab (14 Nov): an instance's 0.8.29 tool reinstalls 0.8.30 but never installs the set; the new
+     * tool's next AUTO run finds nothing newer. It installs the set then when the disk's Manifest isn't the pack's. */
+    CHECK(ou_set_stale("V 47.100\nexec.library 1\n", 24, "V 47.100\nexec.library 1\n", 24) == 0,
+          "the disk's Manifest is the pack's: nothing to do");
+    CHECK(ou_set_stale("V 47.99\nexec.library 1\n", 23, "V 47.100\nexec.library 1\n", 24) == 1,
+          "an older Manifest: the set again");
+    CHECK(ou_set_stale("V 47.100\nexec.library 1\n", 24, "V 47.100\nexec.library 2\n", 24) == 1,
+          "same length, other bytes: the set again");
+    CHECK(ou_set_stale(NULL, 0, "V 47.100\n", 9) == 1, "no Manifest on the disk: the set");
+    CHECK(ou_set_stale("V 47.100\n", 9, NULL, 0) == 0, "no Manifest in the pack: nothing");
+    ou_log_line(buf, sizeof buf, 1, OU_BY_FLAG, "0.8.30", "0.8.30", -1, 0);
+    CHECK(!strcmp(buf, "GFOpenUpTool UPDATE: unattended (host flag) 0.8.30 installed, the newest Cradle has, "
+                       "the Kickstart set installed: ok"), buf);
     printf("%s   %d checks (GFOpenUpTool UPDATE unattended)\n", fails ? "FAIL" : "ok", checks);
     return fails != 0;
 }
