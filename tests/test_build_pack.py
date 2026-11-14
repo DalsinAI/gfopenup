@@ -313,7 +313,8 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     top2 = tmp / "GF2/GFOpenUp"
     gf2, wr2, oc2 = bp.gfoffice_parts(top2, src, zlib, b"guest MIT licence\n", icons)
     check("without GFOpenCalc's program, no GFOpenCalc part, and GFOffice and GFOpenWrite as before",
-          oc2 is None and not (top2 / "Parts/GFOpenCalc").exists() and gf2.lines == gf.lines and wr2.lines == wr.lines)
+          oc2 is None and not (top2 / "Parts/GFOpenCalc").exists() and gf2.lines == gf.lines
+          and (wr2.write() or wr2.lines == wr.lines))
 
     # INSTALL and REMOVE through GFOpenUpTool's own code, from a lab with GFOpenUp's own part only
     fresh = "GFOpenUp\t0.1\npart\tGFOpenUp\t0.8.9\nnew\tSYS:C/GFOpenUpTool\n"
@@ -533,6 +534,61 @@ def kickstartset_checks(tmp: Path) -> None:
     check("the Installer installs it with KICKSET on the slim ROM only",
           'KICKSET Parts/KickstartSet' in (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
           and '(= (getenv "GFOpenUp/SlimROM") "yes")' in (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1"))
+
+
+def versions_stoves_checks(tmp: Path) -> None:
+    """Corwin's 14 Nov build (teams/team3/inbox/20261114-1222): versions from the programs, an ID string after a
+    letter, and the guest scripts' and Telegram's stoves."""
+    # an ID string with a letter right before it is still read; the clean one wins where both are there
+    check("binary_version: an ID string right after a letter is read (gfopeninput.library 1.3)",
+          bp.binary_version(b"\0\0Xgfopeninput.library 1.3 (17.10.2026)\r\n", "gfopeninput.library") == "1.3")
+    check("binary_version: a clean ID string is taken before one glued to a letter",
+          bp.binary_version(b"Xgfopeninput.library 9.9 (1.1.2026)\0gfopeninput.library 1.3 (17.10.2026)",
+                            "gfopeninput.library") == "1.3")
+    check("binary_version: $VER first, as before",
+          bp.binary_version(b"$VER: GFOpenFiles 0.5 (13.11.2026)\0", "GFOpenFiles") == "0.5")
+    # the seven parts that had fallen behind take their program's version
+    src = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
+    for name in ("GFOpenWrite", "GFOpenSocket", "GFOpenCompress", "GFOpenWindows", "GFOpenBlanker", "GFOpenUpSetup",
+                 "GFOpenFiles"):
+        check(f"{name}: the part's version is its program's (Part(..., None, ...)) and it has a PART_MAIN entry",
+              f'Part(top, "{name}", None,' in src and name in bp.PART_MAIN)
+    rel, vername = bp.PART_MAIN["GFOpenFiles"]
+    pf = bp.Part(tmp, "GFOpenFiles", None, "GFOpenFiles: test")
+    pf.add(rel, b"\0\0\x03\xf3$VER: GFOpenFiles 0.5 (13.11.2026)\0", "SYS:" + rel)
+    pf.write()
+    first = (tmp / "Parts/GFOpenFiles/Part").read_text(encoding="latin-1").split("\n")[0]
+    check("a part with no version given is written with its program's ($VER 0.5)", first == "part GFOpenFiles 0.5", first)
+    bp.check_part_versions(tmp / "Parts")
+    check("check_part_versions agrees with it", True)
+    nv = bp.Part(tmp, "GFOpenFiles", None, "GFOpenFiles: test")
+    nv.add(rel, b"\0\0\x03\xf3no version here", "SYS:" + rel)
+    try:
+        nv.write()
+        stopped = False
+    except SystemExit:
+        stopped = True
+    check("a part whose program has no version stops the build", stopped)
+    # the guest scripts: a STOVE default that this host lacks and names open6 -> GUEST_STOVE; else left alone
+    home = tmp / "home"
+    (home / "AmiCradle/stoves/os32-gcc16").mkdir(parents=True)
+    s1 = tmp / "a.sh"
+    s1.write_text('#!/bin/sh\nSTOVE=${STOVE:-"$HOME/AmiCradle/stoves/os32-gcc16-16.2.0-open6"}\n')
+    s2 = tmp / "b.sh"
+    s2.write_text('#!/bin/sh\nSTOVE=${STOVE:-$HOME/AmiCradle/stoves/os32-gcc16}\n')
+    s3 = tmp / "c.sh"
+    s3.write_text('#!/bin/sh\nCC=m68k-amigaos-gcc\n')
+    check("guest_stove: a missing open6 default gets GUEST_STOVE",
+          bp.guest_stove(s1, {"OUT": "x"}, home).get("STOVE") == str(bp.GUEST_STOVE))
+    check("guest_stove: a default the host has is left to the script", "STOVE" not in bp.guest_stove(s2, {}, home))
+    check("guest_stove: a script with no STOVE default is left alone", "STOVE" not in bp.guest_stove(s3, {}, home))
+    check("guest_stove: a STOVE given stays", bp.guest_stove(s1, {"STOVE": "/x"}, home)["STOVE"] == "/x")
+    gs = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
+    check("every amicradle-guest script run with genv or accontrol/acrtg.gpu's env goes through guest_stove or names a STOVE",
+          not re.search(r'run\(\["sh", (?:g|a\.guest) [^\n]*env=(?:env\)|dict\(genv, (?!STOVE)(?![^\n]*guest_stove))', gs))
+    check("UnofficialTelegram is built with the GCC 16 stove (OS32_GCC16)",
+          re.search(r'openamigatelegram / "build-os3.sh"\], env=dict\(os.environ, STOVE=gcc16_root, OS32_GCC16=gcc16_root\)', gs)
+          is not None)
 
 
 def main() -> int:
@@ -887,7 +943,7 @@ def main() -> int:
         check("gfopenrtg's make_sdk.py pins the same gfopenphysfs commit",
               f'PHYSFS_COMMIT = "{bp.GFOPENPHYSFS["commit"]}"' in rtg_sdk.read_text(encoding="utf-8"))
     # GFOpenWindows 0.12.2 (0.8.23): the snapshot pin is a toggle (gfopenprefs #184); 0.12.1, none on system requesters
-    check("the GFOpenWindows part is 0.12.2", 'Part(top, "GFOpenWindows", "0.12.2",' in src)
+    check("the GFOpenWindows part takes its program's version", 'Part(top, "GFOpenWindows", None,' in src)
     # OGLES3 (0.8.20): ogles3.library on GFOpenGPU (gfopenrtg #190), as Install-ogles3 has it: AmiCradle only, with
     # the GFOpenGPU part, never over another ogles3.library; its version is the library's
     with tempfile.TemporaryDirectory() as t:
@@ -933,7 +989,7 @@ def main() -> int:
     inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
     gpu_block = inst[inst.index('(working "Installing GFOpenGPU")'):inst.index("; Warp3D, as it always has")]
     check("Install-GFOpenUp installs Parts/OGLES3 with GFOpenGPU", "INSTALL Parts/OGLES3" in gpu_block)
-    check("the GFOpenCompress part is 0.3.3 (z.library at run time)", 'Part(top, "GFOpenCompress", "0.3.3",' in src)
+    check("the GFOpenCompress part takes its program's version", 'Part(top, "GFOpenCompress", None,' in src)
     check("the GFOpenImage part is 0.6 (gfopensound-decoders.library)", 'Part(top, "GFOpenImage", "0.6",' in src)
     check("GFOpenImage without the pack builder: Datatypes/out/Libs's libraries go to LIBS:",
           'img.add(f"Libs/{lib.name}", lib.read_bytes(), f"LIBS:{lib.name}")' in src)
@@ -979,6 +1035,8 @@ def main() -> int:
     openprinter_checks()
     with tempfile.TemporaryDirectory() as ktmp:
         kickstartset_checks(Path(ktmp))
+    with tempfile.TemporaryDirectory() as vtmp:
+        versions_stoves_checks(Path(vtmp))
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
     return 1 if fails else 0
