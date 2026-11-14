@@ -99,6 +99,9 @@
  *                                        put it there; another program's stays)
  *   retire <dest>                       (moved to SYS:Storage/GFOpenUp-Superseded,
  *                                        so it no longer runs; UNINSTALL puts it back)
+ *   drop <dest>                         (14 Nov 2026: a file an earlier version of the part put there that
+ *                                        it no longer has; taken out as REMOVE would, only where the
+ *                                        manifest lists it as GFOpenUp's; src/openup_drop.h)
  *   face <icon in the drawer> <dest .info>  (0.6: the icon's picture only; dest keeps
  *                                        its type, tools, tool types and window;
  *                                        left alone when the machine hasn't got it)
@@ -147,6 +150,7 @@
 #include "openup_kickset.h"
 #include "openup_slimrom.h"            /* DETECT SlimROM (0.8.x) */
 #include "openup_vers.h"               /* an older file never over a newer one */
+#include "openup_drop.h"               /* REMOVE's and INSTALL's drop: one listed file taken out */
 #include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
 
 static int slim_rom(void);
@@ -1280,6 +1284,61 @@ static void mark_startup(const char *part)
             strcpy(ents[i].kind, "ostartup");
 }
 
+/* One file the manifest lists taken out, as REMOVE does (src/openup_drop.h): GFOpenUp's own bytes deleted, a file
+ * it put over another's gets that original back, one changed since stays; the entry leaves the list either way,
+ * and the drawers GFOpenUp made for it go while empty. Counts into removed and restored; 1 when the file went or
+ * came back, 0 when there was nothing to do, -1 on a problem (said). */
+static int take_out(entry *e, const char *dest, int *removed, int *restored)
+{
+    char dir[ENTRY_PATH];
+    int r = 1;
+    switch (oud_action(e ? e->kind : NULL, e && !strcmp(e->kind, "new") ? still_ours(e) : 0)) {
+    case OUD_STAYS:
+        /* other bytes than GFOpenUp wrote (its mark): someone else's file now, so it stays, and leaves the list */
+        say("GFOpenUp: ", e->a, " has changed since GFOpenUp put it there, so it stays.");
+        e->kind[0] = 0;
+        return 0;
+    case OUD_DELETE:
+        if (DeleteFile((STRPTR)e->a) || !exists(e->a)) { (*removed)++; e->kind[0] = 0; }
+        else { say("GFOpenUp: can't delete ", e->a, "; is it in use?"); return -1; }
+        break;
+    case OUD_RESTORE:
+        if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); (*restored)++; e->kind[0] = 0; }
+        else { say("GFOpenUp: can't put back ", e->a, "; its original is in SYS:Storage/GFOpenUp-Superseded."); return -1; }
+        break;
+    case OUD_FORGET:
+        e->kind[0] = 0;
+        return 0;
+    default:
+        return 0;
+    }
+    /* the directories GFOpenUp made for it, deepest first, while empty */
+    parent_of(dest, dir, sizeof dir);
+    while (dir[0] && dir[strlen(dir) - 1] != ':') {
+        char up[ENTRY_PATH];
+        entry *d = find_entry("dir", dir), *f;
+        if (!d || !DeleteFile((STRPTR)dir)) break;
+        d->kind[0] = 0;
+        /* a file that was where the drawer went (INSTALL's clear_way, 25 Oct 2026) comes back now it's gone */
+        if ((f = find_entry("replaced", dir))) {
+            if (copy_file(f->b, f->a, 0)) { DeleteFile((STRPTR)f->b); (*restored)++; f->kind[0] = 0; }
+            else { say("GFOpenUp: can't put back ", f->a, "; it is in SYS:Storage/GFOpenUp-Superseded."); r = -1; }
+        }
+        parent_of(dir, up, sizeof up);
+        strcpy(dir, up);
+    }
+    return r;
+}
+
+/* INSTALL's "drop <dest>": a file an earlier version of the part put there that this one no longer has (GFOpenMUI
+ * 0.2.1's zunemaster.library and ZuneTest). Only one the manifest lists is touched; the user's own stays. */
+static int drop_file(const char *dest)
+{
+    int removed = 0, restored = 0, r = take_out(find_entry(NULL, dest), dest, &removed, &restored);
+    if (r > 0) Printf((STRPTR)"GFOpenUp: %s taken out (the part no longer has it)\n", (LONG)dest);
+    return r;
+}
+
 static unsigned kickset_host(void);
 
 static int install(const char *drawer)
@@ -1390,6 +1449,11 @@ static int install(const char *drawer)
                 case 1: files++; break;
                 case -1: errors++; break;
                 }
+            } else if (pass == 1 && !strcmp(w[0], "drop") && n >= 2) {
+                switch (drop_file(w[1])) {
+                case 1: files++; break;
+                case -1: errors++; break;
+                }
             } else if (pass == 1 && (!strcmp(w[0], "copy") || !strcmp(w[0], "default") || !strcmp(w[0], "add"))
                        && n >= 3) {
                 /* A body for another CPU is not this machine's. It stays in the pack and is not copied. */
@@ -1471,7 +1535,7 @@ static int remove_part(const char *drawer)
         return RETURN_WARN;
     }
     for (p = text; *p; ) {
-        char *w[12], dir[ENTRY_PATH];
+        char *w[12];
         const char *dest = NULL;
         entry *e;
         int n;
@@ -1496,36 +1560,7 @@ static int remove_part(const char *drawer)
                  && n >= 3) dest = w[2];
         if (!dest || !(e = find_entry(NULL, dest)))
             continue;
-        if (!strcmp(e->kind, "new") && !still_ours(e)) {
-            /* other bytes than GFOpenUp wrote (its mark): someone else's file now, so it stays, and leaves the list */
-            say("GFOpenUp: ", e->a, " has changed since GFOpenUp put it there, so it stays.");
-            e->kind[0] = 0;
-            continue;
-        } else if (!strcmp(e->kind, "new")) {
-            if (DeleteFile((STRPTR)e->a) || !exists(e->a)) { removed++; e->kind[0] = 0; }
-            else { say("GFOpenUp: can't delete ", e->a, "; is it in use?"); problems++; continue; }
-        } else if (!strcmp(e->kind, "replaced")) {
-            if (copy_file(e->b, e->a, 0)) { DeleteFile((STRPTR)e->b); restored++; e->kind[0] = 0; }
-            else { say("GFOpenUp: can't put back ", e->a, "; its original is in SYS:Storage/GFOpenUp-Superseded."); problems++; continue; }
-        } else if (!strcmp(e->kind, "same")) {
-            e->kind[0] = 0;
-            continue;
-        } else continue;
-        /* the directories GFOpenUp made for it, deepest first, while empty */
-        parent_of(dest, dir, sizeof dir);
-        while (dir[0] && dir[strlen(dir) - 1] != ':') {
-            char up[ENTRY_PATH];
-            entry *d = find_entry("dir", dir), *f;
-            if (!d || !DeleteFile((STRPTR)dir)) break;
-            d->kind[0] = 0;
-            /* a file that was where the drawer went (INSTALL's clear_way, 25 Oct 2026) comes back now it's gone */
-            if ((f = find_entry("replaced", dir))) {
-                if (copy_file(f->b, f->a, 0)) { DeleteFile((STRPTR)f->b); restored++; f->kind[0] = 0; }
-                else { say("GFOpenUp: can't put back ", f->a, "; it is in SYS:Storage/GFOpenUp-Superseded."); problems++; }
-            }
-            parent_of(dir, up, sizeof up);
-            strcpy(dir, up);
-        }
+        if (take_out(e, dest, &removed, &restored) < 0) problems++;
     }
     FreeVec(text);
     if (!partname[0] || !find_entry("part", partname)) {

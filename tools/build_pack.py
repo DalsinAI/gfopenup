@@ -1983,6 +1983,10 @@ def gfopenmui_part(top: Path, gfopenmui: Path, icons) -> Part | None:
             if icons:
                 om.add(f"Tools/GFOpenMUI/{ex}.info", icons.icon(icons.WBTOOL, "install", stack=16384),
                        f"SYS:Tools/GFOpenMUI/{ex}.info")
+    # GFOpenMUI 0.2.1's Zune files out of an upgraded disk, where GFOpenUp put them (its manifest says so): a user's
+    # own copy stays (Lorien's note on #253, 14 Nov 2026)
+    for d in ("LIBS:zunemaster.library", "SYS:Tools/ZuneTest", "SYS:Tools/ZuneTest.info"):
+        om.line(f'drop "{d}"')
     om.write()
     return om
 

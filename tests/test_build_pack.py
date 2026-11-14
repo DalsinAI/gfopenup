@@ -571,7 +571,7 @@ def main() -> int:
         check("GFOpenMUI: the clean-room muimaster.library 19.0, where no MUI is (add), and its examples",
               lines[:1] == ["part GFOpenMUI 19.0"] and 'add "Libs/muimaster.library" "LIBS:muimaster.library"' in lines
               and 'copy "Tools/GFOpenMUI/MUIClasses" "SYS:Tools/GFOpenMUI/MUIClasses"' in lines
-              and not any("zune" in l.lower() for l in lines), "\n".join(lines))
+              and not any("zune" in l.lower() for l in lines if not l.startswith("drop ")), "\n".join(lines))
         check("GFOpenMUI: left out, and said, when gfopenmui has no build",
               bp.gfopenmui_part(tmp / "muipack2", tmp / "nothing", None) is None)
         # Koenig's CHANGES on #253 (2ff22b70): the packed readme says what the part is, and a release build of
@@ -587,8 +587,23 @@ def main() -> int:
               env.get("LAB_PROGRAMS") == "0" and env.get("OUT") == str(tmp / "mb")
               and env.get("GFOPENLAYOUT") == str(tmp / "mb" / "deps/gfopenlayout") and env.get("PATH") == "/bin", env)
         check("no icon art key or art named ZuneTest is left",
-              not any("zunetest" in (ROOT / f).read_text(encoding="utf-8").lower()
-                      for f in ("tools/build_pack.py", "tools/icon_library_art.py", "tools/open_icons_art.py")))
+              '"ZuneTest")' not in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")
+              and "ZuneTest =" not in (ROOT / "tools/icon_library_art.py").read_text(encoding="utf-8")
+              and "zunetest" not in (ROOT / "tools/open_icons_art.py").read_text(encoding="utf-8").lower())
+        # Lorien's note on #253: an upgrade from GFOpenMUI 0.2.1 takes out GFOpenUp's own zunemaster.library and
+        # ZuneTest ("drop": only a file the manifest lists as GFOpenUp's; src/openup_drop.h)
+        check("GFOpenMUI drops 0.2.1's zunemaster.library and ZuneTest, where GFOpenUp put them",
+              all(f'drop "{d}"' in lines for d in ("LIBS:zunemaster.library", "SYS:Tools/ZuneTest", "SYS:Tools/ZuneTest.info")),
+              "\n".join(lines))
+        dr = tmp / "test_openup_drop"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_drop.c"), "-o", str(dr)], check=True)
+        r = subprocess.run([str(dr)], capture_output=True, text=True)
+        check("GFOpenUpTool takes a listed file out (tests/test_openup_drop.c)", r.returncode == 0, r.stdout[-600:])
+        tool = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
+        check("INSTALL reads drop lines, and REMOVE and drop share oud_action",
+              '!strcmp(w[0], "drop")' in tool and tool.count("oud_action(") >= 1 and "drop_file(" in tool
+              and "drop <dest>" in tool, "")
         inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
         check("the Installer: no Zune left, and GFOpenMUI installed only when its part is in the pack",
               "AROS's Zune" not in inst and "MUI from Zune" not in inst and "ZuneTest" not in inst
