@@ -195,6 +195,8 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
         src / "THIRD_PARTY.md": b"# Third-party parts\n",
         src / "RELEASE_NOTES_1.0.md": b"1.0\n", src / "RELEASE_NOTES_1.0.2.md": b"1.0.2\n",
         src / "licenses/SCOWL-ASPELL-English.txt": b"SCOWL notice\n",
+        src / "licenses/Apache-2.0.txt": b"Apache License 2.0, for the Publisher test samples\n",
+        src / "licenses/MIT-gabriel-vasile-mimetype.txt": b"MIT, for a cut-short test .pub\n",
     })
     for f, data in files.items():
         f.parent.mkdir(parents=True, exist_ok=True)
@@ -242,8 +244,19 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     check("GFOpenWrite: no z.library, OWConvert or dictionary of its own (GFOffice's now)",
           not [l for l in wl if l.startswith(("copy", "default", "add"))
                and ("z.library" in l or "OWConvert" in l or "Dictionaries" in l)], str(wl))
-    check("GFOpenWrite: the dictionary an earlier part put beside it archived, and nothing else of its drawer",
-          [l for l in wl if l.startswith("retire")] == ['retire "SYS:Utilities/GFOpenWrite/Dictionaries/en_GB.words"'])
+    check("GFOpenWrite: the dictionary an earlier part put beside it archived, and the test-only licences earlier parts "
+          "shipped, and nothing else of its drawer",
+          [l for l in wl if l.startswith("retire")] == ['retire "SYS:Utilities/GFOpenWrite/Dictionaries/en_GB.words"',
+                                                         'retire "SYS:Utilities/GFOpenWrite/licenses/Apache-2.0.txt"',
+                                                         'retire "SYS:Utilities/GFOpenWrite/licenses/MIT-gabriel-vasile-mimetype.txt"'],
+          str([l for l in wl if l.startswith("retire")]))
+    shipped = [l for l in wl if l.startswith("copy") and "/licenses/" in l]
+    check("GFOpenWrite: the licences of what it ships (the dictionary's), not those of gfoffice's test data "
+          "(THIRD_PARTY.md: Apache POI's samples, mimetype's .pub)",
+          shipped == ['copy "Utilities/GFOpenWrite/licenses/SCOWL-ASPELL-English.txt" '
+                      '"SYS:Utilities/GFOpenWrite/licenses/SCOWL-ASPELL-English.txt"']
+          and not (wr.dir / "Utilities/GFOpenWrite/licenses/Apache-2.0.txt").exists()
+          and not (wr.dir / "Utilities/GFOpenWrite/licenses/MIT-gabriel-vasile-mimetype.txt").exists(), str(shipped))
     check("GFOpenWrite: its release notes are the newest", (wr.dir / "Utilities/GFOpenWrite/Release-Notes.txt").read_bytes() == b"1.0.2\n")
     check("GFOpenWrite: its drawer icon only where none is or GFOpenUp's",
           'add "Utilities/GFOpenWrite.info" "SYS:Utilities/GFOpenWrite.info"' in wl)

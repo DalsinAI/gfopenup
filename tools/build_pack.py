@@ -1128,6 +1128,9 @@ def openup_rom_lines(core: "Part", openmonitor: bytes, icon: bytes) -> None:
 GFO_LIBRARY = "build/os3-library"
 GFO_LINKED = "build/os3-linked"      # OWF=linked: GFOpenPresentation's (owfpresent.library has no app on it yet)
 GFO_LIBS = ("owfwrite", "owfcalc", "owfpub", "owfpresent")
+# gfoffice's licenses/ for what only its tests use (its THIRD_PARTY.md, "Test data only (not shipped)": Apache POI's
+# Publisher samples and mimetype's cut-short .pub). GFOpenWrite ships none of that data, so not their licences either.
+GFO_TEST_ONLY_LICENCES = ("Apache-2.0.txt", "MIT-gabriel-vasile-mimetype.txt")
 
 
 def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icons) -> tuple["Part", "Part", "Part | None"]:
@@ -1190,10 +1193,13 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
         if (src / s).is_file():
             wr.add(f"Utilities/GFOpenWrite/{name}", (src / s).read_bytes(), f"SYS:Utilities/GFOpenWrite/{name}")
     for f in sorted((src / "licenses").glob("*")):
-        wr.add(f"Utilities/GFOpenWrite/licenses/{f.name}", f.read_bytes(), f"SYS:Utilities/GFOpenWrite/licenses/{f.name}")
+        if f.name not in GFO_TEST_ONLY_LICENCES:
+            wr.add(f"Utilities/GFOpenWrite/licenses/{f.name}", f.read_bytes(), f"SYS:Utilities/GFOpenWrite/licenses/{f.name}")
     wr.add("Utilities/GFOpenWrite.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 150)), "SYS:Utilities/GFOpenWrite.info", own=True)
     for d in words:                             # GFOffice's now, in SYS:Dictionaries
         wr.line(f'retire "SYS:Utilities/GFOpenWrite/Dictionaries/{d.name}"')
+    for name in GFO_TEST_ONLY_LICENCES:         # earlier parts put them in its drawer
+        wr.line(f'retire "SYS:Utilities/GFOpenWrite/licenses/{name}"')
 
     # owf.library 2, the one library before the split: the four replace it, so it is archived
     gf.line('retire "LIBS:owf.library"')
