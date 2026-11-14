@@ -2483,7 +2483,7 @@ static int move_sysfont(void)
     if (ok && !wbport) write_file("ENV:Sys/Font.prefs", (const char *)d, len);
     FreeVec(d);
     if (ok) say("GFOpenUp: the system font (Font prefs) is now GFOS Mono 11, was DejaVu Sans Mono 11",
-                " (GFOS Mono keeps every letter whole in OS 3.2's lists; from the next reboot). The old prefs: " OUS_KEEP);
+                " (GFOS Mono keeps every letter whole in OS 3.2's lists; from the next reboot). The old prefs: " OUS_KEEP, NULL);
     return ok;
 }
 
