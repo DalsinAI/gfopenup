@@ -4125,18 +4125,11 @@ static int list(void)
 #define CRADLE_PACK "DH1:GFOpenUp/Cradle-Pack"
 #define RELEASES "https://github.com/DalsinAI/gfopenup/releases"
 
-/* Versions compare as numbers, dot by dot: 0.6.14 is newer than 0.6.9. */
+/* Versions compare as numbers, dot by dot: 0.6.14 is newer than 0.6.9, and a release candidate is older than
+ * its release (0.8.29-rc1 < 0.8.29-rc2 < 0.8.29): openup_vers.h's ouv_cmp, so UPDATE offers each day's candidate. */
 static int version_cmp(const char *a, const char *b)
 {
-    while (*a || *b) {
-        char *ea, *eb;
-        long x = strtol(a, &ea, 10), y = strtol(b, &eb, 10);
-        if (x != y) return x < y ? -1 : 1;
-        a = *ea == '.' ? ea + 1 : ea;
-        b = *eb == '.' ? eb + 1 : eb;
-        if (a == ea && b == eb) break;          /* neither moved on: the rest isn't a number */
-    }
-    return 0;
+    return ouv_cmp(a, b);
 }
 
 /* "version 0.6.14" from Cradle-Pack (key value lines, ";" comments). */

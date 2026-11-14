@@ -40,7 +40,18 @@ static int ouv_ver(const char *buf, long len, char *out, int size)
     return 0;
 }
 
-/* Versions compare as numbers, dot by dot: 47.10 is newer than 47.9. -1, 0 or 1. */
+/* A release candidate's number from what follows the numbers ("-rc2" gives 2), else 0: no candidate, which is
+ * weighed above every candidate of the same version (the daily release cycle, 14 Nov 2026). */
+static unsigned long ouv_rc(const char *s)
+{
+    unsigned long n = 0;
+    if (s[0] != '-' || s[1] != 'r' || s[2] != 'c' || !ouv_digit(s[3])) return 0;
+    for (s += 3; ouv_digit(*s); s++) n = n * 10 + (unsigned long)(*s - '0');
+    return n;
+}
+
+/* Versions compare as numbers, dot by dot: 47.10 is newer than 47.9; then a release candidate is older than its
+ * release, and rc2 newer than rc1 (0.8.29-rc1 < 0.8.29-rc2 < 0.8.29). Any other suffix is ignored. -1, 0 or 1. */
 static int ouv_cmp(const char *a, const char *b)
 {
     for (;;) {
@@ -49,7 +60,12 @@ static int ouv_cmp(const char *a, const char *b)
         while (ouv_digit(*a)) { x = x * 10 + (unsigned long)(*a++ - '0'); ma = 1; }
         while (ouv_digit(*b)) { y = y * 10 + (unsigned long)(*b++ - '0'); mb = 1; }
         if (x != y) return x < y ? -1 : 1;
-        if (!ma && !mb) return 0;
+        if (!ma && !mb) {
+            unsigned long ra = ouv_rc(a), rb = ouv_rc(b);
+            if (ra == rb) return 0;
+            if (!ra || !rb) return ra ? -1 : 1;          /* the release over its candidates */
+            return ra < rb ? -1 : 1;
+        }
         if (*a == '.') a++;
         if (*b == '.') b++;
     }
