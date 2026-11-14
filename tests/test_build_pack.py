@@ -656,6 +656,20 @@ def compress_files_checks(tmp: Path) -> None:
           'openamigafilemanager / "build.sh"], env=filemanager_env(a, env))' in src and '"--openamigamedia"' in src)
 
 
+def icon_step_checks() -> None:
+    """Ivanova's pack lab (bundle A, 14 Nov): after UPDATE 7 of 12 dock icons were generic. compress_part's part was
+    never kept (oc.dir: NameError), MUIExample.png was missing, and both icon steps caught the error and went on."""
+    src = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
+    check("the GFOpenCompress part is kept for the icon steps (oc = compress_part)", "oc = compress_part(" in src)
+    block = src[src.index("        open_icons(a.amigachrome, ["):]
+    block = block[:block.index("drawers=")]
+    keys = set(re.findall(r'\.info", "([^"]+)"\)', block)) | {art for _, _, art in bp.PREFERENCES_PAGES}
+    missing = sorted(k for k in keys if not (bp.OPEN_ART / f"{k}.png").is_file())
+    check("every picture the Open apps' icons ask for is in icons/open", not missing and len(keys) > 20, str(missing))
+    check("an icon step that fails stops the build (no 'icons not made' and carry on)",
+          "icons not made" not in src and "the ones above stay" not in src and "the classic ones stay)" not in src)
+
+
 def rc_version_checks() -> None:
     """Corwin's item 10 and the daily release cycle's numbering: a pack can be 0.8.29-rc1."""
     import argparse
@@ -1189,6 +1203,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as ctmp:
         compress_files_checks(Path(ctmp))
     rc_version_checks()
+    icon_step_checks()
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
     return 1 if fails else 0

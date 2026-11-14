@@ -2458,7 +2458,7 @@ def main() -> int:
     # GFOpenCompress: one program, the window from Workbench and the command in
     # the Shell (SYS:Utilities is in the Shell's path)
     # 0.3.3 (0.8.19): inflate through z.library at run time (gfopencompress #24), 53.12 refused
-    compress_part(top, a.openamigacompress, icons)
+    oc = compress_part(top, a.openamigacompress, icons)
 
     # GFOpenService: the services device and Nursery (gfopenservice). It
     # does nothing on the LAN until ENV:GFOpenService/Paired lists a Cradle.
@@ -3247,8 +3247,8 @@ def main() -> int:
                        + [(oin.dir / f"Utilities/GFOpenUp/Docs/{n}.info", "page") for n in ("GFOpenInput.txt", "Design-GFOpenInput.txt", "Gamepads.txt")]
                        if oin else []))
         put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
-    except Exception as e:                  # node or amiga-icon.js missing: the classic icons stay
-        print(f"  (OS 3.2-style icons not made: {e}; the classic ones stay)")
+    except Exception as e:                  # never carry on with the classic icons: the pack's look is wrong without these
+        raise SystemExit(f"the OS 3.2-style icons weren't made: {e!r}")
     try:
         open_icons(a.amigachrome, [
             (a.out / "GFOpenUp.info", "drawer-GFOpenUp"), (top / "Install-GFOpenUp.info", "Install-GFOpenUp"),
@@ -3283,8 +3283,8 @@ def main() -> int:
                      pr.dir / "Icons/GFOpenPrint.info": sorted((pr.dir / "Drawer").glob("*.info")),
                      wr.dir / "Utilities/GFOpenWrite.info": [wr.dir / "Utilities/GFOpenWrite/GFOpenWrite.info"]},
             )
-    except Exception as e:                  # an amicradle checkout without amiga_icon (before #153): the icons above stay
-        print(f"  (the Open apps' icons not made: {e}; the ones above stay)")
+    except Exception as e:                  # never carry on: a dock of generic icons (Ivanova's pack lab, 14 Nov 2026)
+        raise SystemExit(f"the Open apps' icons weren't made: {e!r}")
     # GFOpenUp's own drawers as GFOpenIcons look B drawers with their program's motif (W78, 18 October 2026, Dale:
     # "we need to fix those older icons to our new style"), over the Gorilla-era drawer-NAME and Boxie drawers
     # above; each keeps its window and place. The apps' own animated icons stay as ICONS.md section 1 has them.
