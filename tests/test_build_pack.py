@@ -747,6 +747,21 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_vers.c"), "-o", str(vs)], check=True)
         r = subprocess.run([str(vs)], capture_output=True, text=True)
         check("GFOpenUpTool keeps a newer file (tests/test_openup_vers.c)", r.returncode == 0, r.stdout[-600:])
+        lf = tmp / "test_openup_left"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openup_left.c"), "-o", str(lf)], check=True)
+        r = subprocess.run([str(lf)], capture_output=True, text=True)
+        check("GFOpenUpTool REINSTALL's list of parts the pack hasn't got (tests/test_openup_left.c)", r.returncode == 0,
+              r.stdout[-600:])
+        # Ivanova's pack lab b (14 Nov): a part the pack hasn't got was only named in T:GFOpenUp.log; REINSTALL sets
+        # ENV:GFOpenUp/Left and the Installer's last screen names those parts
+        tl = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
+        inst2 = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("REINSTALL sets GFOpenUp/Left, and the Installer's reinstall screen names the parts in it",
+              'oul_left_add(' in tl and '"GFOpenUp/Left"' in tl and '(getenv "GFOpenUp/Left")' in inst2
+              # Talkie Toaster's nit 1: cleared first, so an early return never leaves an earlier run's list
+              and 'set_env("GFOpenUp/Left", "");' in tl[tl.index("static int reinstall("):][:tl[tl.index("static int reinstall("):].index("manifest_load();")]
+              and "aren't in this pack" in inst2, "")
         un = tmp / "test_openup_unattended"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_unattended.c"), "-o", str(un)], check=True)
