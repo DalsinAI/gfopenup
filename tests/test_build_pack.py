@@ -770,6 +770,14 @@ def main() -> int:
         tl_sf = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
         check("GFOpenUpTool moves the system font when it installs GFOSFonts",
               'if (!strcmp(partname, "GFOSFonts")) move_sysfont();' in tl_sf and "ous_migrate(d, len," in tl_sf and "OUS_KEEP" in tl_sf)
+        ms = tl_sf[tl_sf.index("static int move_sysfont(void)\n{"):]
+        ms = ms[:ms.index("\n}\n")]
+        # Ivanova's lab (14 Nov, LAB: FAIL f11c4ee2): at UPDATE AUTO, reinstalling kept ENVARC:Sys/Font.prefs as it was
+        # while the tool said it had moved the font. The move clears reinstalling for its one write, reads the file
+        # back before it says so, and logs the move.
+        check("GFOpenUpTool's font move writes at UPDATE too, reads it back and logs it",
+              "reinstalling = 0;" in ms and "reinstalling = was;" in ms and "ous_landed(back, blen)" in ms
+              and "log_append(OUS_LOG_LINE);" in ms and ms.index("ous_landed") < ms.index("now GFOS Mono 11"))
         lf = tmp / "test_openup_left"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_left.c"), "-o", str(lf)], check=True)

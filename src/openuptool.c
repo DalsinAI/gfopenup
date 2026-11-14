@@ -2460,6 +2460,19 @@ static int install_prefs(const char *name, const UBYTE *data, LONG len)
     return ok;
 }
 
+/* One line added to GFOpenUpTool's log, ENVARC:GFOpenUp/GFOpenUpTool.log (openup_unattended.h). */
+static void log_append(const char *line)
+{
+    BPTR fh, l;
+    if (!exists("ENVARC:GFOpenUp") && (l = CreateDir((STRPTR)"ENVARC:GFOpenUp"))) UnLock(l);
+    if ((fh = Open((STRPTR)OU_LOG, MODE_READWRITE))) {
+        Seek(fh, 0, OFFSET_END);
+        FPuts(fh, (STRPTR)line);
+        FPutC(fh, '\n');
+        Close(fh);
+    }
+}
+
 /* Font prefs' system default text: DejaVuSansMono.font 11 becomes GFOSMono.font 11, that one setting only (Dale,
  * 14 November 2026: openup_sysfont.h), in ENVARC: and, while Workbench isn't open yet, ENV:. 1 moved, 0 nothing. */
 static int move_sysfont(void)
@@ -2476,13 +2489,32 @@ static int move_sysfont(void)
         FreeVec(d);
         return 0;
     }
-    ok = install_prefs("Font.prefs", d, len);
+    {
+        /* UPDATE AUTO reinstalls with the settings in place kept (reinstalling), which left ENVARC: as it was;
+         * this one setting is the move Dale asked for at update (16:23 "Move it at update") */
+        int was = reinstalling;
+        reinstalling = 0;
+        ok = install_prefs("Font.prefs", d, len);
+        reinstalling = was;
+    }
+    if (ok) {                                       /* read it back: said only when ENVARC: holds the new one */
+        LONG blen = 0;
+        UBYTE *back = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &blen);
+        ok = back && ous_landed(back, blen);
+        if (back) FreeVec(back);
+    }
+    if (!ok) {
+        say("GFOpenUp: couldn't write ENVARC:Sys/Font.prefs; the system font stays DejaVu Sans Mono 11", NULL, NULL);
+        FreeVec(d);
+        return 0;
+    }
     Forbid();
     wbport = FindPort((STRPTR)"WORKBENCH");
     Permit();
-    if (ok && !wbport) write_file("ENV:Sys/Font.prefs", (const char *)d, len);
+    if (!wbport) write_file("ENV:Sys/Font.prefs", (const char *)d, len);
     FreeVec(d);
-    if (ok) say("GFOpenUp: the system font (Font prefs) is now GFOS Mono 11, was DejaVu Sans Mono 11",
+    log_append(OUS_LOG_LINE);
+    say("GFOpenUp: the system font (Font prefs) is now GFOS Mono 11, was DejaVu Sans Mono 11",
                 " (GFOS Mono keeps every letter whole in OS 3.2's lists; from the next reboot). The old prefs: " OUS_KEEP, NULL);
     return ok;
 }
@@ -4232,16 +4264,9 @@ static int auto_kick;                               /* UPDATE AUTO's Kickstart s
 static int update_logged(int by, const char *installed, const char *newer, int done, int rc)
 {
     char line[200];
-    BPTR fh, l;
     ou_log_line(line, sizeof line, auto_kick, by, installed, newer, done, rc);
     say(line, NULL, NULL);
-    if (!exists("ENVARC:GFOpenUp") && (l = CreateDir((STRPTR)"ENVARC:GFOpenUp"))) UnLock(l);
-    if ((fh = Open((STRPTR)OU_LOG, MODE_READWRITE))) {
-        Seek(fh, 0, OFFSET_END);
-        FPuts(fh, (STRPTR)line);
-        FPutC(fh, '\n');
-        Close(fh);
-    }
+    log_append(line);
     return rc;
 }
 

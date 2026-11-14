@@ -59,4 +59,15 @@ static int ous_migrate(unsigned char *d, long len, int have_gfosmono11)
     return have_gfosmono11 && d ? ous_move(d, len) : 0;
 }
 
+/* 1: the file's system font is GFOSMono.font 11 (read back after the write: Ivanova's lab, 14 Nov, found an UPDATE
+ * that said it had moved it while ENVARC: still held the old file) */
+static int ous_landed(unsigned char *d, long len)
+{
+    unsigned char *f = ous_sysfont(d, len);
+    return f && ((f[24] << 8) | f[25]) == OUS_SIZE && !strncmp((const char *)f + 28, OUS_NEW_FONT, 128);
+}
+
+/* the line GFOpenUpTool adds to its log (ENVARC:GFOpenUp/GFOpenUpTool.log) when it moves the system font */
+#define OUS_LOG_LINE "GFOpenUpTool: system font " OUS_OLD_FONT " 11 moved to " OUS_NEW_FONT " 11, the old Font.prefs kept as " OUS_KEEP
+
 #endif

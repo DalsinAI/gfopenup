@@ -81,6 +81,12 @@ int main(void)
     CHECK(ous_migrate(NULL, 0, 1) == 0, "no Font.prefs: nothing to do");
     CHECK(ous_migrate(a, n, 1) == 1 && !strcmp((char *)ous_sysfont(a, n) + 28, "GFOSMono.font"), "exact match with GFOS Mono 11 there: moved");
     CHECK(ous_migrate(a, n, 1) == 0, "a second run changes nothing");
+    CHECK(ous_landed(a, n) == 1, "read back: GFOS Mono 11 is the system font");
+    n = prefs(a, NULL, "DejaVuSansMono.font", 11, NULL);
+    CHECK(ous_landed(a, n) == 0, "read back of the old file: not moved (the UPDATE case Ivanova found)");
+    CHECK(ous_landed(NULL, 0) == 0, "read back, no file: not moved");
+    CHECK(strstr(OUS_LOG_LINE, "DejaVuSansMono.font 11") && strstr(OUS_LOG_LINE, "GFOSMono.font 11") && strstr(OUS_LOG_LINE, OUS_KEEP),
+          "the log line names both fonts and the kept copy");
     n = prefs(a, NULL, "DejaVuSansMono.font", 12, NULL);
     CHECK(ous_migrate(a, n, 1) == 0, "other size: stays");
     n = prefs(a, NULL, "GFOSSans.font", 11, NULL);
