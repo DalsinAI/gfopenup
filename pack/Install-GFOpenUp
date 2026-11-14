@@ -231,9 +231,9 @@
               "a slideshow, sounds, tunes and films, with a playlist. In SYS:Utilities.\n\n"
               "GFOpenMUI: muimaster.library, the AmiCradle Team's own MUI, drawn with GFOpenLayout "
               "(a preview, off unless picked). It goes in only where there is no muimaster.library, "
-              "so MUI programs run, and an installed MUI is never touched. MUIClasses, MUIAddons and "
-              "MUITime in SYS:Tools/GFOpenMUI show it working.\n\n"
-              "GFOpenTitle: AmiCradle's logo at the title bar's left, the free chip and "
+              "so MUI programs run, and an installed MUI is never touched. Where the build has them, "
+              "MUIClasses, MUIAddons and MUITime in SYS:Tools/GFOpenMUI show it working.\n\n"
+              "GFOpenTitle: the GFOS mark at the title bar's left, the free chip and "
               "fast memory after Workbench's title, and the day, date and time at the right "
               "(new). Title bar in SYS:Prefs switches each, and a black border around the screen.")
         (choices "GFOpenRTG: Workbench without Picasso96"
@@ -244,7 +244,7 @@
                  "GFOpenFiles: a file manager"
                  "GFOpenPlay: a media player"
                  "GFOpenMUI: our own MUI (preview)"
-                 "GFOpenTitle: logo, memory and clock")
+                 "GFOpenTitle: GFOS mark, memory and clock")
         (default (bitand (shiftright #default 9) 511))))
 (set #g3
     (askoptions

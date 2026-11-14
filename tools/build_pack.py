@@ -2920,7 +2920,7 @@ def main() -> int:
     tbo = a.openamigaprefs / "TitleBar/build/os3"
     tbb = (tbo / "GFOpenTitle").read_bytes()
     tb = Part(top, "GFOpenTitle", binary_version(tbb, "GFOpenTitle") or "0.7",
-              "GFOpenTitle: AmiCradle's logo, free memory, a clock, the settings cog and the taskspace on the title bar")
+              "GFOpenTitle: the GFOS mark, free memory, a clock, the settings cog and the taskspace on the title bar")
     tb.add("C/GFOpenTitle", tbb, "SYS:C/GFOpenTitle")
     tb.line("startup Run >NIL: C:GFOpenTitle")
     # GFOpenNetwork (gfopenprefs Network/, 0.8, Dale 12 Nov 2026 "make the sound and wifi and network commodities"):
