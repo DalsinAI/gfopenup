@@ -5,7 +5,7 @@ archive (DESIGN.md sections 3 and 4).
     python3 tools/build_pack.py [--version 0.1] [--out build/pack]
         [--amigachrome DIR] [--openamigaprint DIR] [--opengadtools DIR]
         [--guest DIR] [--openamigaservice DIR] [--opendatatypes DIR] [--openamigartg DIR]
-        [--openamigafilemanager DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
+        [--openamigafilemanager DIR] [--openamigamedia DIR] [--openamigamediaplayer DIR] [--openamigamui DIR]
         [--openamigaedit DIR] [--gfoffice DIR] [--openamigalayout DIR]
         [--openamigamesa DIR] [--openamigatls DIR] [--openamigaputty DIR] [--openamigatata DIR]
         [--openamigaftp DIR] [--openamigatelegram DIR] [--opengpu-sdk DIR] [--openamigainput DIR]
@@ -35,7 +35,7 @@ a Part file that C/GFOpenUpTool reads:
                         lowlevel.library, clipboard, serial and parallel.device (OPENKICK_DISK, the OpenKick
                         boot disk's files), and SYS:Classes/arexx.class, so programs' ARexx ports open
                         (OPENKICK_CLASSES: amicradle-guest's GFOpenReaction, with its licence)
-  GFOpenSocket/           bsdsocket.library 4.3 and its tools, built from gfopensocket
+  GFOpenSocket/           bsdsocket.library and its tools, built from gfopensocket
                         (--openamigasocket) and laid out by the manifest of amicradle's
                         vendored payload (vendor/opensocket-os32); without the checkout,
                         that vendored payload as it is
@@ -58,7 +58,8 @@ a Part file that C/GFOpenUpTool reads:
                         amicradle-guest checkout (--guest; tools/openicons_part.py)
   GFOpenTypes/            GFOpenPrefs's File Types page: no files of its own since the no-ROM-volume
                         design (24 October 2026); it archives its old name's stub in SYS:Prefs
-  GFOpenCompress/         GFOpenCompress, its window and command (gfopencompress)
+  GFOpenCompress/         GFOpenCompress, its window and command, and its two libraries in LIBS:
+                        (gfopencompress_archive and _crunch.library: RAR, 7z, bzip2, xz, crunchers)
   GFOpenService/          mitchy.device (with gfopenservice.device, its old name) and Nursery: services from boards and
                         paired Cradles; ServiceTest; MEDIA:, files decoded through
                         media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA); mitchy.library (gfopenservice)
@@ -243,6 +244,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEV = ROOT.parent
 STOVE = Path(os.environ.get("STOVE", Path.home() / "AmiCradle/stoves/os32"))
+# amicradle-guest's scripts: the GCC 16 open6 stove by the name the Cradle hosts give it (the scripts' own default,
+# os32-gcc16-16.2.0-open6, is a folder daletop doesn't have: Corwin's 14 Nov build)
+GUEST_STOVE = Path(os.environ.get("OS32_GCC16_OPEN6", Path.home() / "AmiCradle/stoves/os32-gcc16-open6"))
 CC = STOVE / "prefix/bin/m68k-amigaos-gcc"
 # soft float: -m68040 links libnix's libm020, not libm881 (specs/m68k-soft-m68040.specs)
 SOFT_SPECS = Path(__file__).resolve().parent.parent / "specs/m68k-soft-m68040.specs"
@@ -364,6 +368,14 @@ def wbconfig_backdrop() -> bytes:
     return b"FORM" + struct.pack(">I", len(body)) + body
 
 
+def pack_version(v: str) -> str:
+    """--version: 0.8.29, or a release candidate 0.8.29-rc1 (DECISION-RELEASE-CYCLE-20261114-1302's numbering),
+    which binary_version reads back from the Installer's and uninstaller's $VER (Corwin's item 10)."""
+    if not re.fullmatch(r"[0-9]+(\.[0-9]+)+(-rc[1-9][0-9]*)?", v):
+        raise argparse.ArgumentTypeError(f"{v!r}: digits and dots, then -rcN (N from 1) for a release candidate (0.8.29-rc1)")
+    return v
+
+
 def first(*paths: Path) -> Path | None:
     for p in paths:
         if p and p.is_dir():
@@ -374,12 +386,15 @@ def first(*paths: Path) -> Path | None:
 class Part:
     """A part's drawer: its files and its Part file's lines."""
 
-    def __init__(self, top: Path, name: str, version: str, title: str):
+    def __init__(self, top: Path, name: str, version: str | None, title: str):
+        """version None: the part's version is its main program's own (PART_MAIN), read when the part is
+        written, so a part can't fall behind its program (Corwin's 14 Nov build: seven had)."""
         self.dir = top / "Parts" / name
         if self.dir.exists():
             shutil.rmtree(self.dir)
         self.dir.mkdir(parents=True)
-        self.lines = [f"part {name} {version}", f'; {title}']
+        self.name = name
+        self.lines = [f"part {name} {version}" if version else "", f'; {title}']
 
     def add(self, rel: str, data: bytes, dest: str, default: bool = False, own: bool = False, cond: str = ""):
         """default: only where nothing is (the user's settings); own: where
@@ -400,7 +415,21 @@ class Part:
         self.lines.append(f"needs part {name}")
 
     def write(self):
+        if not self.lines[0]:
+            self.lines[0] = f"part {self.name} {program_version(self.dir, self.name)}"
         (self.dir / "Part").write_text("\n".join(self.lines) + "\n", encoding="latin-1")
+
+
+def program_version(part_dir: Path, name: str) -> str:
+    """A part's version from its main program's $VER (PART_MAIN); stops the build when it has none."""
+    if name not in PART_MAIN:
+        raise SystemExit(f"{name}: no main binary in PART_MAIN to take the version from")
+    rel, vername = PART_MAIN[name]
+    f = part_dir / rel
+    got = binary_version(f.read_bytes(), vername) if f.is_file() else None
+    if not got:
+        raise SystemExit(f"{name}: {rel} says no version, so the part has none")
+    return got
 
 
 def icon_maker(openamigaprint: Path):
@@ -574,6 +603,60 @@ def late_combine_off(cc) -> list[str]:
     return ["-fno-late-combine-instructions"] if r.returncode == 0 else []
 
 
+_STOVE_DEFAULT = re.compile(r'^\s*STOVE=\$\{STOVE:-"?([^"}]+)"?\}', re.M)
+
+
+def guest_stove(script: Path, env: dict, home: Path | None = None, guest: Path | None = None) -> dict:
+    """env for an amicradle-guest script: as given, but when the script's own STOVE default is a stove folder this
+    host doesn't have and its name is an open6 one (os32-gcc16-16.2.0-open6), GUEST_STOVE instead, if this host has
+    that (Corwin's 14 Nov build: 13 guest scripts stopped on m68k-amigaos-gcc: not found). The default's $STOVES is
+    env's STOVES, else $HOME/AmiCradle/stoves, as the scripts read it (Londo, #254). A STOVE already in env stays."""
+    if "STOVE" in env:
+        return env
+    guest = guest or GUEST_STOVE
+    m = _STOVE_DEFAULT.search(script.read_text(encoding="latin-1")) if script.is_file() else None
+    if not m or not guest.is_dir():
+        return env
+    h = str(home or Path.home())
+    stoves = env.get("STOVES") or f"{h}/AmiCradle/stoves"
+    d = Path(m.group(1).replace("$STOVES", stoves).replace("${STOVES}", stoves).replace("$HOME", h))
+    if d.is_dir() or "open6" not in d.name:
+        return env
+    return dict(env, STOVE=str(guest))
+
+
+def filemanager_env(a, env: dict) -> dict:
+    """GFOpenFiles' build.sh: GFOpenGadTools and the guest, and GFOpenCompress, GFOpenFTP and GFOpenMedia by the
+    checkouts this build was given, not whatever sits beside gfopenfilemanager (Corwin's 14 Nov build: no MEDIA)."""
+    e = dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest), OC=str(a.openamigacompress))
+    if getattr(a, "openamigaftp", None):
+        e["FTP"] = str(a.openamigaftp)
+    if getattr(a, "openamigamedia", None):
+        e["MEDIA"] = str(a.openamigamedia)
+    return e
+
+
+# GFOpenCompress's run-time libraries (gfopencompress build-os3.sh since 6 Nov 2026): RAR, 7z, bzip2 and xz, and
+# crunched files (PowerPacker, Imploder, XPK...). GFOpenCompress's part owns them; GFOpenFiles opens the same ones.
+COMPRESS_LIBS = ("gfopencompress_archive.library", "gfopencompress_crunch.library")
+
+
+def compress_part(top: Path, oc_dir: Path, icons) -> "Part":
+    """Parts/GFOpenCompress: the program in SYS:Utilities and its two libraries in LIBS:; the build stops when one
+    of the three wasn't built."""
+    b = oc_dir / "build/os3"
+    oc = Part(top, "GFOpenCompress", None, "GFOpenCompress: archives and disk images, from its window or the Shell")
+    for f in ("GFOpenCompress",) + COMPRESS_LIBS:
+        if not (b / f).is_file():
+            raise SystemExit(f"GFOpenCompress: {b / f} wasn't built (gfopencompress build-os3.sh)")
+    oc.add("Utilities/GFOpenCompress", (b / "GFOpenCompress").read_bytes(), "SYS:Utilities/GFOpenCompress")
+    oc.add("Utilities/GFOpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenCompress.info")
+    for lib in COMPRESS_LIBS:
+        oc.add(f"Libs/{lib}", (b / lib).read_bytes(), f"LIBS:{lib}", own=True)
+    oc.write()
+    return oc
+
+
 def build_parts(a):
     """Each part's own build, into its own build folder."""
     env = dict(os.environ, AMIGA_CC=str(CC), PATH=f"{CC.parent}:{os.environ['PATH']}")
@@ -597,12 +680,12 @@ def build_parts(a):
     run([sys.executable, a.opengadtools / "tools/make_backdrops.py"], env=env)
     g = a.guest
     out = g / "build/guest/os32"
-    run(["sh", g / "devices/accontrol.device/build.sh", out], env=env)
+    run(["sh", g / "devices/accontrol.device/build.sh", out], env=guest_stove(g / "devices/accontrol.device/build.sh", env))
     inc = g / "devices/accontrol.device/include"
     run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-O2", NULL_OK, *late, "-Wall", f"-I{inc}", g / "tools/acclip/acclip.c", "-o", out / "ACClip"], env=env)
     run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-O2", NULL_OK, *late, "-Wall", f"-I{inc}", f"-I{g / 'common/amiga'}",
          g / "tools/acdrop/acdrop.c", g / "common/amiga/ac_stack.c", "-o", out / "ACDrop"], env=env)
-    run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=env)        # GFOpenGPU's driver for the ACRTG board
+    run(["sh", g / "libraries/acrtg.gpu/build.sh", out], env=guest_stove(g / "libraries/acrtg.gpu/build.sh", env))        # GFOpenGPU's driver for the ACRTG board
     # gfopengfx.library 1.2: the stub that sends gfopengfx.library's calls to gfopengpu.library 0.6 (GCC 16)
     run(["sh", g / "libraries/opengfx/build-amiga.sh"], env=dict(os.environ, STOVE=gcc16_root))
     run(["sh", a.openamigaprefs / "OpenTypes/build.sh"], env=env)
@@ -657,7 +740,7 @@ def build_parts(a):
             env=dict(os.environ, RTG=str(a.openamigartg), CROSS="mesa/cross/m68k-amigaos.ini", GL_OUT=str(gl_out),
                      PATH=f"{stove16 / 'bin'}:{os.environ['PATH']}"))
     # GFOpenFiles' zlib is our openzlib, from the guest checkout (GUEST), not a libz.a beside it
-    run(["sh", a.openamigafilemanager / "build.sh"], env=dict(env, OGT=str(a.opengadtools), GUEST=str(a.guest)))
+    run(["sh", a.openamigafilemanager / "build.sh"], env=filemanager_env(a, env))
     run(["sh", a.openamigamediaplayer / "build.sh"], env=dict(env, OGT=str(a.opengadtools)))
     # GFOpenMUI: the clean-room muimaster.library (gfopenmui muimaster/build-amiga.sh, GCC 16 open6, on GFOpenLayout
     # library 18 at the commit its script pins: GFOPENLAYOUT names the script's own deps folder, so it fetches that one)
@@ -706,7 +789,7 @@ def build_parts(a):
                                                              FPCR_CHECK=str(a.openamigartg / "tools/fpcr_check.py")))
     # Unofficial Telegram for Amiga (Open): the Amiga program (os32 stove)
     if a.openamigatelegram:
-        run(["sh", a.openamigatelegram / "build-os3.sh"], env=dict(os.environ, STOVE=str(STOVE)))
+        run(["sh", a.openamigatelegram / "build-os3.sh"], env=dict(os.environ, STOVE=gcc16_root, OS32_GCC16=gcc16_root))
     # The GFOpenGPU developer files: gfopenrtg's kit, from this build's libraries
     # GFOpenInput (gfopeninput): gfopeninput.library and OIList (os32 stove), and
     # GFOpenPrefs Gamepads, its editor (gfopenprefs, with GFOpenInput's headers)
@@ -721,11 +804,11 @@ def build_parts(a):
     ol = ROOT / "build/openlibs"
     g = a.guest / "libraries"
     genv = {k: v for k, v in os.environ.items() if k not in ("STOVE", "CC")}
-    run(["sh", g / "openutility/build-amiga.sh", "module"], env=dict(genv, OUT=str(ol / "openutility")))
-    run(["sh", g / "openmathieee/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openmathieee")))
+    run(["sh", g / "openutility/build-amiga.sh", "module"], env=guest_stove(g / "openutility/build-amiga.sh", dict(genv, OUT=str(ol / "openutility"))))
+    run(["sh", g / "openmathieee/build-amiga.sh"], env=guest_stove(g / "openmathieee/build-amiga.sh", dict(genv, OUT=str(ol / "openmathieee"))))
     # OpenRexx (amicradle-guest libraries/openrexx, its default os32-gcc16 stove): rexxsyslib.library,
     # rexxsupport.library and RexxMast
-    run(["sh", g / "openrexx/build-amiga.sh"], env=dict(genv, OUT=str(ol / "openrexx")))
+    run(["sh", g / "openrexx/build-amiga.sh"], env=guest_stove(g / "openrexx/build-amiga.sh", dict(genv, OUT=str(ol / "openrexx"))))
     # z.library 53.15 (amicradle-guest libraries/openzlib, GCC 16; the Aminet jump table since #632; since #643, 0.8.23,
     # CRC-32, Adler-32 and its copies and clears through AC090's helpers, plain 68k code on any other machine; since
     # #677/#690, 53.15, a block's codes and a whole-input deflate as hostlib calls, ZLIB_MIN_FOR_PHYSFS): the
@@ -739,21 +822,21 @@ def build_parts(a):
     if a.openamigaphysfs:
         build_physfs(a.openamigaphysfs, ROOT / "build/physfs", gcc16_root)
     # softfpu.library (amicradle-guest libraries/opensoftfpu, its default os32-gcc16 stove): the GFOpenUp part's
-    run(["sh", g / "opensoftfpu/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/opensoftfpu")))
+    run(["sh", g / "opensoftfpu/build-amiga.sh"], env=guest_stove(g / "opensoftfpu/build-amiga.sh", dict(genv, OUT=str(ROOT / "build/opensoftfpu"))))
     # The disk libraries and devices the open ROM leaves to a disk (the OpenKick boot disk's, gfopenkick
     # disks/openkick-boot/manifest.json): the GFOpenUp part's, on the GFOpenKick ROM, where none is (OPENKICK_DISK)
     for name, (src, _out, _dest) in OPENKICK_DISK.items():
-        run(["sh", a.guest / src / "build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openkickdisk" / name)))
+        run(["sh", a.guest / src / "build-amiga.sh"], env=guest_stove(a.guest / src / "build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openkickdisk" / name))))
     # GFOpenReaction's classes GFOS lacks (OPENKICK_CLASSES: arexx.class), each with its own script, the same way
     for name, (src, _out, _dest) in OPENKICK_CLASSES.items():
-        run(["sh", a.guest / src / "build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openkickclasses" / name)))
+        run(["sh", a.guest / src / "build-amiga.sh"], env=guest_stove(a.guest / src / "build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openkickclasses" / name))))
     # ACROMFix (amicradle-guest tools/acromfix, the os32 stove as its build.sh): the GFOpenUp part's
     run(["sh", a.guest / "tools/acromfix/build-amiga.sh"], env=dict(genv, STOVE=str(STOVE), OUT=str(ROOT / "build/acromfix")))
     # HostClock (amicradle-guest resources/openbattclock.resource built -DOBC_INSTALL, its default os32-gcc16 stove):
     # the HostClock part's
-    run(["sh", a.guest / "resources/openbattclock.resource/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/hostclock")))
+    run(["sh", a.guest / "resources/openbattclock.resource/build-amiga.sh"], env=guest_stove(a.guest / "resources/openbattclock.resource/build-amiga.sh", dict(genv, OUT=str(ROOT / "build/hostclock"))))
     # printer.device (amicradle-guest devices/openprinter.device, its default os32-gcc16 stove): the GFOpenPrinter part's
-    run(["sh", a.guest / "devices/openprinter.device/build-amiga.sh"], env=dict(genv, OUT=str(ROOT / "build/openprinter")))
+    run(["sh", a.guest / "devices/openprinter.device/build-amiga.sh"], env=guest_stove(a.guest / "devices/openprinter.device/build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openprinter"))))
     if a.openamigainput:
         run(["sh", a.openamigainput / "device/build.sh", ol / "input"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
@@ -843,7 +926,11 @@ def binary_version(data: bytes, name: str) -> str | None:
     """The version a program's $VER (or a library's or device's ID string)
     gives for name: "$VER: GFOpenDock 0.4 (...)" or "gfopengpu.library 0.9 (...)"."""
     n = re.escape(name.encode("latin-1"))
-    m = re.search(rb"\$VER: ?" + n + rb" ([0-9][0-9.]*[0-9])", data) or re.search(rb"(?<![A-Za-z0-9_.])" + n + rb" ([0-9]+\.[0-9][0-9.]*) \(", data)
+    idstr = rb" ([0-9]+\.[0-9][0-9.]*) \("
+    m = (re.search(rb"\$VER: ?" + n + rb" ([0-9][0-9.]*[0-9](?:-rc[0-9]+)?)", data) or re.search(rb"(?<![A-Za-z0-9_.])" + n + idstr, data)
+         # an ID string right after another constant's last byte (gfopeninput.library 1.3 in Corwin's 14 Nov
+         # build had a letter before it): taken when no clean one is there
+         or re.search(n + idstr, data))
     return m.group(1).decode() if m else None
 
 
@@ -1086,7 +1173,7 @@ def gfoffice_parts(top: Path, src: Path, zlib: bytes, guest_licence: bytes, icon
 
     # GFOpenWrite: the word processor, as its 1.0 release laid it out, on owf.library
     # 2.0.26 (0.8.28): gfoffice main since #124 (ARexx return codes, no requesters during a command)
-    wr = Part(top, "GFOpenWrite", "2.0.26", "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
+    wr = Part(top, "GFOpenWrite", None, "GFOpenWrite: a word processor for DOCX, ODT and Amiga documents, with PDF and printing")
     wr.needs_part("GFOffice")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite", (onlib / "GFOpenWrite").read_bytes(), "SYS:Utilities/GFOpenWrite/GFOpenWrite")
     wr.add("Utilities/GFOpenWrite/GFOpenWrite.info", icons.icon(icons.WBTOOL, "page", stack=32768), "SYS:Utilities/GFOpenWrite/GFOpenWrite.info")
@@ -2087,7 +2174,8 @@ def check_part_versions(parts: Path) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--version", default="0.1")
+    ap.add_argument("--version", default="0.1", type=pack_version,
+                    help="the pack's version: digits and dots, and a release candidate's -rcN (0.8.29-rc1)")
     ap.add_argument("--out", type=Path, default=ROOT / "build" / "pack")
     ap.add_argument("--amigachrome", type=Path, default=first(DEV / "amicradle", DEV / "wt-deploy"))
     ap.add_argument("--openamigaprint", type=Path, default=first(DEV / "gfopenprint", DEV / "review/gfopenprint"))
@@ -2102,6 +2190,8 @@ def main() -> int:
     ap.add_argument("--openamigartg", type=Path, default=first(DEV / "gfopenrtg", DEV.parent / "gfopenrtg"))
     ap.add_argument("--openamigafilemanager", type=Path,
                     default=first(DEV / "gfopenfilemanager", DEV.parent / "gfopenfilemanager"))
+    ap.add_argument("--openamigamedia", type=Path, default=first(DEV / "gfopenmedia", DEV.parent / "gfopenmedia"),
+                    help="gfopenmedia, which GFOpenFiles' build needs (its MEDIA)")
     ap.add_argument("--openamigamediaplayer", type=Path,
                     default=first(DEV / "gfopenmediaplayer", DEV.parent / "gfopenmediaplayer"))
     ap.add_argument("--openamigamui", type=Path, default=first(DEV / "gfopenmui", DEV.parent / "gfopenmui"))
@@ -2250,7 +2340,7 @@ def main() -> int:
     payload = a.amigachrome / "vendor/opensocket-os32"
     m = json.loads((payload / "manifest.json").read_text())
     so_out = ROOT / "build/opensocket" if a.openamigasocket else None
-    sock = Part(top, "GFOpenSocket", "4.4", "bsdsocket.library 4.3 through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
+    sock = Part(top, "GFOpenSocket", None, "bsdsocket.library through the x86 or ARM64 cores (" + m.get("identity", "") + ")")
     sock.line("needs AmiCradle")
     sock.line('keep "SYS:Libs/bsdsocket.library" ' + " ".join(f'"{x}"' for x in OPENSOCKET_MARKERS))
     for f in m["files"]:
@@ -2368,10 +2458,7 @@ def main() -> int:
     # GFOpenCompress: one program, the window from Workbench and the command in
     # the Shell (SYS:Utilities is in the Shell's path)
     # 0.3.3 (0.8.19): inflate through z.library at run time (gfopencompress #24), 53.12 refused
-    oc = Part(top, "GFOpenCompress", "0.3.3", "GFOpenCompress: archives and disk images, from its window or the Shell")
-    oc.add("Utilities/GFOpenCompress", (a.openamigacompress / "build/os3/GFOpenCompress").read_bytes(), "SYS:Utilities/GFOpenCompress")
-    oc.add("Utilities/GFOpenCompress.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenCompress.info")
-    oc.write()
+    compress_part(top, a.openamigacompress, icons)
 
     # GFOpenService: the services device and Nursery (gfopenservice). It
     # does nothing on the LAN until ENV:GFOpenService/Paired lists a Cradle.
@@ -2450,7 +2537,7 @@ def main() -> int:
     # GFOpenWindows: the commodity, started at boot, and its editor (gfopenprefs)
     # 0.12.2 (0.8.23): no snapshot pin on system requesters (gfopenprefs #181, 0.12.1), and the pin is a toggle: a click
     # on a pushed-in pin unsnaps the window (#184)
-    ow = Part(top, "GFOpenWindows", "0.12.2", "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel scrolls the list last clicked, "
+    ow = Part(top, "GFOpenWindows", None, "GFOpenWindows: snapping, Amiga+Tab, double-click to front, the wheel scrolls the list last clicked, "
                                             "window places, new windows centred until snapped and a snapshot gadget (both on unless switched off in Prefs/Windows)")
     ow.add("Tools/Commodities/GFOpenWindows", (a.openamigaprefs / "Windows/build/os3/GFOpenWindows").read_bytes(),
            "SYS:Tools/Commodities/GFOpenWindows")
@@ -2462,7 +2549,7 @@ def main() -> int:
     # and Angels, AmiCradle's homage to the Amiga's makers and keepers
     # 1.4 (0.8.16): CGTriumvirate and CGTimes, OS 3.2's, else DejaVu Sans and DejaVu Serif (blanker_fonts): the open
     # ROM's disk has no CGTriumvirate or CGTimes
-    bl = Part(top, "GFOpenBlanker", "1.4", "GFOpenBlanker: the screen blanker, and its show, Gods and Angels")
+    bl = Part(top, "GFOpenBlanker", None, "GFOpenBlanker: the screen blanker, and its show, Gods and Angels")
     bl.add("Tools/Commodities/GFOpenBlanker", (a.openamigaprefs / "Blanker/build/os3/GFOpenBlanker").read_bytes(),
            "SYS:Tools/Commodities/GFOpenBlanker")
     bl.add("Tools/Commodities/GFOpenBlanker.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Tools/Commodities/GFOpenBlanker.info")
@@ -2552,7 +2639,7 @@ def main() -> int:
 
     # GFOpenUp Setup: the first-start wizard (gfopenprefs). A project in
     # WBStartup starts it once; it does nothing after ENVARC:GFOpenAmiga/Setup.done.
-    setup = Part(top, "GFOpenUpSetup", "0.1.8", "GFOpenUp Setup: the first-start wizard, with the startup switches")
+    setup = Part(top, "GFOpenUpSetup", None, "GFOpenUp Setup: the first-start wizard, with the startup switches")
     setup.add("Prefs/GFOpenUp-Setup", (a.openamigaprefs / "Setup/build/os3/GFOpenUp-Setup").read_bytes(), "SYS:Prefs/GFOpenUp-Setup")
     setup.add("Prefs/GFOpenUp-Setup.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Prefs/GFOpenUp-Setup.info")
     setup.add("WBStartup/GFOpenUp-Setup", b"", "SYS:WBStartup/GFOpenUp-Setup")
@@ -2910,7 +2997,7 @@ def main() -> int:
 
     # GFOpenFiles: the file manager (gfopenfilemanager). Double-click opens
     # files with their icon's program, else GFOpenView (the GFOpenPrint part).
-    of = Part(top, "GFOpenFiles", "0.4.2", "GFOpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
+    of = Part(top, "GFOpenFiles", None, "GFOpenFiles: two panes with tabs, the drives bar, safe copies, a trashcan and undo")
     of.add("Utilities/GFOpenFiles", (a.openamigafilemanager / "build/os3/GFOpenFiles").read_bytes(), "SYS:Utilities/GFOpenFiles")
     of.add("Utilities/GFOpenFiles.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenFiles.info")
     of.write()
