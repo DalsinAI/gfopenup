@@ -13,6 +13,7 @@
 #     SYS:Kickstart/.retired/ and the tool says "this host is 68k"
 #   the host is 62, 183 or 20:
 #     only that .bodies/<cpu>/ is there, and the other leftover is retired
+# A stray gfopenfiles.module the Manifest doesn't list is moved to .retired.
 # Instance-5, Instance-40 and the card are refused.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
@@ -63,6 +64,8 @@ icon.module icon.library 47.5 4 aaaa 4
 EOF
 printf 'old183' > "$DH0/Kickstart/default/.bodies/183/old.module"
 printf 'old20' > "$DH0/Kickstart/default/.bodies/20/old.module"
+# an older set's module the new Manifest doesn't list (Instance-32, 14 Nov 2026: kickload refused the set for it)
+printf 'stray' > "$DH0/Kickstart/default/gfopenfiles.module"
 cat > "$P/Part" << 'EOF'
 part KickstartSet 47.100
 ; a fake set: bodies for three hosts, so KICKSET can copy one of them
@@ -101,6 +104,11 @@ retired() {
     echo "FAIL bodies-$1 was not moved to .retired"; fail=1
 }
 mod
+if [ ! -e "$ks/default/gfopenfiles.module" ] && [ -f "$ks/.retired/gfopenfiles.module" ]; then
+    echo "ok   the stray gfopenfiles.module moved to .retired"
+else
+    echo "FAIL the stray gfopenfiles.module was not moved to .retired"; fail=1
+fi
 case "$part" in
 *"this host is 68k"*)
     echo "host is 68k: no bodies, both leftovers retired"
