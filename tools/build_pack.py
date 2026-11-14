@@ -87,6 +87,10 @@ a Part file that C/GFOpenUpTool reads:
                         licence, for Font prefs' System Default Text; always installed. The GFOpenKick ROM
                         has the 11 and makes it the Shell's font itself; no Font prefs are written
                         (gfopenfont's fonts/amiga; left out without --openamigafont)
+  GFOSFonts/            GFOS Sans, GFOS Sans Bold and GFOS Mono, GFOS's own hand-drawn bitmap fonts, 11, 13 and 16
+                        pixels, in FONTS: (GFOSSans.font, GFOSSansBold.font, GFOSMono.font), with their licence;
+                        always installed. Built here from a gfosfonts checkout's grids (its tools/amigafont.py);
+                        no Font prefs are written (left out without --gfosfonts)
   ShellIcon/            the Shell icon's WINDOW tool type without its 130, so a Shell from SYS:System/Shell
                         opens 80 x 24 as NewShell's own window does; always installed, after GFOpenIcons
                         (GFOpenUpTool REMOVE Parts/ShellIcon puts the 130 back)
@@ -1193,12 +1197,12 @@ PART_MAIN = {
 # opentga.datatype (47.1). GFOpenService 1.3 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:),
 # mitchy.library (1.0) and ServiceTest (0.2); 1.4 is mitchy.device (2.0), with gfopenservice.device (2.0) its old name
 # opening it. ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
-# fonts/amiga). ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so GFOpenUpTool UPDATE
+# fonts/amiga). GFOSFonts 1.0 is fonts too: gfosfonts' grids, built by its tools/amigafont.py. ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so GFOpenUpTool UPDATE
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
 # binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
 PART_OWN_VERSION = {"KickstartSet", "GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "GFOpenService", "Backdrops", "GFOpenIcons", "GFOpenDemos", "GFOpenGPUDev",
-                    "GFOpenPrint", "GFOpenMUI", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon",
+                    "GFOpenPrint", "GFOpenMUI", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon", "GFOSFonts",
                     # pages of GFOpenPrefs with no files of their own since the no-ROM-volume design: GFOpenPrefs's version
                     "GFOpenTypes", "GFOpenDateTime"}
 
@@ -1667,6 +1671,40 @@ def opentls_part(top: Path, tls_src: Path):
     return tls
 
 
+# GFOS's own fonts (14 November 2026, Dale 04:36 "yes, go for it"; amicradle-teams designs/DISPLAY-PROFILES-20261113.md):
+# GFOS Sans, GFOS Sans Bold and GFOS Mono, hand-corrected from DejaVu's bitmaps in the gfosfonts repo, kept there as
+# pixel grids (src/*.txt) and built into Amiga bitmap fonts by its own tools/amigafont.py, so no font file is kept in
+# git. Each face has 11, 13 and 16 pixels. GFOS Mono's .font is marked not proportional (tf_XSize 7, 8 and 10).
+GFOS_FACES = (("GFOSSans", "gfos-sans"), ("GFOSSansBold", "gfos-sans-bold"), ("GFOSMono", "gfos-mono"))
+GFOS_SIZES = (13, 11, 16)                      # amigafont.py build: the first grid, then the more ones
+
+
+def gfos_fonts_part(top: Path, src: Path) -> "Part | None":
+    """Parts/GFOSFonts from a gfosfonts checkout: FONTS:<face>.font and FONTS:<face>/<size> for each face, built by
+    the checkout's tools/amigafont.py, and its LICENSE-FONTS in SYS:Utilities/GFOpenUp/Licences/GFOSFonts.txt. "add":
+    a font of the same name of another program's stays. None (and the part left out) when the checkout lacks a grid."""
+    tool = src / "tools/amigafont.py"
+    grids = {face: [src / f"src/{stem}-{n}.txt" for n in GFOS_SIZES] for face, stem in GFOS_FACES}
+    missing = [g for gs in grids.values() for g in gs if not g.is_file()]
+    if not tool.is_file() or missing or not (src / "LICENSE-FONTS").is_file():
+        print(f"  GFOSFonts: left out ({src} has no " +
+              (str(missing[0].relative_to(src)) if missing else "tools/amigafont.py or LICENSE-FONTS") + ")")
+        return None
+    import tempfile
+    p = Part(top, "GFOSFonts", "1.0", "GFOS Sans, Sans Bold and Mono, 11, 13 and 16 pixels (GFOS's own fonts)")
+    with tempfile.TemporaryDirectory() as t:
+        for face, gs in grids.items():
+            subprocess.run([sys.executable, str(tool), "build", str(gs[0]), face, t] + [str(g) for g in gs[1:]],
+                           check=True, stdout=subprocess.DEVNULL)
+            o = Path(t)
+            p.add(f"Fonts/{face}.font", (o / f"{face}.font").read_bytes(), f"FONTS:{face}.font", own=True)
+            for n in sorted(GFOS_SIZES):
+                p.add(f"Fonts/{face}/{n}", (o / face / str(n)).read_bytes(), f"FONTS:{face}/{n}", own=True)
+    p.add("Utilities/GFOpenUp/Licences/GFOSFonts.txt", (src / "LICENSE-FONTS").read_bytes(),
+          "SYS:Utilities/GFOpenUp/Licences/GFOSFonts.txt")
+    return p
+
+
 # GFOpenLibs (0.8.0): the open libraries, one switch each in the Installer's sixth page, off by default
 # (amicradle-guest libraries/OPEN_LIBRARIES.md, section 3: "default off until its ABI test is clean"). Only a
 # library whose ABI test against OS 3.2's own is clean, and which builds with the stoves as its script says, is
@@ -2066,6 +2104,9 @@ def main() -> int:
                     help="gfopenfont checkout: the ShellFont part, DejaVu Sans Mono as Amiga bitmap fonts "
                          "(its fonts/amiga; left out without it), and the GFOpenFont part's gfopenfont.library "
                          "(its build-amiga.sh's build/amiga/gfopenfont.library; left out without it)")
+    ap.add_argument("--gfosfonts", type=Path, default=first(DEV / "gfosfonts", DEV.parent / "gfosfonts"),
+                    help="gfosfonts checkout: the GFOSFonts part, GFOS Sans, Sans Bold and Mono 11/13/16 built from its "
+                         "src/*.txt grids by its tools/amigafont.py (left out without it)")
     ap.add_argument("--dejavu-serif", type=Path, default=Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"),
                     help="DejaVu fonts 2.37's DejaVuSerif.ttf (sha256 checked): GFOpenBlanker's serif where OS 3.2's CGTimes isn't")
     ap.add_argument("--dejavu-sans", type=Path, default=Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
@@ -2415,6 +2456,11 @@ def main() -> int:
         sf.write()
     else:
         print("  ShellFont: left out (no --openamigafont checkout with fonts/amiga)")
+
+    # GFOS's own fonts, on every install (gfos_fonts_part); no Font prefs are written here
+    gf = gfos_fonts_part(top, a.gfosfonts) if a.gfosfonts else None
+    if gf:
+        gf.write()
 
     # The Shell icon (24 October 2026, the Team's decision): OS 3.2.3's SYS:System/Shell.info opens its window
     # CON:0///130, 130 pixels high: about 7 rows of the GFOpenKick ROM's DejaVu Sans Mono 11. Its WINDOW tool type

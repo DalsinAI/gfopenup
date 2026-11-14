@@ -121,6 +121,9 @@ choose:
   to 24 pixels high, fixed width, for Font in SYS:Prefs ("System default
   text"); the GFOpenKick ROM's own Shell font is its 11, and GFOpenUp changes no
   Font prefs;
+- GFOS's own fonts (new, always installed): GFOS Sans, GFOS Sans Bold and
+  GFOS Mono, hand-drawn bitmap fonts, 11, 13 and 16 pixels high, in FONTS:,
+  so Font in SYS:Prefs lists them; GFOpenUp changes no Font prefs for them;
 - The Shell icon (new, always): a Shell from SYS:System/Shell opens 80
   columns by 24 rows, as NewShell's own window, not 130 pixels high (its
   WINDOW tool type loses the 130; GFOpenUpTool REMOVE Parts/ShellIcon puts it

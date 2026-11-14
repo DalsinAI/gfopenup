@@ -415,6 +415,56 @@ def amisans_checks() -> None:
               and 'add "Fonts/_otf/texgyreheros-regular.otf" "FONTS:_otf/texgyreheros-regular.otf"' in p.lines)
 
 
+def gfos_fonts_checks() -> None:
+    """The GFOSFonts part (14 November 2026): from a gfosfonts checkout (GFOSFONTS=dir, or one beside this one), each
+    face's .font and its 11, 13 and 16 built by the checkout's amigafont.py and added where nothing is or GFOpenUp put
+    them; GFOS Mono not proportional; the licence; and the part left out, not half made, when a grid is missing."""
+    import struct
+    src = Path(os.environ.get("GFOSFONTS", ROOT.parent / "gfosfonts"))
+    if not (src / "src/gfos-mono-16.txt").is_file():
+        print(f"skipped: GFOSFonts (no {src}/src/gfos-mono-16.txt)")
+        return
+    with tempfile.TemporaryDirectory() as t:
+        p = bp.gfos_fonts_part(Path(t), src)
+        check("GFOSFonts: built from gfosfonts", p is not None)
+        if p is None:
+            return
+        d = p.dir
+        for face in ("GFOSSans", "GFOSSansBold", "GFOSMono"):
+            font = (d / f"Fonts/{face}.font").read_bytes()
+            fch_id, n = struct.unpack(">HH", font[:4])
+            names = [font[4 + 260 * i:4 + 260 * i + 256].split(b"\0")[0].decode() for i in range(n)]
+            check(f"GFOSFonts: {face}.font a bitmap contents file listing 11, 13 and 16",
+                  fch_id == 0x0F00 and sorted(names) == sorted(f"{face}/{s}" for s in (11, 13, 16)), f"{fch_id:#x} {names}")
+            for s in (11, 13, 16):
+                check(f"GFOSFonts: FONTS:{face}/{s} in the part, added as GFOpenUp's own",
+                      (d / f"Fonts/{face}/{s}").stat().st_size > 100
+                      and f'add "Fonts/{face}/{s}" "FONTS:{face}/{s}"' in p.lines)
+            check(f"GFOSFonts: FONTS:{face}.font added as GFOpenUp's own", f'add "Fonts/{face}.font" "FONTS:{face}.font"' in p.lines)
+
+        def tf(face, s):                       # tf_YSize, tf_Flags, tf_XSize: the TextFont at 58 in the code hunk
+            b = (d / f"Fonts/{face}/{s}").read_bytes()
+            t = 32 + 58                         # the hunk's words start at 32 (header 24, HUNK_CODE and its length)
+            return struct.unpack_from(">H", b, t + 20)[0], b[t + 23], struct.unpack_from(">H", b, t + 24)[0]
+        check("GFOSFonts: Mono not proportional, 7, 8 and 10 wide; Sans proportional",
+              all(not (tf("GFOSMono", s)[1] & 0x20) and tf("GFOSMono", s)[2] == w for s, w in ((11, 7), (13, 8), (16, 10)))
+              and tf("GFOSSans", 13)[1] & 0x20 and [tf("GFOSSans", s)[0] for s in (11, 13, 16)] == [11, 13, 16],
+              str([tf("GFOSMono", s) for s in (11, 13, 16)] + [tf("GFOSSans", 13)]))
+        check("GFOSFonts: its licence", (d / "Utilities/GFOpenUp/Licences/GFOSFonts.txt").read_bytes()
+              == (src / "LICENSE-FONTS").read_bytes()
+              and 'copy "Utilities/GFOpenUp/Licences/GFOSFonts.txt" "SYS:Utilities/GFOpenUp/Licences/GFOSFonts.txt"' in p.lines)
+        inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("Install-GFOpenUp: GFOSFonts on every install, right after the Shell's font",
+              0 < inst.index("INSTALL Parts/ShellFont") < inst.index("INSTALL Parts/GFOSFonts")
+              and '(if (exists "Parts/GFOSFonts/Part")' in inst)
+        check("GFOSFonts: its own version, 1.0", p.lines[0] == "part GFOSFonts 1.0" and "GFOSFonts" in bp.PART_OWN_VERSION)
+    with tempfile.TemporaryDirectory() as t:
+        half = Path(t) / "gfosfonts"
+        shutil.copytree(src, half, ignore=shutil.ignore_patterns(".git", "specimens", "gfos-mono-16.txt"))
+        check("GFOSFonts: left out, no drawer made, when a grid is missing",
+              bp.gfos_fonts_part(Path(t), half) is None and not (Path(t) / "Parts/GFOSFonts").exists())
+
+
 def kickstartset_checks(tmp: Path) -> None:
     """The slim ROM's disk part (9 November 2026): Parts/KickstartSet from a thin build's thin-support/: the set's
     modules copied, its Manifest last, the files on demand added (a disk's own stays), the ROM's version; a module
@@ -925,6 +975,7 @@ def main() -> int:
           entries and all(label == page and pagewords.get(page) == word for label, page, word in entries), str(entries))
 
     amisans_checks()
+    gfos_fonts_checks()
     openprinter_checks()
     with tempfile.TemporaryDirectory() as ktmp:
         kickstartset_checks(Path(ktmp))
