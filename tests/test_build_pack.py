@@ -591,6 +591,48 @@ def versions_stoves_checks(tmp: Path) -> None:
           is not None)
 
 
+def compress_files_checks(tmp: Path) -> None:
+    """Legion's 14 Nov note: GFOpenCompress's two run-time libraries in its part; GFOpenFiles' build given the
+    checkouts (OC, FTP, MEDIA) this build has."""
+    oc = tmp / "gfopencompress"
+    b = oc / "build/os3"
+    b.mkdir(parents=True)
+    (b / "GFOpenCompress").write_bytes(b"\0\0\x03\xf3$VER: GFOpenCompress 0.4.0 (13.11.2026)\0")
+    for lib in bp.COMPRESS_LIBS:
+        (b / lib).write_bytes(b"\0\0\x03\xf3" + lib.encode() + b" 1.0 (6.11.2026)\0")
+    top = tmp / "top"
+    part = bp.compress_part(top, oc, FakeIcons())
+    lines = (part.dir / "Part").read_text(encoding="latin-1").splitlines()
+    check("GFOpenCompress: its program's version (0.4.0)", lines[0] == "part GFOpenCompress 0.4.0", lines[0])
+    check("GFOpenCompress: both run-time libraries go to LIBS: (add)",
+          all(f'add "Libs/{lib}" "LIBS:{lib}"' in lines for lib in bp.COMPRESS_LIBS)
+          and bp.COMPRESS_LIBS == ("gfopencompress_archive.library", "gfopencompress_crunch.library"), str(lines))
+    check("GFOpenCompress: the program in SYS:Utilities as before",
+          'copy "Utilities/GFOpenCompress" "SYS:Utilities/GFOpenCompress"' in lines)
+    (b / bp.COMPRESS_LIBS[1]).unlink()
+    try:
+        bp.compress_part(tmp / "top2", oc, FakeIcons())
+        stopped = False
+    except SystemExit:
+        stopped = True
+    check("GFOpenCompress: a library not built stops the build", stopped)
+
+    class A:
+        pass
+    a = A()
+    a.opengadtools, a.guest, a.openamigacompress = Path("/g"), Path("/u"), Path("/oc")
+    a.openamigaftp, a.openamigamedia = Path("/ftp"), Path("/media")
+    e = bp.filemanager_env(a, {"PATH": "x"})
+    check("GFOpenFiles' build gets OGT, GUEST, OC, FTP and MEDIA from this build's checkouts",
+          (e["OGT"], e["GUEST"], e["OC"], e["FTP"], e["MEDIA"], e["PATH"]) == ("/g", "/u", "/oc", "/ftp", "/media", "x"), str(e))
+    a.openamigaftp = a.openamigamedia = None
+    e = bp.filemanager_env(a, {})
+    check("without gfopenftp or gfopenmedia the build's own defaults stay", "FTP" not in e and "MEDIA" not in e)
+    src = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
+    check("build_pack runs GFOpenFiles' build with filemanager_env and has --openamigamedia",
+          'openamigafilemanager / "build.sh"], env=filemanager_env(a, env))' in src and '"--openamigamedia"' in src)
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -1037,6 +1079,8 @@ def main() -> int:
         kickstartset_checks(Path(ktmp))
     with tempfile.TemporaryDirectory() as vtmp:
         versions_stoves_checks(Path(vtmp))
+    with tempfile.TemporaryDirectory() as ctmp:
+        compress_files_checks(Path(ctmp))
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
     return 1 if fails else 0
