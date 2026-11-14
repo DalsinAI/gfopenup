@@ -74,13 +74,13 @@ def draw_tool(f, small, chosen=False):
 
 def draw_trashcan(f, small, chosen=False):
     body = (128, 136, 150)
-    f.ell([90, 120, 422, 470], body, d3.light(body, 0.45))                          # the bin, seen from above
-    f.ell([130, 160, 382, 430], d3.dark(body, 0.45), d3.dark(body, 0.25))           # its inside
-    if chosen:                                                                       # chosen: the lid lifts off
-        f.ell([80, 20, 432, 250], (170, 178, 190), d3.light(body, 0.6))
-        f.rr([216, 70, 296, 110], 20, d3.dark(body, 0.3))
+    f.ell([50, 110, 462, 480], body, d3.light(body, 0.45))                          # the bin, seen from above
+    f.ell([96, 150, 416, 440], d3.dark(body, 0.45), d3.dark(body, 0.25))            # its inside
+    if chosen:                                                                       # chosen: the lid lifts and tips
+        f.ell([60, 40, 452, 230], (170, 178, 190), d3.light(body, 0.6))
+        f.rr([216, 110, 296, 150], 20, d3.dark(body, 0.3))
     else:
-        f.ell([80, 110, 432, 480], (170, 178, 190), d3.light(body, 0.6))
+        f.ell([40, 100, 472, 490], (170, 178, 190), d3.light(body, 0.6))
         f.rr([216, 270, 296, 310], 20, d3.dark(body, 0.3))
     return 120
 
