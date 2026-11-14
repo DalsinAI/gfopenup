@@ -145,6 +145,7 @@
 #include "openup_lines.h"
 #include "openup_startupseq.h"
 #include "openup_kickset.h"
+#include "openup_slimrom.h"            /* DETECT SlimROM (0.8.x) */
 #include "openup_vers.h"               /* an older file never over a newer one */
 #include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
 
@@ -4586,7 +4587,8 @@ static int in_rom_window(ULONG a)
     return (a >= 0x00F80000UL && a < 0x01000000UL) || (a >= 0x00E00000UL && a < 0x00E80000UL);
 }
 
-/* 1 on the slim ROM: kickload in the ROM, and workbench.library not a RomTag of the ROM (none, or the set's in RAM) */
+/* 1 on the slim ROM: kickload there, and the ROM's own header says the thin profile (openup_slimrom.h); a ROM of
+ * ours without that header: kickload in the ROM, and workbench.library not a RomTag of the ROM */
 static int slim_rom(void)
 {
     struct Resident *k, *wb;
@@ -4594,7 +4596,8 @@ static int slim_rom(void)
     k = FindResident((STRPTR)"kickload");
     wb = FindResident((STRPTR)"workbench.library");
     Permit();
-    return k && in_rom_window((ULONG)k) && (!wb || !in_rom_window((ULONG)wb));
+    return ous_slim_rom(k != NULL, (const unsigned char *)0x00F80000UL, k && in_rom_window((ULONG)k), wb != NULL,
+                        wb && in_rom_window((ULONG)wb));
 }
 
 /* The file's size, or -1 when it isn't a file there */
