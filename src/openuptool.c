@@ -2468,9 +2468,14 @@ static int move_sysfont(void)
     UBYTE *d;
     int ok;
     struct MsgPort *wbport;
-    if (!exists("FONTS:" OUS_NEW_FONT)) return 0;
-    if (!(d = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &len))) return 0;
-    if (!ous_move(d, len)) { FreeVec(d); return 0; }
+    d = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &len);
+    if (!ous_migrate(d, len, exists("FONTS:" OUS_NEW_FONT) && exists(OUS_NEW_SIZE_FILE))) { if (d) FreeVec(d); return 0; }
+    /* the old Font.prefs, kept beside it (once: a later run finds GFOS Mono there and changes nothing) */
+    if (!exists(OUS_KEEP) && !copy_file("ENVARC:Sys/Font.prefs", OUS_KEEP, 0)) {
+        say("GFOpenUp: can't keep a copy of ENVARC:Sys/Font.prefs; the system font stays DejaVu Sans Mono 11", NULL, NULL);
+        FreeVec(d);
+        return 0;
+    }
     ok = install_prefs("Font.prefs", d, len);
     Forbid();
     wbport = FindPort((STRPTR)"WORKBENCH");
@@ -2478,7 +2483,7 @@ static int move_sysfont(void)
     if (ok && !wbport) write_file("ENV:Sys/Font.prefs", (const char *)d, len);
     FreeVec(d);
     if (ok) say("GFOpenUp: the system font (Font prefs) is now GFOS Mono 11, was DejaVu Sans Mono 11",
-                " (GFOS Mono keeps every letter whole in OS 3.2's lists; from the next reboot)", NULL);
+                " (GFOS Mono keeps every letter whole in OS 3.2's lists; from the next reboot). The old prefs: " OUS_KEEP);
     return ok;
 }
 

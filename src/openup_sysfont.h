@@ -15,6 +15,8 @@
 #define OUS_OLD_FONT "DejaVuSansMono.font"
 #define OUS_NEW_FONT "GFOSMono.font"
 #define OUS_SIZE 11
+#define OUS_NEW_SIZE_FILE "FONTS:GFOSMono/11"          /* GFOS Mono 11 installed (GFOSFonts) */
+#define OUS_KEEP "ENVARC:Sys/Font.prefs-DejaVuSansMono"  /* the old Font.prefs, kept beside it */
 #define OUS_FP_SYSFONT 1             /* fp_Type: the system default text (the Shell's, fixed width) */
 #define OUS_FONT_MIN 156             /* struct FontPrefs */
 
@@ -48,6 +50,13 @@ static int ous_move(unsigned char *d, long len)
     memset(f + 28, 0, 128);
     memcpy(f + 28, OUS_NEW_FONT, sizeof OUS_NEW_FONT - 1);
     return 1;
+}
+
+/* What GFOpenUpTool does (Dale, 16:26 "font migrate yes": only with GFOS Mono 11 installed): 1 move it, 0 leave it.
+ * have_gfosmono11: OUS_NEW_SIZE_FILE is there; d NULL: no Font.prefs. d is changed only when it says 1. */
+static int ous_migrate(unsigned char *d, long len, int have_gfosmono11)
+{
+    return have_gfosmono11 && d ? ous_move(d, len) : 0;
 }
 
 #endif

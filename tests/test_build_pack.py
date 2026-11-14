@@ -769,7 +769,7 @@ def main() -> int:
               r.returncode == 0, r.stdout[-600:])
         tl_sf = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
         check("GFOpenUpTool moves the system font when it installs GFOSFonts",
-              'if (!strcmp(partname, "GFOSFonts")) move_sysfont();' in tl_sf and "ous_move(d, len)" in tl_sf)
+              'if (!strcmp(partname, "GFOSFonts")) move_sysfont();' in tl_sf and "ous_migrate(d, len," in tl_sf and "OUS_KEEP" in tl_sf)
         lf = tmp / "test_openup_left"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_left.c"), "-o", str(lf)], check=True)

@@ -74,6 +74,17 @@ int main(void)
         f[24] = 0; f[25] = 11;
         CHECK(ous_move(a, n - 40) == 0, "a cut-off file is left alone");
     }
+    /* Dale's conditions (16:26): exact match, other size, other font, no Font.prefs, GFOS Mono absent */
+    n = prefs(a, NULL, "DejaVuSansMono.font", 11, NULL);
+    memcpy(b, a, n);
+    CHECK(ous_migrate(a, n, 0) == 0 && !memcmp(a, b, n), "GFOS Mono 11 not installed: nothing changes");
+    CHECK(ous_migrate(NULL, 0, 1) == 0, "no Font.prefs: nothing to do");
+    CHECK(ous_migrate(a, n, 1) == 1 && !strcmp((char *)ous_sysfont(a, n) + 28, "GFOSMono.font"), "exact match with GFOS Mono 11 there: moved");
+    CHECK(ous_migrate(a, n, 1) == 0, "a second run changes nothing");
+    n = prefs(a, NULL, "DejaVuSansMono.font", 12, NULL);
+    CHECK(ous_migrate(a, n, 1) == 0, "other size: stays");
+    n = prefs(a, NULL, "GFOSSans.font", 11, NULL);
+    CHECK(ous_migrate(a, n, 1) == 0, "other font: stays");
     memcpy(a, "FORM\0\0\0\4ILBM", 12);
     CHECK(ous_move(a, 12) == 0, "not a Font.prefs");
     CHECK(ous_move(NULL, 0) == 0, "no file");
