@@ -633,6 +633,27 @@ def compress_files_checks(tmp: Path) -> None:
           'openamigafilemanager / "build.sh"], env=filemanager_env(a, env))' in src and '"--openamigamedia"' in src)
 
 
+def rc_version_checks() -> None:
+    """Corwin's item 10 and the daily release cycle's numbering: a pack can be 0.8.29-rc1."""
+    import argparse
+    check("pack_version: 0.8.29 and 0.8.29-rc1 are taken",
+          bp.pack_version("0.8.29") == "0.8.29" and bp.pack_version("0.8.29-rc1") == "0.8.29-rc1")
+    bad = []
+    for v in ("0.8.29-t5build", "rc1", "0.8", "0.8.29-rc", "0.8.29 rc1"):
+        try:
+            bp.pack_version(v)
+            bad.append(v)
+        except argparse.ArgumentTypeError:
+            pass
+    check("pack_version: other suffixes, a lone number and spaces are refused (0.8 is taken: two numbers)",
+          bad == ["0.8"], str(bad))
+    check("binary_version reads a release candidate's $VER whole",
+          bp.binary_version(b"; $VER: Uninstall-GFOpenUp 0.8.29-rc1 (14.11.2026)\n", "Uninstall-GFOpenUp") == "0.8.29-rc1")
+    check("binary_version: a plain $VER as before, and no -rc taken from a following word",
+          bp.binary_version(b"$VER: GFOpenFiles 0.5 (13.11.2026)", "GFOpenFiles") == "0.5"
+          and bp.binary_version(b"$VER: X 1.2-beta (1.1.2026)", "X") == "1.2")
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -1081,6 +1102,7 @@ def main() -> int:
         versions_stoves_checks(Path(vtmp))
     with tempfile.TemporaryDirectory() as ctmp:
         compress_files_checks(Path(ctmp))
+    rc_version_checks()
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
     return 1 if fails else 0
