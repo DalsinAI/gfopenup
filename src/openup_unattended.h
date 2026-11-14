@@ -99,4 +99,14 @@ static int ou_auto_kickset(int slim_rom, int in_pack)
     return slim_rom && in_pack;
 }
 
+/* After REINSTALL: the set again only when REINSTALL didn't just install it. With KickstartSet in the manifest,
+ * REINSTALL installs the part (KICKSET) and AUTO's step ran it a second time in the same run, changing nothing
+ * ("installed (5 files changed)", then "(0 files changed)": Lorien's note on #250, Ivanova's bundle C row 7).
+ * reinstalled: 1 REINSTALL installed KickstartSet in this run, -1 it tried and failed (not tried again: the log
+ * line says it failed), 0 not in the manifest. */
+static int ou_auto_kickset_after(int slim_rom, int in_pack, int reinstalled)
+{
+    return ou_auto_kickset(slim_rom, in_pack) && !reinstalled;
+}
+
 #endif

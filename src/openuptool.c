@@ -1592,6 +1592,8 @@ static void find_parts(const char *drawer, int depth)
 
 static int reinstalled;                             /* the parts REINSTALL put in again (UPDATE AUTO's log line) */
 
+static int kickset_reinstalled;   /* REINSTALL's KickstartSet in this run: 1 in, -1 failed, 0 not (ou_auto_kickset_after) */
+
 static int reinstall(const char *parts)
 {
     static char wanted[MAXPARTS][48];
@@ -1599,6 +1601,7 @@ static int reinstall(const char *parts)
     int nwanted = 0, i, j, rc = RETURN_OK, done = 0;
     reinstalled = 0;
     kept_newer = 0;
+    kickset_reinstalled = 0;
     set_env("GFOpenUp/Left", "");                   /* an early return never leaves an earlier run's list */
     manifest_load();
     if (manifest_short) {
@@ -1632,6 +1635,7 @@ static int reinstall(const char *parts)
             int r = install(part_drawers[j]);
             if (r > rc) rc = r;
             done++;
+            if (!strcmp(part_names[j], "KickstartSet")) kickset_reinstalled = r > RETURN_WARN ? -1 : 1;
         }
     }
     reinstalling = 0;
@@ -4249,8 +4253,9 @@ static int update(const char *how)
     if (!show_changes()) say("  (the same parts, updated in place)", NULL, NULL);
     if (unattended) {
         int rc = reinstall(CRADLE_DRAWER "/Parts");
-        auto_kick = 0;
-        if (rc < RETURN_ERROR && ou_auto_kickset(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"))) {
+        auto_kick = kickset_reinstalled;            /* REINSTALL's own KickstartSet, when the manifest lists it */
+        if (rc < RETURN_ERROR && ou_auto_kickset_after(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"),
+                                                       kickset_reinstalled)) {
             int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);
             auto_kick = r > RETURN_WARN ? -1 : 1;
             if (r > rc) rc = r;
