@@ -737,15 +737,50 @@ def main() -> int:
                               ("Libs/rexx.library", b"r", "LIBS:rexx.library", "copy")])
         got = bp.check_clashes(cp)
         check("two parts, one path, different bytes: stops the pack",
-              any(g.startswith("libs:gfopengpu.library: written by GFOpenGPU, GFOpenRTG with different bytes") for g in got),
+              any(g.startswith("sys:libs/gfopengpu.library: written by GFOpenGPU, GFOpenRTG with different bytes") for g in got),
               "\n".join(got))
-        check("a SHARED_PATHS path with the same bytes is allowed", not any(g.startswith("libs:z.library") for g in got),
+        check("a SHARED_PATHS path with the same bytes is allowed", not any(g.startswith("sys:libs/z.library") for g in got),
               "\n".join(got))
-        check("the same bytes but not in SHARED_PATHS still stop it (a condition, another case, a drawer below)",
-              any(g.startswith("devs:ahi/acaudio.audio: written by KickstartSet, Sound (the same bytes") for g in got)
-              and any(g.startswith("libs:rexx.library: written by GFOpenLibs-rexx, KickstartSet") for g in got),
-              "\n".join(got))
-        check("nothing else is called a clash", len(got) == 3, "\n".join(got))
+        check("the slim ROM's file on demand that one program part also brings, with the same bytes, is allowed "
+              "(a condition, another case, a drawer below)",
+              not any(g.startswith(("sys:devs/ahi/acaudio.audio", "sys:libs/rexx.library")) for g in got), "\n".join(got))
+        check("nothing else is called a clash", len(got) == 1, "\n".join(got))
+        # Dale, 15 Nov 2026 (fix the pack's file clash): KickstartSet's files on demand that a program part brings too
+        # become one copy in both, the higher version, else the program part's
+        sp = tmp / "share" / "Parts"
+        cp_saved, cp = cp, sp
+        part("KickstartSet", [("Classes/DataTypes/png.datatype", b"\0$VER: png.datatype 47.3 (14.11.2026)\0",
+                               "SYS:Classes/DataTypes/png.datatype", "add"),
+                              ("Libs/gfopeninput.library", b"\0gfopeninput.library 1.3 (14.11.2026)\r\n\0rom",
+                               "SYS:Libs/gfopeninput.library", "add"),
+                              ("Devs/ahi.device", b"rom ahi", "SYS:Devs/ahi.device", "add"),
+                              ("Kickstart/default/icon.module", b"set", "SYS:Kickstart/default/icon.module", "copy"),
+                              ("Devs/AHI/acaudio.audio", b"rom", "DEVS:AHI/acaudio.audio", "add")])
+        part("GFOpenImage", [("Classes/DataTypes/png.datatype", b"\0$VER: png.datatype 47.1 (10.11.2026)\0",
+                              "SYS:Classes/DataTypes/png.datatype", "copy")])
+        part("GFOpenInput", [("Libs/gfopeninput.library", b"\0gfopeninput.library 1.3 (14.11.2026)\r\n\0part",
+                              "LIBS:gfopeninput.library", "copy")])
+        part("Sound", [("Devs/ahi.device", b"part ahi", "DEVS:ahi.device", "copy")])
+        part("Other", [("Kickstart/default/icon.module", b"other", "SYS:Kickstart/default/icon.module", "copy")])
+        part("Two", [("Devs/AHI/acaudio.audio", b"two", "DEVS:AHI/acaudio.audio", "copy")])
+        part("Three", [("Devs/AHI/acaudio.audio", b"three", "DEVS:AHI/acaudio.audio", "copy")])
+        moved = bp.one_copy_shared(sp)
+        rd = lambda p, r: (sp / p / r).read_bytes()
+        check("one copy: the slim ROM's higher png.datatype 47.3 goes into GFOpenImage too",
+              rd("GFOpenImage", "Classes/DataTypes/png.datatype") == rd("KickstartSet", "Classes/DataTypes/png.datatype")
+              and b"47.3" in rd("GFOpenImage", "Classes/DataTypes/png.datatype"), "\n".join(moved))
+        check("one copy: equal versions take the program part's own build",
+              rd("KickstartSet", "Libs/gfopeninput.library").endswith(b"part"), "\n".join(moved))
+        check("one copy: no version to compare takes the program part's",
+              rd("KickstartSet", "Devs/ahi.device") == b"part ahi", "\n".join(moved))
+        check("one copy: the module set itself is never changed",
+              rd("KickstartSet", "Kickstart/default/icon.module") == b"set", "\n".join(moved))
+        got = bp.check_clashes(sp)
+        check("after one copy only real clashes stop the pack: the module set's path, and a file three parts write",
+              sorted(g.split(":", 2)[0] + ":" + g.split(":", 2)[1] for g in got)
+              == ["sys:devs/ahi/acaudio.audio", "sys:kickstart/default/icon.module"], "\n".join(got))
+        check("no KickstartSet part: one copy changes nothing", bp.one_copy_shared(tmp / "nothing") == [])
+        cp = cp_saved
         n = bp.write_pack_list(cp, tmp / "clash" / "PACK-LIST.txt")
         pl = (tmp / "clash" / "PACK-LIST.txt").read_text(encoding="latin-1").splitlines()
         check("PACK-LIST.txt: every installed file with its part, size and SHA-256", n == 9 and len(pl) == 10
