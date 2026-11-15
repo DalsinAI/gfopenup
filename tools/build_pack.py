@@ -2205,6 +2205,136 @@ def kickstartset_part(top: Path, support: Path | None) -> Part | None:
     return ks
 
 
+# Paths two parts may both write, on purpose and only with the same bytes (Team 5, 14 Nov 2026: one part owns each
+# file; the pack builder stops on two parts writing one path). Each needs its reason.
+SHARED_PATHS = {
+    "libs:z.library": "GFOpenZlib, the one file GFOffice, GFOpenGPU (physfs.library inflates through it) and "
+                      "GFOpenImage each need, whichever is installed alone",
+}
+
+_PART_LINE = re.compile(r'^(?:(?:when|unless) \S+ )?(?:copy|add|default) "([^"]*)" "([^"]*)"\s*$')
+
+# The part whose files on demand may also be another part's: the slim ROM's (KickstartSet, kickstartset_part). On a
+# slim-ROM disk they must be there before any program part is installed (AddDataTypes stops the Startup-Sequence
+# without the datatypes), and on any other machine the program part brings them, so both carry them. one_copy_shared
+# gives both the same bytes, and check_clashes then lets them be (Dale, 15 Nov 2026: fix the pack's file clash).
+KICKSET = "KickstartSet"
+
+
+# The assigns a Part file's paths use, as the SYS: drawers GFOpenUp's Startup-Sequence makes them: KickstartSet
+# writes SYS:Libs/x where a program part writes LIBS:x, and both are one file (#264's spelling)
+_ASSIGN_DRAWERS = {"libs:": "sys:libs/", "devs:": "sys:devs/", "l:": "sys:l/", "c:": "sys:c/", "s:": "sys:s/",
+                   "fonts:": "sys:fonts/", "locale:": "sys:locale/"}
+
+
+def _canon(dest: str) -> str:
+    """An installed path as one spelling for comparing: lower case, the assign as its SYS: drawer."""
+    d = dest.lower()
+    for a, drawer in _ASSIGN_DRAWERS.items():
+        if d.startswith(a):
+            return drawer + d[len(a):]
+    return d
+
+
+def _version_key(v: str | None) -> tuple:
+    """A version string as numbers for comparing ("47.102" > "47.12" > "47.9"); None and no digits sort first."""
+    if not v:
+        return ()
+    return tuple(int(x) for x in re.findall(r"[0-9]+", v.split("-rc")[0]))
+
+
+def _part_files(pf: Path) -> tuple[str, list[tuple[str, str]]]:
+    """A Part file's name and its (file in the drawer, installed path) lines."""
+    lines = pf.read_text(encoding="latin-1").splitlines()
+    if not lines or not lines[0].startswith("part "):
+        return "", []
+    return lines[0].split()[1], [m.groups() for m in map(_PART_LINE.match, lines[1:]) if m]
+
+
+def one_copy_shared(parts: Path) -> list[str]:
+    """Each path the KickstartSet part and another part both install gets one copy in both: the one whose ID string
+    or $VER is higher, the other part's when they are equal or either has none (the program's own build). Returns
+    one line per path changed: "<path>: <part>'s <version> in both". Nothing changes without a KickstartSet part."""
+    pfs = sorted(list(parts.glob("*/Part")) + list(parts.glob("*/*/Part")))
+    ks = next((pf for pf in pfs if _part_files(pf)[0] == KICKSET), None)
+    if ks is None:
+        return []
+    ks_dest = {_canon(dest): ks.parent / rel for rel, dest in _part_files(ks)[1]
+               if not rel.startswith("Kickstart/")}   # the module set itself is kickload's alone
+    changed = []
+    for pf in pfs:
+        name, files = _part_files(pf)
+        if not name or name == KICKSET:
+            continue
+        for rel, dest in files:
+            mine, theirs = ks_dest.get(_canon(dest)), pf.parent / rel
+            if mine is None or not mine.is_file() or not theirs.is_file():
+                continue
+            a, b = mine.read_bytes(), theirs.read_bytes()
+            if a == b:
+                continue
+            base = dest.replace("\\", "/").rsplit("/", 1)[-1].rsplit(":", 1)[-1]
+            va, vb = binary_version(a, base), binary_version(b, base)
+            if va and vb and _version_key(va) > _version_key(vb):
+                theirs.write_bytes(a)
+                changed.append(f"{dest}: {KICKSET}'s {va} in both (over {name}'s {vb})")
+            else:
+                mine.write_bytes(b)
+                changed.append(f"{dest}: {name}'s {vb or 'copy'} in both (over {KICKSET}'s {va or 'copy'})")
+    return changed
+
+
+def check_clashes(parts: Path) -> list[str]:
+    """Every Part file under parts (Parts/<name>/Part and one level of drawers below, as GFOpenUpTool finds them):
+    the paths two or more parts write. A path in SHARED_PATHS, or one KickstartSet and one other part write (its files
+    on demand, made one copy by one_copy_shared), is allowed when every part's file has the same bytes.
+    Returns the problems, one line each (empty: none)."""
+    by_dest: dict[str, list[tuple[str, bytes]]] = {}
+    for pf in sorted(list(parts.glob("*/Part")) + list(parts.glob("*/*/Part"))):
+        lines = pf.read_text(encoding="latin-1").splitlines()
+        if not lines or not lines[0].startswith("part "):
+            continue
+        name = lines[0].split()[1]
+        for line in lines[1:]:
+            m = _PART_LINE.match(line)
+            if not m:
+                continue
+            rel, dest = m.groups()
+            f = pf.parent / rel
+            by_dest.setdefault(_canon(dest), []).append((name, f.read_bytes() if f.is_file() else b""))
+    problems = []
+    for dest, owners in sorted(by_dest.items()):
+        names = sorted({n for n, _ in owners})
+        if len(names) < 2:
+            continue
+        same = len({d for _, d in owners}) == 1
+        if same and (dest in {_canon(k) for k in SHARED_PATHS} or (KICKSET in names and len(names) == 2)):
+            continue   # SHARED_PATHS, or a file on demand of the slim ROM's that one program part also brings
+        problems.append(f"{dest}: written by {', '.join(names)}"
+                        f"{' (the same bytes, but not in SHARED_PATHS)' if same else ' with different bytes'}")
+    return problems
+
+
+def write_pack_list(parts: Path, out: Path) -> int:
+    """PACK-LIST.txt beside the parts: one line per file a Part file installs, "<part>\t<dest>\t<size>\t<sha256>",
+    sorted. Returns how many lines."""
+    import hashlib
+    rows = []
+    for pf in sorted(list(parts.glob("*/Part")) + list(parts.glob("*/*/Part"))):
+        lines = pf.read_text(encoding="latin-1").splitlines()
+        if not lines or not lines[0].startswith("part "):
+            continue
+        name = lines[0].split()[1]
+        for line in lines[1:]:
+            m = _PART_LINE.match(line)
+            if m and (pf.parent / m.group(1)).is_file():
+                data = (pf.parent / m.group(1)).read_bytes()
+                rows.append(f"{name}\t{m.group(2)}\t{len(data)}\t{hashlib.sha256(data).hexdigest()}")
+    rows.sort()
+    out.write_text("# part\tinstalled as\tbytes\tSHA-256\n" + "\n".join(rows) + "\n", encoding="latin-1")
+    return len(rows)
+
+
 # Our own libraries resident in a ROM the pack runs on without being in the pack (none yet: the slim ROM has no gf*
 # library; the KickstartSet part's are in the pack and count as packed)
 ROM_GF_LIBRARIES: frozenset = frozenset()
@@ -2744,9 +2874,10 @@ def main() -> int:
     # AmiCradle's ACRTG board. LoadMonDrvs runs its monitor driver; the
     # Picasso96 monitor for the same board is moved aside (UNINSTALL puts it
     # back), and Workbench's screen mode becomes GFOpenRTG.1 800x600 16-bit.
-    # gfopengpu.library and ACRTG.gpu come with it, so GFOpenRTG's drawing goes
-    # to the board's ring without the GFOpenGPU part; that part has the same
-    # files, and whichever installs last leaves the same bytes.
+    # It draws through gfopengpu.library and ACRTG.gpu, which the GFOpenGPU part
+    # owns (one part owns each file, 14 Nov 2026): the Installer brings GFOpenGPU
+    # when GFOpenRTG is picked. No "needs part" line: the Installer puts
+    # GFOpenRTG in before GFOpenGPU, and INSTALL would leave it out.
     rtg = a.openamigartg / "build"
     acrtg_gpu = (a.guest / "build/guest/os32/ACRTG.gpu").read_bytes()
     # amicradle-guest keeps an ACRTG.gpu in git, and on 12 October 2026 that one was 1.1 (8.10.2026) while the
@@ -2764,8 +2895,6 @@ def main() -> int:
     rt.line('retire "DEVS:Monitors/acrtg"')
     rt.line('retire "DEVS:Monitors/acrtg.info"')
     rt.add("Libs/gfopenrtg.library", (rtg / "gfopenrtg.library").read_bytes(), "LIBS:gfopenrtg.library")
-    rt.add("Libs/gfopengpu.library", (rtg / "gfopengpu.library").read_bytes(), "LIBS:gfopengpu.library")
-    rt.add("Libs/GFOpenGPU/ACRTG.gpu", acrtg_gpu, "LIBS:GFOpenGPU/ACRTG.gpu")
     rt.add("Libs/GFOpenRTG/cybergraphics.library", (rtg / "cybergraphics.library").read_bytes(), "LIBS:GFOpenRTG/cybergraphics.library")
     rt.add("C/GFOpenRTG", (rtg / "GFOpenRTG").read_bytes(), "C:GFOpenRTG")
     rt.add("Devs/Monitors/GFOpenRTG", (rtg / "GFOpenRTG-Monitor").read_bytes(), "DEVS:Monitors/GFOpenRTG")
@@ -3391,10 +3520,20 @@ def main() -> int:
                                        + ([oin.dir / "Utilities/GFOpenUp/Docs.info"] if oin else []))
         print(f"  GFOpenUp's own drawers in GFOpenIcons look B: {n}")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
+    # before the version check: a part whose main binary took the slim ROM's newer copy must say that version
+    for t in [top] + ([browser_top] if browser_top else []):
+        for line in one_copy_shared(t / "Parts"):
+            print(f"  one copy: {line}")
     check_part_versions(top / "Parts")
     check_opened_libraries(top / "Parts")
     if browser_top:
         check_part_versions(browser_top / "Parts")
+    for t in [top] + ([browser_top] if browser_top else []):
+        clashes = check_clashes(t / "Parts")
+        if clashes:
+            raise SystemExit("two parts write one path (one part owns each file; SHARED_PATHS for same-byte sharing):\n  "
+                             + "\n  ".join(clashes))
+        print(f"  {t / 'PACK-LIST.txt'}: {write_pack_list(t / 'Parts', t / 'PACK-LIST.txt')} files, no two parts on one path")
     if a.lha:
         arc = a.out / f"GFOpenUp-{a.version}.lha"
         arc.unlink(missing_ok=True)

@@ -458,6 +458,9 @@
         (set #libs (bitand #libs 7))))
 (set #parts (+ (+ (+ #g1 (shiftleft #g2 9)) (shiftleft #g3 18)) (shiftleft (bitand #g4 15) 27)))
 (set #parts2 #g5)
+; GFOpenRTG draws through gfopengpu.library and ACRTG.gpu, which only the GFOpenGPU part carries (one part owns each
+; file, 14 Nov 2026): GFOpenRTG picked brings GFOpenGPU
+(if (bitand #parts 512) (set #parts (bitor #parts 33554432)))
 ; the fourth page's fifth choice is OpenBrowser Lite, #parts2's 512
 (if (bitand #g4 16) (set #parts2 (bitor #parts2 512)))
 ; OpenBrowser Lite is built for a 68040 with its FPU: elsewhere it is left out, and doesn't pull in GFOpenTLS
