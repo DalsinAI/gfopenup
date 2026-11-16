@@ -356,9 +356,35 @@ def openprinter_part(top: Path, printer_device: bytes) -> "Part":
     return op
 
 
-def run(cmd, cwd=None, env=None):
+def _run(cmd, cwd=None, env=None):
     print("  $", " ".join(str(c) for c in cmd), flush=True)
     subprocess.run([str(c) for c in cmd], cwd=cwd, env=env, check=True)
+
+
+# build_parts' steps go through step_reuse.StepCache while it runs (main sets it): a step whose checkouts, command,
+# environment and compilers are the same as at its last build, and whose files are still there, isn't built again
+STEPS = None
+
+
+def run(cmd, cwd=None, env=None, extra=None):
+    if STEPS is not None:
+        STEPS.run(_run, cmd, cwd=cwd, env=env, extra=extra)
+    else:
+        _run(cmd, cwd=cwd, env=env)
+
+
+def dev_checkouts(a, dev: Path = DEV) -> dict:
+    """Every git checkout this build can read, by its folder name: the ones given on the command line, this one,
+    and the ones beside it (a part's script can reach a sibling by a relative path)."""
+    found = {ROOT.name: ROOT}
+    for v in vars(a).values():
+        if isinstance(v, Path) and v.is_dir() and (v / ".git").exists():
+            found.setdefault(v.resolve().name, v.resolve())
+    if dev.is_dir():
+        for d in sorted(dev.iterdir()):
+            if (d / ".git").exists():
+                found.setdefault(d.name, d.resolve())
+    return found
 
 
 def wbconfig_backdrop() -> bytes:
@@ -847,18 +873,20 @@ def build_parts(a):
     if a.openamigainput:
         run(["sh", a.openamigainput / "device/build.sh", ol / "input"], env=dict(env, STOVE=str(STOVE)))
     if a.opengpu_sdk:
-        # make_sdk.py won't write over a kit: a rebuild's old one goes to archive/ beside it
-        for old in Path(a.opengpu_sdk).glob("GFOpenGPU-SDK-*/"):
-            arch = Path(a.opengpu_sdk) / "archive"
-            arch.mkdir(parents=True, exist_ok=True)
-            old.rename(arch / f"{old.name}-{time.strftime('%Y%m%dT%H%M%S')}")
         # 0.7 (0.8.22): libGL.a and gla_core.h from gfopenrtg #195 (gla_last_why); make_sdk.py's default is still 0.6
         # physfs.library's SDK (0.8.28) when it was built and make_sdk.py takes it (gfopenrtg's --physfs)
         physfs_sdk = []
         if (ROOT / "build/physfs/COMMIT").is_file() and "--physfs" in (a.openamigartg / "tools/make_sdk.py").read_text():
             physfs_sdk = ["--physfs", ROOT / "build/physfs"]
-        run([sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
-             "--gl", gl_out, *physfs_sdk, "--version", "0.7", a.opengpu_sdk], env=dict(os.environ))
+        sdk_cmd = [sys.executable, a.openamigartg / "tools/make_sdk.py", "--build", a.openamigartg / "build",
+                   "--gl", gl_out, *physfs_sdk, "--version", "0.7", a.opengpu_sdk]
+        # make_sdk.py won't write over a kit: a rebuild's old one goes to archive/ beside it (a reused kit stays)
+        if STEPS is None or not STEPS.would_reuse(sdk_cmd, env=dict(os.environ)):
+            for old in Path(a.opengpu_sdk).glob("GFOpenGPU-SDK-*/"):
+                arch = Path(a.opengpu_sdk) / "archive"
+                arch.mkdir(parents=True, exist_ok=True)
+                old.rename(arch / f"{old.name}-{time.strftime('%Y%m%dT%H%M%S')}")
+        run(sdk_cmd, env=dict(os.environ))
     # GFOpenBench (gfopenbench desktop/build.sh, GCC 16 since gfopenbench #31: it stops when given the
     # os32 stove's GCC 6.5): the desktop with the dock and the Open editors built in, from this build's
     # gfopengadtools, gfopenprefs, gfopentata and gfopenfilemanager (its drag and drop)
@@ -1483,11 +1511,13 @@ def build_physfs(checkout: Path, out: Path, stove16: str) -> None:
         raise SystemExit(f"physfs.library: {checkout} has no commit {pin[:12]} (GFOPENPHYSFS): "
                          f"git -C {checkout} fetch origin main")
     src = out.parent / "physfs-src"
-    shutil.rmtree(src, ignore_errors=True)
-    src.mkdir(parents=True)
-    tar = subprocess.run(["git", "-C", str(checkout), "archive", pin], check=True, capture_output=True).stdout
-    subprocess.run(["tar", "-x", "-C", str(src)], input=tar, check=True)
-    run(["sh", src / "build-amiga.sh"], env=dict(os.environ, STOVE=stove16, OUT=str(out)))
+    cmd, env = ["sh", src / "build-amiga.sh"], dict(os.environ, STOVE=stove16, OUT=str(out))
+    if STEPS is None or not STEPS.would_reuse(cmd, env=env, extra=pin):
+        shutil.rmtree(src, ignore_errors=True)
+        src.mkdir(parents=True)
+        tar = subprocess.run(["git", "-C", str(checkout), "archive", pin], check=True, capture_output=True).stdout
+        subprocess.run(["tar", "-x", "-C", str(src)], input=tar, check=True)
+    run(cmd, env=env, extra=pin)
     (out / "LICENSE.txt").write_bytes((src / "physfs/LICENSE.txt").read_bytes() + b"\n\n" + (src / "LICENSE").read_bytes())
     (out / "COMMIT").write_text(pin + "\n")
 
@@ -2479,6 +2509,13 @@ def main() -> int:
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the GFOpenGPU developer kit is made (or, with --no-build, read): the GFOpenGPUDev part (left out without it)")
     ap.add_argument("--no-build", action="store_true", help="use what the parts' builds already made")
+    ap.add_argument("--fresh", action="store_true", default=os.environ.get("STEPS_FRESH") == "1",
+                    help="build every step, even one whose checkouts haven't moved since its last build (STEPS_FRESH=1)")
+    ap.add_argument("--steps", type=Path, default=ROOT / "build" / "steps",
+                    help="where each step's stamp is kept, for the next cut to reuse (tools/step_reuse.py)")
+    ap.add_argument("--freeze", type=Path, default=None,
+                    help="the cut's freeze list (checkout name and commit per line): stops unless every checkout "
+                         "it names is at that commit with no tracked change")
     ap.add_argument("--no-openicons", action="store_true", help="leave out the GFOpenIcons part (made from --guest's icons/openicons)")
     ap.add_argument("--lha", action="store_true", help="also make GFOpenUp-<version>.lha with the host's lha")
     a = ap.parse_args()
@@ -2490,8 +2527,21 @@ def main() -> int:
     check_openbrowserlite_pin()            # before hours of building, not after
     if a.openbrowser:
         check_openbrowser_pin(a.openbrowser)
+    global STEPS
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import step_reuse
+    cache = step_reuse.StepCache(a.steps, dev_checkouts(a), fresh=a.fresh)
+    if a.freeze:
+        cache.check_freeze(step_reuse.read_freeze(a.freeze))
     if not a.no_build:
-        build_parts(a)
+        STEPS = cache
+        t0 = time.time()
+        try:
+            build_parts(a)
+        finally:
+            STEPS = None
+            print(f"build_parts: {cache.report()}, {time.time() - t0:.0f} s in all", flush=True)
+    cache.commits(a.out / "GFOpenUp-commits.tsv")
     icons = icon_maker(a.openamigaprint)
     date = time.strftime("%d.%m.%Y").lstrip("0").replace(".0", ".")
     top = a.out / "GFOpenUp"
