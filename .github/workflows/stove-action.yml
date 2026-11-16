@@ -1,0 +1,36 @@
+# Copyright (c) 2026 AmiCradle Team. MIT licence.
+# The stove action (.github/actions/stove) on a GitHub-hosted runner: GFOpenAmigaGCC and the NDK in place, and a
+# program on exec.library's and dos.library's headers compiled and linked for the 68040 (docs/design/PARTS-ON-MERGE.md).
+name: Stove action
+on:
+  pull_request:
+    paths: ['.github/actions/stove/**', '.github/workflows/stove-action.yml']
+  push:
+    branches: [main]
+    paths: ['.github/actions/stove/**', '.github/workflows/stove-action.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/stove
+      - name: A program on the NDK's headers
+        run: |
+          cat > hello.c <<'C'
+          #include <proto/exec.h>
+          #include <proto/dos.h>
+          int main(void) { struct Library *l = OpenLibrary("dos.library", 39); if (l) { PutStr("ok\n"); CloseLibrary(l); } return 0; }
+          C
+          "$STOVE/prefix/bin/m68k-amigaos-gcc" -noixemul -m68040 -specs=specs/m68k-soft-m68040.specs -O2 -Wall -Werror -o hello hello.c
+          file hello || true
+          head -c 4 hello | od -An -tx1 | grep -q "00 00 03 f3" && echo "AmigaOS hunk executable"
+      - name: GFOpenUpTool on the hosted stove
+        run: |
+          mkdir -p build/os3
+          "$STOVE/prefix/bin/m68k-amigaos-gcc" -noixemul -m68040 -specs=specs/m68k-soft-m68040.specs -std=gnu99 -Wall -Werror -O2 \
+            -fno-delete-null-pointer-checks -fno-common -o build/os3/GFOpenUpTool src/openuptool.c
+          ls -l build/os3/GFOpenUpTool
