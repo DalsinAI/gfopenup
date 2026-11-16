@@ -153,6 +153,7 @@
 #include "openup_kickset.h"
 #include "openup_slimrom.h"            /* DETECT SlimROM (0.8.x) */
 #include "openup_vers.h"               /* an older file never over a newer one */
+#include "openup_sysfont.h"            /* Font prefs' system font: DejaVuSansMono 11 to GFOSMono 11 */
 #include "openup_drop.h"               /* REMOVE's and INSTALL's drop: one listed file taken out */
 #include "openup_left.h"               /* REINSTALL: the parts the pack hasn't got, for the Installer */
 #include "openup_unattended.h"          /* UPDATE AUTO (0.8.20) */
@@ -160,7 +161,7 @@
 static int slim_rom(void);
 static int kickset(const char *a1, const char *a2);
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.20 (13.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.21 (14.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -1363,6 +1364,8 @@ static int drop_file(const char *dest, const char *text, const char *upath, cons
 
 static unsigned kickset_host(void);
 
+static int move_sysfont(void);
+
 static int install(const char *drawer)
 {
     char path[220], from[260], *text, *p, *line, partname[64] = "", partver[32] = "";
@@ -1516,6 +1519,7 @@ static int install(const char *drawer)
         return RETURN_ERROR;
     }
     Printf((STRPTR)"GFOpenUp: %s %s installed (%ld file%s changed)\n", (LONG)partname, (LONG)partver, files, (LONG)(files == 1 ? "" : "s"));
+    if (!strcmp(partname, "GFOSFonts")) move_sysfont();     /* GFOS Mono is in FONTS: now (openup_sysfont.h) */
     return RETURN_OK;
 }
 
@@ -2549,6 +2553,65 @@ static int install_prefs(const char *name, const UBYTE *data, LONG len)
          && install_file("T:GFOpenUp-prefs", envarc, 0) >= 0
          && manifest_save();
     DeleteFile((STRPTR)"T:GFOpenUp-prefs");
+    return ok;
+}
+
+/* One line added to GFOpenUpTool's log, ENVARC:GFOpenUp/GFOpenUpTool.log (openup_unattended.h). */
+static void log_append(const char *line)
+{
+    BPTR fh, l;
+    if (!exists("ENVARC:GFOpenUp") && (l = CreateDir((STRPTR)"ENVARC:GFOpenUp"))) UnLock(l);
+    if ((fh = Open((STRPTR)OU_LOG, MODE_READWRITE))) {
+        Seek(fh, 0, OFFSET_END);
+        FPuts(fh, (STRPTR)line);
+        FPutC(fh, '\n');
+        Close(fh);
+    }
+}
+
+/* Font prefs' system default text: DejaVuSansMono.font 11 becomes GFOSMono.font 11, that one setting only (Dale,
+ * 14 November 2026: openup_sysfont.h), in ENVARC: and, while Workbench isn't open yet, ENV:. 1 moved, 0 nothing. */
+static int move_sysfont(void)
+{
+    LONG len = 0;
+    UBYTE *d;
+    int ok;
+    struct MsgPort *wbport;
+    d = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &len);
+    if (!ous_migrate(d, len, exists("FONTS:" OUS_NEW_FONT) && exists(OUS_NEW_SIZE_FILE))) { if (d) FreeVec(d); return 0; }
+    /* the old Font.prefs, kept beside it (once: a later run finds GFOS Mono there and changes nothing) */
+    if (!exists(OUS_KEEP) && !copy_file("ENVARC:Sys/Font.prefs", OUS_KEEP, 0)) {
+        say("GFOpenUp: can't keep a copy of ENVARC:Sys/Font.prefs; the system font stays DejaVu Sans Mono 11", NULL, NULL);
+        FreeVec(d);
+        return 0;
+    }
+    {
+        /* UPDATE AUTO reinstalls with the settings in place kept (reinstalling), which left ENVARC: as it was;
+         * this one setting is the move Dale asked for at update (16:23 "Move it at update") */
+        int was = reinstalling;
+        reinstalling = 0;
+        ok = install_prefs("Font.prefs", d, len);
+        reinstalling = was;
+    }
+    if (ok) {                                       /* read it back: said only when ENVARC: holds the new one */
+        LONG blen = 0;
+        UBYTE *back = (UBYTE *)read_file("ENVARC:Sys/Font.prefs", &blen);
+        ok = back && ous_landed(back, blen);
+        if (back) FreeVec(back);
+    }
+    if (!ok) {
+        say("GFOpenUp: couldn't write ENVARC:Sys/Font.prefs; the system font stays DejaVu Sans Mono 11", NULL, NULL);
+        FreeVec(d);
+        return 0;
+    }
+    Forbid();
+    wbport = FindPort((STRPTR)"WORKBENCH");
+    Permit();
+    if (!wbport) write_file("ENV:Sys/Font.prefs", (const char *)d, len);
+    FreeVec(d);
+    log_append(OUS_LOG_LINE);
+    say("GFOpenUp: the system font (Font prefs) is now GFOS Mono 11, was DejaVu Sans Mono 11",
+                " (GFOS Mono keeps every letter whole in OS 3.2's lists; from the next reboot). The old prefs: " OUS_KEEP, NULL);
     return ok;
 }
 
@@ -4291,22 +4354,26 @@ static int show_changes(void)
     return changes;
 }
 
+/* UPDATE AUTO's GFOSFonts (ou_auto_gfosfonts): installed once when it isn't, which moves the system font
+ * (move_sysfont, from install()). The return code, or RETURN_OK when there was nothing to add. */
+#define PACK_GFOSFONTS CRADLE_DRAWER "/Parts/GFOSFonts"
+static int auto_gfosfonts(void)
+{
+    manifest_load();
+    if (!ou_auto_gfosfonts(find_entry("part", "GFOSFonts") != NULL, exists(PACK_GFOSFONTS "/Part"))) return RETURN_OK;
+    say("GFOpenUp: adding GFOSFonts (GFOS's own fonts; the system font moves to GFOS Mono 11)", NULL, NULL);
+    return install(PACK_GFOSFONTS);
+}
+
 /* The unattended UPDATE's one line, in ENVARC:GFOpenUp/GFOpenUpTool.log and on the Shell; rc back. */
 static int auto_kick;                               /* UPDATE AUTO's Kickstart set: 1 in, -1 failed, 0 not tried */
 
 static int update_logged(int by, const char *installed, const char *newer, int done, int rc)
 {
     char line[200];
-    BPTR fh, l;
     ou_log_line(line, sizeof line, auto_kick, by, installed, newer, done, rc);
     say(line, NULL, NULL);
-    if (!exists("ENVARC:GFOpenUp") && (l = CreateDir((STRPTR)"ENVARC:GFOpenUp"))) UnLock(l);
-    if ((fh = Open((STRPTR)OU_LOG, MODE_READWRITE))) {
-        Seek(fh, 0, OFFSET_END);
-        FPuts(fh, (STRPTR)line);
-        FPutC(fh, '\n');
-        Close(fh);
-    }
+    log_append(line);
     return rc;
 }
 
@@ -4315,7 +4382,7 @@ static int update_logged(int by, const char *installed, const char *newer, int d
  * runs the Installer. AUTO (openup_unattended.h; only AUTO, so the menu's
  * plain UPDATE still asks on a card with the host flag) is unattended: no requester and no Installer,
  * the installed parts reinstalled from the pack (the settings in place stay,
- * no part added), the startup block written again, one line in the log.
+ * no part added but GFOSFonts once, Dale 14 Nov: ou_auto_gfosfonts), the startup block written again, one line in the log.
  * It never runs on its own, and it never changes anything until asked. */
 #ifndef KICKSET_DIR
 #define KICKSET_DIR "SYS:Kickstart/default/"
@@ -4357,7 +4424,11 @@ static int update(const char *how)
                 rc = r;
             }
         }
-        if (!auto_kick) say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
+        if (unattended && !find_entry("part", "GFOSFonts") && exists(PACK_GFOSFONTS "/Part")) {
+            int r = auto_gfosfonts();               /* an older GFOpenUpTool did the update, without GFOSFonts */
+            if (r > rc) rc = r;
+        } else if (!auto_kick)
+            say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
         return unattended ? update_logged(by, installed, newer, -1, rc) : rc;
     }
     Printf((STRPTR)"GFOpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
@@ -4366,6 +4437,10 @@ static int update(const char *how)
     if (unattended) {
         int rc = reinstall(CRADLE_DRAWER "/Parts");
         auto_kick = kickset_reinstalled;            /* REINSTALL's own KickstartSet, when the manifest lists it */
+        if (rc < RETURN_ERROR) {
+            int r = auto_gfosfonts();
+            if (r > rc) rc = r;
+        }
         if (rc < RETURN_ERROR && ou_auto_kickset_after(slim_rom(), exists(CRADLE_DRAWER "/Parts/KickstartSet/Part"),
                                                        kickset_reinstalled)) {
             int r = kickset(CRADLE_DRAWER "/Parts/KickstartSet", NULL);

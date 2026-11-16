@@ -43,6 +43,9 @@ int main(void)
     CHECK(ou_auto_kickset(1, 1) == 1, "slim ROM, the pack has KickstartSet: AUTO installs it");
     CHECK(ou_auto_kickset(1, 0) == 0, "slim ROM, no KickstartSet in the pack: nothing");
     CHECK(ou_auto_kickset(0, 1) == 0, "another ROM: not installed (the Installer's rule)");
+    CHECK(ou_auto_gfosfonts(0, 1) == 1, "GFOSFonts not installed, in the pack: AUTO adds it (Dale 19:17)");
+    CHECK(ou_auto_gfosfonts(1, 1) == 0, "GFOSFonts installed: the reinstall has it already");
+    CHECK(ou_auto_gfosfonts(0, 0) == 0, "not in the pack: nothing");
     /* once a run (Lorien's note on #250; Ivanova's bundle C row 7: "installed (5 files changed)", then "(0 files
      * changed)") */
     CHECK(ou_auto_kickset_after(1, 1, 1) == 0, "REINSTALL just installed the set: AUTO doesn't run it again");

@@ -102,6 +102,14 @@ static int ou_auto_kickset(int slim_rom, int in_pack)
     return slim_rom && in_pack;
 }
 
+/* The other part AUTO adds (Dale, 14 Nov 2026 19:17, "Yes, update adds GFOS Fonts"): GFOSFonts, once, when the
+ * manifest doesn't list it and the pack has it, so the update itself moves the system font to GFOS Mono 11
+ * (openup_sysfont.h). listed: the manifest has the part. 1: install it. */
+static int ou_auto_gfosfonts(int listed, int in_pack)
+{
+    return !listed && in_pack;
+}
+
 /* After REINSTALL: the set again only when REINSTALL didn't just install it. With KickstartSet in the manifest,
  * REINSTALL installs the part (KICKSET) and AUTO's step ran it a second time in the same run, changing nothing
  * ("installed (5 files changed)", then "(0 files changed)": Lorien's note on #250, Ivanova's bundle C row 7).
