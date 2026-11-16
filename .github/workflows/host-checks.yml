@@ -23,6 +23,8 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends python3-pil
       - name: build_pack.py's parts and GFOpenUpTool's conditions
         run: OPENAMIGAPREFS=gfopenprefs python3 tests/test_build_pack.py
+      - name: step reuse (a cut builds only the steps whose checkouts moved)
+        run: python3 tests/test_step_reuse.py
       - name: the drive icons (AOS style) and their specimen sheet
         run: sudo apt-get install -y -qq --no-install-recommends python3-numpy && python3 tests/test_drive_icons.py
       - name: the drive icons by kind in the Soft 3D style
