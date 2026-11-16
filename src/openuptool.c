@@ -1521,6 +1521,11 @@ static int install(const char *drawer)
 
 /* ---- REMOVE: one part taken out (0.8.0) ------------------------------------------------------ */
 
+#define MAXPARTS 128
+static char part_names[MAXPARTS][48], part_drawers[MAXPARTS][160];
+static int nparts;
+static void find_parts(const char *drawer, int depth);
+
 /* Takes out the files one part's Part file names, as UNINSTALL takes out everything: a file the part added
  * is deleted, a file it replaced or retired gets its original back from SYS:Storage/GFOpenUp-Superseded, and
  * its startup lines and its "part" line leave the manifest (STARTUP writes S:User-Startup again after). The
@@ -1528,11 +1533,16 @@ static int install(const char *drawer)
  * back. Only a file the manifest lists is touched, so a file the part names but GFOpenUp never put there (the
  * user's own) stays. 0 when the part isn't installed.
  * A part another installed part needs (its "needs part" line, noted as needpart in the manifest) stays, and
- * nothing changes: GFOffice stays while GFOpenWrite or GFOpenCalc is installed (25 Oct 2026). */
+ * nothing changes: GFOffice stays while GFOpenWrite or GFOpenCalc is installed (25 Oct 2026).
+ * A file another installed part puts there too (its Part file beside this one in the pack's Parts drawer) stays,
+ * listed, for that part: SYS:Libs/gfopenlayout.library is the GFOpenLayout part's and the KickstartSet part's
+ * (Ivanova's lab, bundle D row 8, 14 Nov 2026: REMOVE GFOpenLayout took it from the set). */
 static int remove_part(const char *drawer)
 {
     char path[220], *text, *p, *line, partname[64] = "";
     const char *by;
+    static const char *others[MAXPARTS];           /* static: off the stack */
+    static char *other_text[MAXPARTS];
     int removed = 0, restored = 0, problems = 0, i;
 
     strncpy(path, drawer, 200);
@@ -1554,6 +1564,31 @@ static int remove_part(const char *drawer)
                (LONG)partname, (LONG)by, (LONG)by, (LONG)by, (LONG)partname);
         FreeVec(text);
         return RETURN_WARN;
+    }
+    {   /* the pack's other parts the manifest lists as installed, and their Part files: who else writes a file */
+        char root[200];
+        parent_of(drawer, root, sizeof root);
+        if (!strcmp(root, drawer)) root[0] = 0;     /* "GFOpenLayout" from inside Parts: the current drawer */
+        else {
+            strlcpy(path, root, sizeof path);
+            AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
+            if (exists(path)) {                     /* Parts/GFOpenLibs/rexx: GFOpenLibs is a part drawer too */
+                char up[200];
+                parent_of(root, up, sizeof up);
+                strcpy(root, strcmp(up, root) ? up : "");
+            }
+        }
+        nparts = 0;
+        find_parts(root, 0);
+        for (i = 0; i < nparts; i++) {
+            others[i] = part_names[i];
+            other_text[i] = NULL;
+            if (strcmp(part_names[i], partname) && oul_installed(ents, nents, part_names[i])) {
+                strlcpy(path, part_drawers[i], sizeof path);
+                AddPart((STRPTR)path, (STRPTR)"Part", sizeof path);
+                other_text[i] = read_file(path, NULL);
+            }
+        }
     }
     for (p = text; *p; ) {
         char *w[12];
@@ -1581,9 +1616,16 @@ static int remove_part(const char *drawer)
                  && n >= 3) dest = w[2];
         if (!dest || !(e = find_entry(NULL, dest)))
             continue;
+        if ((!strcmp(e->kind, "new") || !strcmp(e->kind, "replaced") || !strcmp(e->kind, "same")) &&
+            (by = oul_kept_by(ents, nents, partname, others, (const char *const *)other_text, nparts, e->a))) {
+            Printf((STRPTR)"GFOpenUp: %s stays: %s, which is installed, has it too.\n", (LONG)e->a, (LONG)by);
+            continue;
+        }
         if (take_out(e, dest, &removed, &restored) < 0) problems++;
     }
     FreeVec(text);
+    for (i = 0; i < nparts; i++)
+        if (other_text[i]) FreeVec(other_text[i]);
     if (!partname[0] || !find_entry("part", partname)) {
         if (!removed && !restored) {
             Printf((STRPTR)"GFOpenUp: %s isn't installed\n", (LONG)(partname[0] ? partname : drawer));
@@ -1613,10 +1655,6 @@ static int remove_part(const char *drawer)
  * stay: in a reinstall no line writes over a file in ENVARC: or ENV: that is there (reinstalling), as "default"
  * lines never do; S:User-Startup's block is the Installer's STARTUP's, after, which keeps the lines switched off. A
  * part this pack hasn't got is said and left as it is. RETURN_OK, or the worst of the parts' codes. */
-#define MAXPARTS 128
-static char part_names[MAXPARTS][48], part_drawers[MAXPARTS][160];
-static int nparts;
-
 /* each Part file in drawer and the drawers in it, one level down: its part's name and drawer */
 static void find_parts(const char *drawer, int depth)
 {
