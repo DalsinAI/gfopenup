@@ -83,7 +83,7 @@ def main() -> int:
                         "DalsinAI/two v0.3 Two.tar.gz Emulation:Two-App code\n")
         assets = t / "assets"
         zipped(assets / "one" / "One-1.2.zip", {"One/One": b"program one", "One/One.info": b"icon", "One/Docs/Read Me": b"text",
-                                                 "One/Install": b"; installer", "One.info": b"the release's drawer icon"})
+                                                 "One/Install": b"; installer", "One/INSTALL.txt": b"how to", "One.info": b"the release's drawer icon"})
         tgz = assets / "two" / "Two.tar.gz"
         tgz.parent.mkdir(parents=True)
         with tarfile.open(tgz, "w:gz") as tf:
@@ -122,8 +122,8 @@ def main() -> int:
               and (top / "Parts/EmulationDrawers/Drawer0.info").read_bytes() == b"ICON:chip",
               "the Emulation drawers ship a ReadMe and an icon each and nothing else: no ROM or disk image")
         check(all(m in marks.MOTIFS for m in ap.EMULATION_DRAWERS.values()), "the Emulation drawers' marks are drawn")
-        check([r["installer"] for r in rows] == ["Install", ""] and rows[0]["files"] == 4 and rows[0]["bytes"] == 30,
-              "the list names an app's own installer, its files and bytes")
+        check([r["installer"] for r in rows] == ["Install", ""] and rows[0]["files"] == 5 and rows[0]["bytes"] == 36,
+              "the list names an app's own installer (a script, not a text about installing), its files and bytes")
         script = (top / "Install-GFOpenApps").read_text()
         check('C:GFOpenUpTool INSTALL "Work:GFOpenApps/Parts/AppOne"' in script
               and script.index("EmulationDrawers") < script.index("AppOne") < script.index("AppTwoApp") and "FailAt 21" in script,

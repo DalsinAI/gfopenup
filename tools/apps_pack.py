@@ -138,7 +138,7 @@ def app_root(tree: Path) -> Path:
 def own_installer(root: Path) -> str:
     """The application's own installer, when its release has one at its top: Install, Install-<name>, Install.sh..."""
     for f in sorted(root.iterdir()):
-        if f.is_file() and f.suffix.lower() != ".info" and re.match(r"install", f.name, re.I):
+        if f.is_file() and f.suffix.lower() not in (".info", ".txt", ".md", ".readme") and re.match(r"install", f.name, re.I):
             return f.name
     return ""
 
