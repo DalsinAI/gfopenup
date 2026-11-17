@@ -12,7 +12,7 @@ LIST has one part repository per line, then what to take:
 A freeze.tsv (repository and commit) is such a list. parts.lock is the pack's own.
 
 Each tarball's PART.json must name the repository and a commit; the checkout (DIR/<repo>) must be at that commit
-(--checkout puts it there first), else the part isn't taken. The token is GH_TOKEN, else PARTS_READ_TOKEN.
+(--checkout puts it there first, and clones a repository that has no checkout yet), else the part isn't taken. The token is GH_TOKEN, else PARTS_READ_TOKEN.
 
 Copyright (c) 2026 AmiCradle Team. MIT licence."""
 from __future__ import annotations
@@ -93,6 +93,10 @@ def fetch(repo: str, ref: str, checkout: Path, token: str | None, do_checkout: b
     blob = get(a["url"], token, raw=True)
     with tarfile.open(fileobj=io.BytesIO(blob), mode="r:gz") as t:
         commit = json.load(t.extractfile("PART.json"))["commit"]
+    if do_checkout and not checkout.exists():      # a part repository the cut has no checkout of yet
+        url = f"https://x-access-token:{token}@github.com/{OWNER}/{repo}" if token else f"https://github.com/{OWNER}/{repo}"
+        subprocess.run(["git", "clone", "-q", url, str(checkout)], check=True)
+        subprocess.run(["git", "-C", str(checkout), "remote", "set-url", "origin", f"https://github.com/{OWNER}/{repo}"], check=True)
     if do_checkout and head(checkout) != commit:
         subprocess.run(["git", "-C", str(checkout), "fetch", "-q", "origin", commit], check=True)
         subprocess.run(["git", "-C", str(checkout), "checkout", "-q", "--detach", commit], check=True)
