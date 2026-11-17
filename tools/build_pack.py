@@ -1982,7 +1982,7 @@ def picture_tone(path: Path) -> str:
 
 def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_tone) -> "Part":
     """The Backdrops part: GFOpenUp's own desktops (gfopengadtools' make_backdrops.py, the themes' pictures, strips and
-    logo versions), each with its .tone, into SYS:Prefs/Presets/Backdrops/GFOpenUp.
+    logo versions, the Ethereal set and the Swish set, whose Swish-Glass-Light a new install shows), each with its .tone, into SYS:Prefs/Presets/Backdrops/GFOpenUp.
 
     make_backdrops.py also exports the AmiCradle Background Pack's art (gfopengadtools #73). That pack is not
     GFOpenUp's: it is an optional install, from Cradle's Media Library or its own InstallBackgrounds, and GFOpenUp keeps
@@ -1991,7 +1991,7 @@ def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_
     folder: an export from before pack 1.1 leaves its 2560x1440 and 3840x2160 art there, and 1.1's names no longer
     list them. None of GFOpenUp's own pictures is named so."""
     art = art_backdrop_names(opengadtools) or set()
-    bd = Part(top, "Backdrops", "0.3", "The themes' desktops and the Ethereal ones as Workbench backdrops, with their tones")
+    bd = Part(top, "Backdrops", "0.4", "The themes' desktops, the Ethereal and the Swish ones as Workbench backdrops, with their tones")
     for png in sorted(Path(backdrops).glob("*.png")):
         if png.name in art or ART_NAME_RE.match(png.name):
             continue
@@ -2451,6 +2451,43 @@ def write_pack_list(parts: Path, out: Path) -> int:
     rows.sort()
     out.write_text("# part\tinstalled as\tbytes\tSHA-256\n" + "\n".join(rows) + "\n", encoding="latin-1")
     return len(rows)
+
+
+# Material that is never released (game data and ROMs under someone else's licence) travels to our own test
+# boards in a private pack of its own, which is never in a repository. Two things keep it out of this pack: each
+# of its parts holds a file of this name, and the machine that builds it keeps a list of the SHA-256 of every file
+# it has ever held (GF_TESTING_DENY, else ~/AmiCradle/testing-pack/DENY.sha256; no list on a machine without one).
+PRIVATE_MARKER = "TestingPack.private"
+PRIVATE_NAMES = (PRIVATE_MARKER, "PRIVATE-NOT-FOR-RELEASE")
+
+
+def private_deny_list(path: Path | None = None) -> set[str]:
+    """The SHA-256 list of files that may not be in a public pack: empty when this machine has none."""
+    path = Path(path or os.environ.get("GF_TESTING_DENY") or Path.home() / "AmiCradle/testing-pack/DENY.sha256")
+    if not path.is_file():
+        return set()
+    return {w for w in (line.split("#")[0].strip().lower() for line in path.read_text().splitlines())
+            if re.fullmatch(r"[0-9a-f]{64}", w)}
+
+
+def check_private(top: Path, deny: set[str] | None = None) -> list[str]:
+    """Every file under the pack's drawer: one named as a private pack's marker, or one whose SHA-256 is in the
+    deny list, is a problem. Returns the problems, one line each (empty: none); a path only, never the bytes."""
+    import hashlib
+    deny = private_deny_list() if deny is None else deny
+    problems = []
+    for f in sorted(p for p in Path(top).rglob("*") if p.is_file()):
+        rel = f.relative_to(top).as_posix()
+        if f.name.lower() in {n.lower() for n in PRIVATE_NAMES}:
+            problems.append(f"{rel}: a private pack's marker, so its drawer is not for release")
+        elif deny:
+            h = hashlib.sha256()
+            with open(f, "rb") as fh:
+                while chunk := fh.read(1 << 20):
+                    h.update(chunk)
+            if h.hexdigest() in deny:
+                problems.append(f"{rel}: a file the private pack holds (its SHA-256 is in the deny list)")
+    return problems
 
 
 # Our own libraries resident in a ROM the pack runs on without being in the pack (none yet: the slim ROM has no gf*
@@ -3685,6 +3722,9 @@ def main() -> int:
     if browser_top:
         check_part_versions(browser_top / "Parts")
     for t in [top] + ([browser_top] if browser_top else []):
+        private = check_private(t)
+        if private:
+            raise SystemExit("this pack holds material that is never released:\n  " + "\n  ".join(private))
         clashes = check_clashes(t / "Parts")
         if clashes:
             raise SystemExit("two parts write one path (one part owns each file; SHARED_PATHS for same-byte sharing):\n  "
