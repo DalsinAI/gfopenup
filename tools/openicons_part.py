@@ -335,6 +335,8 @@ def build(out: Path, guest: Path) -> list[str]:
             write_entry(by_name[name], picture(by_name[name]), str(out / "Kinds" / f"{kind}.info"))
     openkick_drawer_files(out)
     lines += openkick_drawer_lines()
+    media_drawer_files(out)
+    lines += media_drawer_lines()
     return lines
 
 
@@ -356,6 +358,23 @@ def openkick_drawer_files(out: Path) -> None:
     (out / "Drawers").mkdir(parents=True, exist_ok=True)
     for name, motif in OPENKICK_DRAWERS.items():
         (out / "Drawers" / f"{name}.info").write_bytes(aos_icon("S3D:drawer:" + motif, "drawer"))
+
+
+# Drawers other parts put on the Media drive (the standard build's DH4:), which arrive with no icon: Media:midi, the
+# GFOpenSynth part's MIDI collection (Dale, 17 November 2026: "include in the media drive an folder called midi").
+# Each gets the Soft 3D folder with its mark where it has no icon, only where a volume named Media is mounted
+# (when MediaDrive, GFOpenUpTool 0.8.22).
+MEDIA_DRAWERS = {"midi": "waveform"}
+
+
+def media_drawer_lines() -> list[str]:
+    return [f'when MediaDrive default "Drawers/Media-{name}.info" "Media:{name}.info"' for name in MEDIA_DRAWERS]
+
+
+def media_drawer_files(out: Path) -> None:
+    (out / "Drawers").mkdir(parents=True, exist_ok=True)
+    for name, motif in MEDIA_DRAWERS.items():
+        (out / "Drawers" / f"Media-{name}.info").write_bytes(aos_icon("S3D:drawer:" + motif, "drawer"))
 
 
 # The AOS drawer style (Dale, 12 November 2026, 13:52 "go with those", 15:04 "those work"; tools/aos_icons_art.py):
