@@ -694,7 +694,7 @@ def archive_art() -> bytes:
     return img.tobytes()
 
 
-# GFOpenUpdate's icon (src/openupdate.c): a check a day, Workbench not waiting for it
+# GFOpenUpdate's icon (src/openupdate/openupdate.c): a check a day, Workbench not waiting for it
 UPDATE_TOOLTYPES = ["INTERVAL=86400", "DONOTWAIT", "CX_PRIORITY=0"]
 
 
@@ -785,13 +785,13 @@ def build_parts(a):
          "-o", ROOT / "build/os3/GFOpenUpTool", ROOT / "src/openuptool.c"], env=env)
     run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, *late, "-fno-common",
          "-o", ROOT / "build/os3/GFOpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
-    # GFOpenUpdate, the commodity that offers GFOS's updates (docs/design/GFOPENUPDATE.md)
-    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, *late, "-fno-common",
-         "-o", ROOT / "build/os3/GFOpenUpdate", ROOT / "src/openupdate.c"], env=env)
     # GFOpenMonitor 1.0, the task manager (src/openmonitor/, its own build.sh, GCC 16 as gfopengadtools wants),
     # built resident (libnix -resident: each run its own variables), so one seglist serves every run. The open
     # ROM builds the same file through amicradle-guest's romprefs.sh.
     gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmiCradle/stoves/os32-gcc16"))
+    # GFOpenUpdate, the commodity that offers GFOS's updates, its window GFOpenLayout UI (docs/design/GFOPENUPDATE.md)
+    run(["sh", ROOT / "src/openupdate/build.sh", ROOT / "build/os3/GFOpenUpdate"],
+        env=dict(os.environ, OS32_GCC16=gcc16_root, OLAYOUT=str(a.openamigalayout), OGT=str(a.opengadtools)))
     run(["sh", ROOT / "src/openmonitor/build.sh", ROOT / "build/os3/GFOpenMonitor"],
         env=dict(os.environ, OS32_GCC16=gcc16_root, OGT=str(a.opengadtools), GUEST=str(a.guest)))
     # GFOpenSnap: its PNGs through openpng.datatype's OIM_ENCODEPNG, whose header is gfopendatatypes'
