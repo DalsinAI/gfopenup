@@ -48,7 +48,7 @@ to install: what is installed stays GFOpenUpTool's manifest, and a part goes in 
 | --- | --- | --- |
 | 1 | The index's form, what is offered against the manifest, the tooltype and when a check is due, with host tests | Done (`src/openupdate.h`) |
 | 2 | The cut writes the index and each part's archive: `tools/update_index.py`, run by `tools/build_pack.py --lha` into `<out>/updates/` | Done; publishing them on the release is the cut's upload |
-| 3 | GFOpenUpdate the commodity: startup and timed checks, the fetch, the requester | Next |
+| 3 | GFOpenUpdate the commodity: startup and timed checks, the fetch, the requester | Started (work in progress): SHA-256 (`src/openupdate_sha256.h`), the address, the requester's lines and Skipped's text in `src/openupdate.h`, all host-tested; the commodity program itself is not written |
 | 4 | The window, and the menu entry pointed at it | |
 | 5 | Its icon, in the icon standard (amicradle `docs/ICON_STANDARD.md`) | |
 

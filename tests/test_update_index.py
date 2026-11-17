@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     FILE *f = fopen(argv[1], "rb");
     long len = f ? (long)fread(buf, 1, sizeof buf, f) : 0;
     int i, n = oud_index_parts(buf, len, p, 64);
-    (void)argc; (void)ouv_ver; (void)ouv_keep_newer; (void)oud_offers; (void)oud_interval; (void)oud_due;
+    (void)argc; (void)ouv_ver; (void)ouv_keep_newer; (void)oud_offers; (void)oud_interval; (void)oud_due; (void)oud_url; (void)oud_offer_text; (void)oud_skip_text;
     printf("%d\n", n);
     for (i = 0; i < n; i++) printf("%s %s %ld %s %s\n", p[i].name, p[i].version, p[i].bytes, p[i].sha256, p[i].file);
     return 0;

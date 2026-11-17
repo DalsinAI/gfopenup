@@ -216,4 +216,96 @@ static int oud_due(int network_up, int checked_this_run, long now, long last, lo
     return now < last || now - last >= interval;
 }
 
+/* ---- what the commodity says and writes (step 3) ---- */
+
+#define OUD_URL_DEFAULT "https://github.com/DalsinAI/gfopenup/releases/download/updates/"   /* the URL tooltype */
+#define OUD_RETRY 60L                                   /* seconds between tries until the first check gets through */
+
+/* base and file as one address into out: base gets a "/" when it hasn't one. 1, or 0 when out is too small or
+ * either holds a quote, a blank or a control letter (the address goes on a command line). */
+static int oud_url(const char *base, const char *file, char *out, int size)
+{
+    int n = 0, i;
+    const char *part[3];
+    part[0] = base; part[1] = (*base && base[strlen(base) - 1] != '/') ? "/" : ""; part[2] = file;
+    if (!*base) return 0;
+    for (i = 0; i < 3; i++) {
+        const char *p;
+        for (p = part[i]; *p; p++) {
+            if ((unsigned char)*p < 33 || *p == '"' || *p == '*' || (unsigned char)*p > 126 || n >= size - 1) return 0;
+            out[n++] = *p;
+        }
+    }
+    out[n] = 0;
+    return 1;
+}
+
+static int oud_put(char *out, int size, int n, const char *s)
+{
+    while (*s && n < size - 1) out[n++] = *s++;
+    out[n] = 0;
+    return n;
+}
+
+/* The offers as the requester's lines, "<Name>: <installed> to <version>" each, the first `show` of them and then
+ * "and <n> more". The length written. */
+static int oud_offer_text(const struct oud_part *parts, int count, int show, char *out, int size)
+{
+    int i, n = 0;
+    out[0] = 0;
+    for (i = 0; i < count && i < show; i++) {
+        n = oud_put(out, size, n, parts[i].name);
+        n = oud_put(out, size, n, ": ");
+        n = oud_put(out, size, n, parts[i].installed);
+        n = oud_put(out, size, n, " to ");
+        n = oud_put(out, size, n, parts[i].version);
+        n = oud_put(out, size, n, "\n");
+    }
+    if (count > show) {
+        char num[12];
+        int more = count - show, k = 0, j;
+        char rev[12];
+        while (more > 0 && k < 11) { rev[k++] = (char)('0' + more % 10); more /= 10; }
+        for (j = 0; j < k; j++) num[j] = rev[k - 1 - j];
+        num[k] = 0;
+        n = oud_put(out, size, n, "and ");
+        n = oud_put(out, size, n, num);
+        n = oud_put(out, size, n, " more\n");
+    }
+    return n;
+}
+
+/* Skipped's new text when the user says no to these offers: a "skip <Name> <version>" line each, then the old
+ * text's lines for other parts (old may be NULL). The length written, or -1 when out is too small (then the file
+ * is left as it was). */
+static int oud_skip_text(const struct oud_part *parts, int count, const char *old, long oldlen, char *out, int size)
+{
+    int i, n = 0;
+    const char *p = old, *end = old ? old + oldlen : NULL, *next;
+    char w[4][80];
+    for (i = 0; i < count; i++) {
+        if (n + (int)strlen(parts[i].name) + (int)strlen(parts[i].version) + 8 >= size) return -1;
+        n = oud_put(out, size, n, "skip ");
+        n = oud_put(out, size, n, parts[i].name);
+        n = oud_put(out, size, n, " ");
+        n = oud_put(out, size, n, parts[i].version);
+        n = oud_put(out, size, n, "\n");
+    }
+    while (p && p < end) {
+        int words = oud_words(p, end, w, 4, &next), again = 0;
+        p = next;
+        if (words != 3 || strcmp(w[0], "skip")) continue;
+        for (i = 0; i < count; i++) again |= !strcmp(parts[i].name, w[1]);
+        if (again) continue;
+        if (n + (int)strlen(w[1]) + (int)strlen(w[2]) + 8 >= size) return -1;
+        n = oud_put(out, size, n, "skip ");
+        n = oud_put(out, size, n, w[1]);
+        n = oud_put(out, size, n, " ");
+        n = oud_put(out, size, n, w[2]);
+        n = oud_put(out, size, n, "\n");
+    }
+    if (!count && !n) out[0] = 0;
+    return n;
+}
+
 #endif

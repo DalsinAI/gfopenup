@@ -1178,6 +1178,11 @@ def main() -> int:
                         str(ROOT / "tests/test_openupdate.c"), "-o", str(ud)], check=True)
         r = subprocess.run([str(ud)], capture_output=True, text=True)
         check("GFOpenUpdate's index, offers and check times (tests/test_openupdate.c)", r.returncode == 0, r.stdout[-600:])
+        sh = tmp / "test_openupdate_sha256"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openupdate_sha256.c"), "-o", str(sh)], check=True)
+        r = subprocess.run([str(sh)], capture_output=True, text=True)
+        check("GFOpenUpdate's SHA-256 (tests/test_openupdate_sha256.c)", r.returncode == 0, r.stdout[-600:])
         lf = tmp / "test_openup_left"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_left.c"), "-o", str(lf)], check=True)
