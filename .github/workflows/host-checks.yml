@@ -31,3 +31,5 @@ jobs:
         run: sudo apt-get install -y -qq --no-install-recommends python3-numpy && python3 tests/test_drive_icons.py
       - name: the drive icons by kind in the Soft 3D style
         run: python3 tests/test_soft3d_drives.py
+      - name: every drawer as the Soft 3D folder with its mark
+        run: python3 tests/test_soft3d_drawers.py

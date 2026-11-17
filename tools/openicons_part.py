@@ -36,6 +36,11 @@ volume), and own_drawers(), which build_pack.py runs on GFOpenUp's own drawer
 icons (GFOpenUp, GFOpenPrint, GFOpenWrite, GFOpenDemos, Developer...) so they are look
 B drawers with their program's motif, not the Gorilla-era or Boxie drawers.
 
+0.5 (Dale, 17 November 2026: "we should redo all the folder icons"): every drawer the part writes is the Soft 3D
+folder (tools/soft3d_kinds_art.py), a named one with its motif's mark on the front (tools/soft3d_motifs.py):
+the system's drawers, the ones in a second place, GFOpenUp's own (own_drawers) and AmiCradle's own on Work: and
+SYS: (NAMED_DRAWERS). Look B stays for programs, projects and file types.
+
 OUT_DIR/Kinds holds the hard disk, trashcan, drawer, tool and project in the Soft 3D style (Dale, 14 November 2026:
 tools/soft3d_drives_art.py, soft3d_kinds_art.py), as do the drives (AOS_DEVICES, AOS_DRIVE_KINDS) and the
 trashcan's face; SYS:System/Shell (the dock's Shell) and the Work: and Games: volumes'
@@ -98,9 +103,17 @@ ELSEWHERE = {
     "SYS:Apps": "Apps", "Work:Apps": "Apps", "SYS:Games": "Games", "Work:Games": "Games",
     "SYS:Demos": "Demos", "Work:Demos": "Demos", "SYS:Developer/GFOpenGPU-SDK": "GFOpenGPU-SDK",
 }
+# Drawers the manifest doesn't name that AmiCradle's machines have (the Work window on the Pi 5, 17 November 2026):
+# each gets the Soft 3D folder with this mark as a face, where the drawer has an icon.
+NAMED_DRAWERS = {
+    "Work:Benchmarks": "gauge", "SYS:Benchmarks": "gauge", "Work:GFTestingPack": "flask",
+    "SYS:GFTestingPack": "flask", "Work:GFOpenBrowser": "globe", "SYS:GFOpenBrowser": "globe",
+    "Work:OpenBrowser": "globe", "SYS:OpenBrowser": "globe",
+}
 
-# GFOpenUp's own drawers (the pack's, ICONS.md section 1), drawn as GFOpenIcons look B drawers with the program's
-# motif. Until 0.8.4 they were the Gorilla-era drawer with a badge (drawer-NAME) or Boxie's blue drawer.
+# GFOpenUp's own drawers (the pack's, ICONS.md section 1): the Soft 3D folder with the program's mark on its front
+# (Dale, 17 November 2026: "we should redo all the folder icons"; tools/soft3d_motifs.py). From 0.8.4 they were
+# GFOpenIcons look B drawers, before that the Gorilla-era drawer with a badge (drawer-NAME) or Boxie's blue drawer.
 OWN_DRAWERS = {
     "GFOpenUp": "install", "GFOpenPrint": "printer", "GFOpenWrite": "pages", "OpenBrowser": "globe",
     "GFOpenDemos": "film", "GFOpenGPU-SDK": "cube", "Developer": "code", "Docs": "page", "GFOpenFTP": "swap",
@@ -135,20 +148,26 @@ def face_bytes(old: bytes, entry: dict, pic: dict, guest: Path) -> bytes:
     return bytes(new)
 
 
+def drawer_picture(e: dict) -> str:
+    """The Soft 3D picture of a drawer's manifest entry: the folder, with its motif's mark when it has one."""
+    import soft3d_motifs
+    motif = e.get("motif") or ""
+    if motif and motif not in soft3d_motifs.MOTIFS:
+        raise KeyError(f"drawer {e.get('name')}: no Soft 3D mark for the motif {motif!r} (tools/soft3d_motifs.py)")
+    return "S3D:drawer" + (":" + motif if motif else "")
+
+
 def own_drawers(guest: Path, files: list[Path]) -> int:
-    """Gives each of GFOpenUp's own drawer icons in files (a missing one is skipped) look B's drawer with its
-    program's motif (OWN_DRAWERS, by the icon's name), in place. Returns how many it changed."""
+    """Gives each of GFOpenUp's own drawer icons in files (a missing one is skipped) the Soft 3D folder with its
+    program's mark (OWN_DRAWERS, by the icon's name), in place; its window and place stay. Returns how many it
+    changed."""
     generator(guest)
-    from openicons.build import load_looks, render_icon
-    import oi
-    look = load_looks()[LOOK]
     done = 0
     for f in files:
         name = f.name[:-5] if f.name.endswith(".info") else f.name
         if not f.is_file() or name not in OWN_DRAWERS:
             continue
-        e = own_drawer(name)
-        f.write_bytes(face_bytes(f.read_bytes(), e, render_icon(oi.spec_of(e), look), guest))
+        f.write_bytes(aos_icon(drawer_picture(own_drawer(name)), "drawer", f.read_bytes()))
         done += 1
     return done
 
@@ -269,10 +288,17 @@ def build(out: Path, guest: Path) -> list[str]:
     names = short_names([dest for dest, _ in todo], ".info")
     for dest, e in todo:
         write_entry(e, picture(e), str(out / "Icons" / names[dest]))
+        if e["wbtype"] == "drawer":             # every drawer is the Soft 3D folder, with its mark
+            f = out / "Icons" / names[dest]
+            f.write_bytes(aos_icon(drawer_picture(e), "drawer", f.read_bytes()))
         if dest in AOS_FACES:
             f = out / "Icons" / names[dest]
             f.write_bytes(aos_icon(AOS_FACES[dest], "tool", f.read_bytes()))
         lines.append(f'face "Icons/{names[dest]}" "{dest}.info"')
+    for dest, motif in NAMED_DRAWERS.items():
+        n = dest.replace(":", "-") + ".info"
+        (out / "Icons" / n).write_bytes(aos_icon("S3D:drawer:" + motif, "drawer"))
+        lines.append(f'face "Icons/{n}" "{dest}.info"')
     # the volumes with a Disk.info of their own, in the AOS drawer style
     for dest, name in AOS_VOLUMES.items():
         n = dest.replace(":", "-") + ".info"
@@ -293,6 +319,9 @@ def build(out: Path, guest: Path) -> list[str]:
         n = e["name"] + ".info"
         if e["group"] == "amigachrome" and len(n) <= FFS_NAME and n.lower() not in used and "/" not in e["name"]:
             write_entry(e, picture(e), str(out / "Icons" / n))
+            if e["wbtype"] == "drawer":
+                f = out / "Icons" / n
+                f.write_bytes(aos_icon(drawer_picture(e), "drawer", f.read_bytes()))
             if e["name"] in AOS_BY_NAME:
                 f = out / "Icons" / n
                 f.write_bytes(aos_icon(AOS_BY_NAME[e["name"]], "tool", f.read_bytes()))
@@ -304,6 +333,7 @@ def build(out: Path, guest: Path) -> list[str]:
             continue
         if name in by_name:
             write_entry(by_name[name], picture(by_name[name]), str(out / "Kinds" / f"{kind}.info"))
+    openkick_drawer_files(out)
     lines += openkick_drawer_lines()
     return lines
 
@@ -313,11 +343,19 @@ def build(out: Path, guest: Path) -> list[str]:
 # (Dale, 17 November 2026, on the Pi 5: "system folder is missing icons for things like devs , storage , tools
 # ,wbstartup , utlities , system etc"). Each gets the Drawer kind's icon (the Soft 3D folder, his pick the same day)
 # where it has none; an OS 3.2.3 disk has its own and is left alone (when GFOpenKick), and so is an icon the user made.
-OPENKICK_DRAWERS = ("Devs", "Prefs", "Storage", "System", "Tools", "Utilities", "WBStartup")
+# Since 0.5 each is the folder with its own mark (Drawers/<name>.info), as the same drawer has on an OS 3.2.3 disk.
+OPENKICK_DRAWERS = {"Devs": "chip", "Prefs": "sliders", "Storage": "archive", "System": "gear", "Tools": "hammer",
+                    "Utilities": "wrench", "WBStartup": "rocketlaunch"}
 
 
 def openkick_drawer_lines() -> list[str]:
-    return [f'when GFOpenKick default "Kinds/Drawer.info" "SYS:{name}.info"' for name in OPENKICK_DRAWERS]
+    return [f'when GFOpenKick default "Drawers/{name}.info" "SYS:{name}.info"' for name in OPENKICK_DRAWERS]
+
+
+def openkick_drawer_files(out: Path) -> None:
+    (out / "Drawers").mkdir(parents=True, exist_ok=True)
+    for name, motif in OPENKICK_DRAWERS.items():
+        (out / "Drawers" / f"{name}.info").write_bytes(aos_icon("S3D:drawer:" + motif, "drawer"))
 
 
 # The AOS drawer style (Dale, 12 November 2026, 13:52 "go with those", 15:04 "those work"; tools/aos_icons_art.py):
@@ -367,8 +405,10 @@ def picture_frames(name: str, size: int):
             mod = soft3d_drives_art
         else:
             mod = soft3d_kinds_art
-            if kind not in mod.KINDS:
-                raise KeyError(name)
+            try:
+                mod.split(kind)                  # a kind, or drawer:<motif>
+            except KeyError:
+                raise KeyError(name) from None
         return [mod.frames(kind, size, c) for c in (False, True)]
     import aos_icons_art
     return aos_icons_art.frames(name, size)
@@ -410,6 +450,8 @@ def aos_icon(name: str, wbtype: str, old: bytes | None = None) -> bytes:
     if old:
         data = bytearray(data)
         data[58:66] = old[58:66]                # do_CurrentX, do_CurrentY: the icon's place
+        if was.get("drawer") and "drawer" in icon:
+            data[126:134] = old[126:134]        # dd_CurrentX, dd_CurrentY: where the window was scrolled to
         data = bytes(data)
     return data
 
@@ -420,7 +462,7 @@ def main(argv=None) -> int:
     ap.add_argument("--guest", type=Path, required=True, help="the amicradle-guest checkout (icons/openicons)")
     a = ap.parse_args(argv)
     lines = build(a.out, a.guest)
-    (a.out / "Part").write_text("part GFOpenIcons 0.4\n" + "\n".join(lines) + "\n")
+    (a.out / "Part").write_text("part GFOpenIcons 0.5\n" + "\n".join(lines) + "\n")
     print(f"{len(lines) - 1} faces in {a.out}")
     return 0
 
