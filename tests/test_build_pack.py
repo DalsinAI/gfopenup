@@ -549,9 +549,15 @@ def gfos_fonts_checks() -> None:
               == (src / "LICENSE-FONTS").read_bytes()
               and 'copy "Utilities/GFOpenUp/Licences/GFOSFonts.txt" "SYS:Utilities/GFOpenUp/Licences/GFOSFonts.txt"' in p.lines)
         inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
-        check("Install-GFOpenUp: GFOSFonts on every install, right after the Shell's font",
-              0 < inst.index("INSTALL Parts/ShellFont") < inst.index("INSTALL Parts/GFOSFonts")
+        check("Install-GFOpenUp: GFOSFonts on every install, and no ShellFont (Dale, 17 Nov 2026: DejaVu bitmaps out)",
+              "INSTALL Parts/GFOSFonts" in inst and "INSTALL Parts/ShellFont" not in inst
               and '(if (exists "Parts/GFOSFonts/Part")' in inst)
+        bsrc = (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")
+        check("build_pack: no ShellFont part made, no DejaVu Sans Mono bitmap added",
+              'Part(top, "ShellFont"' not in bsrc and '"ShellFont"' not in bsrc.split("PART_OWN_VERSION =")[1].split("}")[0]
+              and 'FONTS:DejaVuSansMono/' not in bsrc)
+        check("build_pack: the ROM fonts' DejaVu notice still ships, in GFOSFonts",
+              'gf.add("Utilities/GFOpenUp/Licences/DejaVuSansMono.txt", ROM_FONT_NOTICE' in bsrc)
         check("GFOSFonts: its own version, 1.0", p.lines[0] == "part GFOSFonts 1.0" and "GFOSFonts" in bp.PART_OWN_VERSION)
     with tempfile.TemporaryDirectory() as t:
         half = Path(t) / "gfosfonts"

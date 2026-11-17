@@ -84,10 +84,6 @@ a Part file that C/GFOpenUpTool reads:
                         Shift+Right Amiga+W the active window, as dated PNGs in SYS:Snapshots (through GFOpenImage's
                         openpng.datatype; IFF without it) and as an IFF ILBM on the clipboard; its keys are its
                         icon's tool types. Always installed (src/opensnap/)
-  ShellFont/            DejaVu Sans Mono as Amiga bitmap fonts, 8 to 24 pixels high, in FONTS:, with its
-                        licence, for Font prefs' System Default Text; always installed. The GFOpenKick ROM
-                        has the 11 and makes it the Shell's font itself; no Font prefs are written
-                        (gfopenfont's fonts/amiga; left out without --openamigafont)
   GFOSFonts/            GFOS Sans, GFOS Sans Bold and GFOS Mono, GFOS's own hand-drawn bitmap fonts, 11, 13 and 16
                         pixels, in FONTS: (GFOSSans.font, GFOSSansBold.font, GFOSMono.font), with their licence;
                         always installed. Built here from a gfosfonts checkout's grids (its tools/amigafont.py);
@@ -1460,13 +1456,13 @@ PART_MAIN = {
 # ahi.device (6.1.1), acaudio.audio and modes (AmiCradle machines only). GFOpenImage 0.4 adds
 # opentga.datatype (47.1). GFOpenService 1.3 is gfopenservice.device (1.1) with media-handler (1.0, MEDIA:),
 # mitchy.library (1.0) and ServiceTest (0.2); 1.4 is mitchy.device (2.0), with gfopenservice.device (2.0) its old name
-# opening it. ShellFont 1.0 is fonts, no program: DejaVu Sans Mono 2.37's bitmap sizes (gfopenfont
-# fonts/amiga). GFOSFonts 1.0 is fonts too: gfosfonts' grids, built by its tools/amigafont.py. ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so GFOpenUpTool UPDATE
+# opening it. (ShellFont, DejaVu Sans Mono's bitmap sizes, is no longer made: 17 Nov 2026.)
+# GFOSFonts 1.0 is fonts too: gfosfonts' grids, built by its tools/amigafont.py. ShellIcon 1.0 is one tool type line, no file. A part's own version goes up when what it ships changes, so GFOpenUpTool UPDATE
 # and the Installer's log name the change.
 # OpenAmigaPython's version is its release's (2.7.18-ac3, which the binary's $VER can't give in
 # binary_version's form): openamigapython_part checks it against the pin and the release's manifest.
 PART_OWN_VERSION = {"KickstartSet", "GFOpenLibs", "AmiCradleSharing", "GFOpenImage", "GFOpenService", "Backdrops", "GFOpenIcons", "GFOpenDemos", "GFOpenGPUDev",
-                    "GFOpenPrint", "Sound", "OpenAmigaPython", "ShellFont", "ShellIcon", "GFOSFonts",
+                    "GFOpenPrint", "Sound", "OpenAmigaPython", "ShellIcon", "GFOSFonts",
                     # pages of GFOpenPrefs with no files of their own since the no-ROM-volume design: GFOpenPrefs's version
                     "GFOpenTypes", "GFOpenDateTime"}
 
@@ -1725,6 +1721,9 @@ def check_openbrowser_pin(archive: Path) -> None:
 
 # DejaVu Sans for the GFOpenFont part: DejaVu fonts 2.37's DejaVuSans.ttf (Ubuntu's fonts-dejavu-core 2.37-8build1;
 # OpenBrowser's LIBS:WebBrowser/Fonts copy is the same file). A new DejaVu is a new pin here.
+# The notice line for the GFOpenKick ROM's fonts drawn from DejaVu Sans Mono, before DejaVu's licence (GFOSFonts part).
+ROM_FONT_NOTICE = (b"This licence also covers the GFOpenKick ROM's DejaVuSansMono.font 11 and its topaz.font 8 and 9, "
+                   b"which are drawn from DejaVu Sans Mono.\n\n")
 DEJAVU_SANS_SHA256 = "b4c632e3cdf9acc7f28758fb5a323c8524d7fc6660d46904d9b6cbe2809c419c"
 # DejaVu Serif for the GFOpenBlanker part (0.8.16): the same DejaVu fonts 2.37 package's DejaVuSerif.ttf.
 DEJAVU_SERIF_SHA256 = "a52c2a69dfc93d0b511b98c1019a57eb3d6a62d328bdf1387f00851b02e3a315"
@@ -2742,7 +2741,7 @@ def main() -> int:
     ap.add_argument("--openamigabench", type=Path, default=first(DEV / "gfopenbench", DEV.parent / "gfopenbench"),
                     help="gfopenbench checkout: GFOpenBench, the Team's own Workbench (desktop/build.sh)")
     ap.add_argument("--openamigafont", type=Path, default=first(DEV / "gfopenfont", DEV.parent / "gfopenfont"),
-                    help="gfopenfont checkout: the ShellFont part, DejaVu Sans Mono as Amiga bitmap fonts "
+                    help="gfopenfont checkout: "
                          "(its fonts/amiga; left out without it), and the GFOpenFont part's gfopenfont.library "
                          "(its build-amiga.sh's build/amiga/gfopenfont.library; left out without it)")
     ap.add_argument("--gfosfonts", type=Path, default=first(DEV / "gfosfonts", DEV.parent / "gfosfonts"),
@@ -3118,30 +3117,19 @@ def main() -> int:
     sn = opensnap_part(top, (ROOT / "build/os3/GFOpenSnap").read_bytes(), icons)
     sn.write()
 
-    # The Shell's font (24 October 2026), on every install: DejaVu Sans Mono as Amiga bitmap fonts, fixed width,
-    # 8 to 24 pixels high, made from the TrueType font by gfopenfont's tools/amigafont.py and kept in its
-    # fonts/amiga, with the Bitstream Vera licence they come under (its LICENSE-DejaVu.txt), for Font prefs'
-    # System Default Text. "add": a DejaVuSansMono.font of another program's stays. The GFOpenKick ROM has the 11
-    # and makes it the system default text where no Font prefs name one; GFOpenUp writes no Font prefs.
-    if a.openamigafont and (a.openamigafont / "fonts/amiga/DejaVuSansMono.font").is_file():
-        fa = a.openamigafont / "fonts/amiga"
-        sf = Part(top, "ShellFont", "1.0", "DejaVu Sans Mono 2.37, 8 to 24 pixels, for the Shell (Font prefs' System Default Text)")
-        sf.add("Fonts/DejaVuSansMono.font", (fa / "DejaVuSansMono.font").read_bytes(), "FONTS:DejaVuSansMono.font", own=True)
-        for f in sorted((fa / "DejaVuSansMono").iterdir(), key=lambda p: int(p.name)):
-            sf.add(f"Fonts/DejaVuSansMono/{f.name}", f.read_bytes(), f"FONTS:DejaVuSansMono/{f.name}", own=True)
-        # with one line first for the ROM's fonts drawn from DejaVu Sans Mono too: the system's copy of the notice
-        # (the ROM has no room for one; amicradle-guest and gfopengfx keep theirs beside the sources)
-        rom = (b"This licence also covers the GFOpenKick ROM's DejaVuSansMono.font 11 and its topaz.font 8 and 9, "
-               b"which are drawn from DejaVu Sans Mono.\n\n")
-        sf.add("Utilities/GFOpenUp/Licences/DejaVuSansMono.txt", rom + (fa / "LICENSE-DejaVu.txt").read_bytes(),
-               "SYS:Utilities/GFOpenUp/Licences/DejaVuSansMono.txt")
-        sf.write()
-    else:
-        print("  ShellFont: left out (no --openamigafont checkout with fonts/amiga)")
+    # The Shell's font (24 October 2026 to 17 November 2026): the ShellFont part, DejaVu Sans Mono as Amiga bitmap fonts,
+    # is no longer made (Dale, 17 November 2026: "remove thoe dejavu fonts", the DejaVu bitmap fonts out, the outline
+    # kept). GFOS Mono (GFOSFonts) is the fixed-width bitmap font in FONTS:.
 
     # GFOS's own fonts, on every install (gfos_fonts_part); no Font prefs are written here
     gf = gfos_fonts_part(top, a.gfosfonts) if a.gfosfonts else None
     if gf:
+        # the ROM's DejaVuSansMono.font 11 and topaz 8 and 9 are still drawn from DejaVu Sans Mono: their notice, which
+        # the ShellFont part carried, goes with GFOS's fonts now (the ROM has no room for one)
+        lic = a.openamigafont / "fonts/amiga/LICENSE-DejaVu.txt" if a.openamigafont else None
+        if lic and lic.is_file():
+            gf.add("Utilities/GFOpenUp/Licences/DejaVuSansMono.txt", ROM_FONT_NOTICE + lic.read_bytes(),
+                   "SYS:Utilities/GFOpenUp/Licences/DejaVuSansMono.txt")
         gf.write()
 
     # The Shell icon (24 October 2026, the Team's decision): OS 3.2.3's SYS:System/Shell.info opens its window
