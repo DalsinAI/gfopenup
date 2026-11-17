@@ -160,7 +160,7 @@
 static int slim_rom(void);
 static int kickset(const char *a1, const char *a2);
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.22 (17.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.23 (17.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -804,11 +804,33 @@ static int media_drive(void)
     return there;
 }
 
+/* 0.8.23: a volume named Work is mounted (the standard build's DH1:, which is for applications; Dale 17 Nov 2026:
+ * "on the work volume of all appliances and instances we should include all our open apps"). From the DOS list
+ * too: no requester. */
+static int work_drive(void)
+{
+    struct DosList *dl = LockDosList(LDF_VOLUMES | LDF_READ);
+    int there = FindDosEntry(dl, (STRPTR)"Work", LDF_VOLUMES) != NULL;
+    UnLockDosList(LDF_VOLUMES | LDF_READ);
+    return there;
+}
+
+/* 0.8.23: a volume named Emulation is mounted (the standard build's DH5:; Dale 17 Nov 2026: "make sure our own
+ * emulaton applications are in emulation"). From the DOS list too: no requester. */
+static int emulation_drive(void)
+{
+    struct DosList *dl = LockDosList(LDF_VOLUMES | LDF_READ);
+    int there = FindDosEntry(dl, (STRPTR)"Emulation", LDF_VOLUMES) != NULL;
+    UnLockDosList(LDF_VOLUMES | LDF_READ);
+    return there;
+}
+
 /* The OUL_ bits a Part file's conditions ask about (src/openup_lines.h) */
 static unsigned machine_bits(void)
 {
     return (is_amicradle() ? OUL_AMICRADLE : 0) | (prefs_task_rom() ? OUL_OPENKICK : 0)
-         | (demos_drive() ? OUL_DEMOSDRIVE : 0) | (media_drive() ? OUL_MEDIADRIVE : 0);
+         | (demos_drive() ? OUL_DEMOSDRIVE : 0) | (media_drive() ? OUL_MEDIADRIVE : 0)
+         | (work_drive() ? OUL_WORKDRIVE : 0) | (emulation_drive() ? OUL_EMULATIONDRIVE : 0);
 }
 
 static void set_env(const char *name, const char *value)

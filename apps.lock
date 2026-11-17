@@ -1,0 +1,27 @@
+# GFOpenApps' apps.lock: our applications that have a release of their own, which the GFOpenApps pack puts on Work:
+# (Dale, 17 Nov 2026: "on the work volume of all appliances and instances we should include all our open apps",
+# and of KiCad's 260 MB: "Yes, everything"). A line each: the repository, its release, the release's file, the
+# drawer on Work:, the mark on the drawer's Soft 3D folder (tools/soft3d_motifs.py), then what it is.
+# python3 tools/apps_pack.py fetch, then build; moving an app forward is a one-line change here.
+# Copyright (c) 2026 AmiCradle Team. MIT licence.
+gfopenbrowser        v0.9.0-rc2                  GFOpenBrowser-0.9.0-RC2.lha            GFOpenBrowser   globe     # the web browser
+gfoffice             gfoffice-2.0.25-rc91        GFOffice-2.0.25-rc91-AmigaOS3.lha      GFOffice        pages     # the GFOffice Suite
+GFOpenMakerSuite     openmake-libs-v0.1.0-pre1   OpenMake-libs-0.1.0-pre1.lha           GFOpenMakerSuite cube     # the maker suite, as far as it has got: its OpenMake libraries
+gfopenputty          v0.2                        OpenPuTTY-0.2.lha                      GFOpenPuTTY     terminal  # SSH and Telnet
+gfopendraw           gfopendraw-0.2.0-rc2        GFOpenDraw-0.2.0-rc2-AmigaOS3.zip      GFOpenDraw      layers    # drawing
+gfopenasm            v1.1.0                      gfopenasm-1.1.0-amigaos-m68k.lha       GFOpenAsm       code      # the assembler
+amigaclisp           v0.1-rc3                    AmigaCLISP-0.1-rc3.lha                 AmigaCLISP      code      # Common Lisp
+gfamigaamule         v3.0.0-amiga.2              aMule-3.0.0-amiga.2.lha                aMule           swap      # file sharing
+gfamigafilezilla     v0.1.0-rc2                  FileZilla-0.1.0-rc2.lha                FileZilla       swap      # FTP and SFTP
+gfamiga4pane         v0.1.0-rc4                  4Pane-8.0.lha                          4Pane           dock      # the file manager
+gfamigacodeblocks    v0.1.0-rc1                  GFAmigaCodeBlocks-0.1.0-RC1.lha        CodeBlocks      code      # the programming environment
+gfamigafreefilesync  v0.1.0-rc1                  GFAmigaFreeFileSync-0.1.0-RC1.lha      FreeFileSync    swap      # folder compare and sync
+gfamigawxmaxima      v0.1.0                      wxMaxima-26.10.0.lha                   wxMaxima        scroll    # computer algebra
+gfamigardp           v0.1.0-rc3                  GFAmigaRDP-0.1.0-rc3-m68040.tar.gz     GFAmigaRDP      monitor   # remote desktop
+gfamigaaudacity      v0.1.0-rc2                  GFAmigaAudacity-0.1.0-RC2.lha          Audacity        waveform  # the sound editor
+gfamigawxhexeditor   v0.1.0-rc3                  GFAmigaWxHexEditor-0.1.0-RC3.lha       wxHexEditor     chip      # the hex editor
+gfamigagolly         v5.0-amiga-rc2              Golly-5.0.lha                          Golly           pattern   # the Game of Life and other automata
+gfamigaopencpn       v5.14.2-amiga.2             OpenCPN-5.14.2.lha                     OpenCPN         flag      # the chart plotter
+gfamigakicad         v0.1.0-rc5                  GFAmigaKiCad-0.1.0-RC5.lha             KiCad           chip      # circuit board design
+# Our emulators go on the Emulation drive (Dale, 17 Nov 2026: "make sure our own emulaton applications are in emulation").
+amigadosbox          v0.82.2-amigaos3-rc1        dosbox-0.82.2-amigaos3-rc1-68040.lha   Emulation:DOSBox joystick # the DOS emulator
