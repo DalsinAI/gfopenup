@@ -51,8 +51,8 @@ check("the boot drive and RAM disk by device are Soft 3D", part.AOS_DEVICES == {
 check("the five Kinds are Soft 3D, each with its Workbench type",
       set(part.AOS_KINDS) == set(part.KINDS) == set(part.KIND_TYPES)
       and all(v.startswith("S3D:") and v[4:] in d3.KINDS + k3.KINDS for v in part.AOS_KINDS.values()))
-check("the dock's faces and the Work:/Games: volumes keep their AOS pictures",
-      part.AOS_FACES["SYS:System/Shell"] in art.PICTURES and all(v in art.PICTURES for v in part.AOS_VOLUMES.values())
+check("the dock's faces and the Work: volume keep their AOS pictures",
+      part.AOS_FACES["SYS:System/Shell"] in art.PICTURES and part.AOS_VOLUMES["Work:Disk"] in art.PICTURES
       and all(v in art.PICTURES for v in part.AOS_BY_NAME.values()))
 fr = part.picture_frames("S3D:usb", 64)
 check("picture_frames gives S3D:<kind> at rest and chosen, 64 x 64", [f.size for f in fr] == [(64, 64)] * 2
@@ -62,6 +62,30 @@ try:
     check("an unknown S3D kind is refused", False)
 except KeyError:
     check("an unknown S3D kind is refused", True)
+# the Games: volume: a Soft 3D hard disk with a game pad on it, its own picture, not a kind of drive
+import soft3d_drives_art as s3d
+check("Games: takes the Soft 3D picture", part.AOS_VOLUMES.get("Games:Disk") == "S3D:games", str(part.AOS_VOLUMES))
+check("games is a volume's picture, not a kind of drive", "games" in s3d.DRAW and "games" not in s3d.KINDS
+      and "games" not in kinds.values())
+grest, gchosen = part.picture_frames("S3D:games", 64)
+hrest = part.picture_frames("S3D:harddisk", 64)[0]
+srest = part.picture_frames("S3D:system", 64)[0]
+ga, ha = np.array(grest), np.array(hrest)
+check("S3D:games: 64 x 64, at rest and chosen differ, not the hard disk's nor the system's picture",
+      grest.size == gchosen.size == (64, 64) and not np.array_equal(ga, np.array(gchosen))
+      and not np.array_equal(ga, ha) and not np.array_equal(ga, np.array(srest)))
+check("S3D:games: the hard disk's outline (the same body), so it stands as the other drives do",
+      np.array_equal(ga[..., 3] > 0, ha[..., 3] > 0))
+from PIL import Image
+check("the boot drive's logo is AmiCradle's own (the ball and the A), kept with the tool", s3d.LOGO.is_file())
+check("the logo keeps its shape and sits centred", s3d.logo_box(988, 669, 256, 250, 310) == (101, 145, 310, 210),
+      str(s3d.logo_box(988, 669, 256, 250, 310)))
+flat = s3d.draw_system(s3d.Flat(512), False) and None
+f512 = s3d.Flat(512); s3d.draw_system(f512, False)
+px = np.array(f512.img)[145:355, 101:411, :3].astype(int)
+red = ((px[..., 0] > 170) & (px[..., 1] < 90) & (px[..., 2] < 90)).sum()
+blue = ((px[..., 2] > 180) & (px[..., 0] < 60)).sum()
+check("the boot drive carries the ball's red squares and no Deep cradle arc", red > 2000 and blue == 0, f"red {red}, blue {blue}")
 check("each def_drive_<kind>.info fits an FFS name (30)", all(len(f"def_drive_{k}.info") <= 30 for k in kinds))
 with tempfile.TemporaryDirectory() as d:
     out = os.path.join(d, "s.png")

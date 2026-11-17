@@ -466,6 +466,74 @@ def gfos_fonts_checks() -> None:
               bp.gfos_fonts_part(Path(t), half) is None and not (Path(t) / "Parts/GFOSFonts").exists())
 
 
+def released_parts_checks() -> None:
+    """The parts their own repositories release (17 November 2026, docs/design/PARTS-ON-MERGE.md section 3):
+    parts.lock names them, released_parts copies each as fetch_parts.py unpacked it, and stops on one that isn't
+    the locked release or isn't whole."""
+    import json
+    lock_rows = bp.read_parts_lock(ROOT / "parts.lock")
+    check("parts.lock: acgame, gfopensynth and gfopenallegro, each at a release of its own",
+          [r for r, _ in lock_rows] == ["acgame", "gfopensynth", "gfopenallegro"] and all(v.startswith("v") for _, v in lock_rows))
+    inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+    check("Install-GFOpenUp: ACGame before Allegro4 (which needs it), GFOpenSynth too, each only where the pack has it",
+          0 < inst.index("INSTALL Parts/ACGame") < inst.index("INSTALL Parts/Allegro4")
+          and all(f'(if (exists "Parts/{n}/Part")' in inst for n in ("ACGame", "GFOpenSynth", "Allegro4")))
+
+    def repo(dev: Path, name: str, part: str, version: str, lib: str, extra: str = "", commit: str = "c" * 40) -> Path:
+        d = dev / name / "build/part/Parts" / part
+        (d / "Libs").mkdir(parents=True)
+        (d / "Libs" / lib).write_bytes(b"\0\0$VER: " + lib.encode() + b" " + version.encode() + b" (17.11.2026)\0")
+        (d / "Part").write_text(f'part {part} {version}\n; test\nneeds 68040\n{extra}add "Libs/{lib}" "LIBS:{lib}"\n')
+        (dev / name / "PART.json").write_text(json.dumps({"repo": name, "commit": commit, "parts": [
+            {"name": part, "version": version, "main": f"Libs/{lib}"}]}))
+        return d
+
+    def stops(dev: Path, lock: Path, must: bool = False) -> str:
+        top = dev / "top"
+        shutil.rmtree(top, ignore_errors=True)
+        (top / "Parts").mkdir(parents=True)
+        bp.RELEASED.clear()
+        try:
+            bp.released_parts(top, dev, lock, must=must)
+        except SystemExit as e:
+            return str(e)
+        return ""
+
+    with tempfile.TemporaryDirectory() as t:
+        dev = Path(t)
+        lock = dev / "parts.lock"
+        lock.write_text("# a note\nacgame v1.3-rc2  # the game layer\nDalsinAI/gfopenallegro v1.1\n")
+        check("parts.lock: notes are skipped, an owner in front is fine",
+              bp.read_parts_lock(lock) == [("acgame", "v1.3-rc2"), ("gfopenallegro", "v1.1")])
+        check("released parts: none unpacked, none taken, the build goes on", stops(dev, lock) == "" and not bp.RELEASED)
+        check("released parts: --assemble-only stops at a locked part that isn't unpacked, and names fetch_parts.py",
+              "acgame v1.3-rc2 isn't unpacked" in stops(dev, lock, must=True) and "fetch_parts.py" in stops(dev, lock, must=True))
+        repo(dev, "acgame", "ACGame", "1.3", "acgame.library")
+        al = repo(dev, "gfopenallegro", "Allegro4", "1.1", "allegro4.library", extra="needs part ACGame\n")
+        check("released parts: both taken as they are", stops(dev, lock, must=True) == ""
+              and bp.RELEASED == {"ACGame": "1.3", "Allegro4": "1.1"}
+              and (dev / "top/Parts/Allegro4/Part").read_text() == (al / "Part").read_text()
+              and (dev / "top/Parts/ACGame/Libs/acgame.library").is_file())
+        bp.check_part_versions(dev / "top/Parts")
+        check("released parts: check_part_versions lets them be (released_parts checked the library's version)", True)
+        (al / "Libs/extra").write_bytes(b"x")
+        check("released parts: a file the Part doesn't name stops the build", "lines and its files differ" in stops(dev, lock))
+        (al / "Libs/extra").unlink()
+        lock.write_text("acgame v1.3-rc2\ngfopenallegro v1.2-rc1\n")
+        check("released parts: a part at another version than parts.lock's stops the build",
+              "Allegro4 is 1.1, parts.lock takes v1.2-rc1" in stops(dev, lock))
+        lock.write_text("acgame v1.3-rc2\ngfopenallegro v1.1\n")
+        (al / "Libs/allegro4.library").write_bytes(b"$VER: allegro4.library 1.0 (1.1.2026)\0")
+        check("released parts: a library that says another version than its part stops the build",
+              "the part says 1.1, Libs/allegro4.library says 1.0" in stops(dev, lock))
+        lock.write_text("acgame latest\n")
+        try:
+            bp.read_parts_lock(lock)
+            check("parts.lock: only releases, never latest or a commit", False)
+        except SystemExit:
+            check("parts.lock: only releases, never latest or a commit", True)
+
+
 def kickstartset_checks(tmp: Path) -> None:
     """The slim ROM's disk part (9 November 2026): Parts/KickstartSet from a thin build's thin-support/: the set's
     modules copied, its Manifest last, the files on demand added (a disk's own stays), the ROM's version; a module
@@ -1116,6 +1184,51 @@ def main() -> int:
         check("each file as built", all((core.dir / "OpenKick" / out).read_bytes() == f"{n} body".encode()
                                          for n, (_, out, _) in bp.OPENKICK_DISK.items()))
 
+        # gfopenextmem.library (the Pi 5, 17 November 2026: the AA+ 3 GB machine's title and meter counted 2 GB, the
+        # library not on its disk): on the open ROM where none is; under OS 3.2.3's ROM nothing
+        built = tmp / "openextmem"
+        built.mkdir()
+        core = bp.Part(top, "GFOpenUp", "0.9", "test")
+        try:
+            bp.openkick_extmem_lines(core, built)
+            check("gfopenextmem.library not built: the build stops", False)
+        except SystemExit as e:
+            check("gfopenextmem.library not built: the build stops", "wasn't built" in str(e), str(e))
+        (built / "gfopenextmem.library").write_bytes(b"no id string")
+        try:
+            bp.openkick_extmem_lines(core, built)
+            check("gfopenextmem.library with no version: the build stops", False)
+        except SystemExit as e:
+            check("gfopenextmem.library with no version: the build stops", "version" in str(e), str(e))
+        body = b"\0gfopenextmem.library 2.1 (12.11.2026) GFOpenExtMem\r\n\0"
+        (built / "gfopenextmem.library").write_bytes(body)
+        core = bp.Part(top, "GFOpenUp", "0.9", "test")
+        bp.openkick_extmem_lines(core, built)
+        core.write()
+        for machine in ("openkick101-ac", "openkick101"):
+            eff = lines_on(core.dir / "Part", machine, filt)
+            check(f"{machine}: gfopenextmem.library where none is",
+                  eff[2:] == ['default "OpenKick/libs/gfopenextmem.library" "LIBS:gfopenextmem.library"'], str(eff))
+        eff = lines_on(core.dir / "Part", "os323", filt)
+        check("os323: no gfopenextmem.library line", eff[2:] == [], str(eff))
+        check("gfopenextmem.library as built", (core.dir / "OpenKick/libs/gfopenextmem.library").read_bytes() == body)
+
+        # The system's drawers with no icon on a GFOpenKick disk (the Pi 5, 17 November 2026: two icons of ten in the
+        # System window): the Drawer kind's icon, each where none is; under OS 3.2.3's ROM nothing (its disk has them)
+        import openicons_part as oip
+        dl = oip.openkick_drawer_lines()
+        check("a drawer icon for Devs, Prefs, Storage, System, Tools, Utilities and WBStartup",
+              dl == [f'when GFOpenKick default "Kinds/Drawer.info" "SYS:{n}.info"'
+                     for n in ("Devs", "Prefs", "Storage", "System", "Tools", "Utilities", "WBStartup")], str(dl))
+        check("the Drawer kind is the Soft 3D folder, a drawer icon", oip.AOS_KINDS["Drawer"] == "S3D:drawer"
+              and oip.KIND_TYPES["Drawer"] == "drawer")
+        pf = tmp / "IconsPart"
+        pf.write_text("part GFOpenIcons 0.4\n; test\n" + "\n".join(dl) + "\n")
+        eff = lines_on(pf, "openkick101", filt)
+        check("openkick101: each drawer's icon where none is",
+              eff[2:] == [l[len("when GFOpenKick "):] for l in dl], str(eff))
+        check("os323: no drawer icon lines", lines_on(pf, "os323", filt)[2:] == [], str(lines_on(pf, "os323", filt)))
+
         # GFOS had no SYS:Classes/arexx.class, so no program's ARexx port opened (Team 5, 10 November 2026): ours
         # (GFOpenReaction) on the open ROM where none is, with its licence; under OS 3.2.3's ROM nothing (ReAction's)
         built = tmp / "openkickclasses"
@@ -1147,7 +1260,8 @@ def main() -> int:
         (ogt / "tools/make_art_backdrops.py").write_text(
             "from PIL import Image\nSIZES = [(640, 480), (1920, 1200)]\n"
             "ART = [('Prismatic-light', 'light'), ('Nebula-dark', 'dark')]\n", encoding="utf-8")
-        own = ["Clear-light-chrome-logo-1920x1080.png", "Open-dark-1920x1200.png", "Open-light-strip-1080.png"]
+        own = ["Clear-light-chrome-logo-1920x1080.png", "Open-dark-1920x1200.png", "Open-light-strip-1080.png",
+               "Swish-Glass-Light-1920x1080.png"]
         art = [f"AmiCradle-{d}-{size}.png" for d in ("Prismatic-light", "Nebula-dark") for size in ("640x480", "1920x1200")]
         for n in own + art:
             (bdir / n).write_bytes(n.encode())
@@ -1157,7 +1271,15 @@ def main() -> int:
         bd = bp.backdrops_part(top, bdir, ogt, tone=fake_tone)
         bd.write()
         lines = (bd.dir / "Part").read_text(encoding="latin-1").splitlines()
-        check("the Backdrops part is 0.3 (the Ethereal backdrops are new)", lines[0] == "part Backdrops 0.3", lines[0])
+        check("the Backdrops part is 0.4 (the Swish backdrops are new)", lines[0] == "part Backdrops 0.4", lines[0])
+        inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("Install-GFOpenUp: Glass Light is the first backdrop offered, so a new install's default",
+              inst.count('"Glass Light" "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic"') == 2
+              and '(if (= #theme0 "") (set #pick 0))' in inst and '(if (= #theme0 "Glass Light") (set #pick 0))' in inst)
+        check("Install-GFOpenUp: Glass Light's backdrop is Swish-Glass-Light, on AmiCradle too (set after the chrome line)",
+              0 < inst.find('(if #ac (set #back (cat #theme "-light-chrome")))')
+              < inst.find('(if (= #theme "Glass Light") (set #back "Swish-Glass-Light"))')
+              < inst.find('(if (= #theme "Classic") (set #back ""))'))
         want = []
         for n in own:
             want += [f'copy "Backdrops/{n}" "SYS:Prefs/Presets/Backdrops/GFOpenUp/{n}"',
@@ -1399,6 +1521,7 @@ def main() -> int:
 
     amisans_checks()
     gfos_fonts_checks()
+    released_parts_checks()
     openprinter_checks()
     with tempfile.TemporaryDirectory() as ktmp:
         kickstartset_checks(Path(ktmp))

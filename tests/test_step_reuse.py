@@ -120,8 +120,81 @@ def main() -> int:
                   "a checkout at another commit than the freeze list's stops the cut, and only it is named")
         c.commits(dev / "out/commits.tsv")
         check(f"gfopenpartlib\t{head}" in (dev / "out/commits.tsv").read_text(), "the cut's commits are written")
+    prebuilt_checks()
+    fetch_checks()
     print("all passed" if not FAILS else f"{len(FAILS)} failed")
     return 1 if FAILS else 0
+
+
+def prebuilt_checks():
+    """--prebuilt: a part fetched at its checkout's commit isn't built; --assemble-only: nothing else is either."""
+    with tempfile.TemporaryDirectory() as t:
+        dev = Path(t)
+        a = make_repo(dev / "gfopena", {"build.sh": "exit 1\n"})
+        b = make_repo(dev / "gfopenb", {"build.sh": "true\n"})
+        ha = subprocess.run(["git", "-C", str(a), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+        ran = []
+
+        def runner(cmd, cwd=None, env=None):
+            ran.append(Path(str(cmd[1])).parent.name)
+
+        c = step_reuse.StepCache(dev / "steps", {"gfopena": a, "gfopenb": b}, prebuilt={"gfopena": ha[:12]},
+                                 no_compile=True)
+        c.run(runner, ["sh", a / "build.sh"], env=dict(os.environ))
+        c.run(runner, ["sh", b / "build.sh"], env=dict(os.environ))
+        check(ran == [] and c.rows[0][1] == "prebuilt", "a prebuilt part at its checkout's commit isn't built")
+        check(len(c.missing) == 1 and "gfopenb" in c.missing[0], "--assemble-only names the step with no built part")
+        c2 = step_reuse.StepCache(dev / "steps", {"gfopena": a}, prebuilt={"gfopena": "0" * 12})
+        c2.run(runner, ["sh", a / "build.sh"], env=dict(os.environ))
+        check(ran == ["gfopena"], "a part built at another commit than the checkout's is built here")
+
+
+def fetch_checks():
+    """fetch_parts.py: the asset for a commit, latest or a part's own RC; the checkout must be at its commit."""
+    import io
+    import json
+    import tarfile
+    import fetch_parts as fp
+    with tempfile.TemporaryDirectory() as t:
+        dev = Path(t)
+        r = make_repo(dev / "gfopenx", {"a.c": "x\n"})
+        h = subprocess.run(["git", "-C", str(r), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+
+        def tarball(commit, repo="gfopenx", extra=None):
+            bio = io.BytesIO()
+            with tarfile.open(fileobj=bio, mode="w:gz") as tf:
+                for name, data in [("PART.json", json.dumps({"repo": repo, "commit": commit}).encode()),
+                                   ("build/os3/X", b"built")] + (extra or []):
+                    ti = tarfile.TarInfo(name)
+                    ti.size = len(data)
+                    tf.addfile(ti, io.BytesIO(data))
+            return bio.getvalue()
+
+        store = {"https://api.github.com/repos/DalsinAI/gfopenx/releases/tags/parts":
+                 json.dumps({"assets": [{"name": f"gfopenx-{h[:12]}.tar.gz", "url": "T1"},
+                                        {"name": "gfopenx-000000000000.tar.gz", "url": "T0"},
+                                        {"name": "latest.json", "url": "L"}]}).encode(),
+                 "https://api.github.com/repos/DalsinAI/gfopenx/releases/tags/v1.0-rc1":
+                 json.dumps({"assets": [{"name": "gfopenx-1.0-rc1.tar.gz", "url": "T1"}]}).encode(),
+                 "L": json.dumps({"commit": h}).encode(), "T1": tarball(h), "T0": tarball("0" * 40)}
+
+        def get(url, token, raw=False):
+            return store[url]
+
+        for ref in ("latest", h, "v1.0-rc1"):
+            (r / "build/os3/X").unlink(missing_ok=True)
+            got = fp.fetch("gfopenx", ref, r, None, False, get=get)
+            check(got == h and (r / "build/os3/X").read_bytes() == b"built", f"fetch_parts takes {ref[:12]}")
+        try:
+            fp.fetch("gfopenx", "000000000000", r, None, False, get=get)
+            check(False, "a part built at another commit than the checkout's isn't taken")
+        except SystemExit:
+            check(True, "a part built at another commit than the checkout's isn't taken")
+        try:
+            fp.unpack(tarball(h, extra=[("../evil", b"x")]), "gfopenx", r)
+            check(False, "a tarball with a path outside the checkout isn't unpacked")
+        except SystemExit:
+            check(True, "a tarball with a path outside the checkout isn't unpacked")
 
 
 if __name__ == "__main__":

@@ -37,7 +37,6 @@ LABELS = {"system": "Boot", "harddisk": "Hard disk", "nvme": "NVMe", "ide": "IDE
           "cd": "CD/DVD", "floppy": "Floppy", "ram": "RAM disk", "network": "Network"}
 GLOW = (74, 163, 255)                   # #4aa3ff, the chosen glow
 EDGE = (22, 26, 36)                     # the thin dark edge
-LOGO_ARC, LOGO_DOT = (11, 94, 215), (255, 122, 26)     # the Deep cradle mark: arc #0b5ed7, dot #ff7a1a (Dale 12:41)
 
 # the chipset set: one 16-colour palette for every drive (transparent, then these 15): a grey ramp of five for the
 # bodies, the edge and the light, and the accents, two shades where a drive's light runs across one
@@ -113,17 +112,23 @@ def dark(c, k):
     return tuple(int(v * (1 - k)) for v in c)
 
 
-def cradle_mark(f, cx, cy, r, small):
-    """the Deep cradle mark (logo concept 3, refinement 4): a deep arc, open about 124 degrees at the top, holding
-    a dot"""
-    w = 26 if small else 22
-    m = Image.new("L", (f.S, f.S), 0)
-    d = ImageDraw.Draw(m)
-    b = f.box([cx - r, cy - r, cx + r, cy + r])
-    d.arc(b, -28, 208, fill=255, width=max(2, int(f.k(w))))
-    f.fill(LOGO_ARC, m)
-    dr = r * 0.36
-    f.ell([cx - dr, cy - dr + r * 0.12, cx + dr, cy + dr + r * 0.12], LOGO_DOT, light(LOGO_DOT, 0.35))
+LOGO = Path(__file__).resolve().parent / "art" / "amicradle-logo.png"      # AmiCradle's logo: the ball and the A
+
+
+def logo_box(w, h, cx, cy, across):
+    """where a w x h picture sits when it is `across` wide and centred on (cx, cy): (left, top, width, height)"""
+    high = max(1, round(across * h / w))
+    return round(cx - across / 2), round(cy - high / 2), round(across), high
+
+
+def logo_mark(f, cx, cy, across):
+    """AmiCradle's logo (the ball and the A), cut to its own edges, `across` wide on the 512 square, centred"""
+    im = Image.open(LOGO).convert("RGBA")
+    im = im.crop(im.getchannel("A").getbbox())
+    x, y, w, h = logo_box(im.width, im.height, f.k(cx), f.k(cy), f.k(across))
+    layer = Image.new("RGBA", (f.S, f.S))
+    layer.paste(im.resize((w, h), Image.LANCZOS), (x, y))
+    f.img = Image.alpha_composite(f.img, layer)
 
 
 # ---- the nine drives, flat. small: the 32 px drawing (fewer, bigger features). Returns (Flat, thickness) --
@@ -138,7 +143,7 @@ def hd_body(f, col=(196, 202, 212), small=False):
 
 def draw_system(f, small):
     hd_body(f, small=small)
-    cradle_mark(f, 256, 240, 140 if small else 120, small)
+    logo_mark(f, 256, 250, 340 if small else 310)
     return 70
 
 
@@ -153,6 +158,29 @@ def draw_harddisk(f, small):
         f.ell([236, 340, 276, 380], dark(col, 0.35))
     else:
         f.ell([176, 290, 336, 450], dark(col, 0.2), light(col, 0.15))
+    return 70
+
+
+def draw_games(f, small):
+    """the Games: volume (Dale, 17 November 2026, of its AOS-style picture beside the Soft 3D drives: "games drive
+    icon ?"): the hard disk's body with a game pad on it"""
+    hd_body(f, small=small)
+    pad = (52, 58, 72)
+    f.ell([92, 200, 222, 360], pad, light(pad, 0.12))                       # the grips
+    f.ell([290, 200, 420, 360], pad, light(pad, 0.12))
+    f.rr([112, 160, 400, 300], 62, pad, light(pad, 0.28))                   # the pad's body
+    white = (240, 243, 248)
+    f.rr([146, 220, 226, 248], 7, white)                                    # the d-pad
+    f.rr([172, 194, 200, 274], 7, white)
+    if small:
+        f.ell([300, 228, 340, 268], (74, 163, 255))
+        f.ell([344, 196, 384, 236], (255, 122, 26))
+    else:
+        for (x, y), col in (((338, 202), (255, 122, 26)), ((368, 232), (224, 72, 60)), ((308, 232), (74, 163, 255)),
+                            ((338, 262), (90, 200, 120))):
+            f.ell([x - 14, y - 14, x + 14, y + 14], col, light(col, 0.3))
+        f.ell([196, 330, 316, 450], dark((196, 202, 212), 0.12), light((196, 202, 212), 0.25))   # the spindle's dome
+        f.ell([236, 370, 276, 410], dark((196, 202, 212), 0.35))
     return 70
 
 
@@ -284,7 +312,8 @@ def draw_network(f, small):
 
 
 DRAW = {"system": draw_system, "harddisk": draw_harddisk, "nvme": draw_nvme, "ide": draw_ide, "usb": draw_usb,
-        "cd": draw_cd, "floppy": draw_floppy, "ram": draw_ram, "network": draw_network}
+        "cd": draw_cd, "floppy": draw_floppy, "ram": draw_ram, "network": draw_network,
+        "games": draw_games}            # a volume's picture, not a kind of drive: not in KINDS
 
 
 # ---- tilt, thickness, light, edge, shadow ------------------------------------------------------------

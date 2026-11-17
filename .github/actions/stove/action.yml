@@ -1,0 +1,67 @@
+# Copyright (c) 2026 AmiCradle Team. MIT licence.
+# The os32-gcc16 stove on a GitHub-hosted runner, so a part builds on every merge without the Team's machines
+# (docs/design/PARTS-ON-MERGE.md). GFOpenAmigaGCC's binary and source releases (gfopengcc, public, checked by
+# their SHA256SUMS) and the AmigaOS 3.2 NDK from Aminet (checked by its sha256), put in place by gfopengcc's own
+# scripts/install-ndk.sh, in the layout every part's build script reads: $STOVE/prefix/bin/m68k-amigaos-gcc.
+# The NDK isn't free software: it is fetched here and kept only in this repository's Actions cache, never in an
+# artifact, a release or an image.
+#
+#   - uses: DalsinAI/gfopenup/.github/actions/stove@main
+#     id: stove
+#   - run: sh build.sh build/os3          # OS32_GCC16 and STOVE are set
+name: os32-gcc16 stove
+description: GFOpenAmigaGCC and the AmigaOS 3.2 NDK, as the os32-gcc16 stove
+inputs:
+  gcc:
+    description: GFOpenAmigaGCC release (gfopengcc tag without the v)
+    default: 16.2.0-open8
+  ndk-sha256:
+    description: NDK3.2.lha's sha256 (gfopengcc scripts/ndk.lock)
+    default: 96cabd4ad683dced632e147bf86dee0f50dcb1254386216c25c362916a6409bb
+outputs:
+  stove:
+    description: the stove folder (its prefix/bin has m68k-amigaos-gcc)
+    value: ${{ steps.where.outputs.stove }}
+runs:
+  using: composite
+  steps:
+    - id: where
+      shell: bash
+      run: echo "stove=$RUNNER_TOOL_CACHE/stoves/os32-gcc16-${{ inputs.gcc }}" >> "$GITHUB_OUTPUT"
+    - id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.where.outputs.stove }}
+        key: stove-os32-gcc16-${{ inputs.gcc }}-ndk-${{ inputs.ndk-sha256 }}-v1
+    - if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        V: ${{ inputs.gcc }}
+        NDK_SHA: ${{ inputs.ndk-sha256 }}
+        STOVE: ${{ steps.where.outputs.stove }}
+      run: |
+        set -euo pipefail
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq --no-install-recommends lhasa rsync build-essential python3 >/dev/null
+        T=$(mktemp -d); cd "$T"
+        base=https://github.com/DalsinAI/gfopengcc/releases/download/v$V
+        for f in SHA256SUMS gfopenamigagcc-$V-x86_64-linux.tar.xz gfopenamigagcc-$V-src.tar.xz; do
+          curl -fsSL --retry 3 -o "$f" "$base/$f"
+        done
+        sha256sum -c SHA256SUMS
+        curl -fsSL --retry 3 -o NDK3.2.lha https://aminet.net/dev/misc/NDK3.2.lha
+        echo "$NDK_SHA  NDK3.2.lha" | sha256sum -c -
+        tar -xJf gfopenamigagcc-$V-x86_64-linux.tar.xz
+        tar -xJf gfopenamigagcc-$V-src.tar.xz
+        mkdir -p "$STOVE"
+        mv gfopenamigagcc-$V-x86_64-linux "$STOVE/prefix"
+        bash gfopenamigagcc-$V-src/gfopengcc/scripts/install-ndk.sh gfopenamigagcc-$V-src/amiga-gcc "$STOVE/prefix" NDK3.2.lha
+        test -f "$STOVE/prefix/m68k-amigaos/ndk-include/exec/types.h"
+        cd / && rm -rf "$T"
+    - shell: bash
+      env:
+        STOVE: ${{ steps.where.outputs.stove }}
+      run: |
+        "$STOVE/prefix/bin/m68k-amigaos-gcc" --version | head -1
+        echo "OS32_GCC16=$STOVE" >> "$GITHUB_ENV"
+        echo "STOVE=$STOVE" >> "$GITHUB_ENV"

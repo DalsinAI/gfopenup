@@ -210,6 +210,11 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenMulticore/        gfopenmulticore.library: jobs on a cores board's other cores, or on
                         the main CPU without one, OMCTest and OMCBench (gfopenmulticore)
   GFOpenMail/             GFOpenMail, the mail reader, and C:GFOpenMailCheck; needs GFOpenTLS (gfopenmail)
+  ACGame/, GFOpenSynth/, Allegro4/ and any other part parts.lock names: taken as its own repository released
+                        it (docs/design/PARTS-ON-MERGE.md section 3), never built here. parts.lock has a line per
+                        part repository and the release the pack takes ("gfopensynth v1.0-rc2"); tools/fetch_parts.py
+                        unpacks each into its checkout (PART.json, build/part/Parts/<Name>) and released_parts
+                        copies the drawers as they are. Moving a part forward is a one-line change to parts.lock
   OpenAmigaPython/      OpenAmigaPython, Python 2.7.18 for AmigaOS 3 (any Amiga with a 68020 or
                         later), in SYS:Tools/OpenAmigaPython/<version> with Python: and the Shell's
                         path; off by default, and GFOpenTLS comes with it. Not built here (VBCC and
@@ -881,6 +886,10 @@ def build_parts(a):
     # disks/openkick-boot/manifest.json): the GFOpenUp part's, on the GFOpenKick ROM, where none is (OPENKICK_DISK)
     for name, (src, _out, _dest) in OPENKICK_DISK.items():
         run(["sh", a.guest / src / "build-amiga.sh"], env=guest_stove(a.guest / src / "build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openkickdisk" / name))))
+    # gfopenextmem.library (amicradle-guest libraries/openextmem, its own os32-gcc16-open8 stove; OUT is its argument):
+    # the GFOpenUp part's, on the GFOpenKick ROM, where none is (openkick_extmem_lines)
+    run(["sh", a.guest / "libraries/openextmem/build.sh", str(ROOT / "build/openextmem")],
+        env=guest_stove(a.guest / "libraries/openextmem/build.sh", dict(genv)))
     # GFOpenReaction's classes GFOS lacks (OPENKICK_CLASSES: arexx.class), each with its own script, the same way
     for name, (src, _out, _dest) in OPENKICK_CLASSES.items():
         run(["sh", a.guest / src / "build-amiga.sh"], env=guest_stove(a.guest / src / "build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openkickclasses" / name))))
@@ -1119,6 +1128,20 @@ OPENKICK_DISK = {
     "serial": ("devices/openserial.device", "devs/serial.device", "DEVS:serial.device"),
     "parallel": ("devices/openparallel.device", "devs/parallel.device", "DEVS:parallel.device"),
 }
+
+
+def openkick_extmem_lines(core: "Part", built: Path) -> None:
+    """The GFOpenUp part, on the GFOpenKick ROM: gfopenextmem.library (amicradle-guest libraries/openextmem), the
+    extended memory of the AA+ machine's 3 GB option, where none is. Without it GFOpenBench's title and GFOpenMeters
+    count the 2 GB of Fast memory alone (Dale, 17 November 2026, on the Pi 5: "this board doesnt look like the aa+
+    with the 3gb option", "openmeter is showing the arong amoung of free memopry , showing on the 2gb portion")."""
+    f = built / "gfopenextmem.library"
+    if not f.is_file():
+        raise SystemExit(f"{f} wasn't built (amicradle-guest libraries/openextmem/build.sh)")
+    if not binary_version(f.read_bytes(), "gfopenextmem.library"):
+        raise SystemExit(f"{f} has no gfopenextmem.library version")
+    core.add("OpenKick/libs/gfopenextmem.library", f.read_bytes(), "LIBS:gfopenextmem.library", default=True,
+             cond="when GFOpenKick")
 
 
 def openkick_disk_lines(core: "Part", built: Path) -> None:
@@ -2001,7 +2024,7 @@ def picture_tone(path: Path) -> str:
 
 def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_tone) -> "Part":
     """The Backdrops part: GFOpenUp's own desktops (gfopengadtools' make_backdrops.py, the themes' pictures, strips and
-    logo versions), each with its .tone, into SYS:Prefs/Presets/Backdrops/GFOpenUp.
+    logo versions, the Ethereal set and the Swish set, whose Swish-Glass-Light a new install shows), each with its .tone, into SYS:Prefs/Presets/Backdrops/GFOpenUp.
 
     make_backdrops.py also exports the AmiCradle Background Pack's art (gfopengadtools #73). That pack is not
     GFOpenUp's: it is an optional install, from Cradle's Media Library or its own InstallBackgrounds, and GFOpenUp keeps
@@ -2010,7 +2033,7 @@ def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_
     folder: an export from before pack 1.1 leaves its 2560x1440 and 3840x2160 art there, and 1.1's names no longer
     list them. None of GFOpenUp's own pictures is named so."""
     art = art_backdrop_names(opengadtools) or set()
-    bd = Part(top, "Backdrops", "0.3", "The themes' desktops and the Ethereal ones as Workbench backdrops, with their tones")
+    bd = Part(top, "Backdrops", "0.4", "The themes' desktops, the Ethereal and the Swish ones as Workbench backdrops, with their tones")
     for png in sorted(Path(backdrops).glob("*.png")):
         if png.name in art or ART_NAME_RE.match(png.name):
             continue
@@ -2089,6 +2112,89 @@ def akikoplus_part(top: Path, src: Path | None) -> Part | None:
         ak.add(rel, (src / rel).read_bytes(), dest)
     ak.write()
     return ak
+
+
+# Parts their own repositories release (Dale, 17 Nov 2026: "acgame should be their own rcs ... that way they fold in,
+# rather than this huge thing"; docs/design/PARTS-ON-MERGE.md section 3). parts.lock names a part repository and the
+# release the pack takes, a line each. tools/fetch_parts.py parts.lock --checkout unpacks that release's tarball into
+# the repository's checkout: PART.json and build/part/Parts/<Name>, the drawer GFOpenUpTool installs, as the
+# repository's own part.yml built it when the commit merged. released_parts copies the drawers into the pack as they
+# are. Nothing of them is built or written here, so a new part of this kind needs a line in parts.lock and its
+# Installer lines, and no code in this file.
+PARTS_LOCK = ROOT / "parts.lock"
+RELEASED: dict[str, str] = {}          # the parts released_parts took, by name: their versions
+
+
+def read_parts_lock(path: Path) -> list[tuple[str, str]]:
+    """parts.lock: a part repository and its release (v1.0-rc2) per line; # starts a note."""
+    out = []
+    for n, line in enumerate(path.read_text().splitlines(), 1):
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        f = line.split()
+        if len(f) != 2 or not re.fullmatch(r"v[0-9]+(\.[0-9]+)+(-rc[1-9][0-9]*)?", f[1]):
+            raise SystemExit(f"{path.name} line {n}: {line!r} isn't a repository and its release (gfopensynth v1.0-rc2)")
+        out.append((f[0].rsplit("/", 1)[-1], f[1]))
+    return out
+
+
+def released_parts(top: Path, dev: Path, lock: Path, must: bool = False) -> list[str]:
+    """Parts/<Name> for every part the repositories in parts.lock released, copied from their checkouts
+    (dev/<repo>/build/part/Parts/<Name>, which fetch_parts.py unpacked) as they are. A repository whose release
+    isn't unpacked is left out, and named; with must (--assemble-only, a cut) the build stops there. Stops when what
+    is unpacked isn't the locked release's build of that checkout, or a part isn't whole: its Part file's first line
+    is PART.json's name and version, its main file says that version, and its lines and its files are the same set."""
+    took = []
+    if not lock.is_file():
+        return took
+    for repo, ref in read_parts_lock(lock):
+        checkout = dev / repo
+        pj = checkout / "PART.json"
+        if not pj.is_file():
+            if must:
+                raise SystemExit(f"{lock.name}: {repo} {ref} isn't unpacked in {checkout} "
+                                 f"(python3 tools/fetch_parts.py {lock.name} --checkout)")
+            print(f"  {repo} {ref}: left out, its release isn't unpacked in {checkout} (tools/fetch_parts.py {lock.name})")
+            continue
+        part = json.loads(pj.read_text())
+        wrong = []
+        if part.get("repo") != repo:
+            wrong.append(f"PART.json is {part.get('repo')!r}'s")
+        head = subprocess.run(["git", "-C", str(checkout), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+        if (checkout / ".git").exists() and head != part.get("commit"):
+            wrong.append(f"the checkout is at {head[:12]}, the part was built at {str(part.get('commit'))[:12]}")
+        want = ref[1:].split("-rc")[0]
+        for e in part.get("parts") or []:
+            name, version, main = e["name"], e["version"], e.get("main")
+            src = checkout / "build/part/Parts" / name
+            if version != want:
+                wrong.append(f"{name} is {version}, {lock.name} takes {ref}")
+            if not (src / "Part").is_file():
+                wrong.append(f"{name}: no build/part/Parts/{name}/Part")
+                continue
+            lines = (src / "Part").read_text(encoding="latin-1").splitlines()
+            if lines[0].split() != ["part", name, version]:
+                wrong.append(f"{name}: its Part begins {lines[0]!r}")
+            listed = {m.group(1) for m in map(_PART_LINE.match, lines) if m}
+            have = {f.relative_to(src).as_posix() for f in src.rglob("*") if f.is_file()} - {"Part"}
+            if listed != have:
+                wrong.append(f"{name}: its Part's lines and its files differ: {sorted(listed ^ have)[:5]}")
+            got = binary_version((src / main).read_bytes(), Path(main).name) if main and (src / main).is_file() else None
+            if got != version:
+                wrong.append(f"{name}: the part says {version}, {main} says {got or 'no version'}")
+            if (top / "Parts" / name).exists():
+                wrong.append(f"{name}: the pack already has a part of that name")
+            if not wrong:
+                shutil.copytree(src, top / "Parts" / name)
+                RELEASED[name] = version
+                took.append(name)
+                print(f"  {name} {version}: {len(have)} files, {repo} {ref} as released ({str(part['commit'])[:12]})")
+        if not part.get("parts"):
+            wrong.append("PART.json names no parts")
+        if wrong:
+            raise SystemExit(f"{lock.name}: {repo} {ref}: " + "; ".join(wrong))
+    return took
 
 
 # The slim ROM's disk part (9 November 2026; amicradle-guest docs/design/thin-loader.md). The thin ROM keeps what a
@@ -2389,6 +2495,43 @@ def write_pack_list(parts: Path, out: Path) -> int:
     return len(rows)
 
 
+# Material that is never released (game data and ROMs under someone else's licence) travels to our own test
+# boards in a private pack of its own, which is never in a repository. Two things keep it out of this pack: each
+# of its parts holds a file of this name, and the machine that builds it keeps a list of the SHA-256 of every file
+# it has ever held (GF_TESTING_DENY, else ~/AmiCradle/testing-pack/DENY.sha256; no list on a machine without one).
+PRIVATE_MARKER = "TestingPack.private"
+PRIVATE_NAMES = (PRIVATE_MARKER, "PRIVATE-NOT-FOR-RELEASE")
+
+
+def private_deny_list(path: Path | None = None) -> set[str]:
+    """The SHA-256 list of files that may not be in a public pack: empty when this machine has none."""
+    path = Path(path or os.environ.get("GF_TESTING_DENY") or Path.home() / "AmiCradle/testing-pack/DENY.sha256")
+    if not path.is_file():
+        return set()
+    return {w for w in (line.split("#")[0].strip().lower() for line in path.read_text().splitlines())
+            if re.fullmatch(r"[0-9a-f]{64}", w)}
+
+
+def check_private(top: Path, deny: set[str] | None = None) -> list[str]:
+    """Every file under the pack's drawer: one named as a private pack's marker, or one whose SHA-256 is in the
+    deny list, is a problem. Returns the problems, one line each (empty: none); a path only, never the bytes."""
+    import hashlib
+    deny = private_deny_list() if deny is None else deny
+    problems = []
+    for f in sorted(p for p in Path(top).rglob("*") if p.is_file()):
+        rel = f.relative_to(top).as_posix()
+        if f.name.lower() in {n.lower() for n in PRIVATE_NAMES}:
+            problems.append(f"{rel}: a private pack's marker, so its drawer is not for release")
+        elif deny:
+            h = hashlib.sha256()
+            with open(f, "rb") as fh:
+                while chunk := fh.read(1 << 20):
+                    h.update(chunk)
+            if h.hexdigest() in deny:
+                problems.append(f"{rel}: a file the private pack holds (its SHA-256 is in the deny list)")
+    return problems
+
+
 # Our own libraries resident in a ROM the pack runs on without being in the pack (none yet: the slim ROM has no gf*
 # library; the KickstartSet part's are in the pack and count as packed)
 ROM_GF_LIBRARIES: frozenset = frozenset()
@@ -2426,7 +2569,7 @@ def check_part_versions(parts: Path) -> None:
     wrong = []
     for pf in sorted(parts.glob("*/Part")):
         name, version = pf.read_text(encoding="latin-1").split("\n", 1)[0].split()[1:3]
-        if name in PART_OWN_VERSION:
+        if name in PART_OWN_VERSION or RELEASED.get(name) == version:   # a released part: released_parts checked it
             continue
         if name not in PART_MAIN:
             wrong.append(f"{name} {version}: no main binary in PART_MAIN (or add it to PART_OWN_VERSION)")
@@ -2537,6 +2680,15 @@ def main() -> int:
                     help="build every step, even one whose checkouts haven't moved since its last build (STEPS_FRESH=1)")
     ap.add_argument("--steps", type=Path, default=ROOT / "build" / "steps",
                     help="where each step's stamp is kept, for the next cut to reuse (tools/step_reuse.py)")
+    ap.add_argument("--prebuilt", type=Path, default=None,
+                    help="prebuilt.tsv from tools/fetch_parts.py: the checkouts whose parts were built when they merged "
+                         "and are unpacked in them; their steps aren't built here")
+    ap.add_argument("--assemble-only", action="store_true",
+                    help="never compile: stop, naming them, when steps have neither a built part nor a reusable stamp")
+    ap.add_argument("--parts-lock", type=Path, default=PARTS_LOCK,
+                    help="parts.lock: the part repositories whose own releases the pack takes as they are "
+                         "(tools/fetch_parts.py unpacks them; left out, and named, where one isn't unpacked, and "
+                         "--assemble-only stops there)")
     ap.add_argument("--freeze", type=Path, default=None,
                     help="the cut's freeze list (checkout name and commit per line): stops unless every checkout "
                          "it names is at that commit with no tracked change")
@@ -2554,7 +2706,9 @@ def main() -> int:
     global STEPS
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import step_reuse
-    cache = step_reuse.StepCache(a.steps, dev_checkouts(a), fresh=a.fresh)
+    cache = step_reuse.StepCache(a.steps, dev_checkouts(a), fresh=a.fresh,
+                                 prebuilt=step_reuse.read_freeze(a.prebuilt) if a.prebuilt else None,
+                                 no_compile=a.assemble_only)
     if a.freeze:
         cache.check_freeze(step_reuse.read_freeze(a.freeze))
     if not a.no_build:
@@ -2565,6 +2719,9 @@ def main() -> int:
         finally:
             STEPS = None
             print(f"build_parts: {cache.report()}, {time.time() - t0:.0f} s in all", flush=True)
+        if cache.missing:
+            raise SystemExit("--assemble-only: these steps have no built part (publish them from their "
+                             "repositories' part.yml, docs/design/PARTS-ON-MERGE.md):\n  " + "\n  ".join(cache.missing))
     cache.commits(a.out / "GFOpenUp-commits.tsv")
     icons = icon_maker(a.openamigaprint)
     date = time.strftime("%d.%m.%Y").lstrip("0").replace(".0", ".")
@@ -2627,6 +2784,7 @@ def main() -> int:
         raise SystemExit(f"{sfl} wasn't built (amicradle-guest libraries/opensoftfpu/build-amiga.sh)")
     core.add("Libs/softfpu.library", sfl.read_bytes(), "LIBS:softfpu.library")
     openkick_disk_lines(core, ROOT / "build/openkickdisk")
+    openkick_extmem_lines(core, ROOT / "build/openextmem")
     openkick_classes_lines(core, ROOT / "build/openkickclasses", (a.guest / "LICENSE").read_bytes())
     core.write()
 
@@ -2781,6 +2939,10 @@ def main() -> int:
     # mitchy.library when it is fitted, on the 68k when not; Install-GFOpenUp installs it with GFOpenService.
     akikoplus_part(top, a.akikoplus)
     kickstartset_part(top, a.thinsupport)
+
+    # The parts their own repositories released (parts.lock): ACGame, GFOpenSynth, Allegro4. As they are.
+    RELEASED.clear()
+    released_parts(top, DEV, a.parts_lock, must=a.assemble_only)
 
     # GFOpenImage: datatypes (gfopendatatypes). PNG, Targa (opentga.datatype), WebP, WebM and music modules
     # (openmodule.datatype: MOD, MED, Oktalyzer, DigiBooster, XM, S3M, IT,
@@ -3604,6 +3766,9 @@ def main() -> int:
     if browser_top:
         check_part_versions(browser_top / "Parts")
     for t in [top] + ([browser_top] if browser_top else []):
+        private = check_private(t)
+        if private:
+            raise SystemExit("this pack holds material that is never released:\n  " + "\n  ".join(private))
         clashes = check_clashes(t / "Parts")
         if clashes:
             raise SystemExit("two parts write one path (one part owns each file; SHARED_PATHS for same-byte sharing):\n  "
