@@ -100,6 +100,13 @@ static int checks(void)
     same("when WorkDrive retire, with the drive", oul_strip("when WorkDrive retire \"SYS:Utilities/x\"", OUL_WORKDRIVE, 0), "retire \"SYS:Utilities/x\"");
     same("REMOVE takes a WorkDrive condition off", oul_strip("when WorkDrive copy \"a\" \"Work:a\"", none, 1), "copy \"a\" \"Work:a\"");
     truth("the Work bit is its own", OUL_WORKDRIVE == 16u && !(OUL_WORKDRIVE & (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE | OUL_MEDIADRIVE)), 1);
+    /* EmulationDrive (0.8.23): a volume named Emulation is mounted, the standard build's DH5:, where our emulators go */
+    same("when EmulationDrive, with the drive", oul_strip("when EmulationDrive copy \"a\" \"Emulation:a\"", OUL_EMULATIONDRIVE, 0), "copy \"a\" \"Emulation:a\"");
+    same("when EmulationDrive, without it", oul_strip("when EmulationDrive copy \"a\" \"Emulation:a\"", both | OUL_WORKDRIVE, 0), NULL);
+    same("unless EmulationDrive, without it", oul_strip("unless EmulationDrive copy \"a\" \"SYS:a\"", both, 0), "copy \"a\" \"SYS:a\"");
+    same("when EmulationDrive default, with the drive", oul_strip("when EmulationDrive default \"r\" \"Emulation:Roms/ReadMe\"", OUL_EMULATIONDRIVE, 0), "default \"r\" \"Emulation:Roms/ReadMe\"");
+    same("REMOVE takes an EmulationDrive condition off", oul_strip("when EmulationDrive copy \"a\" \"Emulation:a\"", none, 1), "copy \"a\" \"Emulation:a\"");
+    truth("the Emulation bit is its own", OUL_EMULATIONDRIVE == 32u && !(OUL_EMULATIONDRIVE & (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE | OUL_MEDIADRIVE | OUL_WORKDRIVE)), 1);
     truth("the three machine bits are three bits", (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE) == 7u
           && OUL_DEMOSDRIVE != OUL_AMICRADLE && OUL_DEMOSDRIVE != OUL_OPENKICK, 1);
     /* GFOpenKick, startup lines and retire lines too */
@@ -497,6 +504,7 @@ int main(int argc, char **argv)
     if (strstr(argv[2], "-demos")) have |= OUL_DEMOSDRIVE;
     if (strstr(argv[2], "-media")) have |= OUL_MEDIADRIVE;
     if (strstr(argv[2], "-work")) have |= OUL_WORKDRIVE;
+    if (strstr(argv[2], "-emulation")) have |= OUL_EMULATIONDRIVE;
     if (!(f = fopen(argv[1], "r"))) { perror(argv[1]); return 2; }
     while (fgets(line, sizeof line, f)) {
         const char *rest;

@@ -60,6 +60,8 @@ def main() -> int:
     by = {a["drawer"]: a for a in apps}
     check({"GFOpenBrowser", "GFOffice", "GFOpenMakerSuite", "GFOpenPuTTY", "aMule", "KiCad"} <= set(by),
           "the browser, GFOffice, the maker suite, PuTTY, aMule and KiCad are in it")
+    check(by["DOSBox"]["home"] == "Emulation" and all(a["home"] == "Work" for a in apps if a["drawer"] != "DOSBox"),
+          "DOSBox, our emulator, is for the Emulation drive, and every other application for Work:")
     check(ap.version("v0.9.0-rc2") == "0.9.0" and ap.version("gfoffice-2.0.25-rc91") == "2.0.25"
           and ap.version("v5.14.2-amiga.2") == "5.14.2", "a part's version is its release's dotted number")
     refused("a release name with no version is refused", lambda: ap.version("latest"))
@@ -71,12 +73,14 @@ def main() -> int:
         refused("a lock line short of a word is refused", lambda: ap.read_lock(bad))
         bad.write_text("a v1.0 a.lha Same globe\nb v1.0 b.lha same globe\n")
         refused("a drawer named twice is refused", lambda: ap.read_lock(bad))
+        bad.write_text("a v1.0 a.lha Games:Thing globe\n")
+        refused("a volume that is not for applications is refused", lambda: ap.read_lock(bad))
         bad.write_text("a v1.0 a.lha ADrawerNameThatIsFarTooLongForFFS globe\n")
         refused("a drawer name FFS can't hold is refused", lambda: ap.read_lock(bad))
 
         lock = t / "apps.lock"
         lock.write_text("one v1.2-rc3 One-1.2.zip One globe   # the first\n"
-                        "DalsinAI/two v0.3 Two.tar.gz Two-App code\n")
+                        "DalsinAI/two v0.3 Two.tar.gz Emulation:Two-App code\n")
         assets = t / "assets"
         zipped(assets / "one" / "One-1.2.zip", {"One/One": b"program one", "One/One.info": b"icon", "One/Docs/Read Me": b"text",
                                                  "One/Install": b"; installer", "One.info": b"the release's drawer icon"})
@@ -103,13 +107,26 @@ def main() -> int:
         check(all(l.startswith(("part ", "; ", "when WorkDrive ")) for l in one), "every line is only for a machine with Work:")
         check((top / "Parts/AppOne/Files/Docs/Read Me").read_bytes() == b"text", "the files are in the part")
         two = (top / "Parts/AppTwoApp/Part").read_text()
-        check('when WorkDrive copy "Files/libs/two.library" "Work:Two-App/libs/two.library"' in two
-              and two.startswith("part AppTwoApp 0.3\n"), "an archive with no top drawer is taken as it is")
+        check('when EmulationDrive copy "Files/libs/two.library" "Emulation:Two-App/libs/two.library"' in two
+              and two.startswith("part AppTwoApp 0.3\n") and "WorkDrive" not in two
+              and 'when EmulationDrive add "Drawer.info" "Emulation:Two-App.info"' in two,
+              "an emulator (Emulation:<Drawer> in the lock) goes on the Emulation drive; an archive with no top drawer is taken as it is")
+        emu = (top / "Parts/EmulationDrawers/Part").read_text().splitlines()
+        check(emu[0] == "part EmulationDrawers 1.0" and all(l.startswith("when EmulationDrive ") for l in emu[2:])
+              and [l.split('"')[3] for l in emu[2:]] == [f"Emulation:{n}{s}" for n in ("Roms", "Disks", "HardDrives", "Optical Media")
+                                                        for s in ("/ReadMe", ".info")]
+              and sum(l.startswith("when EmulationDrive default ") for l in emu) == 4,
+              "Emulation: gets Roms, Disks, HardDrives and Optical Media, each with a ReadMe (kept if there) and its folder icon")
+        check(sorted(p.name for p in (top / "Parts/EmulationDrawers").iterdir()) ==
+              sorted(["Part"] + [f"{k}{n}{e}" for n in range(4) for k, e in (("ReadMe", ""), ("Drawer", ".info"))])
+              and (top / "Parts/EmulationDrawers/Drawer0.info").read_bytes() == b"ICON:chip",
+              "the Emulation drawers ship a ReadMe and an icon each and nothing else: no ROM or disk image")
+        check(all(m in marks.MOTIFS for m in ap.EMULATION_DRAWERS.values()), "the Emulation drawers' marks are drawn")
         check([r["installer"] for r in rows] == ["Install", ""] and rows[0]["files"] == 4 and rows[0]["bytes"] == 30,
               "the list names an app's own installer, its files and bytes")
         script = (top / "Install-GFOpenApps").read_text()
         check('C:GFOpenUpTool INSTALL "Work:GFOpenApps/Parts/AppOne"' in script
-              and script.index("AppOne") < script.index("AppTwoApp") and "FailAt 21" in script,
+              and script.index("EmulationDrawers") < script.index("AppOne") < script.index("AppTwoApp") and "FailAt 21" in script,
               "the install script installs each part with GFOpenUpTool, in the lock's order")
         listing = (top / "APPS-LIST.txt").read_text().splitlines()
         check(len(listing) == 3 and rows[0]["sha256"] in listing[1] and "\tInstall" in listing[1], "APPS-LIST.txt has a row an app")
@@ -129,9 +146,9 @@ def main() -> int:
         (long / "a").mkdir(parents=True)
         (long / "a" / ("n" * 31)).write_bytes(b"x")
         refused("a name longer than an FFS volume keeps stops the build",
-                lambda: ap.app_part(t / "p", dict(repo="r", tag="v1.0", asset="a", drawer="D", mark="globe", title=""), long, icon))
+                lambda: ap.app_part(t / "p", dict(repo="r", tag="v1.0", asset="a", drawer="D", mark="globe", title="", home="Work"), long, icon))
         refused("a release with no files stops the build",
-                lambda: ap.app_part(t / "p", dict(repo="r", tag="v1.0", asset="a", drawer="D", mark="globe", title=""), (t / "empty").mkdir() or t / "empty", icon))
+                lambda: ap.app_part(t / "p", dict(repo="r", tag="v1.0", asset="a", drawer="D", mark="globe", title="", home="Work"), (t / "empty").mkdir() or t / "empty", icon))
         evil = t / "evil.zip"
         with zipfile.ZipFile(evil, "w") as z:
             z.writestr("../out.txt", b"x")

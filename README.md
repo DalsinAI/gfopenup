@@ -124,7 +124,9 @@ rest: `apps.lock`) are not in the GFOpenUp pack. `tools/apps_pack.py` makes a se
 Each application is a GFOpenUp part whose lines are all `when WorkDrive` (GFOpenUpTool 0.8.23): it goes in
 `Work:<Drawer>`, with the Soft 3D folder as the drawer's icon, where a volume named Work is mounted. On the Amiga,
 with GFOpenUp installed: `Execute Work:GFOpenApps/Install-GFOpenApps`. `APPS-LIST.txt` lists what is in the pack and
-names each application's own installer, where it has one.
+names each application's own installer, where it has one. An emulator (`Emulation:<Drawer>` in the lock: DOSBox) goes on the
+Emulation drive instead (`when EmulationDrive`), and the part EmulationDrawers gives that drive its Roms, Disks,
+HardDrives and Optical Media drawers: a ReadMe and the folder icon each, and no ROM or disk image.
 
 ## Licence
 

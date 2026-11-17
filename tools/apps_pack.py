@@ -14,7 +14,9 @@ parts beside GFOpenUp's own, so the GFOpenUp pack stays its size:
     GFOpenApps/APPS-LIST.txt                each app: part, release, file, sha256, files, bytes, its own installer
 
 Every line is "when WorkDrive" (GFOpenUpTool 0.8.23): an application goes in Work:<Drawer> where a volume named
-Work is mounted, and nowhere else. GFOpenUpTool records each part, so UPDATE and REMOVE work as for any part. An
+Work is mounted, and nowhere else. An emulator's drawer is written Emulation:<Drawer> in the lock: it goes on the
+Emulation drive ("when EmulationDrive"), and the part EmulationDrawers gives that drive its Roms, Disks, HardDrives
+and Optical Media drawers, each with a ReadMe and nothing else. GFOpenUpTool records each part, so UPDATE and REMOVE work as for any part. An
 application that carries an installer of its own (Install, Install-<name>) keeps it in its drawer, and APPS-LIST.txt
 names it: a part has no line that runs a program, so that installer is still the user's to run.
 
@@ -42,6 +44,12 @@ API = "https://api.github.com"
 PACK = "GFOpenApps"
 INSTALL = "Install-GFOpenApps"
 HOME = "Work"                 # the volume: the standard build's DH1:, which is for applications
+HOMES = {"Work": "WorkDrive", "Emulation": "EmulationDrive"}       # a volume an app may live on, and its condition
+# Emulation:'s own drawers (Dale, 17 Nov 2026: "make sure our own emulaton applications are in emulation, with two
+# or three folders , Roms , Disks , HardDrives , Optical Media"), each with its mark. They ship with a ReadMe and
+# nothing else: no ROM, disk or disc image is ours to give.
+EMULATION_DRAWERS = {"Roms": "chip", "Disks": "mount", "HardDrives": "archive", "Optical Media": "film"}
+EMULATION_PART = "EmulationDrawers"
 DEST_MAX = 180                # GFOpenUpTool's path buffers are 200
 NAME_MAX = 30                 # the longest name a standard FFS volume keeps
 
@@ -62,12 +70,19 @@ def read_lock(path: Path) -> list[dict]:
         if len(w) != 5:
             raise AppsError(f"{path.name} line {n}: wants repository, release, file, drawer and mark")
         repo, tag, asset, drawer, mark = w
+        home, sep, rest = drawer.partition(":")
+        if sep:
+            if home not in HOMES:
+                raise AppsError(f"{path.name} line {n}: {home}: is no volume an application goes on")
+            drawer = rest
+        else:
+            home = HOME
         if drawer.lower() in seen:
             raise AppsError(f"{path.name} line {n}: the drawer {drawer} is there twice")
         if len(drawer) + len(".info") > NAME_MAX or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]*", drawer):
             raise AppsError(f"{path.name} line {n}: {drawer} is no drawer name")
         seen.add(drawer.lower())
-        apps.append(dict(repo=repo.rsplit("/", 1)[-1], tag=tag, asset=asset, drawer=drawer, mark=mark, title=title.strip()))
+        apps.append(dict(repo=repo.rsplit("/", 1)[-1], tag=tag, asset=asset, drawer=drawer, mark=mark, title=title.strip(), home=home))
     return apps
 
 
@@ -132,7 +147,8 @@ def app_part(top: Path, app: dict, tree: Path, icon) -> dict:
     volume is mounted, and the drawer's icon (icon(mark): the .info file's bytes) as Work:<Drawer>.info. The row
     for APPS-LIST.txt. A path GFOpenUpTool or the volume can't hold stops the build."""
     name, root = part_name(app), app_root(tree)
-    home = f"{HOME}:{app['drawer']}"
+    cond = "when " + HOMES[app.get("home", HOME)]
+    home = f"{app.get('home', HOME)}:{app['drawer']}"
     pdir = top / "Parts" / name
     if pdir.exists():
         shutil.rmtree(pdir)
@@ -150,12 +166,31 @@ def app_part(top: Path, app: dict, tree: Path, icon) -> dict:
         (pdir / "Files" / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(f, pdir / "Files" / rel)
         size += f.stat().st_size
-        lines.append(f'when WorkDrive copy "Files/{rel}" "{dest}"')
+        lines.append(f'{cond} copy "Files/{rel}" "{dest}"')
     (pdir / "Drawer.info").write_bytes(icon(app["mark"]))
-    lines.append(f'when WorkDrive add "Drawer.info" "{home}.info"')
+    lines.append(f'{cond} add "Drawer.info" "{home}.info"')
     (pdir / "Part").write_text("\n".join(lines) + "\n", encoding="latin-1")
     return dict(part=name, drawer=app["drawer"], repo=app["repo"], tag=app["tag"], asset=app["asset"],
                 files=len(files), bytes=size, installer=own_installer(root))
+
+
+def emulation_part(top: Path, icon) -> str:
+    """Parts/EmulationDrawers: Emulation:'s Roms, Disks, HardDrives and Optical Media, each made by its ReadMe
+    (only where there is none) and given the Soft 3D folder with its mark, where a volume named Emulation is
+    mounted. The part's name."""
+    pdir = top / "Parts" / EMULATION_PART
+    if pdir.exists():
+        shutil.rmtree(pdir)
+    pdir.mkdir(parents=True)
+    lines = [f"part {EMULATION_PART} 1.0", "; Emulation: its Roms, Disks, HardDrives and Optical Media drawers, empty but for a ReadMe"]
+    for n, (name, mark) in enumerate(EMULATION_DRAWERS.items()):
+        (pdir / f"ReadMe{n}").write_text(f"Emulation:{name}\n\nThis drawer is for your own files for the emulators on this drive.\n"
+                                         "None are supplied: use only files you have the right to use.\n", encoding="latin-1")
+        (pdir / f"Drawer{n}.info").write_bytes(icon(mark))
+        lines += [f'when EmulationDrive default "ReadMe{n}" "Emulation:{name}/ReadMe"',
+                  f'when EmulationDrive add "Drawer{n}.info" "Emulation:{name}.info"']
+    (pdir / "Part").write_text("\n".join(lines) + "\n", encoding="latin-1")
+    return EMULATION_PART
 
 
 def install_script(names: list[str]) -> str:
@@ -212,7 +247,7 @@ def build(lock: Path, assets: Path, out: Path, icon=soft3d_icon, check_private=N
         row["sha256"] = got
         rows.append(row)
         shutil.rmtree(tree)
-    (top / INSTALL).write_text(install_script([r["part"] for r in rows]), encoding="latin-1")
+    (top / INSTALL).write_text(install_script([emulation_part(top, icon)] + [r["part"] for r in rows]), encoding="latin-1")
     listing = ["# part\tdrawer\trepository\trelease\tfile\tsha256\tfiles\tbytes\town installer"]
     listing += ["\t".join(str(r[k]) for k in ("part", "drawer", "repo", "tag", "asset", "sha256", "files", "bytes", "installer"))
                 for r in rows]

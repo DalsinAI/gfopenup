@@ -23,3 +23,5 @@ gfamigawxhexeditor   v0.1.0-rc3                  GFAmigaWxHexEditor-0.1.0-RC3.lh
 gfamigagolly         v5.0-amiga-rc2              Golly-5.0.lha                          Golly           pattern   # the Game of Life and other automata
 gfamigaopencpn       v5.14.2-amiga.2             OpenCPN-5.14.2.lha                     OpenCPN         flag      # the chart plotter
 gfamigakicad         v0.1.0-rc5                  GFAmigaKiCad-0.1.0-RC5.lha             KiCad           chip      # circuit board design
+# Our emulators go on the Emulation drive (Dale, 17 Nov 2026: "make sure our own emulaton applications are in emulation").
+amigadosbox          v0.82.2-amigaos3-rc1        dosbox-0.82.2-amigaos3-rc1-68040.lha   Emulation:DOSBox joystick # the DOS emulator
