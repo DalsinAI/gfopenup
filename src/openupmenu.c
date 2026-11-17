@@ -77,8 +77,9 @@
 #include <string.h>
 
 #include "openup_hotkeys.h"
+#include "openup_home.h"                /* an application's place on Work: (0.1.8) */
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpMenu 0.1.7 (03.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpMenu 0.1.8 (17.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct Library *WorkbenchBase, *IconBase, *CxBase;
 struct IntuitionBase *IntuitionBase;
@@ -158,6 +159,27 @@ static int exists(const char *path)
     return l != 0;
 }
 
+/* A volume named Work is mounted (the standard build's DH1:, where applications live). From the DOS list, so no
+ * "Please insert volume Work" requester comes up where there is none. */
+static int work_drive(void)
+{
+    struct DosList *dl = LockDosList(LDF_VOLUMES | LDF_READ);
+    int there = FindDosEntry(dl, (STRPTR)"Work", LDF_VOLUMES) != NULL;
+    UnLockDosList(LDF_VOLUMES | LDF_READ);
+    return there;
+}
+
+/* An entry's file where it is now: an application that GFOpenUp installs on Work: (src/openup_home.h) is looked
+ * for there first, where a Work drive is mounted, then where the table has it, in SYS:Utilities. */
+static const char *entry_path(const struct entry *e)
+{
+    static char homes[NENTRIES][64];
+    char *home = homes[e - entries];
+    if (e->path && work_drive() && ouh_work(e->path, home, sizeof homes[0]) && exists(home))
+        return home;
+    return e->path;
+}
+
 /* 1 when the file holds the marker; read in pieces, so it stays small. */
 static int holds(const char *path, const char *marker)
 {
@@ -182,7 +204,7 @@ static int holds(const char *path, const char *marker)
 static int page_icon(const struct entry *e)
 {
     char info[80];
-    strcpy(info, e->path);
+    strcpy(info, entry_path(e));
     strcat(info, ".info");
     return exists(info);
 }
@@ -194,9 +216,10 @@ static int find_shown(void)
     int i, j, any = 0, openprefs = exists(OPENPREFS);
     for (i = 0; i < (int)NENTRIES; i++) {
         const struct entry *e = &entries[i];
-        const char *needs = e->needs ? e->needs : e->path;
+        const char *path = entry_path(e);
+        const char *needs = e->needs ? e->needs : path;
         if (e->how == HOW_PAGE) { shown[i] = openprefs || page_icon(e); continue; }
-        shown[i] = e->how != HOW_SEP && (!e->path || exists(e->path)) && exists(needs)
+        shown[i] = e->how != HOW_SEP && (!path || exists(path)) && exists(needs)
                    && (!e->marker || holds(needs, e->marker));
     }
     for (i = 0; i < (int)NENTRIES; i++) {
@@ -295,7 +318,7 @@ static void start_cli(const struct entry *e)
 {
     char cmd[200], dir[160];
     BPTR in, out, lock, old;
-    const char *path = e->path ? e->path : e->needs;
+    const char *path = e->path ? entry_path(e) : e->needs;
     LONG stack = icon_stack(path);
     if (e->how == HOW_CON) {
         in = Open((STRPTR)"CON:40/30/600/220/GFOpenUp Update/AUTO/CLOSE/WAIT", MODE_OLDFILE);
@@ -343,13 +366,13 @@ static void start(int i, BPTR *locks, char **names, int nargs)
             tags[t].ti_Tag = WBOPENA_ArgName; tags[t++].ti_Data = (ULONG)names[k];
         }
         tags[t].ti_Tag = TAG_DONE;
-        if (OpenWorkbenchObjectA((STRPTR)e->path, tags))
+        if (OpenWorkbenchObjectA((STRPTR)entry_path(e), tags))
             return;
     }
     /* a GFOpenPrefs page: its project icon, as a double-click on it; else (no icon, or a Workbench that didn't
      * open it) GFOpenPrefs at that page */
     if (e->how == HOW_PAGE && WorkbenchBase->lib_Version >= 44 && page_icon(e)
-        && OpenWorkbenchObjectA((STRPTR)e->path, NULL))
+        && OpenWorkbenchObjectA((STRPTR)entry_path(e), NULL))
         return;
     if (e->how != HOW_SEP)
         start_cli(e);

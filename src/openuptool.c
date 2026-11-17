@@ -160,7 +160,7 @@
 static int slim_rom(void);
 static int kickset(const char *a1, const char *a2);
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.23 (17.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.24 (17.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -3957,7 +3957,12 @@ static int reconcile(const char *how, const char *once)
             strlcpy(cmd, dock_ed, sizeof cmd);
             str_cat(cmd, " ADD SYS:Utilities/GFOpenFiles SYS:Utilities/GFOpenPrint/GFOpenView "
                          "SYS:Utilities/GFOpenWrite/GFOpenWrite SYS:Utilities/GFOpenPlay SYS:Utilities/GFOpenCompress "
-                         "SYS:Utilities/GFOpenFTP/GFOpenFTP SYS:Utilities/GFOpenPuTTY/GFOpenPuTTY SAVE", sizeof cmd);
+                         "SYS:Utilities/GFOpenFTP/GFOpenFTP SYS:Utilities/GFOpenPuTTY/GFOpenPuTTY", sizeof cmd);
+            /* 0.8.24: where a Work drive is mounted these three live on it (src/openup_home.h); named only
+             * there, so no machine is asked for a volume it doesn't have */
+            if (work_drive())
+                str_cat(cmd, " Work:GFOpenWrite/GFOpenWrite Work:GFOpenFTP/GFOpenFTP Work:GFOpenPuTTY/GFOpenPuTTY", sizeof cmd);
+            str_cat(cmd, " SAVE", sizeof cmd);
             r = run_sync(cmd, 1);
             PutStr((STRPTR)(r == 0 ? "  dock: the Open apps are on it\n" : "  dock: Dock ADD didn't run; the dock is as it was\n"));
         }
