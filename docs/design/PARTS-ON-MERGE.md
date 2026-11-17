@@ -51,10 +51,29 @@ GitHub's hosted runners, never the daletop runner.
   The release keeps the newest 30 builds. An RC's pinned builds are copied to the RC's own release, so pruning
   never loses one.
 
-## 3. How a pack is put together
+## 3. Each part has its own RCs (Dale, 17 Nov: "acgame should be their own rcs ... that way they fold in, rather than this huge thing")
 
-`tools/fetch_parts.py` (next PR) reads either a freeze list (repo and commit per line, the form rc.sh writes) or
-"latest". For each repository it downloads that commit's tarball, checks PART.json's commit, and unpacks it into
+A part repository (acgame, gfopenallegro, gfopenbench, gfopenprefs...) cuts its own release candidates, on its own
+version line, when its own work is ready. A pack never decides a part's version.
+
+- **Promotion, not a rebuild:** `release.yml` (workflow_dispatch: version such as 1.3-rc1, and a commit, default main
+  HEAD) takes that commit's build already in `parts` and publishes it as the repository's own release `v<version>`.
+  It marks the release as a pre-release while the version ends in -rcN. The release holds the same tarball and
+  PART.json, plus `<Part>-<version>.lha` for an Amiga user who wants only that part. If the commit has no build yet,
+  release.yml builds it the same way part.yml does.
+- **One release per part repository:** a repository that makes several parts (amicradle-guest's libraries, say)
+  names each part in PART.json's `parts` list, and the release carries all of them.
+- **The pack pins part releases:** gfopenup keeps `parts.lock`, one line per part:
+  `gfopenbench v0.2-rc1`, `acgame v1.0-rc2`, and so on. A GFOpenUp RC is a parts.lock commit plus an assembly run:
+  fetch each pinned release, check PART.json, put the pack together and LhA it. Moving one part forward is a
+  one-line PR to parts.lock, reviewed like any other, and it changes nothing else in the pack.
+- **Nightly:** takes `latest` from every repository's `parts` release instead of parts.lock, so it shows what main
+  would give before anyone cuts.
+
+## 4. How a pack is put together
+
+`tools/fetch_parts.py` (next PR) reads parts.lock (a GFOpenUp RC), a freeze list of commits (repo and commit per line,
+the form rc.sh writes), or "latest" (nightly). For each repository it downloads that commit's tarball, checks PART.json's commit, and unpacks it into
 the checkout. build_pack.py then runs `--prebuilt`: a step whose repository came from a published part is taken as
 built, and its outputs are checked against PART.json. Only repositories with no published part yet still build
 locally, through #267's step reuse.
@@ -65,14 +84,15 @@ locally, through #267's step reuse.
 - **GFOpenUpTool UPDATE:** it can take the nightly pack the way it takes an RC today. Pulling single parts over the
   network on the Amiga is a later step.
 
-## 4. Order
+## 5. Order
 
 1. The stove action (this PR), with its own check that compiles and links against the NDK's headers.
 2. gfopenbench `part.yml` (first part repo, public).
-3. gfopenprefs, gfopengadtools, amicradle-guest, gfopenrtg and the rest. One PR each, the same workflow, its paths
-   from build_pack.py's reads.
-4. fetch_parts.py and build_pack.py `--prebuilt`.
-5. nightly.yml.
+3. gfopenbench `release.yml` (its own RCs), then gfopenprefs, gfopengadtools, amicradle-guest, gfopenrtg, acgame,
+   gfopenallegro and the rest: one PR each with part.yml and release.yml, their paths from build_pack.py's reads.
+4. gfopenup `parts.lock`, listing each part's current release.
+5. fetch_parts.py and build_pack.py `--prebuilt`.
+6. nightly.yml.
 
 ## Needs from Dale
 
