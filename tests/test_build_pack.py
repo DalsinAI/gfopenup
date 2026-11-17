@@ -1708,6 +1708,19 @@ def main() -> int:
     check("GFOpenUpdate: in SYS:WBStartup from the GFOpenUp part, built with its window, and GFOpenUp's menu opens it",
           '"SYS:WBStartup/GFOpenUpdate"' in bp_src and "src/openupdate/build.sh" in bp_src
           and '"GFOS Updates...", "SYS:WBStartup/GFOpenUpdate"' in menu)
+    with tempfile.TemporaryDirectory() as t:     # GFOpenNotifier's part: in WBStartup, OpenRexx first
+        t = Path(t)
+        (t / "repo/build/os3").mkdir(parents=True)
+        (t / "repo/build/os3/GFOpenNotifier").write_bytes(b"\0\0$VER: GFOpenNotifier 0.1 (17.11.2026)\0")
+        class NtIcons:
+            WBTOOL = 3
+            def icon(self, *a, **k): return b"icon " + repr(a[3] if len(a) > 3 else k).encode()
+        (t / "top/Parts").mkdir(parents=True)
+        ntp = bp.notifier_part(t / "top", t / "repo", NtIcons())
+        text = (ntp.dir / "Part").read_text(encoding="latin-1")
+        check("GFOpenNotifier's part: its version, OpenRexx needed, the program in SYS:WBStartup with a DONOTWAIT icon",
+              text.startswith("part GFOpenNotifier 0.1") and "needs part GFOpenLibs-rexx" in text
+              and '"SYS:WBStartup/GFOpenNotifier"' in text and b"DONOTWAIT" in (ntp.dir / "WBStartup/GFOpenNotifier.info").read_bytes(), text)
     entries = re.findall(r'HOW_PAGE, "([^"]+)", +"SYS:Preferences/([^"]+)", +"([A-Z]+)"', menu)
     pagewords = {p: w for p, w, _ in bp.PREFERENCES_PAGES}
     check("GFOpenUpMenu's page entries: each a page icon by its plain name, with its page's SECTION word",

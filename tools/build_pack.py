@@ -188,6 +188,8 @@ a Part file that C/GFOpenUpTool reads:
                         and AHI's settings on Host mix, with GFOpenAHI's own ahi.device
                         (amicradle's vendor/amigachrome-guest; all "when AmiCradle")
   GFOpenEdit/             GFOpenEdit, the text editor with tabs (gfopenedit)
+  GFOpenNotifier/         GFOpenNotifier in SYS:WBStartup: pop-up notices, Ranchero's and Ringhio's ARexx interface;
+                        needs OpenRexx (GFOpenLibs-rexx); built from gfopennotifier (--gfopennotifier)
   GFOpenDrawer/           GFOpenDrawer, the drawer windows of the Team's own Workbench, beside the OS's
                         Workbench, in SYS:Utilities; off by default (gfopengadtools workbench/)
   GFOffice/             what the GFOffice Suite's programs share: their four libraries (LIBS:owfwrite.library,
@@ -515,6 +517,28 @@ def demos_part(top: Path, program: bytes, icons) -> "Part":
     return dm
 
 
+NOTIFIER_TOOLTYPES = ["DONOTWAIT"]
+
+
+def notifier_part(top: Path, repo: Path, icons) -> "Part":
+    """Parts/GFOpenNotifier: GFOpenNotifier in SYS:WBStartup, its icon only where there is none (the user's tool
+    types), and OpenRexx's part needed first. The build stops when it wasn't built or says no version."""
+    prog = repo / "build/os3/GFOpenNotifier"
+    if not prog.is_file():
+        raise SystemExit(f"GFOpenNotifier: {prog} wasn't built (gfopennotifier build.sh)")
+    data = prog.read_bytes()
+    ver = binary_version(data, "GFOpenNotifier")
+    if not ver:
+        raise SystemExit(f"GFOpenNotifier: {prog} says no version")
+    nt = Part(top, "GFOpenNotifier", ver, "GFOpenNotifier: pop-up notices for programs and ARexx scripts, as Ranchero and Ringhio show them")
+    nt.needs_part("GFOpenLibs-rexx")
+    nt.add("WBStartup/GFOpenNotifier", data, "SYS:WBStartup/GFOpenNotifier")
+    nt.add("WBStartup/GFOpenNotifier.info", icons.icon(icons.WBTOOL, "install", None, NOTIFIER_TOOLTYPES, stack=16384),
+           "SYS:WBStartup/GFOpenNotifier.info", default=True)
+    nt.write()
+    return nt
+
+
 def bench_meters(bench: "Part", built: Path) -> None:
     """GFOpenMeters, the desktop's widget (gfopenbench meters/), in the GFOpenBench part, so every Amiga with
     GFOpenBench gets it and an update brings it (Dale, 17 Nov 2026: "open meter is still missing": no pack had
@@ -789,6 +813,9 @@ def build_parts(a):
     # built resident (libnix -resident: each run its own variables), so one seglist serves every run. The open
     # ROM builds the same file through amicradle-guest's romprefs.sh.
     gcc16_root = os.environ.get("OS32_GCC16", str(Path.home() / "AmiCradle/stoves/os32-gcc16"))
+    # GFOpenNotifier (gfopennotifier): pop-up notices for ARexx scripts, Ranchero's and Ringhio's interface
+    if getattr(a, "gfopennotifier", None):
+        run(["sh", a.gfopennotifier / "build.sh", a.gfopennotifier / "build/os3"], env=dict(env, STOVE=str(STOVE)))
     # GFOpenUpdate, the commodity that offers GFOS's updates, its window GFOpenLayout UI (docs/design/GFOPENUPDATE.md)
     run(["sh", ROOT / "src/openupdate/build.sh", ROOT / "build/os3/GFOpenUpdate"],
         env=dict(os.environ, OS32_GCC16=gcc16_root, OLAYOUT=str(a.openamigalayout), OGT=str(a.opengadtools)))
@@ -2761,6 +2788,8 @@ def main() -> int:
     ap.add_argument("--thinsupport", type=Path, default=None,
                     help="a thin ROM build's OUT/thin-support/ (amicradle-guest trial-1m/build.sh --profile thin), for the "
                          "KickstartSet part (left out without it)")
+    ap.add_argument("--gfopennotifier", type=Path, default=first(DEV / "gfopennotifier", DEV.parent / "gfopennotifier"),
+                    help="gfopennotifier's checkout: the GFOpenNotifier part (left out without it)")
     ap.add_argument("--akikoplus", type=Path, default=None,
                     help="a built AkikoPlus drawer (Libs/akikoplus.library, C/AkikoTest, C/APTest, Developer/AkikoPlus/): "
                          "gfosautoconfigboards cards/akikoplus/guest's build; the part is left out without it")
@@ -3643,6 +3672,12 @@ def main() -> int:
     # (prefs.resource 47.101)
     snd.write()
 
+    # GFOpenNotifier: pop-up notices, compatible with Ranchero and Ringhio (Dale, 17 Nov 2026: "we jsut call it
+    # GFOPenNotifer", "it should go in with the other openup installs"). A commodity in SYS:WBStartup; its only
+    # interface is ARexx, so it needs OpenRexx (the GFOpenLibs-rexx part) beside it. GFOpenUpdate says through it
+    # that updates are waiting.
+    nt = notifier_part(top, a.gfopennotifier, icons) if getattr(a, "gfopennotifier", None) else None
+
     # GFOpenEdit: the text editor (gfopenedit), with its kinds of file in ENVARC:
     oe = a.openamigaedit / "build/os3"
     ed = Part(top, "GFOpenEdit", "0.1.2", "GFOpenEdit: a text editor with tabs, find and replace, and colours for scripts and code")
@@ -3847,7 +3882,8 @@ def main() -> int:
                                        + ([dev.dir / "Developer/GFOpenGPU-SDK.info", dev.dir / "Developer.info"] if dev else [])
                                        + ([oin.dir / "Utilities/GFOpenUp/Docs.info"] if oin else []))
         print(f"  GFOpenUp's own drawers as Soft 3D folders: {n}")
-        n = openicons_part.own_programs(a.guest, [core.dir / "WBStartup/GFOpenUpdate.info"])
+        n = openicons_part.own_programs(a.guest, [core.dir / "WBStartup/GFOpenUpdate.info"]
+                                        + ([nt.dir / "WBStartup/GFOpenNotifier.info"] if nt else []))
         print(f"  our programs' Soft 3D icons: {n}")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
     # before the version check: a part whose main binary took the slim ROM's newer copy must say that version

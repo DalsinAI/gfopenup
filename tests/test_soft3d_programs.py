@@ -15,15 +15,15 @@ def check(what, ok, more=""):
     print(("ok   " if ok else "FAIL ") + what + ("" if ok else f": {more}"))
     fails += 0 if ok else 1
 
-for n in (64, 32):
-    rest, chosen = (np.array(p3.frames("GFOpenUpdate", n, c)) for c in (False, True))
-    check(f"GFOpenUpdate at {n} px: two frames of {n} x {n}", rest.shape == chosen.shape == (n, n, 4), str(rest.shape))
+for name, n in [(x, n) for x in ("GFOpenUpdate", "GFOpenNotifier") for n in (64, 32)]:
+    rest, chosen = (np.array(p3.frames(name, n, c)) for c in (False, True))
+    check(f"{name} at {n} px: two frames of {n} x {n}", rest.shape == chosen.shape == (n, n, 4), str(rest.shape))
     a = np.concatenate([rest[..., 3].ravel(), chosen[..., 3].ravel()])
-    check(f"{n} px: each pixel solid or see-through", set(np.unique(a)) <= {0, 255}, str(np.unique(a)[:8]))
-    check(f"{n} px: something there, and chosen is another picture (it lifts, the arrow goes in)",
+    check(f"{name} {n} px: each pixel solid or see-through", set(np.unique(a)) <= {0, 255}, str(np.unique(a)[:8]))
+    check(f"{name} {n} px: something there, and chosen is another picture",
           (rest[..., 3] > 0).sum() > n * n // 4 and (rest != chosen).any())
     blue = ((chosen[..., 2] > 200) & (chosen[..., 0] < 120) & (chosen[..., 3] > 0)).sum()
-    check(f"{n} px chosen: the blue glow and arrow", blue > 0)
+    check(f"{name} {n} px chosen: the blue glow", blue > 0)
 check("a name with no drawing is refused", "Nothing" not in p3.DRAW)
 try:
     part.picture_frames("S3P:Nothing", 64)
