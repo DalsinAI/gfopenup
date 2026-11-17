@@ -280,6 +280,9 @@ def soft3d_face(kind: str, old: bytes | None) -> bytes:
     import openicons_part as part
     guest = Path(os.environ.get("AMICRADLE_GUEST") or ROOT.parent / "amicradle-guest")
     part.generator(guest)
+    if not getattr(part.aos_pictures, "cache_info", None):       # a kind's picture is drawn once, not for every icon
+        import functools
+        part.aos_pictures = functools.lru_cache(maxsize=None)(part.aos_pictures)
     return part.aos_icon(part.AOS_KINDS[kind.capitalize()], kind, old)
 
 
