@@ -2550,6 +2550,11 @@ def main() -> int:
                     help="build every step, even one whose checkouts haven't moved since its last build (STEPS_FRESH=1)")
     ap.add_argument("--steps", type=Path, default=ROOT / "build" / "steps",
                     help="where each step's stamp is kept, for the next cut to reuse (tools/step_reuse.py)")
+    ap.add_argument("--prebuilt", type=Path, default=None,
+                    help="prebuilt.tsv from tools/fetch_parts.py: the checkouts whose parts were built when they merged "
+                         "and are unpacked in them; their steps aren't built here")
+    ap.add_argument("--assemble-only", action="store_true",
+                    help="never compile: stop, naming them, when steps have neither a built part nor a reusable stamp")
     ap.add_argument("--freeze", type=Path, default=None,
                     help="the cut's freeze list (checkout name and commit per line): stops unless every checkout "
                          "it names is at that commit with no tracked change")
@@ -2567,7 +2572,9 @@ def main() -> int:
     global STEPS
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import step_reuse
-    cache = step_reuse.StepCache(a.steps, dev_checkouts(a), fresh=a.fresh)
+    cache = step_reuse.StepCache(a.steps, dev_checkouts(a), fresh=a.fresh,
+                                 prebuilt=step_reuse.read_freeze(a.prebuilt) if a.prebuilt else None,
+                                 no_compile=a.assemble_only)
     if a.freeze:
         cache.check_freeze(step_reuse.read_freeze(a.freeze))
     if not a.no_build:
@@ -2578,6 +2585,9 @@ def main() -> int:
         finally:
             STEPS = None
             print(f"build_parts: {cache.report()}, {time.time() - t0:.0f} s in all", flush=True)
+        if cache.missing:
+            raise SystemExit("--assemble-only: these steps have no built part (publish them from their "
+                             "repositories' part.yml, docs/design/PARTS-ON-MERGE.md):\n  " + "\n  ".join(cache.missing))
     cache.commits(a.out / "GFOpenUp-commits.tsv")
     icons = icon_maker(a.openamigaprint)
     date = time.strftime("%d.%m.%Y").lstrip("0").replace(".0", ".")
