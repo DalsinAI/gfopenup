@@ -865,6 +865,10 @@ def build_parts(a):
     # disks/openkick-boot/manifest.json): the GFOpenUp part's, on the GFOpenKick ROM, where none is (OPENKICK_DISK)
     for name, (src, _out, _dest) in OPENKICK_DISK.items():
         run(["sh", a.guest / src / "build-amiga.sh"], env=guest_stove(a.guest / src / "build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openkickdisk" / name))))
+    # gfopenextmem.library (amicradle-guest libraries/openextmem, its own os32-gcc16-open8 stove; OUT is its argument):
+    # the GFOpenUp part's, on the GFOpenKick ROM, where none is (openkick_extmem_lines)
+    run(["sh", a.guest / "libraries/openextmem/build.sh", str(ROOT / "build/openextmem")],
+        env=guest_stove(a.guest / "libraries/openextmem/build.sh", dict(genv)))
     # GFOpenReaction's classes GFOS lacks (OPENKICK_CLASSES: arexx.class), each with its own script, the same way
     for name, (src, _out, _dest) in OPENKICK_CLASSES.items():
         run(["sh", a.guest / src / "build-amiga.sh"], env=guest_stove(a.guest / src / "build-amiga.sh", dict(genv, OUT=str(ROOT / "build/openkickclasses" / name))))
@@ -1100,6 +1104,20 @@ OPENKICK_DISK = {
     "serial": ("devices/openserial.device", "devs/serial.device", "DEVS:serial.device"),
     "parallel": ("devices/openparallel.device", "devs/parallel.device", "DEVS:parallel.device"),
 }
+
+
+def openkick_extmem_lines(core: "Part", built: Path) -> None:
+    """The GFOpenUp part, on the GFOpenKick ROM: gfopenextmem.library (amicradle-guest libraries/openextmem), the
+    extended memory of the AA+ machine's 3 GB option, where none is. Without it GFOpenBench's title and GFOpenMeters
+    count the 2 GB of Fast memory alone (Dale, 17 November 2026, on the Pi 5: "this board doesnt look like the aa+
+    with the 3gb option", "openmeter is showing the arong amoung of free memopry , showing on the 2gb portion")."""
+    f = built / "gfopenextmem.library"
+    if not f.is_file():
+        raise SystemExit(f"{f} wasn't built (amicradle-guest libraries/openextmem/build.sh)")
+    if not binary_version(f.read_bytes(), "gfopenextmem.library"):
+        raise SystemExit(f"{f} has no gfopenextmem.library version")
+    core.add("OpenKick/libs/gfopenextmem.library", f.read_bytes(), "LIBS:gfopenextmem.library", default=True,
+             cond="when GFOpenKick")
 
 
 def openkick_disk_lines(core: "Part", built: Path) -> None:
@@ -2742,6 +2760,7 @@ def main() -> int:
         raise SystemExit(f"{sfl} wasn't built (amicradle-guest libraries/opensoftfpu/build-amiga.sh)")
     core.add("Libs/softfpu.library", sfl.read_bytes(), "LIBS:softfpu.library")
     openkick_disk_lines(core, ROOT / "build/openkickdisk")
+    openkick_extmem_lines(core, ROOT / "build/openextmem")
     openkick_classes_lines(core, ROOT / "build/openkickclasses", (a.guest / "LICENSE").read_bytes())
     core.write()
 
