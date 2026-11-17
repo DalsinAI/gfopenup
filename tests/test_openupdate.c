@@ -193,6 +193,20 @@ int main(void)
               && oud_status(-1, 0)[0] == 'T' && !strcmp(oud_status(0, 0), "Not checked yet."), "the status line");
     }
 
+    /* the notice through GFOpenNotifier */
+    {
+        char c[200];
+        oud_notice_cmd(0, 0, c, sizeof c);
+        CHECK(!strcmp(c, "REGISTERAPP APP=GFOpenUpdate AREXXPORT=GFOPENUPDATE TEXT GFOS updates"), "registers with its port");
+        oud_notice_cmd(1, 3, c, sizeof c);
+        CHECK(!strcmp(c, "RINGHIO APP=GFOpenUpdate TITLE=\"GFOS updates\" BACKRXMSG=SHOW TEXT 3 updates are waiting. Double-click to see them."),
+              "the notice, SHOW back on a double-click");
+        oud_notice_cmd(1, 1, c, sizeof c);
+        CHECK(strstr(c, "TEXT One update is waiting.") != NULL, "one update");
+        oud_notice_cmd(1, 12, c, sizeof c);
+        CHECK(strstr(c, "TEXT 12 updates") != NULL, "two digits");
+    }
+
     printf("%d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

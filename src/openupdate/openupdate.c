@@ -12,6 +12,9 @@
  * and Not now. Update fetches each part's archive, checks its size and SHA-256, unpacks it with GFOpenCompress and
  * installs it with GFOpenUpTool INSTALL. Nothing is installed unasked.
  *
+ * A timed check that finds updates says so through GFOpenNotifier (or Ranchero, or Ringhio: the RINGHIO port);
+ * a double-click on the notice sends SHOW to its port GFOPENUPDATE, which opens the window. With no notifier
+ * running the window opens by itself.
  * Exchange's Show (or GFOpenUpdate started again) opens the window and checks now; Hide closes it.
  * Tool types (its icon, or KEY=VALUE on the command line):
  *   INTERVAL=86400      seconds between checks after the one at startup; never under 600; 0 = only at startup
@@ -36,6 +39,9 @@
 #include <proto/commodities.h>
 #include <proto/icon.h>
 #include <proto/utility.h>
+#include <proto/rexxsyslib.h>
+#include <rexx/storage.h>
+#include <rexx/errors.h>
 #include <string.h>
 
 #include "gfopenlayout_ui.h"
@@ -54,6 +60,7 @@ static const char version[] __attribute__((used)) = "$VER: " NAME " " VERSION_TE
 struct Library *CxBase, *IconBase;
 struct IntuitionBase *IntuitionBase;
 struct Library *UtilityBase;
+struct Library *RexxSysBase;
 
 #define MANIFEST "ENVARC:GFOpenAmiga/GFOpenUp.manifest"
 #define INDEX_FILE OUD_WORK "/GFOpenUpdate.index"
@@ -383,6 +390,48 @@ static void save_last(long now)
     write_file(OUD_LAST, t, k);
 }
 
+/* ---- the notice: GFOpenNotifier (or Ranchero, or Ringhio) says updates are waiting ----------------------- */
+
+static struct MsgPort *rxport;                 /* OUD_PORT: SHOW from a double-click on the notice */
+
+/* One command to the notifier's port, waited for: 1 when it answered rc 0. */
+static int notifier_cmd(const char *cmd)
+{
+    struct MsgPort *reply, *to;
+    struct RexxMsg *rm;
+    int ok = 0;
+    if (!RexxSysBase || !(reply = CreateMsgPort())) return 0;
+    if ((rm = CreateRexxMsg(reply, NULL, (STRPTR)OUD_NOTIFY_PORT))) {
+        if ((rm->rm_Args[0] = (STRPTR)CreateArgstring((STRPTR)cmd, strlen(cmd)))) {
+            rm->rm_Action = RXCOMM | RXFF_RESULT;
+            Forbid();
+            if ((to = FindPort((STRPTR)OUD_NOTIFY_PORT))) PutMsg(to, (struct Message *)rm);
+            Permit();
+            if (to) {
+                WaitPort(reply);
+                GetMsg(reply);
+                ok = rm->rm_Result1 == 0;
+                if (rm->rm_Result1 == 0 && rm->rm_Result2) DeleteArgstring((STRPTR)rm->rm_Result2);
+            }
+            DeleteArgstring(rm->rm_Args[0]);
+        }
+        DeleteRexxMsg(rm);
+    }
+    DeleteMsgPort(reply);
+    return ok;
+}
+
+/* "n updates are waiting" as a notice: 1 when the notifier took it, else 0 (the window opens instead). */
+static int notify(int count)
+{
+    char cmd[200];
+    if (!rxport || !RexxSysBase) return 0;
+    oud_notice_cmd(0, 0, cmd, sizeof cmd);
+    notifier_cmd(cmd);                         /* "already registered" after the first time: fine */
+    oud_notice_cmd(1, count, cmd, sizeof cmd);
+    return notifier_cmd(cmd);
+}
+
 /* ---- settings -------------------------------------------------------------------------------------------- */
 
 static void take(const char *key, const char *value)
@@ -463,6 +512,14 @@ int main(int argc, char **argv)
         if (t) { last = oud_last(t, len); FreeVec(t); }
     }
 
+    RexxSysBase = OpenLibrary((STRPTR)"rexxsyslib.library", 0);   /* only for the notice */
+    if (RexxSysBase && (rxport = CreateMsgPort())) {
+        rxport->mp_Node.ln_Name = (char *)OUD_PORT;
+        rxport->mp_Node.ln_Pri = 0;
+        Forbid();
+        if (FindPort((STRPTR)OUD_PORT)) { Permit(); DeleteMsgPort(rxport); rxport = NULL; }
+        else { AddPort(rxport); Permit(); }
+    }
     if (!(port = CreateMsgPort())) goto out;
     nb.nb_Port = port;
     nb.nb_Pri = (BYTE)set.cxpri;
@@ -489,7 +546,18 @@ int main(int argc, char **argv)
             tpending = 1;
         }
         got = Wait((1UL << port->mp_SigBit) | (1UL << tport->mp_SigBit) | SIGBREAKF_CTRL_C
-                   | (win ? 1UL << win->UserPort->mp_SigBit : 0));
+                   | (win ? 1UL << win->UserPort->mp_SigBit : 0) | (rxport ? 1UL << rxport->mp_SigBit : 0));
+        if (rxport) {                          /* SHOW, from a double-click on the notice: the window */
+            struct RexxMsg *rm;
+            int show_win = 0;
+            while ((rm = (struct RexxMsg *)GetMsg(rxport))) {
+                show_win = 1;
+                rm->rm_Result1 = 0;
+                rm->rm_Result2 = 0;
+                ReplyMsg((struct Message *)rm);
+            }
+            if (show_win) open_win();
+        }
         if (got & SIGBREAKF_CTRL_C) quit = 1;
         while ((m = (CxMsg *)GetMsg(port))) {
             ULONG type = CxMsgType(m), id = CxMsgID(m);
@@ -520,7 +588,7 @@ int main(int argc, char **argv)
                 save_last(now);
                 checked = 1;
                 last = now;
-                if (offers) open_win();            /* never installs: it shows what there is, and waits */
+                if (offers && !win && !notify(offers)) open_win();   /* never installs: it says so, and waits */
             }
         }
         if (now_asked) {                           /* Exchange's Show, or started again: the window, checked now */
@@ -535,12 +603,21 @@ int main(int argc, char **argv)
     }
 out:
     close_win();
+    if (rxport) {
+        struct Message *msg;
+        Forbid();
+        RemPort(rxport);
+        Permit();
+        while ((msg = GetMsg(rxport))) { ((struct RexxMsg *)msg)->rm_Result1 = RC_ERROR; ReplyMsg(msg); }
+        DeleteMsgPort(rxport);
+    }
     if (tpending) { AbortIO((struct IORequest *)tr); WaitIO((struct IORequest *)tr); }
     if (timer) CloseDevice((struct IORequest *)tr);
     if (tr) DeleteIORequest((struct IORequest *)tr);
     if (tport) DeleteMsgPort(tport);
     if (broker) DeleteCxObjAll(broker);
     if (port) { struct Message *msg; while ((msg = GetMsg(port))) ReplyMsg(msg); DeleteMsgPort(port); }
+    if (RexxSysBase) CloseLibrary(RexxSysBase);
     if (UtilityBase) CloseLibrary(UtilityBase);
     if (IntuitionBase) CloseLibrary((struct Library *)IntuitionBase);
     if (IconBase) CloseLibrary(IconBase);

@@ -436,4 +436,27 @@ static const char *oud_status(int state, int offers)
     return offers == 1 ? "One update is ready." : "Updates are ready.";
 }
 
+/* ---- GFOpenNotifier, or Ranchero or Ringhio: "updates are waiting" ---- */
+
+#define OUD_NOTIFY_PORT "RINGHIO"                       /* GFOpenNotifier's, as Ranchero's and Ringhio's */
+#define OUD_PORT "GFOPENUPDATE"                         /* ours: a double-click on the notice sends SHOW here */
+
+/* The two commands for the notifier: register (which = 0) and the notice (which = 1), count updates waiting. */
+static int oud_notice_cmd(int which, int count, char *out, int size)
+{
+    char num[12], rev[12];
+    int k = 0, j, n = 0;
+    if (!which)
+        return oud_put(out, size, 0, "REGISTERAPP APP=GFOpenUpdate AREXXPORT=" OUD_PORT " TEXT GFOS updates");
+    if (count < 0) count = 0;
+    do { rev[k++] = (char)('0' + count % 10); count /= 10; } while (count > 0 && k < 11);
+    for (j = 0; j < k; j++) num[j] = rev[k - 1 - j];
+    num[k] = 0;
+    n = oud_put(out, size, n, "RINGHIO APP=GFOpenUpdate TITLE=\"GFOS updates\" BACKRXMSG=SHOW TEXT ");
+    if (!strcmp(num, "1")) n = oud_put(out, size, n, "One update is waiting.");
+    else { n = oud_put(out, size, n, num); n = oud_put(out, size, n, " updates are waiting."); }
+    n = oud_put(out, size, n, " Double-click to see them.");
+    return n;
+}
+
 #endif
