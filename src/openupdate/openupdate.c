@@ -41,6 +41,7 @@
 #include <proto/utility.h>
 #include <proto/rexxsyslib.h>
 #include <rexx/storage.h>
+#include <rexx/rxslib.h>
 #include <rexx/errors.h>
 #include <string.h>
 
@@ -60,7 +61,7 @@ static const char version[] __attribute__((used)) = "$VER: " NAME " " VERSION_TE
 struct Library *CxBase, *IconBase;
 struct IntuitionBase *IntuitionBase;
 struct Library *UtilityBase;
-struct Library *RexxSysBase;
+struct RxsLib *RexxSysBase;
 
 #define MANIFEST "ENVARC:GFOpenAmiga/GFOpenUp.manifest"
 #define INDEX_FILE OUD_WORK "/GFOpenUpdate.index"
@@ -512,7 +513,7 @@ int main(int argc, char **argv)
         if (t) { last = oud_last(t, len); FreeVec(t); }
     }
 
-    RexxSysBase = OpenLibrary((STRPTR)"rexxsyslib.library", 0);   /* only for the notice */
+    RexxSysBase = (struct RxsLib *)OpenLibrary((STRPTR)"rexxsyslib.library", 0);   /* only for the notice */
     if (RexxSysBase && (rxport = CreateMsgPort())) {
         rxport->mp_Node.ln_Name = (char *)OUD_PORT;
         rxport->mp_Node.ln_Pri = 0;
@@ -617,7 +618,7 @@ out:
     if (tport) DeleteMsgPort(tport);
     if (broker) DeleteCxObjAll(broker);
     if (port) { struct Message *msg; while ((msg = GetMsg(port))) ReplyMsg(msg); DeleteMsgPort(port); }
-    if (RexxSysBase) CloseLibrary(RexxSysBase);
+    if (RexxSysBase) CloseLibrary((struct Library *)RexxSysBase);
     if (UtilityBase) CloseLibrary(UtilityBase);
     if (IntuitionBase) CloseLibrary((struct Library *)IntuitionBase);
     if (IconBase) CloseLibrary(IconBase);
