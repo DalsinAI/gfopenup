@@ -3846,6 +3846,12 @@ def main() -> int:
         # jlha makes archives; on some systems "lha" is lhasa, which only reads them
         run([shutil.which("jlha") or "lha", "aq", arc.name, "GFOpenUp", "GFOpenUp.info"], cwd=a.out)
         print(f"{arc}: {arc.stat().st_size} bytes")
+        # GFOpenUpdate's side of the cut (docs/design/GFOPENUPDATE.md): each part as an archive of its own and the
+        # index that lists them, for the release the Amiga's updater reads. After the checks above, so only what
+        # the pack itself releases is in them.
+        import update_index
+        print(f"  {a.out / 'updates' / update_index.INDEX_NAME}: "
+              f"{update_index.write_updates(top / 'Parts', a.out / 'updates')} parts, an archive each")
         if browser_top:
             barc = a.out / f"GFOpenUp-{a.version}-OpenBrowser.lha"
             barc.unlink(missing_ok=True)

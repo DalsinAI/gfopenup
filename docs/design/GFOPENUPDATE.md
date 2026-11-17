@@ -46,13 +46,14 @@ to install: what is installed stays GFOpenUpTool's manifest, and a part goes in 
 
 | Step | What | State |
 | --- | --- | --- |
-| 1 | The index's form, what is offered against the manifest, the tooltype and when a check is due, with host tests | This change |
-| 2 | The cut writes the index and each part's archive (`tools/build_pack.py`) | Next |
-| 3 | GFOpenUpdate the commodity: startup and timed checks, the fetch, the requester | |
+| 1 | The index's form, what is offered against the manifest, the tooltype and when a check is due, with host tests | Done (`src/openupdate.h`) |
+| 2 | The cut writes the index and each part's archive: `tools/update_index.py`, run by `tools/build_pack.py --lha` into `<out>/updates/` | Done; publishing them on the release is the cut's upload |
+| 3 | GFOpenUpdate the commodity: startup and timed checks, the fetch, the requester | Next |
 | 4 | The window, and the menu entry pointed at it | |
 | 5 | Its icon, in the icon standard (amicradle `docs/ICON_STANDARD.md`) | |
 
-## Open
+## Where it is published
 
-- Where the index and the archives are published. Planned: a release of this repository, which is public, so the
-  Amiga needs no token (19 of the part repositories are private). Dale's to confirm.
+Dale, 17 November 2026: "yes build parts from public releases". The index and the part archives go on this
+repository's public releases, so the Amiga needs no token. Built files only, as the pack itself holds: never source,
+and never anything `check_private` refuses.

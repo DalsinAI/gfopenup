@@ -128,9 +128,11 @@ static int oud_index_parts(const char *text, long len, struct oud_part *out, int
     int count = 0, i;
     if (!oud_index_whole(text, len)) return -1;
     while (p < end) {
+        const char *q = p;
         int n = oud_words(p, end, w, 7, &next);
         p = next;
-        if (n == 0 || (n > 0 && w[0][0] == ';')) continue;
+        while (q < end && oud_blank(*q)) q++;
+        if (n == 0 || (q < end && *q == ';')) continue;      /* empty, or a comment however long */
         if (n > 0 && !strcmp(w[0], "GFOpenUpdate")) continue;
         if (n != 6 || strcmp(w[0], "part")) return -1;
         if (count == max) return -1;

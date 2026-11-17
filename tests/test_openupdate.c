@@ -59,6 +59,8 @@ int main(void)
     CHECK(n == 4 && !strcmp(p[1].name, "GFOpenIcons") && !strcmp(p[1].file, "GFOpenIcons-0.8.31.lha"), "tabs and a CR");
     CHECK(parts_of(index_ok, p, 3) == -1, "more parts than the table holds: none used");
     CHECK(parts_of("GFOpenUpdate 1\nGFOpenUpdate end\n", p, 8) == 0, "an empty index offers nothing");
+    CHECK(parts_of("GFOpenUpdate 1\n ; a long comment of more words than a part line has, a b c\nGFOpenUpdate end\n", p, 8) == 0,
+          "a comment of any length is passed over");
     CHECK(parts_of("GFOpenUpdate 1\npart A 1.0 10 " SHA_A "\nGFOpenUpdate end\n", p, 8) == -1, "a field missing");
     CHECK(parts_of("GFOpenUpdate 1\npart A 1.0 10 " SHA_A " a.lha more\nGFOpenUpdate end\n", p, 8) == -1, "a field too many");
     CHECK(parts_of("GFOpenUpdate 1\npart A 1.0 10 0123 a.lha\nGFOpenUpdate end\n", p, 8) == -1, "a short SHA-256");
