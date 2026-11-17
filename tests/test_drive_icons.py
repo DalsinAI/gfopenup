@@ -76,6 +76,16 @@ check("S3D:games: 64 x 64, at rest and chosen differ, not the hard disk's nor th
       and not np.array_equal(ga, ha) and not np.array_equal(ga, np.array(srest)))
 check("S3D:games: the hard disk's outline (the same body), so it stands as the other drives do",
       np.array_equal(ga[..., 3] > 0, ha[..., 3] > 0))
+from PIL import Image
+check("the boot drive's logo is AmiCradle's own (the ball and the A), kept with the tool", s3d.LOGO.is_file())
+check("the logo keeps its shape and sits centred", s3d.logo_box(988, 669, 256, 250, 310) == (101, 145, 310, 210),
+      str(s3d.logo_box(988, 669, 256, 250, 310)))
+flat = s3d.draw_system(s3d.Flat(512), False) and None
+f512 = s3d.Flat(512); s3d.draw_system(f512, False)
+px = np.array(f512.img)[145:355, 101:411, :3].astype(int)
+red = ((px[..., 0] > 170) & (px[..., 1] < 90) & (px[..., 2] < 90)).sum()
+blue = ((px[..., 2] > 180) & (px[..., 0] < 60)).sum()
+check("the boot drive carries the ball's red squares and no Deep cradle arc", red > 2000 and blue == 0, f"red {red}, blue {blue}")
 check("each def_drive_<kind>.info fits an FFS name (30)", all(len(f"def_drive_{k}.info") <= 30 for k in kinds))
 with tempfile.TemporaryDirectory() as d:
     out = os.path.join(d, "s.png")
