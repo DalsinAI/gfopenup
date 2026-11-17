@@ -1158,6 +1158,18 @@ OPENSNAP_TOOLTYPES = ["DONOTWAIT", "CX_PRIORITY=0", "SCREENKEY=shift rcommand s"
                       "DRAWER=SYS:Snapshots", "CLIPBOARD=YES"]
 
 
+# GFOpenBlanker's music (1.7, the user, 17 November 2026): the show plays one MIDI file, and which one is the icon's
+# MIDIFILE tool type, never the program's own choice. Copper List is one of GFOpenSynth's own dance tunes, which its
+# part puts in Media:midi/Dance where there is a Media drive; with no such file the blanker stays silent. GFOpenBlanker
+# 1.7 also stays silent while something else already plays MIDI.
+BLANKER_TOOLTYPES = ["PLAYMIDI=TRUE", "MIDIFILE=Media:midi/Dance/copper-list.mid"]
+
+
+def blanker_icon(icons) -> bytes:
+    """GFOpenBlanker's icon: a tool icon with its music as tool types (BLANKER_TOOLTYPES)."""
+    return icons.icon(icons.WBTOOL, "page", None, BLANKER_TOOLTYPES, stack=16384)
+
+
 def opensnap_part(top: Path, program: bytes, icons) -> "Part":
     """GFOpenSnap (24 October 2026), on every install: the commodity in SYS:Tools/Commodities, started at boot,
     with its keys as its icon's tool types. The icon goes only where none is ("default"), so keys a user set
@@ -3083,7 +3095,7 @@ def main() -> int:
     bl = Part(top, "GFOpenBlanker", None, "GFOpenBlanker: the screen blanker, and its show, Gods and Angels")
     bl.add("Tools/Commodities/GFOpenBlanker", (a.openamigaprefs / "Blanker/build/os3/GFOpenBlanker").read_bytes(),
            "SYS:Tools/Commodities/GFOpenBlanker")
-    bl.add("Tools/Commodities/GFOpenBlanker.info", icons.icon(icons.WBTOOL, "page", stack=16384), "SYS:Tools/Commodities/GFOpenBlanker.info")
+    bl.add("Tools/Commodities/GFOpenBlanker.info", blanker_icon(icons), "SYS:Tools/Commodities/GFOpenBlanker.info")
     bl.add("Settings/Blanker", b"300\n", "ENVARC:GFOpenPrefs/Blanker", default=True)
     bl.add("Settings/Blanker.env", b"300\n", "ENV:GFOpenPrefs/Blanker", default=True)
     blanker_fonts(bl, a.dejavu_sans, a.dejavu_serif)
@@ -3528,7 +3540,7 @@ def main() -> int:
 
     # GFOpenPlay: the media player for every datatype (gfopenmediaplayer).
     # Files can be shift-clicked with it or dropped on its window.
-    op = Part(top, "GFOpenPlay", "0.1.7", "GFOpenPlay: plays everything the datatypes open, with a playlist")
+    op = Part(top, "GFOpenPlay", "0.1.8", "GFOpenPlay: plays everything the datatypes open, with a playlist")
     op.add("Utilities/GFOpenPlay", (a.openamigamediaplayer / "build/os3/GFOpenPlay").read_bytes(), "SYS:Utilities/GFOpenPlay")
     op.add("Utilities/GFOpenPlay.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenPlay.info")
     op.write()
