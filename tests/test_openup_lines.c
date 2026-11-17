@@ -84,6 +84,14 @@ static int checks(void)
     same("unless DemosDrive, without it", oul_strip("unless DemosDrive copy \"a\" \"SYS:a\"", both, 0), "copy \"a\" \"SYS:a\"");
     same("when DemosDrive retire, with the drive", oul_strip("when DemosDrive retire \"SYS:x\"", OUL_DEMOSDRIVE, 0), "retire \"SYS:x\"");
     same("REMOVE takes a DemosDrive condition off", oul_strip("when DemosDrive copy \"a\" \"Demos:a\"", none, 1), "copy \"a\" \"Demos:a\"");
+    /* MediaDrive (0.8.22): a volume named Media is mounted, the standard build's DH4: */
+    same("when MediaDrive, with the drive", oul_strip("when MediaDrive copy \"a\" \"Media:midi/a\"", OUL_MEDIADRIVE, 0), "copy \"a\" \"Media:midi/a\"");
+    same("when MediaDrive, without it", oul_strip("when MediaDrive copy \"a\" \"Media:midi/a\"", both | OUL_DEMOSDRIVE, 0), NULL);
+    same("unless MediaDrive, with the drive", oul_strip("unless MediaDrive copy \"a\" \"SYS:a\"", ac | OUL_MEDIADRIVE, 0), NULL);
+    same("unless MediaDrive, without it", oul_strip("unless MediaDrive copy \"a\" \"SYS:a\"", both, 0), "copy \"a\" \"SYS:a\"");
+    same("REMOVE takes a MediaDrive condition off", oul_strip("when MediaDrive copy \"a\" \"Media:midi/a\"", none, 1), "copy \"a\" \"Media:midi/a\"");
+    same("the Demos drive is not the Media drive", oul_strip("when MediaDrive copy \"a\" \"Media:a\"", OUL_DEMOSDRIVE, 0), NULL);
+    truth("the Media bit is its own", OUL_MEDIADRIVE == 8u && !(OUL_MEDIADRIVE & (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE)), 1);
     truth("the three machine bits are three bits", (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE) == 7u
           && OUL_DEMOSDRIVE != OUL_AMICRADLE && OUL_DEMOSDRIVE != OUL_OPENKICK, 1);
     /* GFOpenKick, startup lines and retire lines too */
@@ -479,6 +487,7 @@ int main(int argc, char **argv)
     else if (strncmp(argv[2], "openkick100", 11) && strncmp(argv[2], "os323", 5)) { fprintf(stderr, "machine?\n"); return 2; }
     if (strstr(argv[2], "-ac")) have |= OUL_AMICRADLE;
     if (strstr(argv[2], "-demos")) have |= OUL_DEMOSDRIVE;
+    if (strstr(argv[2], "-media")) have |= OUL_MEDIADRIVE;
     if (!(f = fopen(argv[1], "r"))) { perror(argv[1]); return 2; }
     while (fgets(line, sizeof line, f)) {
         const char *rest;

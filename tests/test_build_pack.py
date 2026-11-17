@@ -847,6 +847,8 @@ def demos_part_checks(tmp: Path, filt: Path) -> None:
     tool = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
     check("GFOpenUpTool: the Demos volume is read from the DOS list (no requester), and is a machine bit",
           'FindDosEntry(dl, (STRPTR)"Demos", LDF_VOLUMES)' in tool and "demos_drive() ? OUL_DEMOSDRIVE : 0" in tool)
+    check("GFOpenUpTool: the Media volume is read from the DOS list (no requester), and is a machine bit",
+          'FindDosEntry(dl, (STRPTR)"Media", LDF_VOLUMES)' in tool and "media_drive() ? OUL_MEDIADRIVE : 0" in tool)
 
 
 def main() -> int:
