@@ -1144,6 +1144,51 @@ def main() -> int:
         check("each file as built", all((core.dir / "OpenKick" / out).read_bytes() == f"{n} body".encode()
                                          for n, (_, out, _) in bp.OPENKICK_DISK.items()))
 
+        # gfopenextmem.library (the Pi 5, 17 November 2026: the AA+ 3 GB machine's title and meter counted 2 GB, the
+        # library not on its disk): on the open ROM where none is; under OS 3.2.3's ROM nothing
+        built = tmp / "openextmem"
+        built.mkdir()
+        core = bp.Part(top, "GFOpenUp", "0.9", "test")
+        try:
+            bp.openkick_extmem_lines(core, built)
+            check("gfopenextmem.library not built: the build stops", False)
+        except SystemExit as e:
+            check("gfopenextmem.library not built: the build stops", "wasn't built" in str(e), str(e))
+        (built / "gfopenextmem.library").write_bytes(b"no id string")
+        try:
+            bp.openkick_extmem_lines(core, built)
+            check("gfopenextmem.library with no version: the build stops", False)
+        except SystemExit as e:
+            check("gfopenextmem.library with no version: the build stops", "version" in str(e), str(e))
+        body = b"\0gfopenextmem.library 2.1 (12.11.2026) GFOpenExtMem\r\n\0"
+        (built / "gfopenextmem.library").write_bytes(body)
+        core = bp.Part(top, "GFOpenUp", "0.9", "test")
+        bp.openkick_extmem_lines(core, built)
+        core.write()
+        for machine in ("openkick101-ac", "openkick101"):
+            eff = lines_on(core.dir / "Part", machine, filt)
+            check(f"{machine}: gfopenextmem.library where none is",
+                  eff[2:] == ['default "OpenKick/libs/gfopenextmem.library" "LIBS:gfopenextmem.library"'], str(eff))
+        eff = lines_on(core.dir / "Part", "os323", filt)
+        check("os323: no gfopenextmem.library line", eff[2:] == [], str(eff))
+        check("gfopenextmem.library as built", (core.dir / "OpenKick/libs/gfopenextmem.library").read_bytes() == body)
+
+        # The system's drawers with no icon on a GFOpenKick disk (the Pi 5, 17 November 2026: two icons of ten in the
+        # System window): the Drawer kind's icon, each where none is; under OS 3.2.3's ROM nothing (its disk has them)
+        import openicons_part as oip
+        dl = oip.openkick_drawer_lines()
+        check("a drawer icon for Devs, Prefs, Storage, System, Tools, Utilities and WBStartup",
+              dl == [f'when GFOpenKick default "Kinds/Drawer.info" "SYS:{n}.info"'
+                     for n in ("Devs", "Prefs", "Storage", "System", "Tools", "Utilities", "WBStartup")], str(dl))
+        check("the Drawer kind is the Soft 3D folder, a drawer icon", oip.AOS_KINDS["Drawer"] == "S3D:drawer"
+              and oip.KIND_TYPES["Drawer"] == "drawer")
+        pf = tmp / "IconsPart"
+        pf.write_text("part GFOpenIcons 0.4\n; test\n" + "\n".join(dl) + "\n")
+        eff = lines_on(pf, "openkick101", filt)
+        check("openkick101: each drawer's icon where none is",
+              eff[2:] == [l[len("when GFOpenKick "):] for l in dl], str(eff))
+        check("os323: no drawer icon lines", lines_on(pf, "os323", filt)[2:] == [], str(lines_on(pf, "os323", filt)))
+
         # GFOS had no SYS:Classes/arexx.class, so no program's ARexx port opened (Team 5, 10 November 2026): ours
         # (GFOpenReaction) on the open ROM where none is, with its licence; under OS 3.2.3's ROM nothing (ReAction's)
         built = tmp / "openkickclasses"

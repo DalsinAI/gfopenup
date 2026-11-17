@@ -161,6 +161,29 @@ def draw_harddisk(f, small):
     return 70
 
 
+def draw_games(f, small):
+    """the Games: volume (Dale, 17 November 2026, of its AOS-style picture beside the Soft 3D drives: "games drive
+    icon ?"): the hard disk's body with a game pad on it"""
+    hd_body(f, small=small)
+    pad = (52, 58, 72)
+    f.ell([92, 200, 222, 360], pad, light(pad, 0.12))                       # the grips
+    f.ell([290, 200, 420, 360], pad, light(pad, 0.12))
+    f.rr([112, 160, 400, 300], 62, pad, light(pad, 0.28))                   # the pad's body
+    white = (240, 243, 248)
+    f.rr([146, 220, 226, 248], 7, white)                                    # the d-pad
+    f.rr([172, 194, 200, 274], 7, white)
+    if small:
+        f.ell([300, 228, 340, 268], (74, 163, 255))
+        f.ell([344, 196, 384, 236], (255, 122, 26))
+    else:
+        for (x, y), col in (((338, 202), (255, 122, 26)), ((368, 232), (224, 72, 60)), ((308, 232), (74, 163, 255)),
+                            ((338, 262), (90, 200, 120))):
+            f.ell([x - 14, y - 14, x + 14, y + 14], col, light(col, 0.3))
+        f.ell([196, 330, 316, 450], dark((196, 202, 212), 0.12), light((196, 202, 212), 0.25))   # the spindle's dome
+        f.ell([236, 370, 276, 410], dark((196, 202, 212), 0.35))
+    return 70
+
+
 def draw_nvme(f, small):
     pcb = (34, 38, 46)
     x0, x1 = (150, 362)
@@ -289,7 +312,8 @@ def draw_network(f, small):
 
 
 DRAW = {"system": draw_system, "harddisk": draw_harddisk, "nvme": draw_nvme, "ide": draw_ide, "usb": draw_usb,
-        "cd": draw_cd, "floppy": draw_floppy, "ram": draw_ram, "network": draw_network}
+        "cd": draw_cd, "floppy": draw_floppy, "ram": draw_ram, "network": draw_network,
+        "games": draw_games}            # a volume's picture, not a kind of drive: not in KINDS
 
 
 # ---- tilt, thickness, light, edge, shadow ------------------------------------------------------------
