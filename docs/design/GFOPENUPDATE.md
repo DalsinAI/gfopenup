@@ -50,7 +50,7 @@ to install: what is installed stays GFOpenUpTool's manifest, and a part goes in 
 | 2 | The cut writes the index and each part's archive: `tools/update_index.py`, run by `tools/build_pack.py --lha` into `<out>/updates/` | Done; publishing them on the release is the cut's upload |
 | 3 | GFOpenUpdate the commodity: startup and timed checks, the fetch, the install | Done: `src/openupdate/openupdate.c`, in `SYS:WBStartup` from the GFOpenUp part; fetches with GFOpenSocket's httpget, checks size and SHA-256, unpacks with GFOpenCompress, installs with `GFOpenUpTool INSTALL` |
 | 4 | The window, and the menu entry pointed at it | Done (0.2): GFOpenLayout UI, "GFOS Updates": every part installed with its version and the newer one beside it, Update, Skip these, Check now, Not now; it opens by itself when a timed check finds updates, and from Exchange's Show or GFOpenUp's menu "GFOS Updates...". Its rows and status line are `oud_rows`, `oud_row_text`, `oud_status` in `src/openupdate.h`, host-tested |
-| 5 | Its icon, in the icon standard (amicradle `docs/ICON_STANDARD.md`): a Soft 3D drawing with its sheet for Dale | Owed: until then it has the pack's OS 3.2-style tool icon |
+| 5 | Its icon, in the icon standard (amicradle `docs/ICON_STANDARD.md`) | Drawn: the parcel and the arrow going in, `tools/soft3d_programs_art.py` (sheet: `--sheet`), given to the icon by `openicons_part.own_programs`; waits for Dale to see the sheet |
 
 ## Where it is published
 

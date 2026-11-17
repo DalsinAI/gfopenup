@@ -157,6 +157,22 @@ def drawer_picture(e: dict) -> str:
     return "S3D:drawer" + (":" + motif if motif else "")
 
 
+def own_programs(guest: Path, files: list[Path]) -> int:
+    """Gives each program icon in files (a missing one is skipped) its Soft 3D picture from
+    tools/soft3d_programs_art.py, by the icon's name, in place; its type, tool types, stack and place stay. Returns
+    how many it changed."""
+    import soft3d_programs_art
+    generator(guest)
+    done = 0
+    for f in files:
+        name = f.name[:-5] if f.name.endswith(".info") else f.name
+        if not f.is_file() or name not in soft3d_programs_art.DRAW:
+            continue
+        f.write_bytes(aos_icon("S3P:" + name, "tool", f.read_bytes()))
+        done += 1
+    return done
+
+
 def own_drawers(guest: Path, files: list[Path]) -> int:
     """Gives each of GFOpenUp's own drawer icons in files (a missing one is skipped) the Soft 3D folder with its
     program's mark (OWN_DRAWERS, by the icon's name), in place; its window and place stay. Returns how many it
@@ -419,6 +435,11 @@ ICON_SIZE = 64
 def picture_frames(name: str, size: int):
     """NAME's picture at rest and chosen, size x size: S3D:<kind> from the Soft 3D drives or kinds, else the AOS
     drawer style's picture NAME."""
+    if name.startswith("S3P:"):                  # one of our programs (tools/soft3d_programs_art.py)
+        import soft3d_programs_art
+        if name[4:] not in soft3d_programs_art.DRAW:
+            raise KeyError(name)
+        return [soft3d_programs_art.frames(name[4:], size, c) for c in (False, True)]
     if name.startswith("S3D:"):
         kind = name[4:]
         import soft3d_drives_art, soft3d_kinds_art

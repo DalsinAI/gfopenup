@@ -3847,6 +3847,8 @@ def main() -> int:
                                        + ([dev.dir / "Developer/GFOpenGPU-SDK.info", dev.dir / "Developer.info"] if dev else [])
                                        + ([oin.dir / "Utilities/GFOpenUp/Docs.info"] if oin else []))
         print(f"  GFOpenUp's own drawers as Soft 3D folders: {n}")
+        n = openicons_part.own_programs(a.guest, [core.dir / "WBStartup/GFOpenUpdate.info"])
+        print(f"  our programs' Soft 3D icons: {n}")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
     # before the version check: a part whose main binary took the slim ROM's newer copy must say that version
     for t in [top] + ([browser_top] if browser_top else []):
