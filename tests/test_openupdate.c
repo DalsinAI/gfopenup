@@ -122,6 +122,54 @@ int main(void)
     CHECK(!oud_due(1, 1, 1000000, 1000, 0), "interval 0: only the one at startup");
     CHECK(oud_due(1, 1, 500, 1000, 3600), "the clock set back: due");
 
+    /* what the commodity says and writes */
+    {
+        char url[120], text[400];
+        static const char old[] = "skip GFOpenPlay 0.1.6\nskip GFOpenDock 0.6.14\nnoise\n";
+        CHECK(oud_url("https://x.example/a/", "f.lha", url, sizeof url) && !strcmp(url, "https://x.example/a/f.lha"), "an address");
+        CHECK(oud_url("https://x.example/a", "f.lha", url, sizeof url) && !strcmp(url, "https://x.example/a/f.lha"), "the slash added");
+        CHECK(!oud_url("https://x.example/a b/", "f.lha", url, sizeof url), "a blank in the address");
+        CHECK(!oud_url("https://x.example/\"", "f.lha", url, sizeof url), "a quote in the address");
+        CHECK(!oud_url("", "f.lha", url, sizeof url), "no address");
+        CHECK(!oud_url("https://x.example/a/", "f.lha", url, 20), "too long for its place");
+        n = parts_of(index_ok, p, 8);
+        n = oud_offers(p, n, manifest, (long)strlen(manifest), NULL, 0);
+        oud_offer_text(p, n, 12, text, sizeof text);
+        CHECK(!strcmp(text, "GFOpenPlay: 0.1.6 to 0.1.7-rc1\nGFOpenIcons: 0.8.30-rc6 to 0.8.31\n"), "the requester's lines");
+        oud_offer_text(p, n, 1, text, sizeof text);
+        CHECK(!strcmp(text, "GFOpenPlay: 0.1.6 to 0.1.7-rc1\nand 1 more\n"), "more than it shows");
+        CHECK(oud_skip_text(p, n, old, (long)strlen(old), text, sizeof text) > 0
+              && !strcmp(text, "skip GFOpenPlay 0.1.7-rc1\nskip GFOpenIcons 0.8.31\nskip GFOpenDock 0.6.14\n"),
+              "said no: the new versions first, another part's line kept, the part's old line gone");
+        CHECK(oud_skip_text(p, n, NULL, 0, text, sizeof text) > 0 && !strcmp(text, "skip GFOpenPlay 0.1.7-rc1\nskip GFOpenIcons 0.8.31\n"),
+              "said no with no file yet");
+        CHECK(oud_skip_text(p, n, old, (long)strlen(old), text, 30) == -1, "no room: the file is left");
+        {   /* and what was said no to is then not offered */
+            char skipped[400];
+            int m = oud_skip_text(p, n, NULL, 0, skipped, sizeof skipped);
+            n = parts_of(index_ok, p, 8);
+            CHECK(oud_offers(p, n, manifest, (long)strlen(manifest), skipped, m) == 0, "nothing offered after a no");
+        }
+    }
+
+    /* the commands it runs */
+    {
+        char c[200];
+        CHECK(oud_fetch_cmd("https://x.example/a/f.lha", "T:GFOpenUpdate/f.lha", c, sizeof c)
+              && !strcmp(c, "SYS:Tools/OpenSocket/httpget -q -o \"T:GFOpenUpdate/f.lha\" https://x.example/a/f.lha"), "the fetch");
+        CHECK(!oud_fetch_cmd("https://x.example/a b", "T:f", c, sizeof c), "a blank in the address: no fetch");
+        CHECK(!oud_fetch_cmd("https://x.example/a", "T:\"f", c, sizeof c), "a quote in the file: no fetch");
+        CHECK(!oud_fetch_cmd("https://x.example/a/f.lha", "T:f", c, 30), "the fetch too long for its place");
+        CHECK(oud_unpack_cmd("T:GFOpenUpdate/f.lha", "T:GFOpenUpdate/x", c, sizeof c)
+              && !strcmp(c, "SYS:Utilities/GFOpenCompress x \"T:GFOpenUpdate/f.lha\" \"T:GFOpenUpdate/x\""), "the unpack");
+        CHECK(!oud_unpack_cmd("T:a\nb", "T:x", c, sizeof c), "a newline: no unpack");
+        CHECK(oud_install_cmd("T:GFOpenUpdate/x", "GFOpenPlay", c, sizeof c)
+              && !strcmp(c, "SYS:C/GFOpenUpTool INSTALL \"T:GFOpenUpdate/x/GFOpenPlay\""), "the install");
+        CHECK(!oud_install_cmd("T:GFOpenUpdate/x", "../Evil", c, sizeof c), "a part name with a drawer: no install");
+        CHECK(oud_last("1234567\n", 8) == 1234567, "LastCheck read");
+        CHECK(oud_last("", 0) == 0 && oud_last("soon\n", 5) == 0 && oud_last(NULL, 0) == 0, "no LastCheck, or a wrong one: 0");
+    }
+
     printf("%d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

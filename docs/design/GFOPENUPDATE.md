@@ -48,9 +48,9 @@ to install: what is installed stays GFOpenUpTool's manifest, and a part goes in 
 | --- | --- | --- |
 | 1 | The index's form, what is offered against the manifest, the tooltype and when a check is due, with host tests | Done (`src/openupdate.h`) |
 | 2 | The cut writes the index and each part's archive: `tools/update_index.py`, run by `tools/build_pack.py --lha` into `<out>/updates/` | Done; publishing them on the release is the cut's upload |
-| 3 | GFOpenUpdate the commodity: startup and timed checks, the fetch, the requester | Next |
+| 3 | GFOpenUpdate the commodity: startup and timed checks, the fetch, the requester | Done: `src/openupdate.c` (0.1), in `SYS:WBStartup` from the GFOpenUp part; fetches with GFOpenSocket's httpget, checks size and SHA-256, unpacks with GFOpenCompress, installs with `GFOpenUpTool INSTALL`. Exchange's Show checks now. Until step 4 the offer is a requester |
 | 4 | The window, and the menu entry pointed at it | |
-| 5 | Its icon, in the icon standard (amicradle `docs/ICON_STANDARD.md`) | |
+| 5 | Its icon, in the icon standard (amicradle `docs/ICON_STANDARD.md`): a Soft 3D drawing with its sheet for Dale | Owed: until then it has the pack's OS 3.2-style tool icon |
 
 ## Where it is published
 

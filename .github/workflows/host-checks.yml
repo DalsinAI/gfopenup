@@ -37,3 +37,5 @@ jobs:
         run: python3 tests/test_apps_pack.py
       - name: GFOpenUpdate's index and part archives from a cut (tools/update_index.py)
         run: python3 tests/test_update_index.py
+      - name: GFOpenUpdate's files onto the release (tools/publish_updates.py)
+        run: python3 tests/test_publish_updates.py

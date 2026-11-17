@@ -694,6 +694,10 @@ def archive_art() -> bytes:
     return img.tobytes()
 
 
+# GFOpenUpdate's icon (src/openupdate.c): a check a day, Workbench not waiting for it
+UPDATE_TOOLTYPES = ["INTERVAL=86400", "DONOTWAIT", "CX_PRIORITY=0"]
+
+
 def gf_socket_name(path: str) -> str:
     """path with its file name in gfopensocket's GF form: opensocket.library -> gfopensocket.library,
     OpenSocketControl -> GFOpenSocketControl, C/OpenSocket -> C/GFOpenSocket; other names as they are."""
@@ -781,6 +785,9 @@ def build_parts(a):
          "-o", ROOT / "build/os3/GFOpenUpTool", ROOT / "src/openuptool.c"], env=env)
     run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, *late, "-fno-common",
          "-o", ROOT / "build/os3/GFOpenUpMenu", ROOT / "src/openupmenu.c"], env=env)
+    # GFOpenUpdate, the commodity that offers GFOS's updates (docs/design/GFOPENUPDATE.md)
+    run([CC, "-noixemul", "-m68040", f"-specs={SOFT_SPECS}", "-std=gnu99", "-Wall", "-Werror", "-O2", NULL_OK, *late, "-fno-common",
+         "-o", ROOT / "build/os3/GFOpenUpdate", ROOT / "src/openupdate.c"], env=env)
     # GFOpenMonitor 1.0, the task manager (src/openmonitor/, its own build.sh, GCC 16 as gfopengadtools wants),
     # built resident (libnix -resident: each run its own variables), so one seglist serves every run. The open
     # ROM builds the same file through amicradle-guest's romprefs.sh.
@@ -2848,6 +2855,11 @@ def main() -> int:
     acromfix_lines(core, acromfix.read_bytes())
     core.add("C/GFOpenUpMenu", (ROOT / "build/os3/GFOpenUpMenu").read_bytes(), "SYS:C/GFOpenUpMenu")
     core.line("startup Run >NIL: C:GFOpenUpMenu")
+    # GFOpenUpdate in SYS:WBStartup (Dale, 17 Nov 2026: "make it a wbstartup commodity"); its icon holds the
+    # user's INTERVAL, so it is written only where there is none, and DONOTWAIT so Workbench doesn't wait for it
+    core.add("WBStartup/GFOpenUpdate", (ROOT / "build/os3/GFOpenUpdate").read_bytes(), "SYS:WBStartup/GFOpenUpdate")
+    core.add("WBStartup/GFOpenUpdate.info", icons.icon(icons.WBTOOL, "install", None, UPDATE_TOOLTYPES, stack=32768),
+             "SYS:WBStartup/GFOpenUpdate.info", default=True)
     # AmigaOS 3.2.3's own icons and their default tools (names and tool strings): FIXTOOLS puts back the ones
     # GFOpenUp 0.6.14 to 0.7.0 changed to GFOpenView by mistake, on the 0.7.1 upgrade and on UNINSTALL
     core.add("StockDefaultTools", (ROOT / "pack/StockDefaultTools").read_bytes(), "ENVARC:GFOpenAmiga/StockDefaultTools")
@@ -3761,6 +3773,7 @@ def main() -> int:
     try:
         os32_icons(a.openamigaprint, icons, [(top / "Install-GFOpenUp.info", "install"), (top / "Uninstall-GFOpenUp.info", "install"),
                                              (core.dir / "Utilities/GFOpenUp/Uninstall-GFOpenUp.info", "install"),
+                                             (core.dir / "WBStartup/GFOpenUpdate.info", "install"),
                                              (opp.dir / "Preferences/GFOpenPrefs.info", "page"),
                                              (opp.dir / "Preferences.info", None),
                                              (setup.dir / "Prefs/GFOpenUp-Setup.info", "page"),

@@ -29,6 +29,7 @@
 #define OUD_LAST OUD_DATA "/LastCheck"                  /* when it last checked, seconds */
 #define OUD_INDEX_HEAD "GFOpenUpdate 1"
 #define OUD_INDEX_END "GFOpenUpdate end"
+#define OUD_INDEX_NAME "GFOpenUpdate.index"             /* beside the archives on the release */
 
 #define OUD_INTERVAL_DEFAULT 86400L                     /* seconds between checks: a day */
 #define OUD_INTERVAL_MIN 600L                           /* never more often than this, whatever the tooltype says */
@@ -214,6 +215,166 @@ static int oud_due(int network_up, int checked_this_run, long now, long last, lo
     if (!checked_this_run) return 1;
     if (interval <= 0) return 0;
     return now < last || now - last >= interval;
+}
+
+/* ---- what the commodity says and writes (step 3) ---- */
+
+#define OUD_URL_DEFAULT "https://github.com/DalsinAI/gfopenup/releases/download/updates/"   /* the URL tooltype */
+#define OUD_RETRY 60L                                   /* seconds between tries until the first check gets through */
+
+/* base and file as one address into out: base gets a "/" when it hasn't one. 1, or 0 when out is too small or
+ * either holds a quote, a blank or a control letter (the address goes on a command line). */
+static int oud_url(const char *base, const char *file, char *out, int size)
+{
+    int n = 0, i;
+    const char *part[3];
+    part[0] = base; part[1] = (*base && base[strlen(base) - 1] != '/') ? "/" : ""; part[2] = file;
+    if (!*base) return 0;
+    for (i = 0; i < 3; i++) {
+        const char *p;
+        for (p = part[i]; *p; p++) {
+            if ((unsigned char)*p < 33 || *p == '"' || *p == '*' || (unsigned char)*p > 126 || n >= size - 1) return 0;
+            out[n++] = *p;
+        }
+    }
+    out[n] = 0;
+    return 1;
+}
+
+static int oud_put(char *out, int size, int n, const char *s)
+{
+    while (*s && n < size - 1) out[n++] = *s++;
+    out[n] = 0;
+    return n;
+}
+
+/* The offers as the requester's lines, "<Name>: <installed> to <version>" each, the first `show` of them and then
+ * "and <n> more". The length written. */
+static int oud_offer_text(const struct oud_part *parts, int count, int show, char *out, int size)
+{
+    int i, n = 0;
+    out[0] = 0;
+    for (i = 0; i < count && i < show; i++) {
+        n = oud_put(out, size, n, parts[i].name);
+        n = oud_put(out, size, n, ": ");
+        n = oud_put(out, size, n, parts[i].installed);
+        n = oud_put(out, size, n, " to ");
+        n = oud_put(out, size, n, parts[i].version);
+        n = oud_put(out, size, n, "\n");
+    }
+    if (count > show) {
+        char num[12];
+        int more = count - show, k = 0, j;
+        char rev[12];
+        while (more > 0 && k < 11) { rev[k++] = (char)('0' + more % 10); more /= 10; }
+        for (j = 0; j < k; j++) num[j] = rev[k - 1 - j];
+        num[k] = 0;
+        n = oud_put(out, size, n, "and ");
+        n = oud_put(out, size, n, num);
+        n = oud_put(out, size, n, " more\n");
+    }
+    return n;
+}
+
+/* Skipped's new text when the user says no to these offers: a "skip <Name> <version>" line each, then the old
+ * text's lines for other parts (old may be NULL). The length written, or -1 when out is too small (then the file
+ * is left as it was). */
+static int oud_skip_text(const struct oud_part *parts, int count, const char *old, long oldlen, char *out, int size)
+{
+    int i, n = 0;
+    const char *p = old, *end = old ? old + oldlen : NULL, *next;
+    char w[4][80];
+    for (i = 0; i < count; i++) {
+        if (n + (int)strlen(parts[i].name) + (int)strlen(parts[i].version) + 8 >= size) return -1;
+        n = oud_put(out, size, n, "skip ");
+        n = oud_put(out, size, n, parts[i].name);
+        n = oud_put(out, size, n, " ");
+        n = oud_put(out, size, n, parts[i].version);
+        n = oud_put(out, size, n, "\n");
+    }
+    while (p && p < end) {
+        int words = oud_words(p, end, w, 4, &next), again = 0;
+        p = next;
+        if (words != 3 || strcmp(w[0], "skip")) continue;
+        for (i = 0; i < count; i++) again |= !strcmp(parts[i].name, w[1]);
+        if (again) continue;
+        if (n + (int)strlen(w[1]) + (int)strlen(w[2]) + 8 >= size) return -1;
+        n = oud_put(out, size, n, "skip ");
+        n = oud_put(out, size, n, w[1]);
+        n = oud_put(out, size, n, " ");
+        n = oud_put(out, size, n, w[2]);
+        n = oud_put(out, size, n, "\n");
+    }
+    if (!count && !n) out[0] = 0;
+    return n;
+}
+
+/* ---- the commands the commodity runs (step 3) ---- */
+
+#define OUD_HTTPGET "SYS:Tools/OpenSocket/httpget"       /* GFOpenSocket's, https:// through GFOpenTLS, follows redirects */
+#define OUD_UNPACK "SYS:Utilities/GFOpenCompress"        /* GFOpenCompress x <archive> <drawer> */
+#define OUD_TOOL "SYS:C/GFOpenUpTool"
+#define OUD_WORK "T:GFOpenUpdate"                        /* downloads and unpacked parts, deleted after */
+
+/* A path fit to go in quotes on a command line: something there, no quote, no newline, no control letter. */
+static int oud_quotable(const char *s)
+{
+    if (!*s) return 0;
+    for (; *s; s++) if ((unsigned char)*s < 32 || *s == '"') return 0;
+    return 1;
+}
+
+static int oud_cat(char *out, int size, const char *const *bits)
+{
+    int n = 0;
+    for (; *bits; bits++) {
+        const char *p;
+        for (p = *bits; *p; p++) {
+            if (n >= size - 1) return 0;
+            out[n++] = *p;
+        }
+    }
+    out[n] = 0;
+    return 1;
+}
+
+/* httpget saving url as the file to: 1, or 0 when it won't fit or either can't go on a command line (url is
+ * oud_url's, so it has no blank or quote). */
+static int oud_fetch_cmd(const char *url, const char *to, char *out, int size)
+{
+    const char *bits[] = { OUD_HTTPGET " -q -o \"", to, "\" ", url, NULL };
+    const char *p;
+    if (!oud_quotable(to) || !*url) return 0;
+    for (p = url; *p; p++) if ((unsigned char)*p < 33 || *p == '"' || (unsigned char)*p > 126) return 0;
+    return oud_cat(out, size, bits);
+}
+
+/* GFOpenCompress unpacking the archive into the drawer. 1, or 0 as oud_fetch_cmd. */
+static int oud_unpack_cmd(const char *archive, const char *drawer, char *out, int size)
+{
+    const char *bits[] = { OUD_UNPACK " x \"", archive, "\" \"", drawer, "\"", NULL };
+    if (!oud_quotable(archive) || !oud_quotable(drawer)) return 0;
+    return oud_cat(out, size, bits);
+}
+
+/* GFOpenUpTool installing the part's drawer, <drawer>/<name>: name is the part's drawer as unpacked ("<name>/..." in the
+ * archive, update_index.py). 1, or 0. */
+static int oud_install_cmd(const char *drawer, const char *name, char *out, int size)
+{
+    const char *bits[] = { OUD_TOOL " INSTALL \"", drawer, "/", name, "\"", NULL };
+    if (!oud_quotable(drawer) || !oud_plain_name(name)) return 0;
+    return oud_cat(out, size, bits);
+}
+
+/* The LastCheck file's text (seconds) back as a number: 0 when there is none or it isn't one. */
+static long oud_last(const char *text, long len)
+{
+    char w[1][80];
+    const char *next;
+    long n;
+    if (!text || len <= 0) return 0;
+    if (oud_words(text, text + len, w, 1, &next) < 1 || !oud_number(w[0], &n)) return 0;
+    return n;
 }
 
 #endif
