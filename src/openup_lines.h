@@ -10,6 +10,9 @@
  *                                no-ROM-volume design of 24 October 2026, sections 9 and 10)
  *   unless GFOpenKick <line>       on every other ROM: OS 3.2.3's own, and a GFOpenKick ROM before prefs.resource
  *                                47.101, whose prefs task applies only the system's own settings
+ *   when DemosDrive <line>     only where a volume named Demos is mounted (0.8.21, 17 November 2026: the standard
+ *                                build's drives are System, Work for applications, Games, Demos and Media)
+ *   unless DemosDrive <line>   where there is none: the file goes where it went before
  * A condition this GFOpenUpTool doesn't know keeps its line out of an install, as before.
  *
  * And one part needing another (25 October 2026, the GFOffice design's section 12.2):
@@ -28,6 +31,7 @@
 
 #define OUL_AMICRADLE 1u          /* an AmiCradle instance (its ACBridge or ACStorage board) */
 #define OUL_OPENKICK    2u          /* the open ROM that applies the boot's settings (oul_prefs_task) */
+#define OUL_DEMOSDRIVE  4u          /* a volume named Demos is mounted (the standard build's DH3:) */
 
 /* 1 on the open ROM whose intuition applies Sound's levels, Gamepads' patch and the stack caps at boot:
  * the GFOpenKick ROM (okr: its 'OKR1' mark) with prefs.resource (version, revision) at least 47.101 (no-ROM-volume
@@ -92,6 +96,7 @@ static const char *oul_strip(const char *line, unsigned have, int any)
     while (oul_blank(*s)) s++;
     if ((n = oul_word(s, "AmiCradle"))) bit = OUL_AMICRADLE;
     else if ((n = oul_word(s, "GFOpenKick"))) bit = OUL_OPENKICK;
+    else if ((n = oul_word(s, "DemosDrive"))) bit = OUL_DEMOSDRIVE;
     else for (n = 0; s[n] && !oul_blank(s[n]); n++) ;
     rest = s + n;
     while (oul_blank(*rest)) rest++;

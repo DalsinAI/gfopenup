@@ -140,6 +140,7 @@
 (if (exists "SYS:Utilities/GFOpenMail/GFOpenMail") (set #default (bitor #default 2097152)))
 (if (exists "SYS:Utilities/OpenBrowser/OpenBrowser") (set #default (bitor #default 4194304)))
 (if (exists "SYS:Utilities/GFOpenDemos/GFOpenDemos") (set #default (bitor #default 134217728)))
+(if (exists "Demos:GFOpenDemos/GFOpenDemos" (noreq)) (set #default (bitor #default 134217728)))
 (if (exists "SYS:Utilities/GFOpenPuTTY/GFOpenPuTTY") (set #default (bitor #default 536870912)))
 (if (exists "SYS:C/Tata") (set #default (bitor #default 1073741824)))
 (set #default2 128)
@@ -304,7 +305,8 @@
     (askoptions
         (prompt "Which parts should GFOpenUp install? (4 of 6)")
         (help "GFOpenDemos: Boing, Chrome Gears and Copper Tunnel, three small 3D demos in GL "
-              "(new, off unless picked; needs GFOpenGPU and an FPU). In SYS:Utilities/GFOpenDemos.\n\n"
+              "(new, off unless picked; needs GFOpenGPU and an FPU). On the Demos drive where there is one "
+              "(Demos:GFOpenDemos), else in SYS:Utilities/GFOpenDemos.\n\n"
               "GFOpenCrypto: gfopencrypto.library 2.0, the sums behind secure connections (SSH's key "
               "exchanges, host keys, SHA-2, AES) for the Open programs (new). On AmiCradle they "
               "run on the x86 or ARM64 cores, elsewhere on the Amiga's own CPU. GFOpenPuTTY needs it, so it comes "

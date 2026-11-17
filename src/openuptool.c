@@ -160,7 +160,7 @@
 static int slim_rom(void);
 static int kickset(const char *a1, const char *a2);
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.20 (13.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.21 (17.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -783,10 +783,22 @@ static int prefs_task_rom(void)
     return oul_prefs_task(openkick_rom(), pr ? pr->lib_Version : 0, pr ? pr->lib_Revision : 0);
 }
 
+/* 0.8.21: a volume named Demos is mounted (the standard build's DH3:, Dale 17 Nov 2026: "standard build should
+ * have dh3: Demos dh4: Media too", and GFOpenDemos goes there). Read from the DOS list, so no "Please insert
+ * volume Demos" requester comes up where there is none. */
+static int demos_drive(void)
+{
+    struct DosList *dl = LockDosList(LDF_VOLUMES | LDF_READ);
+    int there = FindDosEntry(dl, (STRPTR)"Demos", LDF_VOLUMES) != NULL;
+    UnLockDosList(LDF_VOLUMES | LDF_READ);
+    return there;
+}
+
 /* The OUL_ bits a Part file's conditions ask about (src/openup_lines.h) */
 static unsigned machine_bits(void)
 {
-    return (is_amicradle() ? OUL_AMICRADLE : 0) | (prefs_task_rom() ? OUL_OPENKICK : 0);
+    return (is_amicradle() ? OUL_AMICRADLE : 0) | (prefs_task_rom() ? OUL_OPENKICK : 0)
+         | (demos_drive() ? OUL_DEMOSDRIVE : 0);
 }
 
 static void set_env(const char *name, const char *value)
