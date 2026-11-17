@@ -1704,6 +1704,10 @@ def main() -> int:
           and '";BEGIN OpenUp\\"' in t)
     menu = (ROOT / "src/openupmenu.c").read_text(encoding="latin-1")
     check("GFOpenUpMenu: no entry runs an old stub", not re.search(rf'"SYS:Prefs/({stubs})"', menu))
+    bp_src = (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")
+    check("GFOpenUpdate: in SYS:WBStartup from the GFOpenUp part, built with its window, and GFOpenUp's menu opens it",
+          '"SYS:WBStartup/GFOpenUpdate"' in bp_src and "src/openupdate/build.sh" in bp_src
+          and '"GFOS Updates...", "SYS:WBStartup/GFOpenUpdate"' in menu)
     entries = re.findall(r'HOW_PAGE, "([^"]+)", +"SYS:Preferences/([^"]+)", +"([A-Z]+)"', menu)
     pagewords = {p: w for p, w, _ in bp.PREFERENCES_PAGES}
     check("GFOpenUpMenu's page entries: each a page icon by its plain name, with its page's SECTION word",
