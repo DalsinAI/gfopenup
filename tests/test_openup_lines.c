@@ -77,6 +77,15 @@ static int checks(void)
     same("when AmiCradle, elsewhere", oul_strip("when AmiCradle copy \"a\" \"b\"", ok, 0), NULL);
     same("unless AmiCradle, on AmiCradle", oul_strip("unless AmiCradle copy \"a\" \"b\"", ac, 0), NULL);
     same("unless AmiCradle, elsewhere", oul_strip("unless AmiCradle copy \"a\" \"b\"", none, 0), "copy \"a\" \"b\"");
+    /* DemosDrive (0.8.21): a volume named Demos is mounted, the standard build's DH3: */
+    same("when DemosDrive, with the drive", oul_strip("when DemosDrive copy \"a\" \"Demos:a\"", OUL_DEMOSDRIVE, 0), "copy \"a\" \"Demos:a\"");
+    same("when DemosDrive, without it", oul_strip("when DemosDrive copy \"a\" \"Demos:a\"", both, 0), NULL);
+    same("unless DemosDrive, with the drive", oul_strip("unless DemosDrive copy \"a\" \"SYS:a\"", ac | OUL_DEMOSDRIVE, 0), NULL);
+    same("unless DemosDrive, without it", oul_strip("unless DemosDrive copy \"a\" \"SYS:a\"", both, 0), "copy \"a\" \"SYS:a\"");
+    same("when DemosDrive retire, with the drive", oul_strip("when DemosDrive retire \"SYS:x\"", OUL_DEMOSDRIVE, 0), "retire \"SYS:x\"");
+    same("REMOVE takes a DemosDrive condition off", oul_strip("when DemosDrive copy \"a\" \"Demos:a\"", none, 1), "copy \"a\" \"Demos:a\"");
+    truth("the three machine bits are three bits", (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE) == 7u
+          && OUL_DEMOSDRIVE != OUL_AMICRADLE && OUL_DEMOSDRIVE != OUL_OPENKICK, 1);
     /* GFOpenKick, startup lines and retire lines too */
     same("when GFOpenKick retire, on GFOpenKick", oul_strip("when GFOpenKick retire \"SYS:x\"", ok, 0), "retire \"SYS:x\"");
     same("when GFOpenKick retire, elsewhere", oul_strip("when GFOpenKick retire \"SYS:x\"", ac, 0), NULL);
@@ -469,6 +478,7 @@ int main(int argc, char **argv)
     else if (!strcmp(argv[2], "remove")) any = 1;
     else if (strncmp(argv[2], "openkick100", 11) && strncmp(argv[2], "os323", 5)) { fprintf(stderr, "machine?\n"); return 2; }
     if (strstr(argv[2], "-ac")) have |= OUL_AMICRADLE;
+    if (strstr(argv[2], "-demos")) have |= OUL_DEMOSDRIVE;
     if (!(f = fopen(argv[1], "r"))) { perror(argv[1]); return 2; }
     while (fgets(line, sizeof line, f)) {
         const char *rest;

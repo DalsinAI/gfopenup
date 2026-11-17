@@ -801,6 +801,54 @@ def bench_meters_checks(tmp: Path) -> None:
           and "bench_meters(bench, a.openamigabench" in src)
 
 
+def demos_part_checks(tmp: Path, filt: Path) -> None:
+    """Parts/GFOpenDemos (bp.demos_part): on the Demos drive where a volume named Demos is mounted, in SYS:Utilities
+    elsewhere, each home's launch scripts naming their own program, and an earlier SYS:Utilities install taken out
+    where the drive is (Dale, 17 Nov 2026)."""
+    prog = b"\0\0\x03\xf3demos"
+    part = bp.demos_part(tmp / "top", prog, FakeIcons())
+    part_file = part.dir / "Part"
+    text = part_file.read_text(encoding="latin-1")
+    check("GFOpenDemos: the part is 0.2", text.startswith("part GFOpenDemos 0.2\n"), text[:40])
+    names = ["GFOpenDemos"] + [n + s for n in ("Boing", "Chrome Gears", "Copper Tunnel") for s in ("", ".info")]
+    for machine, home, rel, other in (("os323-ac-demos", "Demos:GFOpenDemos", "Demos", "SYS:Utilities/GFOpenDemos"),
+                                      ("openkick101-ac-demos", "Demos:GFOpenDemos", "Demos", "SYS:Utilities/GFOpenDemos"),
+                                      ("os323-ac", "SYS:Utilities/GFOpenDemos", "Utilities", "Demos:GFOpenDemos"),
+                                      ("os323", "SYS:Utilities/GFOpenDemos", "Utilities", "Demos:GFOpenDemos")):
+        got = lines_on(part_file, machine, filt)
+        copies = [l for l in got if l.split(" ", 1)[0] in ("copy", "add")]
+        check(f"GFOpenDemos on {machine}: every file goes to {home}",
+              sorted(copies) == sorted([f'copy "{rel}/GFOpenDemos/{n}" "{home}/{n}"' for n in names]
+                                       + [f'add "{rel}/GFOpenDemos.info" "{home}.info"']), str(copies))
+        check(f"GFOpenDemos on {machine}: nothing is copied to {other}",
+              not any(f'"{other}' in l for l in copies), str(copies))
+        retired = sorted(l for l in got if l.startswith("retire "))
+        want = sorted([f'retire "SYS:Utilities/GFOpenDemos/{n}"' for n in names] + ['retire "SYS:Utilities/GFOpenDemos.info"'])
+        check(f"GFOpenDemos on {machine}: an earlier SYS:Utilities install " + ("is taken out" if rel == "Demos" else "stays"),
+              retired == (want if rel == "Demos" else []), str(retired))
+    for rel, home in (("Demos", "Demos:GFOpenDemos"), ("Utilities", "SYS:Utilities/GFOpenDemos")):
+        check(f"GFOpenDemos: the program is in the pack for {home}", (part.dir / rel / "GFOpenDemos/GFOpenDemos").read_bytes() == prog)
+        for name, word in (("Boing", "boing"), ("Chrome Gears", "gears"), ("Copper Tunnel", "tunnel")):
+            script = (part.dir / rel / "GFOpenDemos" / name).read_bytes()
+            check(f"GFOpenDemos: {home}/{name} starts its own home's program",
+                  script == f"Run >NIL: {home}/GFOpenDemos {word}\n".encode(), repr(script))
+            kind, art, tool, types, stack = icon_of((part.dir / rel / "GFOpenDemos" / f"{name}.info").read_bytes())
+            check(f"GFOpenDemos: {home}/{name}'s icon runs it with IconX and no window",
+                  (kind, tool, types) == (FakeIcons.WBPROJECT, "C:IconX", ["WINDOW=NIL:"]), str((kind, tool, types)))
+    removed = lines_on(part_file, "remove", filt)
+    check("GFOpenDemos: REMOVE looks in both homes",
+          f'copy "Demos/GFOpenDemos/GFOpenDemos" "Demos:GFOpenDemos/GFOpenDemos"' in removed
+          and f'copy "Utilities/GFOpenDemos/GFOpenDemos" "SYS:Utilities/GFOpenDemos/GFOpenDemos"' in removed, str(removed[:4]))
+    src = (ROOT / "tools/build_pack.py").read_text(encoding="latin-1")
+    check("build_pack.py: the pack's GFOpenDemos part is demos_part's", "dm = demos_part(top, demos.read_bytes(), icons)" in src)
+    inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+    check("Install-GFOpenUp: GFOpenDemos on the Demos drive counts as installed, asked without a requester",
+          '(exists "Demos:GFOpenDemos/GFOpenDemos" (noreq))' in inst)
+    tool = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
+    check("GFOpenUpTool: the Demos volume is read from the DOS list (no requester), and is a machine bit",
+          'FindDosEntry(dl, (STRPTR)"Demos", LDF_VOLUMES)' in tool and "demos_drive() ? OUL_DEMOSDRIVE : 0" in tool)
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -813,6 +861,8 @@ def main() -> int:
                         "-o", str(filt)], check=True)
         r = subprocess.run([str(filt)], capture_output=True, text=True)
         check("GFOpenUpTool's conditions (tests/test_openup_lines.c)", r.returncode == 0, r.stdout[-400:])
+        with tempfile.TemporaryDirectory() as dtmp:
+            demos_part_checks(Path(dtmp), filt)
         sseq = tmp / "test_openup_startupseq"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_startupseq.c"), "-o", str(sseq)], check=True)

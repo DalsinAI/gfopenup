@@ -140,7 +140,7 @@ a Part file that C/GFOpenUpTool reads:
   Warp3D/               Warp3D.library 5.0 over GFOpenGPU or the CPU, C:Warp3DPrefs,
                         W3DTest and W3DCheck; Wazp3D's settings are taken over
                         (gfopenrtg; needs a 68040 or 68060 with its FPU)
-  GFOpenDemos/            Boing, Chrome Gears and Copper Tunnel on GL.module, off
+  GFOpenDemos/            Boing, Chrome Gears and Copper Tunnel on GL.module (on the Demos drive where there is one), off
                         by default (--openamigamesa)
   GFOpenCrypto/           gfopencrypto.library 2.1: SSH's and TLS's sums, on x86 or ARM64 cores through
                         AC090 on AmiCradle, on the 68k elsewhere (--openamigatls)
@@ -453,6 +453,35 @@ class Part:
         if not self.lines[0]:
             self.lines[0] = f"part {self.name} {program_version(self.dir, self.name)}"
         (self.dir / "Part").write_text("\n".join(self.lines) + "\n", encoding="latin-1")
+
+
+DEMOS = (("Boing", "boing"), ("Chrome Gears", "gears"), ("Copper Tunnel", "tunnel"))
+DEMOS_HOMES = (("when DemosDrive", "Demos", "Demos:GFOpenDemos"),
+               ("unless DemosDrive", "Utilities", "SYS:Utilities/GFOpenDemos"))
+
+
+def demos_part(top: Path, program: bytes, icons) -> "Part":
+    """Parts/GFOpenDemos. Where a volume named Demos is mounted (the standard build's DH3:) GFOpenDemos lives on it,
+    in Demos:GFOpenDemos (Dale, 17 Nov 2026: "standard build should have dh3: Demos dh4: Media too ... work is for
+    applications", and of GFOpenDemos on Demos: "yes GFopendemos there"); elsewhere it stays in SYS:Utilities, as
+    before. Each home has its own launch scripts, which name the program by its full path, and "when DemosDrive"
+    takes an earlier install's files out of SYS:Utilities so the demos are in one place. The conditions are
+    GFOpenUpTool 0.8.21's (src/openup_lines.h); the pack carries its own GFOpenUpTool."""
+    dm = Part(top, "GFOpenDemos", "0.2", "GFOpenDemos: Boing, Chrome Gears and Copper Tunnel, in GL on GFOpenGPU")
+    page = icons.icon(icons.WBPROJECT, "page", "C:IconX", ["WINDOW=NIL:"], stack=8192)
+    drawer = icons.icon(icons.WBDRAWER, "drawer", window=(300, 120))
+    for cond, rel, home in DEMOS_HOMES:
+        dm.add(f"{rel}/GFOpenDemos/GFOpenDemos", program, f"{home}/GFOpenDemos", cond=cond)
+        for name, demo in DEMOS:
+            dm.add(f"{rel}/GFOpenDemos/{name}", f"Run >NIL: {home}/GFOpenDemos {demo}\n".encode(), f"{home}/{name}", cond=cond)
+            dm.add(f"{rel}/GFOpenDemos/{name}.info", page, f"{home}/{name}.info", cond=cond)
+        dm.add(f"{rel}/GFOpenDemos.info", drawer, f"{home}.info", own=True, cond=cond)
+    old = DEMOS_HOMES[1][2]
+    for name in ["GFOpenDemos"] + [n + s for n, _ in DEMOS for s in ("", ".info")]:
+        dm.line(f'when DemosDrive retire "{old}/{name}"')
+    dm.line(f'when DemosDrive retire "{old}.info"')
+    dm.write()
+    return dm
 
 
 def bench_meters(bench: "Part", built: Path) -> None:
@@ -3276,15 +3305,7 @@ def main() -> int:
     dm = None
     if a.openamigamesa:
         demos = gl_work / "mesa-build-m68k-amigaos/GFOpenDemos.stripped"
-        dm = Part(top, "GFOpenDemos", "0.1", "GFOpenDemos: Boing, Chrome Gears and Copper Tunnel, in GL on GFOpenGPU")
-        dm.add("Utilities/GFOpenDemos/GFOpenDemos", demos.read_bytes(), "SYS:Utilities/GFOpenDemos/GFOpenDemos")
-        for name, demo in (("Boing", "boing"), ("Chrome Gears", "gears"), ("Copper Tunnel", "tunnel")):
-            dm.add(f"Utilities/GFOpenDemos/{name}", f"Run >NIL: SYS:Utilities/GFOpenDemos/GFOpenDemos {demo}\n".encode(),
-                   f"SYS:Utilities/GFOpenDemos/{name}")
-            dm.add(f"Utilities/GFOpenDemos/{name}.info", icons.icon(icons.WBPROJECT, "page", "C:IconX", ["WINDOW=NIL:"], stack=8192),
-                   f"SYS:Utilities/GFOpenDemos/{name}.info")
-        dm.add("Utilities/GFOpenDemos.info", icons.icon(icons.WBDRAWER, "drawer", window=(300, 120)), "SYS:Utilities/GFOpenDemos.info", own=True)
-        dm.write()
+        dm = demos_part(top, demos.read_bytes(), icons)
 
     # GFOpenCrypto (gfopentls): gfopencrypto.library 2.0. On AmiCradle its sums run
     # on the PC (AC090's magic functions); elsewhere its own 68k code runs.
@@ -3694,8 +3715,8 @@ def main() -> int:
                                              (w3.dir / "Tools/W3DTest.info", "install"),
                                              (a.out / "GFOpenUp.info", None)]
                     + ([(w3.dir / "Tools/MGLTest.info", "install")] if (w3.dir / "Tools/MGLTest.info").is_file() else [])
-                    + ([(dm.dir / f"Utilities/GFOpenDemos/{n}.info", "page") for n in ("Boing", "Chrome Gears", "Copper Tunnel")]
-                       + [(dm.dir / "Utilities/GFOpenDemos.info", None)] if dm else [])
+                    + ([(dm.dir / f"{rel}/GFOpenDemos/{n}.info", "page") for _c, rel, _h in DEMOS_HOMES for n, _d in DEMOS]
+                       + [(dm.dir / f"{rel}/GFOpenDemos.info", None) for _c, rel, _h in DEMOS_HOMES] if dm else [])
                     + ([(tg.dir / "Utilities/UnofficialTelegram.info", "page")] if tg else [])
                     # GFOpenCalc's own picture comes from icons/open (open_icons, below)
                     + ([(gcalc.dir / "Utilities/GFOpenCalc/GFOpenCalc.info", "page"), (gcalc.dir / "Utilities/GFOpenCalc.info", None)]
@@ -3752,7 +3773,7 @@ def main() -> int:
         import openicons_part
         n = openicons_part.own_drawers(a.guest, [a.out / "GFOpenUp.info", core.dir / "Utilities/GFOpenUp.info", opp.dir / "Preferences.info",
                                                  pr.dir / "Icons/GFOpenPrint.info", wr.dir / "Utilities/GFOpenWrite.info"]
-                                       + ([dm.dir / "Utilities/GFOpenDemos.info"] if dm else [])
+                                       + ([dm.dir / f"{rel}/GFOpenDemos.info" for _c, rel, _h in DEMOS_HOMES] if dm else [])
                                        + ([dev.dir / "Developer/GFOpenGPU-SDK.info", dev.dir / "Developer.info"] if dev else [])
                                        + ([oin.dir / "Utilities/GFOpenUp/Docs.info"] if oin else []))
         print(f"  GFOpenUp's own drawers in GFOpenIcons look B: {n}")
