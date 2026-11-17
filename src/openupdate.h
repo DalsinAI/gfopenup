@@ -377,4 +377,86 @@ static long oud_last(const char *text, long len)
     return n;
 }
 
+/* ---- the window's rows (step 4) ---- */
+
+struct oud_row {
+    char name[40];
+    char installed[24];
+    char newer[24];                                     /* "" when there is none */
+};
+
+/* The parts the manifest lists ("part <Name> <version> ..." lines), each with the newer version an offer has (offers
+ * from oud_offers, count of them), into rows (max): the offered first, in the offers' order, then the rest in the
+ * manifest's order. The count of rows. */
+static int oud_rows(const char *manifest, long len, const struct oud_part *offers, int count, struct oud_row *rows, int max)
+{
+    const char *p = manifest, *end = manifest ? manifest + len : NULL, *next;
+    char w[8][80];
+    int n = 0, i;
+    for (i = 0; i < count && n < max; i++, n++) {
+        strcpy(rows[n].name, offers[i].name);
+        strcpy(rows[n].installed, offers[i].installed);
+        strcpy(rows[n].newer, offers[i].version);
+    }
+    while (p && p < end && n < max) {
+        int words = oud_words(p, end, w, 8, &next), dup = 0;
+        p = next;
+        if (words < 3 || strcmp(w[0], "part") || strlen(w[1]) >= 40 || strlen(w[2]) >= 24) continue;
+        for (i = 0; i < n; i++) dup |= !strcmp(rows[i].name, w[1]);
+        if (dup) continue;
+        strcpy(rows[n].name, w[1]);
+        strcpy(rows[n].installed, w[2]);
+        rows[n].newer[0] = 0;
+        n++;
+    }
+    return n;
+}
+
+/* A row as the list shows it: "<Name>  <installed>  new: <version>", or "<Name>  <installed>". The length. */
+static int oud_row_text(const struct oud_row *r, char *out, int size)
+{
+    int n = 0;
+    out[0] = 0;
+    n = oud_put(out, size, n, r->name);
+    n = oud_put(out, size, n, "  ");
+    n = oud_put(out, size, n, r->installed);
+    if (r->newer[0]) {
+        n = oud_put(out, size, n, "  new: ");
+        n = oud_put(out, size, n, r->newer);
+    }
+    return n;
+}
+
+/* The line under the list: what the last check found. state: 1 checked, 0 never yet, -1 the list couldn't be had. */
+static const char *oud_status(int state, int offers)
+{
+    if (state < 0) return "The list of updates couldn't be fetched. Is the network up?";
+    if (state == 0) return "Not checked yet.";
+    if (offers == 0) return "GFOS is up to date.";
+    return offers == 1 ? "One update is ready." : "Updates are ready.";
+}
+
+/* ---- GFOpenNotifier, or Ranchero or Ringhio: "updates are waiting" ---- */
+
+#define OUD_NOTIFY_PORT "RINGHIO"                       /* GFOpenNotifier's, as Ranchero's and Ringhio's */
+#define OUD_PORT "GFOPENUPDATE"                         /* ours: a double-click on the notice sends SHOW here */
+
+/* The two commands for the notifier: register (which = 0) and the notice (which = 1), count updates waiting. */
+static int oud_notice_cmd(int which, int count, char *out, int size)
+{
+    char num[12], rev[12];
+    int k = 0, j, n = 0;
+    if (!which)
+        return oud_put(out, size, 0, "REGISTERAPP APP=GFOpenUpdate AREXXPORT=" OUD_PORT " TEXT GFOS updates");
+    if (count < 0) count = 0;
+    do { rev[k++] = (char)('0' + count % 10); count /= 10; } while (count > 0 && k < 11);
+    for (j = 0; j < k; j++) num[j] = rev[k - 1 - j];
+    num[k] = 0;
+    n = oud_put(out, size, n, "RINGHIO APP=GFOpenUpdate TITLE=\"GFOS updates\" BACKRXMSG=SHOW TEXT ");
+    if (!strcmp(num, "1")) n = oud_put(out, size, n, "One update is waiting.");
+    else { n = oud_put(out, size, n, num); n = oud_put(out, size, n, " updates are waiting."); }
+    n = oud_put(out, size, n, " Double-click to see them.");
+    return n;
+}
+
 #endif

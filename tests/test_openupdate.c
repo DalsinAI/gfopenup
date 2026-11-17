@@ -170,6 +170,43 @@ int main(void)
         CHECK(oud_last("", 0) == 0 && oud_last("soon\n", 5) == 0 && oud_last(NULL, 0) == 0, "no LastCheck, or a wrong one: 0");
     }
 
+    /* the window's rows */
+    {
+        static const char man[] = "part\tGFOpenUp\t0.8.31\npart\tGFOpenPlay\t0.1.6\nnew\tSYS:x\t=1:2\npart\tGFOpenIcons\t0.8.30-rc6\n";
+        struct oud_row rows[8];
+        char t[120];
+        int r;
+        n = parts_of(index_ok, p, 8);
+        n = oud_offers(p, n, man, (long)strlen(man), NULL, 0);
+        r = oud_rows(man, (long)strlen(man), p, n, rows, 8);
+        CHECK(r == 3, "a row a part installed");
+        CHECK(!strcmp(rows[0].name, "GFOpenPlay") && !strcmp(rows[0].newer, "0.1.7-rc1")
+              && !strcmp(rows[1].name, "GFOpenIcons") && !strcmp(rows[1].newer, "0.8.31"), "the offered first, with their new versions");
+        CHECK(!strcmp(rows[2].name, "GFOpenUp") && !rows[2].newer[0] && !strcmp(rows[2].installed, "0.8.31"), "then the rest, nothing newer");
+        oud_row_text(&rows[0], t, sizeof t);
+        CHECK(!strcmp(t, "GFOpenPlay  0.1.6  new: 0.1.7-rc1"), "an offered row's text");
+        oud_row_text(&rows[2], t, sizeof t);
+        CHECK(!strcmp(t, "GFOpenUp  0.8.31"), "an up-to-date row's text");
+        CHECK(oud_rows(man, (long)strlen(man), p, n, rows, 1) == 1, "no more rows than room");
+        CHECK(oud_rows(NULL, 0, p, 0, rows, 8) == 0, "no manifest, nothing offered: no rows");
+        CHECK(!strcmp(oud_status(1, 0), "GFOS is up to date.") && !strcmp(oud_status(1, 2), "Updates are ready.")
+              && oud_status(-1, 0)[0] == 'T' && !strcmp(oud_status(0, 0), "Not checked yet."), "the status line");
+    }
+
+    /* the notice through GFOpenNotifier */
+    {
+        char c[200];
+        oud_notice_cmd(0, 0, c, sizeof c);
+        CHECK(!strcmp(c, "REGISTERAPP APP=GFOpenUpdate AREXXPORT=GFOPENUPDATE TEXT GFOS updates"), "registers with its port");
+        oud_notice_cmd(1, 3, c, sizeof c);
+        CHECK(!strcmp(c, "RINGHIO APP=GFOpenUpdate TITLE=\"GFOS updates\" BACKRXMSG=SHOW TEXT 3 updates are waiting. Double-click to see them."),
+              "the notice, SHOW back on a double-click");
+        oud_notice_cmd(1, 1, c, sizeof c);
+        CHECK(strstr(c, "TEXT One update is waiting.") != NULL, "one update");
+        oud_notice_cmd(1, 12, c, sizeof c);
+        CHECK(strstr(c, "TEXT 12 updates") != NULL, "two digits");
+    }
+
     printf("%d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

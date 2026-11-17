@@ -117,6 +117,8 @@ static const struct entry entries[] = {
     { M_OPENUP, HOW_WB,  "GFOpenFTP",      "SYS:Utilities/GFOpenFTP/GFOpenFTP",        NULL, NULL, NULL },
     { M_OPENUP, HOW_WB,  "Telegram (unofficial)", "SYS:Utilities/UnofficialTelegram", NULL, NULL, NULL },
     { M_OPENUP, HOW_SEP, "---",          NULL, NULL, NULL, NULL },
+    /* GFOpenUpdate's window (docs/design/GFOPENUPDATE.md, step 4): started again, the commodity running opens it */
+    { M_OPENUP, HOW_WB,  "GFOS Updates...", "SYS:WBStartup/GFOpenUpdate",       NULL, NULL, NULL },
     /* only with a GFOpenUpTool that has UPDATE (GFOpenUp Update, DESIGN.md section 5) */
     { M_OPENUP, HOW_CON, "GFOpenUp Update...", NULL, "SYS:C/GFOpenUpTool UPDATE", "SYS:C/GFOpenUpTool", "UPDATE [CHECK" },
     /* 0.1.5: GFOpenPrefs's pages by their plain names, in SYS:Preferences (the no-ROM-volume design, section 8): the
