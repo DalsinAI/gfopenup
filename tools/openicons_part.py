@@ -304,7 +304,20 @@ def build(out: Path, guest: Path) -> list[str]:
             continue
         if name in by_name:
             write_entry(by_name[name], picture(by_name[name]), str(out / "Kinds" / f"{kind}.info"))
+    lines += openkick_drawer_lines()
     return lines
+
+
+# The system's own drawers on a GFOpenKick disk have no icon: the disk is made with the drawers alone (amicradle's
+# OPEN_ROM_DRAWERS) and a face only changes an icon that is there, so the System window showed two icons of ten
+# (Dale, 17 November 2026, on the Pi 5: "system folder is missing icons for things like devs , storage , tools
+# ,wbstartup , utlities , system etc"). Each gets the Drawer kind's icon (the Soft 3D folder, his pick the same day)
+# where it has none; an OS 3.2.3 disk has its own and is left alone (when GFOpenKick), and so is an icon the user made.
+OPENKICK_DRAWERS = ("Devs", "Prefs", "Storage", "System", "Tools", "Utilities", "WBStartup")
+
+
+def openkick_drawer_lines() -> list[str]:
+    return [f'when GFOpenKick default "Kinds/Drawer.info" "SYS:{name}.info"' for name in OPENKICK_DRAWERS]
 
 
 # The AOS drawer style (Dale, 12 November 2026, 13:52 "go with those", 15:04 "those work"; tools/aos_icons_art.py):
