@@ -1,0 +1,5 @@
+GFOpenUpdate 1
+; the lab's index for GFOpenUpdate's window (URL tooltype at this drawer on the branch): versions no part has yet, never installed
+part GFOpenPlay 9.9.1 1000 0000000000000000000000000000000000000000000000000000000000000000 GFOpenPlay-9.9.1.lha
+part GFOpenUp 9.9.2 1000 0000000000000000000000000000000000000000000000000000000000000000 GFOpenUp-9.9.2.lha
+GFOpenUpdate end

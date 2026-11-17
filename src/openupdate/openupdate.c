@@ -234,8 +234,15 @@ static int check(int asked)
     count = index ? oud_index_parts(index, ilen, parts, MAX_PARTS) : -1;
     if (index) FreeVec(index);
     clear_work();
-    if (count < 0) { state = -1; show(); return -1; }
     manifest = read_file(MANIFEST, &mlen);
+    if (count < 0) {                           /* the parts installed are still shown, with nothing newer */
+        offers = 0;
+        nrows = oud_rows(manifest, mlen, parts, 0, rows, MAX_PARTS);
+        if (manifest) FreeVec(manifest);
+        state = -1;
+        show();
+        return -1;
+    }
     skipped = asked ? NULL : read_file(OUD_SKIPPED, &slen);
     offers = manifest ? oud_offers(parts, count, manifest, mlen, skipped, slen) : 0;
     nrows = oud_rows(manifest, mlen, parts, offers, rows, MAX_PARTS);
