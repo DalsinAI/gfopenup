@@ -1173,6 +1173,11 @@ def main() -> int:
                         str(ROOT / "tests/test_openup_vers.c"), "-o", str(vs)], check=True)
         r = subprocess.run([str(vs)], capture_output=True, text=True)
         check("GFOpenUpTool keeps a newer file (tests/test_openup_vers.c)", r.returncode == 0, r.stdout[-600:])
+        ud = tmp / "test_openupdate"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_openupdate.c"), "-o", str(ud)], check=True)
+        r = subprocess.run([str(ud)], capture_output=True, text=True)
+        check("GFOpenUpdate's index, offers and check times (tests/test_openupdate.c)", r.returncode == 0, r.stdout[-600:])
         lf = tmp / "test_openup_left"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openup_left.c"), "-o", str(lf)], check=True)
