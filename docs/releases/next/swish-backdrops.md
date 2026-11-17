@@ -4,7 +4,7 @@ For whoever builds the next pack. Paste these sections into that pack's RELEASE-
 
 ## What's new
 
-- **The Swish backdrops** come in the Backdrops part (0.4), in `SYS:Prefs/Presets/Backdrops/GFOpenUp/`. They are lit silk folds and glass ribbons (gfopengadtools #124, drawn from code, our own art).
+- **The Swish backdrops** come in the Backdrops part (0.4), in `SYS:Prefs/Presets/Backdrops/GFOpenUp/`. They are lit silk folds and glass ribbons (gfopengadtools #125, drawn from code, our own art).
   - There are seven: `Swish-Crimson`, `Swish-Midnight`, `Swish-Pearl`, `Swish-Sunset`, `Swish-Glass`, `Swish-Glass-Light` and `Swish-Chrome`. Each has its `.tone` file (Pearl and Glass-Light are light, the rest dark).
   - Each comes at the Ethereal ones' 16 screen sizes, from 640x480 to 1920x1200: 8-bit up to 1280 wide, 16-bit above.
   - They are 33 to 91 KB at 640x480 and 165 to 645 KB at 1920x1080, 22.9 MB for all 112.
