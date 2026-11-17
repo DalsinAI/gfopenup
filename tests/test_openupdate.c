@@ -152,6 +152,24 @@ int main(void)
         }
     }
 
+    /* the commands it runs */
+    {
+        char c[200];
+        CHECK(oud_fetch_cmd("https://x.example/a/f.lha", "T:GFOpenUpdate/f.lha", c, sizeof c)
+              && !strcmp(c, "SYS:Tools/OpenSocket/httpget -q -o \"T:GFOpenUpdate/f.lha\" https://x.example/a/f.lha"), "the fetch");
+        CHECK(!oud_fetch_cmd("https://x.example/a b", "T:f", c, sizeof c), "a blank in the address: no fetch");
+        CHECK(!oud_fetch_cmd("https://x.example/a", "T:\"f", c, sizeof c), "a quote in the file: no fetch");
+        CHECK(!oud_fetch_cmd("https://x.example/a/f.lha", "T:f", c, 30), "the fetch too long for its place");
+        CHECK(oud_unpack_cmd("T:GFOpenUpdate/f.lha", "T:GFOpenUpdate/x", c, sizeof c)
+              && !strcmp(c, "SYS:Utilities/GFOpenCompress x \"T:GFOpenUpdate/f.lha\" \"T:GFOpenUpdate/x\""), "the unpack");
+        CHECK(!oud_unpack_cmd("T:a\nb", "T:x", c, sizeof c), "a newline: no unpack");
+        CHECK(oud_install_cmd("T:GFOpenUpdate/x", "GFOpenPlay", c, sizeof c)
+              && !strcmp(c, "SYS:C/GFOpenUpTool INSTALL \"T:GFOpenUpdate/x/GFOpenPlay\""), "the install");
+        CHECK(!oud_install_cmd("T:GFOpenUpdate/x", "../Evil", c, sizeof c), "a part name with a drawer: no install");
+        CHECK(oud_last("1234567\n", 8) == 1234567, "LastCheck read");
+        CHECK(oud_last("", 0) == 0 && oud_last("soon\n", 5) == 0 && oud_last(NULL, 0) == 0, "no LastCheck, or a wrong one: 0");
+    }
+
     printf("%d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }
