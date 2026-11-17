@@ -35,3 +35,5 @@ jobs:
         run: python3 tests/test_soft3d_drawers.py
       - name: the GFOpenApps pack, our applications on Work (tools/apps_pack.py)
         run: python3 tests/test_apps_pack.py
+      - name: GFOpenUpdate's index and part archives from a cut (tools/update_index.py)
+        run: python3 tests/test_update_index.py
