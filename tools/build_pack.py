@@ -865,7 +865,7 @@ def build_parts(a):
         if a.openamigaputty:
             run(["sh", a.openamigaputty / "build.sh"], env=dict(os.environ, OS32_GCC16=gcc16_root, CPU="040",
                                                                 OPENCRYPTO=str(a.openamigatls)))
-            run([sys.executable, a.openamigaputty / "tools/make_icons.py", a.amigachrome / "scripts/amiga_icon.py",
+            run([sys.executable, a.openamigaputty / "tools/make_icons.py", amicradle_script(a.amigachrome, "amiga_icon.py"),
                  a.openamigaputty / "build/icons"])
     # Tata: its own build.sh (os32 stove; its window with this GFOpenGadTools' lib/)
     if a.openamigatata:
@@ -1017,6 +1017,18 @@ def play_art() -> bytes:
             rr, g, b, a = px[x, y]
             px[x, y] = (rr, g, b, 255) if a >= 128 else (0, 0, 0, 0)
     return img.tobytes()
+
+
+def amicradle_script(amicradle: Path, name: str) -> Path:
+    """One of AmiCradle's scripts by its file name, where this checkout keeps it: scripts/<name>, or one folder
+    down since amicradle sorted its scripts into folders (amiga_icon.py is scripts/icons/amiga_icon.py; the pack of
+    17 Nov 2026 stopped at GFOpenPuTTY's icons for the old path). Stops the build saying where it looked."""
+    scripts = Path(amicradle) / "scripts"
+    found = [scripts / name] if (scripts / name).is_file() else sorted(p for p in scripts.glob(f"*/{name}") if p.is_file())
+    if len(found) != 1:
+        raise SystemExit(f"AmiCradle's {name}: " + (f"not in {scripts} or a folder of it" if not found else
+                         "more than one, " + ", ".join(str(p) for p in found)) + " (--amigachrome)")
+    return found[0]
 
 
 def binary_version(data: bytes, name: str) -> str | None:
@@ -3101,7 +3113,7 @@ def main() -> int:
     # (the ROM's or this C:GFOpenDock, the newer by $VER) when ENV:GFOpenDock/Dock
     # is there, and GFOpenDock 0.6.6 ends at once when one runs already, so an
     # old "Run >NIL: C:GFOpenDock" line left by an earlier GFOpenUp does no harm.
-    dock = Part(top, "GFOpenDock", "0.6.13", "GFOpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "GFOpenDock", "0.6.15", "GFOpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/GFOpenDock", (a.openamigaprefs / "Dock/build/os3/GFOpenDock").read_bytes(), "SYS:C/GFOpenDock")
     # its editor is GFOpenPrefs's Dock page (W48), SYS:Preferences/Dock (the GFOpenPrefs part). C:GFOpenDock stays on the
     # open ROM too: the dock left the ROM (the no-ROM-volume design, section 7.4)
@@ -3111,6 +3123,8 @@ def main() -> int:
     # (Workbench writes it on Window > Snapshot, not when Backdrop is toggled).
     # GFOpenUpTool keeps the original in SYS:Storage and UNINSTALL puts it back.
     dock.add("Prefs/Env-Archive/Sys/WBConfig.prefs", wbconfig_backdrop(), "ENVARC:Sys/WBConfig.prefs")
+    # 0.6.14: the dock redrawn at a new size from the strip behind its row; 0.6.15: a new dock starts small
+    # (gfopenprefs #219, #221): nothing new in the part
     # 0.6.13: the Shell button's picture where there is no SYS:System/Shell (the open ROM's disk: NewShell is the
     # ROM's), GFOpenIcons' Shell; GFOpenDock 0.6.13 takes it after SYS:System/Shell's icon
     if not a.no_openicons and (oi.dir / "Icons/Shell.info").is_file():
