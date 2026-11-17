@@ -16,6 +16,10 @@
  *   when MediaDrive <line>     only where a volume named Media is mounted (0.8.22: the standard build's DH4:,
  *                                where pictures and music go; a part's MIDI files go in Media:midi)
  *   unless MediaDrive <line>   where there is none
+ *   when WorkDrive <line>      only where a volume named Work is mounted (0.8.23: the standard build's DH1:, which
+ *                                is for applications; Dale, 17 Nov 2026: "on the work volume of all appliances
+ *                                and instances we should include all our open apps")
+ *   unless WorkDrive <line>    where there is none: the application goes in SYS:Utilities, as before
  * A condition this GFOpenUpTool doesn't know keeps its line out of an install, as before.
  *
  * And one part needing another (25 October 2026, the GFOffice design's section 12.2):
@@ -36,6 +40,7 @@
 #define OUL_OPENKICK    2u          /* the open ROM that applies the boot's settings (oul_prefs_task) */
 #define OUL_DEMOSDRIVE  4u          /* a volume named Demos is mounted (the standard build's DH3:) */
 #define OUL_MEDIADRIVE  8u          /* a volume named Media is mounted (the standard build's DH4:) */
+#define OUL_WORKDRIVE   16u         /* a volume named Work is mounted (the standard build's DH1:, applications) */
 
 /* 1 on the open ROM whose intuition applies Sound's levels, Gamepads' patch and the stack caps at boot:
  * the GFOpenKick ROM (okr: its 'OKR1' mark) with prefs.resource (version, revision) at least 47.101 (no-ROM-volume
@@ -102,6 +107,7 @@ static const char *oul_strip(const char *line, unsigned have, int any)
     else if ((n = oul_word(s, "GFOpenKick"))) bit = OUL_OPENKICK;
     else if ((n = oul_word(s, "DemosDrive"))) bit = OUL_DEMOSDRIVE;
     else if ((n = oul_word(s, "MediaDrive"))) bit = OUL_MEDIADRIVE;
+    else if ((n = oul_word(s, "WorkDrive"))) bit = OUL_WORKDRIVE;
     else for (n = 0; s[n] && !oul_blank(s[n]); n++) ;
     rest = s + n;
     while (oul_blank(*rest)) rest++;

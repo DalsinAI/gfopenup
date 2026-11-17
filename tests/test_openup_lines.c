@@ -92,6 +92,14 @@ static int checks(void)
     same("REMOVE takes a MediaDrive condition off", oul_strip("when MediaDrive copy \"a\" \"Media:midi/a\"", none, 1), "copy \"a\" \"Media:midi/a\"");
     same("the Demos drive is not the Media drive", oul_strip("when MediaDrive copy \"a\" \"Media:a\"", OUL_DEMOSDRIVE, 0), NULL);
     truth("the Media bit is its own", OUL_MEDIADRIVE == 8u && !(OUL_MEDIADRIVE & (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE)), 1);
+    /* WorkDrive (0.8.23): a volume named Work is mounted, the standard build's DH1:, where applications go */
+    same("when WorkDrive, with the drive", oul_strip("when WorkDrive copy \"a\" \"Work:a\"", OUL_WORKDRIVE, 0), "copy \"a\" \"Work:a\"");
+    same("when WorkDrive, without it", oul_strip("when WorkDrive copy \"a\" \"Work:a\"", both | OUL_DEMOSDRIVE | OUL_MEDIADRIVE, 0), NULL);
+    same("unless WorkDrive, with the drive", oul_strip("unless WorkDrive copy \"a\" \"SYS:Utilities/a\"", ac | OUL_WORKDRIVE, 0), NULL);
+    same("unless WorkDrive, without it", oul_strip("unless WorkDrive copy \"a\" \"SYS:Utilities/a\"", both, 0), "copy \"a\" \"SYS:Utilities/a\"");
+    same("when WorkDrive retire, with the drive", oul_strip("when WorkDrive retire \"SYS:Utilities/x\"", OUL_WORKDRIVE, 0), "retire \"SYS:Utilities/x\"");
+    same("REMOVE takes a WorkDrive condition off", oul_strip("when WorkDrive copy \"a\" \"Work:a\"", none, 1), "copy \"a\" \"Work:a\"");
+    truth("the Work bit is its own", OUL_WORKDRIVE == 16u && !(OUL_WORKDRIVE & (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE | OUL_MEDIADRIVE)), 1);
     truth("the three machine bits are three bits", (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE) == 7u
           && OUL_DEMOSDRIVE != OUL_AMICRADLE && OUL_DEMOSDRIVE != OUL_OPENKICK, 1);
     /* GFOpenKick, startup lines and retire lines too */
@@ -488,6 +496,7 @@ int main(int argc, char **argv)
     if (strstr(argv[2], "-ac")) have |= OUL_AMICRADLE;
     if (strstr(argv[2], "-demos")) have |= OUL_DEMOSDRIVE;
     if (strstr(argv[2], "-media")) have |= OUL_MEDIADRIVE;
+    if (strstr(argv[2], "-work")) have |= OUL_WORKDRIVE;
     if (!(f = fopen(argv[1], "r"))) { perror(argv[1]); return 2; }
     while (fgets(line, sizeof line, f)) {
         const char *rest;

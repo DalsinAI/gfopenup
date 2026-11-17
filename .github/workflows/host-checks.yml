@@ -33,3 +33,5 @@ jobs:
         run: python3 tests/test_soft3d_drives.py
       - name: every drawer as the Soft 3D folder with its mark
         run: python3 tests/test_soft3d_drawers.py
+      - name: the GFOpenApps pack, our applications on Work (tools/apps_pack.py)
+        run: python3 tests/test_apps_pack.py
