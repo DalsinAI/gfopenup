@@ -10,6 +10,10 @@ parts beside GFOpenUp's own, so the GFOpenUp pack stays its size:
     GFOpenApps/Parts/App<Drawer>/Part       part App<Drawer> <version>, a "when WorkDrive copy" line for every file
     GFOpenApps/Parts/App<Drawer>/Files/     the release's files, as its archive holds them
     GFOpenApps/Parts/App<Drawer>/Drawer.info  the drawer's icon: the Soft 3D folder with the app's mark (ICONS.md)
+                                            inside the drawer every icon the release carries is given the Soft 3D
+                                            picture of its kind and no place of its own, and a program at the
+                                            drawer's top with no icon gets the tool icon: each drawer opens with
+                                            one style of icon, set out in rows by Workbench
     GFOpenApps/Install-GFOpenApps           Execute Work:GFOpenApps/Install-GFOpenApps (GFOpenUp must be installed)
     GFOpenApps/APPS-LIST.txt                each app: part, release, file, sha256, files, bytes, its own installer
 
@@ -53,6 +57,11 @@ EMULATION_PART = "EmulationDrawers"
 DEST_MAX = 180                # GFOpenUpTool's path buffers are 200
 NAME_MAX = 30                 # the longest drawer name a standard FFS volume keeps (a drawer and its .info)
 FILE_MAX = 107                # the longest name AmigaDOS takes; the standard build's drives are folder drives and keep it
+
+
+NO_PLACE = (0x80000000).to_bytes(4, "big") * 2     # do_CurrentX, do_CurrentY: Workbench finds the icon a place
+ICON_KINDS = {2: "drawer", 3: "tool", 4: "project"}  # do_Type, for the icons a release carries inside its drawer
+HUNK_HEADER = b"\x00\x00\x03\xf3"                   # an AmigaOS program
 
 
 class AppsError(Exception):
@@ -143,7 +152,32 @@ def own_installer(root: Path) -> str:
     return ""
 
 
-def app_part(top: Path, app: dict, tree: Path, icon) -> dict:
+def icon_kind(data: bytes) -> str:
+    """drawer, tool or project when data is such an icon file, else nothing"""
+    if len(data) >= 78 and data[:2] == b"\xe3\x10":
+        return ICON_KINDS.get(data[48], "")
+    return ""
+
+
+def tidy_icon(data: bytes, face) -> bytes:
+    """A release's own icon made to the icon standard (Dale, 17 Nov 2026: "make sure each older is neat and tydy for
+    icons", "no staggly mismatches"): the Soft 3D picture of its kind (face(kind, old): the new file's bytes, old's
+    type, default tool, tool types and stack kept), and no place of its own, so Workbench sets the drawer's icons out
+    in rows and none strays or sits on another. A file that is no drawer, tool or project icon is left as it is."""
+    kind = icon_kind(data)
+    if not kind:
+        return data
+    try:
+        new = bytearray(face(kind, data))
+    except AppsError:
+        raise
+    except Exception:                       # an icon the icon writer can't read: the plain one of its kind
+        new = bytearray(face(kind, None))
+    new[58:66] = NO_PLACE
+    return bytes(new)
+
+
+def app_part(top: Path, app: dict, tree: Path, icon, face=None) -> dict:
     """Parts/App<Drawer> from an unpacked release (tree): every file to Work:<Drawer>/<its path>, where a Work
     volume is mounted, and the drawer's icon (icon(mark): the .info file's bytes) as Work:<Drawer>.info. The row
     for APPS-LIST.txt. A path GFOpenUpTool or the volume can't hold stops the build."""
@@ -158,7 +192,8 @@ def app_part(top: Path, app: dict, tree: Path, icon) -> dict:
     files = sorted(p for p in root.rglob("*") if p.is_file())
     if not files:
         raise AppsError(f"{app['drawer']}: the release holds no files")
-    size, bad = 0, []
+    size, bad, faced = 0, [], 0
+    have = {f.relative_to(root).as_posix().lower() for f in files}
     for f in files:
         rel = f.relative_to(root).as_posix()
         dest = f"{home}/{rel}"
@@ -166,9 +201,29 @@ def app_part(top: Path, app: dict, tree: Path, icon) -> dict:
             bad.append(rel)
             continue
         (pdir / "Files" / rel).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(f, pdir / "Files" / rel)
-        size += f.stat().st_size
+        if face and rel.lower().endswith(".info"):
+            was = f.read_bytes()
+            now = tidy_icon(was, face)
+            (pdir / "Files" / rel).write_bytes(now)
+            faced += now != was
+        else:
+            shutil.copyfile(f, pdir / "Files" / rel)
+        size += (pdir / "Files" / rel).stat().st_size
         lines.append(f'{cond} copy "Files/{rel}" "{dest}"')
+    if face:                                # a program at the drawer's top with no icon can't be seen: the tool icon
+        for f in files:
+            rel = f.relative_to(root).as_posix()
+            if "/" in rel or rel.lower().endswith(".info") or rel.lower() + ".info" in have or '"' in rel:
+                continue
+            with open(f, "rb") as fh:
+                if fh.read(4) != HUNK_HEADER:
+                    continue
+            new = bytearray(face("tool", None))
+            new[58:66] = NO_PLACE
+            (pdir / "Files" / (rel + ".info")).write_bytes(bytes(new))
+            size += len(new)
+            faced += 1
+            lines.append(f'{cond} copy "Files/{rel}.info" "{home}/{rel}.info"')
     if bad:
         raise AppsError(f"{app['drawer']}: {len(bad)} paths the Amiga side can't hold (over {DEST_MAX} letters, or a name over "
                         f"{FILE_MAX}), the first: {bad[0]}")
@@ -176,7 +231,7 @@ def app_part(top: Path, app: dict, tree: Path, icon) -> dict:
     lines.append(f'{cond} add "Drawer.info" "{home}.info"')
     (pdir / "Part").write_text("\n".join(lines) + "\n", encoding="latin-1")
     return dict(part=name, drawer=app["drawer"], repo=app["repo"], tag=app["tag"], asset=app["asset"],
-                files=len(files), bytes=size, installer=own_installer(root))
+                files=len(files), bytes=size, installer=own_installer(root), icons=faced)
 
 
 def emulation_part(top: Path, icon) -> str:
@@ -219,6 +274,18 @@ def soft3d_icon(mark: str) -> bytes:
     return part.aos_icon("S3D:drawer:" + mark, "drawer")
 
 
+def soft3d_face(kind: str, old: bytes | None) -> bytes:
+    """The Soft 3D default icon of a kind (drawer, tool, project), keeping old's type, tool, tool types and stack"""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import openicons_part as part
+    guest = Path(os.environ.get("AMICRADLE_GUEST") or ROOT.parent / "amicradle-guest")
+    part.generator(guest)
+    if not getattr(part.aos_pictures, "cache_info", None):       # a kind's picture is drawn once, not for every icon
+        import functools
+        part.aos_pictures = functools.lru_cache(maxsize=None)(part.aos_pictures)
+    return part.aos_icon(part.AOS_KINDS[kind.capitalize()], kind, old)
+
+
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -227,7 +294,7 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def build(lock: Path, assets: Path, out: Path, icon=soft3d_icon, check_private=None) -> list[dict]:
+def build(lock: Path, assets: Path, out: Path, icon=soft3d_icon, check_private=None, face=soft3d_face) -> list[dict]:
     """The pack in out/GFOpenApps from the fetched files in assets. Every app in the lock must be there, with the
     sha256 fetch wrote beside it; nothing held back from release may be in it (build_pack.check_private)."""
     apps = read_lock(lock)
@@ -248,13 +315,13 @@ def build(lock: Path, assets: Path, out: Path, icon=soft3d_icon, check_private=N
         if tree.exists():
             shutil.rmtree(tree)
         unpack(archive, tree)
-        row = app_part(top, app, tree, icon)
+        row = app_part(top, app, tree, icon, face)
         row["sha256"] = got
         rows.append(row)
         shutil.rmtree(tree)
     (top / INSTALL).write_text(install_script([emulation_part(top, icon)] + [r["part"] for r in rows]), encoding="latin-1")
-    listing = ["# part\tdrawer\trepository\trelease\tfile\tsha256\tfiles\tbytes\town installer"]
-    listing += ["\t".join(str(r[k]) for k in ("part", "drawer", "repo", "tag", "asset", "sha256", "files", "bytes", "installer"))
+    listing = ["# part\tdrawer\trepository\trelease\tfile\tsha256\tfiles\tbytes\town installer\ticons made standard"]
+    listing += ["\t".join(str(r[k]) for k in ("part", "drawer", "repo", "tag", "asset", "sha256", "files", "bytes", "installer", "icons"))
                 for r in rows]
     (top / "APPS-LIST.txt").write_text("\n".join(listing) + "\n")
     if check_private is None:
@@ -317,7 +384,7 @@ def main(argv=None) -> int:
         else:
             rows = build(a.lock, a.assets, a.out)
             for r in rows:
-                print(f"{r['part']}: {r['files']} files, {r['bytes']} bytes" + (f", own installer {r['installer']}" if r["installer"] else ""))
+                print(f"{r['part']}: {r['files']} files, {r['bytes']} bytes, {r['icons']} icons made standard" + (f", own installer {r['installer']}" if r["installer"] else ""))
             print(f"{a.out / PACK}: {len(rows)} applications, {sum(r['bytes'] for r in rows)} bytes")
     except AppsError as e:
         print(f"apps_pack: {e}", file=sys.stderr)

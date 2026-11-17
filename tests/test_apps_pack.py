@@ -98,7 +98,45 @@ def main() -> int:
         tgz.with_name("Two.tar.gz.sha256").write_text(hashlib.sha256(tgz.read_bytes()).hexdigest() + "\n")
 
         icon = lambda mark: b"ICON:" + mark.encode()
-        rows = ap.build(lock, assets, t / "out", icon=icon, check_private=lambda top: [])
+
+        def info(kind: int, place: bytes = b"\x00\x00\x00\x10\x00\x00\x00\x20") -> bytes:      # an icon file as far as tidy_icon reads it
+            return b"\xe3\x10" + bytes(46) + bytes([kind]) + bytes(9) + place + bytes(12) + b"old picture"
+
+        face = lambda kind, old: b"\xe3\x10" + bytes(46) + bytes([{"drawer": 2, "tool": 3, "project": 4}[kind]]) + bytes(9) + \
+            (old[58:66] if old else bytes(8)) + bytes(12) + b"S3D:" + kind.encode()
+        tool = ap.tidy_icon(info(3), face)
+        check(tool.endswith(b"S3D:tool") and tool[58:66] == ap.NO_PLACE and tool[48] == 3,
+              "a release's tool icon gets the standard picture of its kind and no place of its own")
+        check(ap.tidy_icon(info(2), face).endswith(b"S3D:drawer") and ap.tidy_icon(info(4), face).endswith(b"S3D:project"),
+              "a drawer's and a project's icon likewise")
+        check(ap.tidy_icon(b"icon", face) == b"icon" and ap.tidy_icon(info(1), face) == info(1),
+              "a file that is no drawer, tool or project icon is left as it is")
+
+        def picky(kind, old):
+            if old:
+                raise ValueError("an icon this writer can't read")
+            return face(kind, None)
+        check(ap.tidy_icon(info(3), picky).endswith(b"S3D:tool"), "an icon the writer can't read becomes the plain one of its kind")
+        tidy = t / "tidy"
+        (tidy / "Sub").mkdir(parents=True)
+        (tidy / "Prog").write_bytes(ap.HUNK_HEADER + b"code")
+        (tidy / "Other").write_bytes(ap.HUNK_HEADER + b"code")
+        (tidy / "Other.INFO").write_bytes(info(3))
+        (tidy / "ReadMe").write_bytes(b"text")
+        (tidy / "Sub.info").write_bytes(info(2))
+        (tidy / "Sub" / "helper").write_bytes(ap.HUNK_HEADER + b"code")
+        row = ap.app_part(t / "tp", dict(repo="r", tag="v1.0", asset="a", drawer="Tidy", mark="globe", title="", home="Work"), tidy, icon, face)
+        tp = t / "tp" / "Parts" / "AppTidy"
+        lines = (tp / "Part").read_text().splitlines()
+        check((tp / "Files/Prog.info").read_bytes().endswith(b"S3D:tool") and (tp / "Files/Prog.info").read_bytes()[58:66] == ap.NO_PLACE
+              and 'when WorkDrive copy "Files/Prog.info" "Work:Tidy/Prog.info"' in lines,
+              "a program at the drawer's top with no icon gets the tool icon")
+        check(not (tp / "Files/ReadMe.info").exists() and not (tp / "Files/Sub/helper.info").exists()
+              and sum("Other.INFO" in l for l in lines) == 1 and not any("Other.info" in l for l in lines),
+              "a text, a program further in, and a program that has its icon get none added")
+        check((tp / "Files/Other.INFO").read_bytes().endswith(b"S3D:tool") and (tp / "Files/Sub.info").read_bytes().endswith(b"S3D:drawer")
+              and row["icons"] == 3, "every icon in the drawer is one style, and the row counts them")
+        rows = ap.build(lock, assets, t / "out", icon=icon, check_private=lambda top: [], face=None)
         top = t / "out" / "GFOpenApps"
         one = (top / "Parts/AppOne/Part").read_text().splitlines()
         check(one[0] == "part AppOne 1.2", "the part is App<Drawer> at the release's version")
@@ -137,14 +175,14 @@ def main() -> int:
         check(not (t / "out" / "unpacked" / "one").exists(), "the unpacked copies are cleared away")
 
         refused("a file held back from release stops the build",
-                lambda: ap.build(lock, assets, t / "out", icon=icon, check_private=lambda top: ["Parts/AppOne/Files/One: held"]))
+                lambda: ap.build(lock, assets, t / "out", icon=icon, check_private=lambda top: ["Parts/AppOne/Files/One: held"], face=None))
         (assets / "one" / "One-1.2.zip.sha256").write_text("0" * 64 + "\n")
         refused("a file that is not the one fetched stops the build",
-                lambda: ap.build(lock, assets, t / "out", icon=icon, check_private=lambda top: []))
+                lambda: ap.build(lock, assets, t / "out", icon=icon, check_private=lambda top: [], face=None))
         (assets / "two" / "Two.tar.gz").unlink()
         zipped(assets / "one" / "One-1.2.zip", {"One/One": b"x"})
         refused("an app that isn't fetched stops the build",
-                lambda: ap.build(lock, assets, t / "out", icon=icon, check_private=lambda top: []))
+                lambda: ap.build(lock, assets, t / "out", icon=icon, check_private=lambda top: [], face=None))
 
         long = t / "long"
         (long / "a").mkdir(parents=True)
@@ -190,6 +228,9 @@ def main() -> int:
     if guest:
         data = ap.soft3d_icon("globe")
         check(data[:2] == b"\xe3\x10" and data[48] == 2, "the real drawer icon is a drawer's .info file")
+        real = ap.tidy_icon(ap.soft3d_face("tool", None), ap.soft3d_face)
+        check(ap.icon_kind(real) == "tool" and real[58:66] == ap.NO_PLACE and ap.icon_kind(ap.soft3d_face("project", None)) == "project",
+              "the real Soft 3D tool and project icons are made, and read back as their kind")
         refused("a mark that isn't drawn is refused", lambda: ap.soft3d_icon("nothing"))
     print(f"test_apps_pack: {checks} checks passed")
     return 0

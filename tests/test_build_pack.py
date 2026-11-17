@@ -47,6 +47,52 @@ def check(what: str, ok: bool, more: str = "") -> None:
     fails += not ok
 
 
+def pack_faults_checks(tmp: Path) -> None:
+    """The two faults that stopped the pack of 17 Nov 2026 from every repo's main: AmiCradle's icon script named
+    by a path amicradle had moved, and GFOpenDock's part a version behind its program."""
+    for where in ("scripts/amiga_icon.py", "scripts/icons/amiga_icon.py"):
+        ac = tmp / where.replace("/", "-")
+        (ac / where).parent.mkdir(parents=True)
+        (ac / where).write_text("")
+        (ac / "scripts/other").mkdir(exist_ok=True)
+        check(f"amicradle_script finds amiga_icon.py as {where}", bp.amicradle_script(ac, "amiga_icon.py") == ac / where)
+    for name, layout in (("none", []), ("two", ["scripts/icons/amiga_icon.py", "scripts/media/amiga_icon.py"])):
+        ac = tmp / name
+        (ac / "scripts").mkdir(parents=True)
+        for where in layout:
+            (ac / where).parent.mkdir(parents=True)
+            (ac / where).write_text("")
+        try:
+            bp.amicradle_script(ac, "amiga_icon.py")
+            check(f"amicradle_script stops the build with {name} of them", False, "it went on")
+        except SystemExit as e:
+            check(f"amicradle_script stops the build with {name} of them, saying where it looked", str(ac / "scripts") in str(e), str(e))
+    src = (ROOT / "tools/build_pack.py").read_text(encoding="utf-8")
+    check("build_pack.py names no AmiCradle script by a fixed scripts/ path", 'a.amigachrome / "scripts/' not in src)
+
+    # every part with a version written in build_pack.py whose program is gfopenprefs': the same version as the
+    # program's own $VER there (check_part_versions finds a part behind only after everything is built)
+    oap = Path(os.environ.get("OPENAMIGAPREFS", ROOT.parent / "gfopenprefs"))
+    if not (oap / "Dock/src/opendock.c").is_file():
+        print(f"skipped the gfopenprefs part versions: no {oap} (OPENAMIGAPREFS=)")
+        return
+    said = dict(re.findall(r'Part\(top, "([A-Za-z0-9]+)", "([0-9][0-9.]*)", ', src))
+    texts = [f.read_text(encoding="latin-1") for f in sorted(oap.rglob("*.c")) if "/tests/" not in f.as_posix()]
+    behind, seen = [], 0
+    for part, version in sorted(said.items()):
+        if part in bp.PART_OWN_VERSION or part not in bp.PART_MAIN:
+            continue
+        vername = re.escape(bp.PART_MAIN[part][1])
+        theirs = {v for text in texts for v in re.findall(r'"\$VER: ' + vername + r' ([0-9][0-9.]*[0-9]) \(', text)}
+        if len(theirs) != 1:
+            continue          # not gfopenprefs' program, or no one version to read
+        seen += 1
+        if theirs != {version}:
+            behind.append(f"{part}: the part says {version}, gfopenprefs says {theirs.pop()}")
+    check(f"the {seen} parts whose programs are gfopenprefs' say their programs' versions ({oap})",
+          seen >= 2 and not behind, "; ".join(behind) or f"only {seen} read")
+
+
 class FakeIcons:
     """gfopenprint's icon writer as far as the parts call it: each icon's bytes say what it was asked for."""
     WBDISK, WBDRAWER, WBTOOL, WBPROJECT = 1, 2, 3, 4
@@ -1637,6 +1683,8 @@ def main() -> int:
     icon_step_checks()
     with tempfile.TemporaryDirectory() as mtmp:
         bench_meters_checks(Path(mtmp))
+    with tempfile.TemporaryDirectory() as ftmp:
+        pack_faults_checks(Path(ftmp))
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
     return 1 if fails else 0
