@@ -319,7 +319,9 @@ AOS_BY_NAME = {"GFOpenCalc": "CALC", "GFOpenClock": "CLOCK", "GFOpenFTP": "FTP",
                "GFOpenLook": "LOOK", "GFOpenCompress": "COMPRESS", "GFOpenFiles": "FILES"}
 # The volumes with a Disk.info of their own (amicradle's provisioning makes Work:, the card a Games: drive); a
 # machine without the volume is left alone.
-AOS_VOLUMES = {"Work:Disk": "WORK", "Games:Disk": "GAMES"}
+# Games: is drawn as the Soft 3D drives are, a hard disk with a game pad on it (Dale, 17 November 2026, of its AOS
+# picture beside them on the Pi 5: "games drive icon ?").
+AOS_VOLUMES = {"Work:Disk": "WORK", "Games:Disk": "S3D:games"}
 # The drives with no Disk.info (OLDLOOK takes SYS:Disk.info out), by device: the boot drive and the RAM disk. A USB
 # stick's or the IDE drive's device name differs from machine to machine, so those keep the ROM's picture for their
 # device (GFOpenIcon's built-in).
@@ -330,7 +332,7 @@ AOS_DEVICES = {"DH0": "S3D:system", "RAM": "S3D:ram"}
 # called. An icon.library without it never asks for these files.
 # The drives, the disk and trashcan kinds and the drawer, tool and project kinds are in the Soft 3D style (Dale, 14
 # November 2026, 15:18: "soft 3d sheet is cool, go with that"; tools/soft3d_drives_art.py, soft3d_kinds_art.py): a
-# picture named S3D:<kind>. The dock's faces (Shell, Calc...) and the Work: and Games: volumes keep their AOS ones.
+# picture named S3D:<kind>. The dock's faces (Shell, Calc...) and the Work: volume keep their AOS ones.
 AOS_DRIVE_KINDS = {"system": "S3D:system", "acfs": "S3D:harddisk", "harddisk": "S3D:harddisk", "ide": "S3D:ide",
                    "usb": "S3D:usb", "cd": "S3D:cd", "floppy": "S3D:floppy", "network": "S3D:network",
                    "ram": "S3D:ram", "nvme": "S3D:nvme"}
@@ -345,9 +347,12 @@ def picture_frames(name: str, size: int):
     if name.startswith("S3D:"):
         kind = name[4:]
         import soft3d_drives_art, soft3d_kinds_art
-        mod = soft3d_drives_art if kind in soft3d_drives_art.KINDS else soft3d_kinds_art
-        if kind not in mod.KINDS:
-            raise KeyError(name)
+        if kind in soft3d_drives_art.DRAW:       # the drives, and a volume's own picture (games)
+            mod = soft3d_drives_art
+        else:
+            mod = soft3d_kinds_art
+            if kind not in mod.KINDS:
+                raise KeyError(name)
         return [mod.frames(kind, size, c) for c in (False, True)]
     import aos_icons_art
     return aos_icons_art.frames(name, size)
