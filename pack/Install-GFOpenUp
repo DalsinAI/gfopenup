@@ -626,6 +626,25 @@
         (working "Installing the GFOS fonts")
         (if (> (run (cat #tool " INSTALL Parts/GFOSFonts >>T:GFOpenUp.log")) 5)
             (message "The GFOS fonts didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+; The parts their own repositories release (17 Nov 2026; parts.lock), with every install where the pack has them:
+; ACGame (acgame.library, the game layer), GFOpenSynth (gfopensynth.library, General MIDI and MT-32 music, PlaySynth
+; and its own small SoundFont) and Allegro4 (allegro4.library, whose music plays on GFOpenSynth). Each needs a 68040,
+; and Allegro4 needs ACGame: GFOpenUpTool leaves a part out, and says so in the log, where its needs aren't met.
+(if (exists "Parts/ACGame/Part")
+    (
+        (working "Installing ACGame")
+        (if (> (run (cat #tool " INSTALL Parts/ACGame >>T:GFOpenUp.log")) 5)
+            (message "ACGame didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+(if (exists "Parts/GFOpenSynth/Part")
+    (
+        (working "Installing GFOpenSynth")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenSynth >>T:GFOpenUp.log")) 5)
+            (message "GFOpenSynth didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
+(if (exists "Parts/Allegro4/Part")
+    (
+        (working "Installing Allegro4")
+        (if (> (run (cat #tool " INSTALL Parts/Allegro4 >>T:GFOpenUp.log")) 5)
+            (message "Allegro4 didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
 ; A real AGA Amiga with Picasso96's library left behind and no Picasso96 board
 ; running: SDL games hang at their video start. Ask to set it aside (6 Oct 2026).
 (if (= (run (cat #tool " P96LEFTOVER")) 5)

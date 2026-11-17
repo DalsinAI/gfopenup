@@ -466,6 +466,74 @@ def gfos_fonts_checks() -> None:
               bp.gfos_fonts_part(Path(t), half) is None and not (Path(t) / "Parts/GFOSFonts").exists())
 
 
+def released_parts_checks() -> None:
+    """The parts their own repositories release (17 November 2026, docs/design/PARTS-ON-MERGE.md section 3):
+    parts.lock names them, released_parts copies each as fetch_parts.py unpacked it, and stops on one that isn't
+    the locked release or isn't whole."""
+    import json
+    lock_rows = bp.read_parts_lock(ROOT / "parts.lock")
+    check("parts.lock: acgame, gfopensynth and gfopenallegro, each at a release of its own",
+          [r for r, _ in lock_rows] == ["acgame", "gfopensynth", "gfopenallegro"] and all(v.startswith("v") for _, v in lock_rows))
+    inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+    check("Install-GFOpenUp: ACGame before Allegro4 (which needs it), GFOpenSynth too, each only where the pack has it",
+          0 < inst.index("INSTALL Parts/ACGame") < inst.index("INSTALL Parts/Allegro4")
+          and all(f'(if (exists "Parts/{n}/Part")' in inst for n in ("ACGame", "GFOpenSynth", "Allegro4")))
+
+    def repo(dev: Path, name: str, part: str, version: str, lib: str, extra: str = "", commit: str = "c" * 40) -> Path:
+        d = dev / name / "build/part/Parts" / part
+        (d / "Libs").mkdir(parents=True)
+        (d / "Libs" / lib).write_bytes(b"\0\0$VER: " + lib.encode() + b" " + version.encode() + b" (17.11.2026)\0")
+        (d / "Part").write_text(f'part {part} {version}\n; test\nneeds 68040\n{extra}add "Libs/{lib}" "LIBS:{lib}"\n')
+        (dev / name / "PART.json").write_text(json.dumps({"repo": name, "commit": commit, "parts": [
+            {"name": part, "version": version, "main": f"Libs/{lib}"}]}))
+        return d
+
+    def stops(dev: Path, lock: Path, must: bool = False) -> str:
+        top = dev / "top"
+        shutil.rmtree(top, ignore_errors=True)
+        (top / "Parts").mkdir(parents=True)
+        bp.RELEASED.clear()
+        try:
+            bp.released_parts(top, dev, lock, must=must)
+        except SystemExit as e:
+            return str(e)
+        return ""
+
+    with tempfile.TemporaryDirectory() as t:
+        dev = Path(t)
+        lock = dev / "parts.lock"
+        lock.write_text("# a note\nacgame v1.3-rc2  # the game layer\nDalsinAI/gfopenallegro v1.1\n")
+        check("parts.lock: notes are skipped, an owner in front is fine",
+              bp.read_parts_lock(lock) == [("acgame", "v1.3-rc2"), ("gfopenallegro", "v1.1")])
+        check("released parts: none unpacked, none taken, the build goes on", stops(dev, lock) == "" and not bp.RELEASED)
+        check("released parts: --assemble-only stops at a locked part that isn't unpacked, and names fetch_parts.py",
+              "acgame v1.3-rc2 isn't unpacked" in stops(dev, lock, must=True) and "fetch_parts.py" in stops(dev, lock, must=True))
+        repo(dev, "acgame", "ACGame", "1.3", "acgame.library")
+        al = repo(dev, "gfopenallegro", "Allegro4", "1.1", "allegro4.library", extra="needs part ACGame\n")
+        check("released parts: both taken as they are", stops(dev, lock, must=True) == ""
+              and bp.RELEASED == {"ACGame": "1.3", "Allegro4": "1.1"}
+              and (dev / "top/Parts/Allegro4/Part").read_text() == (al / "Part").read_text()
+              and (dev / "top/Parts/ACGame/Libs/acgame.library").is_file())
+        bp.check_part_versions(dev / "top/Parts")
+        check("released parts: check_part_versions lets them be (released_parts checked the library's version)", True)
+        (al / "Libs/extra").write_bytes(b"x")
+        check("released parts: a file the Part doesn't name stops the build", "lines and its files differ" in stops(dev, lock))
+        (al / "Libs/extra").unlink()
+        lock.write_text("acgame v1.3-rc2\ngfopenallegro v1.2-rc1\n")
+        check("released parts: a part at another version than parts.lock's stops the build",
+              "Allegro4 is 1.1, parts.lock takes v1.2-rc1" in stops(dev, lock))
+        lock.write_text("acgame v1.3-rc2\ngfopenallegro v1.1\n")
+        (al / "Libs/allegro4.library").write_bytes(b"$VER: allegro4.library 1.0 (1.1.2026)\0")
+        check("released parts: a library that says another version than its part stops the build",
+              "the part says 1.1, Libs/allegro4.library says 1.0" in stops(dev, lock))
+        lock.write_text("acgame latest\n")
+        try:
+            bp.read_parts_lock(lock)
+            check("parts.lock: only releases, never latest or a commit", False)
+        except SystemExit:
+            check("parts.lock: only releases, never latest or a commit", True)
+
+
 def kickstartset_checks(tmp: Path) -> None:
     """The slim ROM's disk part (9 November 2026): Parts/KickstartSet from a thin build's thin-support/: the set's
     modules copied, its Manifest last, the files on demand added (a disk's own stays), the ROM's version; a module
@@ -1368,6 +1436,7 @@ def main() -> int:
 
     amisans_checks()
     gfos_fonts_checks()
+    released_parts_checks()
     openprinter_checks()
     with tempfile.TemporaryDirectory() as ktmp:
         kickstartset_checks(Path(ktmp))
