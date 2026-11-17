@@ -3144,7 +3144,7 @@ def main() -> int:
     # (the ROM's or this C:GFOpenDock, the newer by $VER) when ENV:GFOpenDock/Dock
     # is there, and GFOpenDock 0.6.6 ends at once when one runs already, so an
     # old "Run >NIL: C:GFOpenDock" line left by an earlier GFOpenUp does no harm.
-    dock = Part(top, "GFOpenDock", "0.6.15", "GFOpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
+    dock = Part(top, "GFOpenDock", "0.6.16", "GFOpenDock: a dock that takes over ToolManager's, AmiDock's or AmiStart's, and its editor")
     dock.add("C/GFOpenDock", (a.openamigaprefs / "Dock/build/os3/GFOpenDock").read_bytes(), "SYS:C/GFOpenDock")
     # its editor is GFOpenPrefs's Dock page (W48), SYS:Preferences/Dock (the GFOpenPrefs part). C:GFOpenDock stays on the
     # open ROM too: the dock left the ROM (the no-ROM-volume design, section 7.4)
@@ -3154,7 +3154,7 @@ def main() -> int:
     # (Workbench writes it on Window > Snapshot, not when Backdrop is toggled).
     # GFOpenUpTool keeps the original in SYS:Storage and UNINSTALL puts it back.
     dock.add("Prefs/Env-Archive/Sys/WBConfig.prefs", wbconfig_backdrop(), "ENVARC:Sys/WBConfig.prefs")
-    # 0.6.14: the dock redrawn at a new size from the strip behind its row; 0.6.15: a new dock starts small
+    # 0.6.14: the dock redrawn at a new size from the strip behind its row; 0.6.15: a new dock starts small; 0.6.16: buttons follow our applications to Work:
     # (gfopenprefs #219, #221): nothing new in the part
     # 0.6.13: the Shell button's picture where there is no SYS:System/Shell (the open ROM's disk: NewShell is the
     # ROM's), GFOpenIcons' Shell; GFOpenDock 0.6.13 takes it after SYS:System/Shell's icon
