@@ -334,7 +334,10 @@ AOS_BY_NAME = {"GFOpenCalc": "CALC", "GFOpenClock": "CLOCK", "GFOpenFTP": "FTP",
 # machine without the volume is left alone.
 # Games: is drawn as the Soft 3D drives are, a hard disk with a game pad on it (Dale, 17 November 2026, of its AOS
 # picture beside them on the Pi 5: "games drive icon ?").
-AOS_VOLUMES = {"Work:Disk": "WORK", "Games:Disk": "S3D:games"}
+# Demos:, Media: and Emulation: the same way, each with what it holds on it (Dale, 17 November 2026: "update the
+# icons so they are like games , representative").
+AOS_VOLUMES = {"Work:Disk": "WORK", "Games:Disk": "S3D:games", "Demos:Disk": "S3D:demos",
+               "Media:Disk": "S3D:media", "Emulation:Disk": "S3D:emulation"}
 # The drives with no Disk.info (OLDLOOK takes SYS:Disk.info out), by device: the boot drive and the RAM disk. A USB
 # stick's or the IDE drive's device name differs from machine to machine, so those keep the ROM's picture for their
 # device (GFOpenIcon's built-in).
