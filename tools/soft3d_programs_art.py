@@ -8,7 +8,7 @@ as the kinds and the drives are (tools/soft3d_kinds_art.py, tools/soft3d_drives_
 A program is one object, what it is. Chosen, it lifts with the glow and one thing in it moves.
 
 GFOpenUpdate: a part's parcel, its lid open, and the blue arrow bringing the new version down into it; chosen,
-the arrow goes deeper in.
+the arrow goes deeper in. GFOpenNotifier: a bell; chosen, it swings and rings.
 
 MIT, Copyright (c) 2026 AmiCradle Team.
 """
@@ -41,7 +41,24 @@ def draw_gfopenupdate(f, small, chosen=False):
     return 40
 
 
-DRAW = {"GFOpenUpdate": draw_gfopenupdate}
+GOLD = (232, 176, 52)
+
+
+def draw_gfopennotifier(f, small, chosen=False):
+    """GFOpenNotifier: a bell, the thing that tells you; chosen, it swings and its clapper rings out to the side."""
+    sw = 40 if chosen else 0                                                               # the swing
+    f.ell([226 + sw, 40, 286 + sw, 100], d3.dark(GOLD, 0.2))                               # the ring on top
+    f.poly([(256 + sw - 70, 90), (256 + sw + 70, 90), (256 + sw + 150, 380), (256 + sw - 150, 380)], GOLD)  # the bell
+    f.ell([256 + sw - 110, 70, 256 + sw + 110, 260], GOLD, d3.light(GOLD, 0.45))           # its round shoulder
+    f.rr([256 + sw - 190, 360, 256 + sw + 190, 420], 30, d3.dark(GOLD, 0.15), d3.light(GOLD, 0.3))   # its lip
+    cx = 256 + sw + (90 if chosen else 0)                                                  # the clapper
+    f.ell([cx - 45, 400, cx + 45, 490], d3.dark(GOLD, 0.45))
+    if not small:
+        f.rr([256 + sw - 60, 140, 256 + sw - 30, 300], 15, d3.light(GOLD, 0.6))           # the shine
+    return 40
+
+
+DRAW = {"GFOpenUpdate": draw_gfopenupdate, "GFOpenNotifier": draw_gfopennotifier}
 
 
 def render(name, S, chosen, small):
