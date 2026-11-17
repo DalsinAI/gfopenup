@@ -51,9 +51,11 @@ check("the boot drive and RAM disk by device are Soft 3D", part.AOS_DEVICES == {
 check("the five Kinds are Soft 3D, each with its Workbench type",
       set(part.AOS_KINDS) == set(part.KINDS) == set(part.KIND_TYPES)
       and all(v.startswith("S3D:") and v[4:] in d3.KINDS + k3.KINDS for v in part.AOS_KINDS.values()))
-check("the dock's faces and the Work: volume keep their AOS pictures",
-      part.AOS_FACES["SYS:System/Shell"] in art.PICTURES and part.AOS_VOLUMES["Work:Disk"] in art.PICTURES
-      and all(v in art.PICTURES for v in part.AOS_BY_NAME.values()))
+check("the dock's faces keep their AOS pictures",
+      part.AOS_FACES["SYS:System/Shell"] in art.PICTURES and all(v in art.PICTURES for v in part.AOS_BY_NAME.values()))
+check("every volume with a Disk.info of its own is a Soft 3D drive, Work: the plain hard disk",
+      all(v.startswith("S3D:") and len(part.picture_frames(v, 64)) == 2 for v in part.AOS_VOLUMES.values())
+      and part.AOS_VOLUMES["Work:Disk"] == "S3D:harddisk", str(part.AOS_VOLUMES))
 fr = part.picture_frames("S3D:usb", 64)
 check("picture_frames gives S3D:<kind> at rest and chosen, 64 x 64", [f.size for f in fr] == [(64, 64)] * 2
       and not np.array_equal(np.array(fr[0]), np.array(fr[1])))

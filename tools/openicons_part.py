@@ -393,7 +393,9 @@ AOS_BY_NAME = {"GFOpenCalc": "CALC", "GFOpenClock": "CLOCK", "GFOpenFTP": "FTP",
 # picture beside them on the Pi 5: "games drive icon ?").
 # Demos:, Media: and Emulation: the same way, each with what it holds on it (Dale, 17 November 2026: "update the
 # icons so they are like games , representative").
-AOS_VOLUMES = {"Work:Disk": "WORK", "Games:Disk": "S3D:games", "Demos:Disk": "S3D:demos",
+# Work: is drawn as the plain Soft 3D hard disk, as the other drives are (Dale, 17 November 2026, of its AOS
+# picture beside them on the Pi 5 after an update: "the work icon has changed on the pi5").
+AOS_VOLUMES = {"Work:Disk": "S3D:harddisk", "Games:Disk": "S3D:games", "Demos:Disk": "S3D:demos",
                "Media:Disk": "S3D:media", "Emulation:Disk": "S3D:emulation"}
 # The drives with no Disk.info (OLDLOOK takes SYS:Disk.info out), by device: the boot drive and the RAM disk. A USB
 # stick's or the IDE drive's device name differs from machine to machine, so those keep the ROM's picture for their
@@ -405,7 +407,7 @@ AOS_DEVICES = {"DH0": "S3D:system", "RAM": "S3D:ram"}
 # called. An icon.library without it never asks for these files.
 # The drives, the disk and trashcan kinds and the drawer, tool and project kinds are in the Soft 3D style (Dale, 14
 # November 2026, 15:18: "soft 3d sheet is cool, go with that"; tools/soft3d_drives_art.py, soft3d_kinds_art.py): a
-# picture named S3D:<kind>. The dock's faces (Shell, Calc...) and the Work: volume keep their AOS ones.
+# picture named S3D:<kind>. The dock's faces (Shell, Calc...) keep their AOS ones.
 AOS_DRIVE_KINDS = {"system": "S3D:system", "acfs": "S3D:harddisk", "harddisk": "S3D:harddisk", "ide": "S3D:ide",
                    "usb": "S3D:usb", "cd": "S3D:cd", "floppy": "S3D:floppy", "network": "S3D:network",
                    "ram": "S3D:ram", "nvme": "S3D:nvme"}
