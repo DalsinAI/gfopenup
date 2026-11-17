@@ -2365,6 +2365,43 @@ def write_pack_list(parts: Path, out: Path) -> int:
     return len(rows)
 
 
+# Material that is never released (game data and ROMs under someone else's licence) travels to our own test
+# boards in a private pack of its own, which is never in a repository. Two things keep it out of this pack: each
+# of its parts holds a file of this name, and the machine that builds it keeps a list of the SHA-256 of every file
+# it has ever held (GF_TESTING_DENY, else ~/AmiCradle/testing-pack/DENY.sha256; no list on a machine without one).
+PRIVATE_MARKER = "TestingPack.private"
+PRIVATE_NAMES = (PRIVATE_MARKER, "PRIVATE-NOT-FOR-RELEASE")
+
+
+def private_deny_list(path: Path | None = None) -> set[str]:
+    """The SHA-256 list of files that may not be in a public pack: empty when this machine has none."""
+    path = Path(path or os.environ.get("GF_TESTING_DENY") or Path.home() / "AmiCradle/testing-pack/DENY.sha256")
+    if not path.is_file():
+        return set()
+    return {w for w in (line.split("#")[0].strip().lower() for line in path.read_text().splitlines())
+            if re.fullmatch(r"[0-9a-f]{64}", w)}
+
+
+def check_private(top: Path, deny: set[str] | None = None) -> list[str]:
+    """Every file under the pack's drawer: one named as a private pack's marker, or one whose SHA-256 is in the
+    deny list, is a problem. Returns the problems, one line each (empty: none); a path only, never the bytes."""
+    import hashlib
+    deny = private_deny_list() if deny is None else deny
+    problems = []
+    for f in sorted(p for p in Path(top).rglob("*") if p.is_file()):
+        rel = f.relative_to(top).as_posix()
+        if f.name.lower() in {n.lower() for n in PRIVATE_NAMES}:
+            problems.append(f"{rel}: a private pack's marker, so its drawer is not for release")
+        elif deny:
+            h = hashlib.sha256()
+            with open(f, "rb") as fh:
+                while chunk := fh.read(1 << 20):
+                    h.update(chunk)
+            if h.hexdigest() in deny:
+                problems.append(f"{rel}: a file the private pack holds (its SHA-256 is in the deny list)")
+    return problems
+
+
 # Our own libraries resident in a ROM the pack runs on without being in the pack (none yet: the slim ROM has no gf*
 # library; the KickstartSet part's are in the pack and count as packed)
 ROM_GF_LIBRARIES: frozenset = frozenset()
@@ -3579,6 +3616,9 @@ def main() -> int:
     if browser_top:
         check_part_versions(browser_top / "Parts")
     for t in [top] + ([browser_top] if browser_top else []):
+        private = check_private(t)
+        if private:
+            raise SystemExit("this pack holds material that is never released:\n  " + "\n  ".join(private))
         clashes = check_clashes(t / "Parts")
         if clashes:
             raise SystemExit("two parts write one path (one part owns each file; SHARED_PATHS for same-byte sharing):\n  "
