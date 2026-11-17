@@ -109,7 +109,9 @@ It needs:
   AmiCradle isn't installed on the build machine.
 
 `tests/` holds the host-side checks. `DESIGN.md` is the design, and
-`ICONS.md` covers the icons.
+`ICONS.md` covers the icons. Every build, pack, installer and port ships icons in
+the Team's icon standard (amicradle `docs/ICON_STANDARD.md` and
+`docs/howto/12-draw-icons.md`); `ICONS.md` section 0 has the rule.
 
 ## Licence
 
