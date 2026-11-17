@@ -693,6 +693,46 @@ def rc_version_checks() -> None:
           and bp.binary_version(b"$VER: X 1.2-beta (1.1.2026)", "X") == "1.2")
 
 
+def bench_meters_checks(tmp: Path) -> None:
+    """GFOpenMeters in the GFOpenBench part (bp.bench_meters): the program copied, the icon only where none is,
+    and the build stopped when the program, the icon or its DONOTWAIT is missing."""
+    built = tmp / "os3"
+    built.mkdir()
+    prog = b"\0\0\x03\xf3code$VER: GFOpenMeters 0.3 (11.11.2026) MIT\0"
+    icon = b"\xe3\x10icon\0CORNER=TOPRIGHT\0DONOTWAIT\0"
+
+    def run(have_prog: bytes | None, have_icon: bytes | None):
+        for name, data in (("GFOpenMeters", have_prog), ("GFOpenMeters.info", have_icon)):
+            (built / name).unlink(missing_ok=True)
+            if data is not None:
+                (built / name).write_bytes(data)
+        part = bp.Part(tmp / "top", "GFOpenBench", "0.1.69", "test")
+        try:
+            bp.bench_meters(part, built)
+        except SystemExit as e:
+            return None, str(e)
+        return part, ""
+
+    part, why = run(prog, icon)
+    check("GFOpenMeters: in the GFOpenBench part", part is not None, why)
+    if part:
+        check("GFOpenMeters: the program copied to SYS:WBStartup, over an older one",
+              'copy "WBStartup/GFOpenMeters" "SYS:WBStartup/GFOpenMeters"' in part.lines
+              and (part.dir / "WBStartup/GFOpenMeters").read_bytes() == prog, str(part.lines))
+        check("GFOpenMeters: its icon only where there is none (its tooltypes are the user's settings)",
+              'default "WBStartup/GFOpenMeters.info" "SYS:WBStartup/GFOpenMeters.info"' in part.lines
+              and (part.dir / "WBStartup/GFOpenMeters.info").read_bytes() == icon, str(part.lines))
+    for what, a, b, word in (("no program", None, icon, "was not built"), ("no icon", prog, None, "was not built"),
+                             ("a program with no version", b"code", icon, "no version"),
+                             ("an icon with no DONOTWAIT", prog, b"\xe3\x10icon\0CORNER=TOPRIGHT\0", "DONOTWAIT")):
+        part, why = run(a, b)
+        check(f"GFOpenMeters: {what} stops the build", part is None and word in why, why)
+    src = (ROOT / "tools/build_pack.py").read_text()
+    check("build_pack.py: meters/build.sh runs after desktop/build.sh, and the part takes its output",
+          0 < src.find('"desktop/build.sh"], env=bench_env)') < src.find('"meters/build.sh"]')
+          and "bench_meters(bench, a.openamigabench" in src)
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -1368,6 +1408,8 @@ def main() -> int:
         compress_files_checks(Path(ctmp))
     rc_version_checks()
     icon_step_checks()
+    with tempfile.TemporaryDirectory() as mtmp:
+        bench_meters_checks(Path(mtmp))
 
     print(f"{'all passed' if not fails else str(fails) + ' FAILED'}")
     return 1 if fails else 0

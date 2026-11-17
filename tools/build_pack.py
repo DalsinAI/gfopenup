@@ -176,7 +176,8 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenBench/            GFOpenBench, the Team's own Workbench, in SYS:System, off unless picked
                         (--openamigabench). It runs where the Startup-Sequence starts
                         SYS:System/GFOpenBench in LoadWB's place; GFOpenUp doesn't change the
-                        Startup-Sequence yet
+                        Startup-Sequence yet. With GFOpenMeters, the desktop's widget (the date, the RAM
+                        and each volume as bars), in SYS:WBStartup
   GFOpenLibs/             the open libraries, one switch each, off by default (0.8.0): S:GFOpenLibs-Startup
                         (OS 3.2's LoadModule, from S:Pre-LoadModule-Startup), and a part of its own per library in
                         GFOpenLibs/<name> (utility.module, mathieeedoubbas.library, input.device
@@ -447,6 +448,26 @@ class Part:
         if not self.lines[0]:
             self.lines[0] = f"part {self.name} {program_version(self.dir, self.name)}"
         (self.dir / "Part").write_text("\n".join(self.lines) + "\n", encoding="latin-1")
+
+
+def bench_meters(bench: "Part", built: Path) -> None:
+    """GFOpenMeters, the desktop's widget (gfopenbench meters/), in the GFOpenBench part, so every Amiga with
+    GFOpenBench gets it and an update brings it (Dale, 17 Nov 2026: "open meter is still missing": no pack had
+    carried it, and a Pi 5 on 0.8.30-rc4 had no meter). It goes in SYS:WBStartup, which GFOpenBench runs at each
+    start. The program is copied over an older one. Its icon holds the user's settings as tooltypes (the corner,
+    what to leave out), so it is written only where there is none. The build stops when either is missing, or when
+    the icon has no DONOTWAIT (OS 3.2.3's Workbench would wait for it and show no disk icons)."""
+    prog, info = built / "GFOpenMeters", built / "GFOpenMeters.info"
+    for f in (prog, info):
+        if not f.is_file():
+            raise SystemExit(f"GFOpenMeters: {f} was not built (gfopenbench meters/build.sh; the icon needs "
+                             "amicradle's icon writer)")
+    if not binary_version(prog.read_bytes(), "GFOpenMeters"):
+        raise SystemExit(f"GFOpenMeters: {prog} says no version")
+    if b"DONOTWAIT" not in info.read_bytes():
+        raise SystemExit(f"GFOpenMeters: {info} has no DONOTWAIT tooltype")
+    bench.add("WBStartup/GFOpenMeters", prog.read_bytes(), "SYS:WBStartup/GFOpenMeters")
+    bench.add("WBStartup/GFOpenMeters.info", info.read_bytes(), "SYS:WBStartup/GFOpenMeters.info", default=True)
 
 
 def program_version(part_dir: Path, name: str) -> str:
@@ -896,6 +917,9 @@ def build_parts(a):
         if a.openamigatata:
             bench_env["TATA"] = str(a.openamigatata)
         run(["sh", a.openamigabench / "desktop/build.sh"], env=bench_env)
+        # GFOpenMeters, the desktop's widget (gfopenbench meters/build.sh, into the same build/os3), with its icon
+        # from amicradle's icon writer (Dale, 17 Nov 2026: "open meter is still missing")
+        run(["sh", a.openamigabench / "meters/build.sh"], env=dict(bench_env, AMICRADLE=str(a.amigachrome)))
     # GFOpenPrint, GFOpenPrint's browser and GFOpenView with GCC 16 (GFOpenNDK's os32 libamiga.a, for GCC 6.5,
     # has no SetRexxVar, which GFOpenView calls); IPPS through GFOpenTLS, whose headers gfopenprint carries
     p = a.openamigaprint
@@ -3322,6 +3346,7 @@ def main() -> int:
         # OpenUp had replaced (put back by its UNINSTALL), and a new install never started GFOpenBench (lab
         # t5-up0813-upgrade, 4 Nov 2026). The copy it replaces is kept in SYS:Storage, as ever.
         bench.add("System/OpenBench", obb, "SYS:System/OpenBench")
+        bench_meters(bench, a.openamigabench / "build/os3")
         bench.write()
 
     # Sound: GFOpenPrefs Sound (the volume, Paula's and AHI's levels, the beep)
