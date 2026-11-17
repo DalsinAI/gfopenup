@@ -37,6 +37,8 @@
 #include <proto/utility.h>
 #include <string.h>
 
+/* the shared headers carry helpers only the host tests and GFOpenUpTool use */
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include "openupdate.h"
 #include "openupdate_sha256.h"
 
@@ -46,7 +48,7 @@ static const char version[] = "$VER: " NAME " " VERSION_TEXT " (17.11.2026)";
 
 struct Library *CxBase, *IconBase;
 struct IntuitionBase *IntuitionBase;
-struct UtilityBase *UtilityBase;
+struct Library *UtilityBase;
 
 #define MANIFEST "ENVARC:GFOpenAmiga/GFOpenUp.manifest"
 #define INDEX_FILE OUD_WORK "/GFOpenUpdate.index"
@@ -307,7 +309,7 @@ int main(int argc, char **argv)
     CxBase = OpenLibrary((STRPTR)"commodities.library", 37);
     IconBase = OpenLibrary((STRPTR)"icon.library", 37);
     IntuitionBase = (struct IntuitionBase *)OpenLibrary((STRPTR)"intuition.library", 37);
-    UtilityBase = (struct UtilityBase *)OpenLibrary((STRPTR)"utility.library", 37);
+    UtilityBase = OpenLibrary((STRPTR)"utility.library", 37);
     if (!CxBase || !IntuitionBase || !UtilityBase) goto out;
     settings(argc, argv);
     {
@@ -380,7 +382,7 @@ out:
     if (tport) DeleteMsgPort(tport);
     if (broker) DeleteCxObjAll(broker);
     if (port) { struct Message *msg; while ((msg = GetMsg(port))) ReplyMsg(msg); DeleteMsgPort(port); }
-    if (UtilityBase) CloseLibrary((struct Library *)UtilityBase);
+    if (UtilityBase) CloseLibrary(UtilityBase);
     if (IntuitionBase) CloseLibrary((struct Library *)IntuitionBase);
     if (IconBase) CloseLibrary(IconBase);
     if (CxBase) CloseLibrary(CxBase);
