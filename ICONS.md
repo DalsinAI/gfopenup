@@ -4,6 +4,21 @@ The standard working practice for the icons of everything GFOpenUp installs:
 every Open app, every prefs editor, every drawer of our own. A thread that
 adds an app or an editor adds its icon this way, in the same pull request.
 
+## 0. The standing rule for every build
+
+Dale, 17 November 2026: all builds use our icon standard. Every build, pack,
+installer and port ships its icons in that standard: drives, drawers, programs,
+documents and installers alike, and a drawer never ships without its icon file
+(a drawer with no `.info` does not show in its window). The standard and how to
+draw to it are in the amicradle repo:
+
+- `docs/ICON_STANDARD.md`: the policy, what must carry an icon and which kind;
+- `docs/howto/12-draw-icons.md`: how to draw one, step by step.
+
+This file says how GFOpenUp's own icons are made to that standard. A pull
+request that adds a program, a drawer or an installer adds its icon in the
+same pull request.
+
 ## 1. The rule
 
 **Every GFOpenUp application and prefs editor has a GlowIcon with animation.**
