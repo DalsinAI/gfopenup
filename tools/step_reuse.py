@@ -86,9 +86,15 @@ def read_freeze(path: Path) -> dict[str, str]:
 
 
 class StepCache:
-    def __init__(self, stamps: Path, checkouts: dict[str, Path], fresh: bool = False, base_env=None):
+    def __init__(self, stamps: Path, checkouts: dict[str, Path], fresh: bool = False, base_env=None,
+                 prebuilt: dict[str, str] | None = None, no_compile: bool = False):
         self.stamps = stamps
         self.fresh = fresh
+        # checkouts whose part was built when it merged and unpacked into them (tools/fetch_parts.py): name -> commit
+        self.prebuilt = dict(prebuilt or {})
+        # --assemble-only: a step that would compile is listed in self.missing and not run
+        self.no_compile = no_compile
+        self.missing: list[str] = []
         self.base_env = dict(os.environ if base_env is None else base_env)
         self.checkouts: dict[str, Path] = {}
         self.state: dict[str, tuple[str, bool]] = {}
@@ -268,7 +274,21 @@ class StepCache:
                     return f"{out} made again in this cut"
         return None
 
+    def script_repo(self, cmd, cwd=None) -> str | None:
+        """The checkout the step's build script belongs to: the part the step builds."""
+        for f in self._scripts(cmd, cwd)[:1]:
+            return self._owner(f.resolve())
+        return None
+
+    def _is_prebuilt(self, name: str) -> bool:
+        head, dirty = self.state.get(name, ("", True))
+        want = self.prebuilt.get(name, "")
+        return bool(want) and not dirty and (head.startswith(want) or want.startswith(head))
+
     def would_reuse(self, cmd, cwd=None, env=None, extra=None) -> bool:
+        part = self.script_repo(cmd, cwd)
+        if part and self._is_prebuilt(part):
+            return True
         k, what = self.key(cmd, cwd, env, extra)
         return self._why_not(what, self.stamps / f"{k}.json", cmd, cwd, self._env_extra(env)) is None
 
@@ -281,6 +301,16 @@ class StepCache:
         reads = " ".join(f"{n}@{h[:10]}" for n, h in what["reads"].items())
         why = self._why_not(what, stamp, cmd, cwd, env_extra)
         line = " ".join(str(c) for c in cmd)
+        part = self.script_repo(cmd, cwd)
+        if why is not None and part and self._is_prebuilt(part):
+            print(f"  = step {self.n} prebuilt part {part}@{self.state[part][0][:10]}", flush=True)
+            self.rows.append([str(self.n), "prebuilt", "0", reads, line])
+            return True
+        if why is not None and self.no_compile:
+            print(f"  ! step {self.n} has no built part: {why} ({reads})", flush=True)
+            self.missing.append(f"step {self.n} ({part or '?'}): {line}")
+            self.rows.append([str(self.n), "missing", "0", reads, line])
+            return True
         if why is None:
             print(f"  = step {self.n} reused ({reads})", flush=True)
             self.rows.append([str(self.n), "reused", "0", reads, line])
@@ -305,9 +335,12 @@ class StepCache:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("step\tdone\tseconds\treads\tcommand\n" + "".join("\t".join(r) + "\n" for r in self.rows))
         built = [r for r in self.rows if r[1] == "built"]
+        pre = [r for r in self.rows if r[1] == "prebuilt"]
+        miss = [r for r in self.rows if r[1] == "missing"]
         secs = sum(float(r[2]) for r in built)
-        return (f"{len(self.rows)} steps: {len(built)} built in {secs:.0f} s, "
-                f"{len(self.rows) - len(built)} reused ({path})")
+        return (f"{len(self.rows)} steps: {len(built)} built in {secs:.0f} s, {len(pre)} prebuilt parts, "
+                f"{len(self.rows) - len(built) - len(pre) - len(miss)} reused"
+                + (f", {len(miss)} with no built part" if miss else "") + f" ({path})")
 
     def commits(self, path: Path) -> None:
         """The commits this cut was built from, one checkout per line, in freeze.tsv's form."""
