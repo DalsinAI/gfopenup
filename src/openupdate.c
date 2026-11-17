@@ -131,10 +131,29 @@ static int network_up(void)
 
 /* ---- one part: fetch, check, unpack, install ------------------------------------------------------------- */
 
+/* The part's drawer in what was unpacked: the one drawer there ("<drawer>/..." in the archive, by the part's own
+ * drawer name, which for a part inside another's, rexx in GFOpenLibs, isn't the part's name). 1, else 0. */
+static int part_drawer(const char *where, char *out, int size)
+{
+    BPTR lock = Lock((STRPTR)where, ACCESS_READ);
+    struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
+    int found = 0, many = 0;
+    if (lock && fib && Examine(lock, fib)) {
+        while (ExNext(lock, fib)) {
+            if (fib->fib_DirEntryType <= 0) continue;
+            if (found) { many = 1; continue; }
+            if ((int)strlen((const char *)fib->fib_FileName) < size) { strcpy(out, (const char *)fib->fib_FileName); found = 1; }
+        }
+    }
+    if (fib) FreeDosObject(DOS_FIB, fib);
+    if (lock) UnLock(lock);
+    return found && !many;
+}
+
 /* 0 when installed; else why not into why. */
 static int update_part(const struct oud_part *p, char *why, int size)
 {
-    char url[300], path[160], cmd[600];
+    char url[300], path[160], cmd[600], drawer[80];
     struct oud_sha s;
     char got[65];
     unsigned char *buf;
@@ -159,7 +178,8 @@ static int update_part(const struct oud_part *p, char *why, int size)
 
     run("C:Delete >NIL: \"" UNPACKED "\" ALL QUIET FORCE");
     if (!oud_unpack_cmd(path, UNPACKED, cmd, sizeof cmd) || run(cmd) != 0) { strncpy(why, "it couldn't be unpacked", size); return 1; }
-    if (!oud_install_cmd(UNPACKED, p->name, cmd, sizeof cmd) || run(cmd) > RETURN_WARN) {
+    if (!part_drawer(UNPACKED, drawer, sizeof drawer)) { strncpy(why, "its archive holds no part", size); return 1; }
+    if (!oud_install_cmd(UNPACKED, drawer, cmd, sizeof cmd) || run(cmd) > RETURN_WARN) {
         strncpy(why, "GFOpenUpTool INSTALL failed (T:GFOpenUp.log)", size); return 1;
     }
     return 0;

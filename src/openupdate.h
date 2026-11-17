@@ -357,7 +357,8 @@ static int oud_unpack_cmd(const char *archive, const char *drawer, char *out, in
     return oud_cat(out, size, bits);
 }
 
-/* GFOpenUpTool installing the part's drawer, <drawer>/<Name> (the archive holds "<Name>/..."). 1, or 0. */
+/* GFOpenUpTool installing the part's drawer, <drawer>/<name>: name is the part's drawer as unpacked ("<name>/..." in the
+ * archive, update_index.py). 1, or 0. */
 static int oud_install_cmd(const char *drawer, const char *name, char *out, int size)
 {
     const char *bits[] = { OUD_TOOL " INSTALL \"", drawer, "/", name, "\"", NULL };
