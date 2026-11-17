@@ -160,7 +160,7 @@
 static int slim_rom(void);
 static int kickset(const char *a1, const char *a2);
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.21 (17.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.22 (17.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -794,11 +794,21 @@ static int demos_drive(void)
     return there;
 }
 
+/* 0.8.22: a volume named Media is mounted (the standard build's DH4:, where pictures and music go; Dale 17 Nov
+ * 2026: "include in the media drive an folder called midi"). From the DOS list too: no requester. */
+static int media_drive(void)
+{
+    struct DosList *dl = LockDosList(LDF_VOLUMES | LDF_READ);
+    int there = FindDosEntry(dl, (STRPTR)"Media", LDF_VOLUMES) != NULL;
+    UnLockDosList(LDF_VOLUMES | LDF_READ);
+    return there;
+}
+
 /* The OUL_ bits a Part file's conditions ask about (src/openup_lines.h) */
 static unsigned machine_bits(void)
 {
     return (is_amicradle() ? OUL_AMICRADLE : 0) | (prefs_task_rom() ? OUL_OPENKICK : 0)
-         | (demos_drive() ? OUL_DEMOSDRIVE : 0);
+         | (demos_drive() ? OUL_DEMOSDRIVE : 0) | (media_drive() ? OUL_MEDIADRIVE : 0);
 }
 
 static void set_env(const char *name, const char *value)
