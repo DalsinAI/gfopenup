@@ -1493,6 +1493,36 @@ def main() -> int:
         check("GFOpenSnap's part version is read from its program", bp.PART_MAIN.get("GFOpenSnap") ==
               ("Tools/Commodities/GFOpenSnap", "GFOpenSnap"))
 
+        # GFOpenBlanker's music (1.7): the icon's tool types choose it, Copper List from GFOpenSynth's Media:midi/Dance
+        bl_icon = icon_of(bp.blanker_icon(FakeIcons()))
+        check("GFOpenBlanker.info: a tool icon, 16 KB of stack, PLAYMIDI=TRUE and MIDIFILE=Media:midi/Dance/copper-list.mid",
+              bl_icon[0] == FakeIcons.WBTOOL and bl_icon[4] == 16384
+              and bl_icon[3] == ["PLAYMIDI=TRUE", "MIDIFILE=Media:midi/Dance/copper-list.mid"], str(bl_icon))
+        check("the GFOpenBlanker part's icon is blanker_icon's",
+              'bl.add("Tools/Commodities/GFOpenBlanker.info", blanker_icon(icons),' in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
+        oap = Path(os.environ.get("OPENAMIGAPREFS", ROOT.parent / "gfopenprefs"))
+        bl_src = oap / "Blanker/src/openblanker.c"
+        if bl_src.is_file():
+            text = bl_src.read_text(encoding="latin-1")
+            check("every tool type GFOpenBlanker's icon has is one GFOpenBlanker reads",
+                  all(f'"{t.split("=")[0]}"' in text for t in bp.BLANKER_TOOLTYPES))
+        else:
+            print(f"skipped GFOpenBlanker's tool type names: no {bl_src} (OPENAMIGAPREFS=)")
+        synth = Path(os.environ.get("GFOPENSYNTH", ROOT.parent / "gfopensynth"))
+        if (synth / "midi").is_dir():
+            check("MIDIFILE names a tune GFOpenSynth's part puts in Media:midi",
+                  (synth / "midi/Dance/copper-list.mid").is_file())
+        else:
+            print(f"skipped the blanker's tune: no {synth}/midi (GFOPENSYNTH=)")
+        mp = Path(os.environ.get("OPENAMIGAMEDIAPLAYER", ROOT.parent / "gfopenmediaplayer"))
+        if (mp / "app/openplay.c").is_file():
+            said = re.search(r'Part\(top, "GFOpenPlay", "([0-9.]+)"', (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
+            theirs = re.search(r'#define VERSION_TEXT "GFOpenPlay ([0-9.]+) ', (mp / "app/openplay.c").read_text(encoding="latin-1"))
+            check("the GFOpenPlay part says gfopenmediaplayer's GFOpenPlay version",
+                  said and theirs and said.group(1) == theirs.group(1), f"{said and said.group(1)} / {theirs and theirs.group(1)}")
+        else:
+            print(f"skipped the GFOpenPlay part version: no {mp} (OPENAMIGAMEDIAPLAYER=)")
+
         # GFOpenSnap's pictures: the ILBM writer, HAM, Extra Half-Brite and the names (tests/test_opensnap_pic.c)
         pic = tmp / "test_opensnap_pic"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src/opensnap'}", str(ROOT / "tests/test_opensnap_pic.c"),
