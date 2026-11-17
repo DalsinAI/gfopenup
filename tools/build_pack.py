@@ -2916,7 +2916,7 @@ def main() -> int:
     if not a.no_openicons:
         sys.path.insert(0, str(ROOT / "tools"))
         import openicons_part
-        oi = Part(top, "GFOpenIcons", "0.4", "GFOpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
+        oi = Part(top, "GFOpenIcons", "0.5", "GFOpenIcons, the Team's own icon set: new pictures for the system's drawers, programs and kinds of file")
         for text in openicons_part.build(oi.dir, a.guest):
             oi.line(text)
         oi.write()
@@ -3766,9 +3766,9 @@ def main() -> int:
             )
     except Exception as e:                  # never carry on: a dock of generic icons (Ivanova's pack lab, 14 Nov 2026)
         raise SystemExit(f"the Open apps' icons weren't made: {e!r}")
-    # GFOpenUp's own drawers as GFOpenIcons look B drawers with their program's motif (W78, 18 October 2026, Dale:
-    # "we need to fix those older icons to our new style"), over the Gorilla-era drawer-NAME and Boxie drawers
-    # above; each keeps its window and place. The apps' own animated icons stay as ICONS.md section 1 has them.
+    # GFOpenUp's own drawers as the Soft 3D folder with their program's mark (Dale, 17 November 2026: "we should
+    # redo all the folder icons"; look B drawers from W78, 18 October 2026), over the Gorilla-era drawer-NAME and
+    # Boxie drawers above; each keeps its window and place. The apps' own animated icons stay as ICONS.md section 1 has them.
     if not a.no_openicons:
         import openicons_part
         n = openicons_part.own_drawers(a.guest, [a.out / "GFOpenUp.info", core.dir / "Utilities/GFOpenUp.info", opp.dir / "Preferences.info",
@@ -3776,7 +3776,7 @@ def main() -> int:
                                        + ([dm.dir / f"{rel}/GFOpenDemos.info" for _c, rel, _h in DEMOS_HOMES] if dm else [])
                                        + ([dev.dir / "Developer/GFOpenGPU-SDK.info", dev.dir / "Developer.info"] if dev else [])
                                        + ([oin.dir / "Utilities/GFOpenUp/Docs.info"] if oin else []))
-        print(f"  GFOpenUp's own drawers in GFOpenIcons look B: {n}")
+        print(f"  GFOpenUp's own drawers as Soft 3D folders: {n}")
     print(f"{top}: {sum(1 for _ in top.rglob('*') if _.is_file())} files")
     # before the version check: a part whose main binary took the slim ROM's newer copy must say that version
     for t in [top] + ([browser_top] if browser_top else []):

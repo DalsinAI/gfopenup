@@ -1268,8 +1268,12 @@ def main() -> int:
         import openicons_part as oip
         dl = oip.openkick_drawer_lines()
         check("a drawer icon for Devs, Prefs, Storage, System, Tools, Utilities and WBStartup",
-              dl == [f'when GFOpenKick default "Kinds/Drawer.info" "SYS:{n}.info"'
+              dl == [f'when GFOpenKick default "Drawers/{n}.info" "SYS:{n}.info"'
                      for n in ("Devs", "Prefs", "Storage", "System", "Tools", "Utilities", "WBStartup")], str(dl))
+        check("each is the Soft 3D folder with its own mark (drawn: tests/test_soft3d_drawers.py)",
+              oip.OPENKICK_DRAWERS == {"Devs": "chip", "Prefs": "sliders", "Storage": "archive", "System": "gear",
+                                       "Tools": "hammer", "Utilities": "wrench", "WBStartup": "rocketlaunch"},
+              str(oip.OPENKICK_DRAWERS))
         check("the Drawer kind is the Soft 3D folder, a drawer icon", oip.AOS_KINDS["Drawer"] == "S3D:drawer"
               and oip.KIND_TYPES["Drawer"] == "drawer")
         pf = tmp / "IconsPart"

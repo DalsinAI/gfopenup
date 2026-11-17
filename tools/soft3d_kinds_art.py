@@ -9,6 +9,10 @@ Our own drawing: a drawer is an open folder holding papers, a project a page wit
 program's window with its title bar, the trashcan a bin with its lid. Chosen, the drawer's papers rise out of it,
 as in the AOS set.
 
+A named drawer is the same folder with a white mark on its front that says what it holds (Dale, 17 November 2026:
+"we should redo all the folder icons"): the kind "drawer:<motif>", the marks in tools/soft3d_motifs.py. Its
+outline is the plain drawer's exactly.
+
 MIT, Copyright (c) 2026 AmiCradle Team.
 """
 from __future__ import annotations
@@ -26,7 +30,11 @@ BLUE = (59, 120, 216)
 PAPER = (246, 248, 251)
 
 
-def draw_drawer(f, small, chosen=False):
+MARK_ZONE = (150, 246, 362, 458)             # where a named drawer's mark sits on the front flap (512 units)
+MARK_ZONE_SMALL = (126, 180, 386, 464)       # the 32 px drawing: the mark as big as the flap takes
+
+
+def draw_drawer(f, small, chosen=False, motif=None):
     body = BLUE
     f.rr([40, 60, 210, 140], 18, d3.dark(body, 0.15), d3.light(body, 0.2))          # the tab
     f.rr([40, 100, 472, 472], 24, d3.dark(body, 0.2), d3.light(body, 0.1))        # the back
@@ -36,8 +44,13 @@ def draw_drawer(f, small, chosen=False):
     if not small:
         for i, y in enumerate((150, 190, 230)):
             f.rr([150, y - lift, 380 - 50 * i, y + 14 - lift], 7, (170, 178, 192))
-    f.rr([40, 220, 472, 472], 24, body, d3.light(body, 0.4))                        # the front flap
-    f.rr([196, 250, 316, 274], 12, d3.light(body, 0.55))                             # its handle
+    # the front flap; on a named drawer's 32 px drawing it comes higher, so the mark has room
+    f.rr([40, 160 if small and motif else 220, 472, 472], 24, body, d3.light(body, 0.4))
+    if motif:                                                                        # a named drawer: its mark
+        import soft3d_motifs
+        soft3d_motifs.stamp(f, motif, MARK_ZONE_SMALL if small else MARK_ZONE, small)
+    else:
+        f.rr([196, 250, 316, 274], 12, d3.light(body, 0.55))                         # its handle
     return 40
 
 
@@ -88,10 +101,23 @@ def draw_trashcan(f, small, chosen=False):
 DRAW = {"drawer": draw_drawer, "project": draw_project, "tool": draw_tool, "trashcan": draw_trashcan}
 
 
+def split(kind):
+    """"drawer:gear" is the drawer with the gear's mark: (kind, motif). Any other kind has no mark."""
+    base, _, motif = kind.partition(":")
+    if motif:
+        import soft3d_motifs
+        if base != "drawer" or motif not in soft3d_motifs.MOTIFS:
+            raise KeyError(kind)
+    if base not in DRAW:
+        raise KeyError(kind)
+    return base, motif or None
+
+
 def render(kind, S, chosen, small):
     from PIL import Image
     f = d3.Flat(S)
-    thick = DRAW[kind](f, small, chosen)
+    base, motif = split(kind)
+    thick = DRAW[base](f, small, chosen, motif) if motif else DRAW[base](f, small, chosen)
     im = d3.solid(f.img, thick, S, chosen)
     if chosen:
         up = Image.new("RGBA", (S, S))
@@ -100,18 +126,23 @@ def render(kind, S, chosen, small):
     return im
 
 
+_FITTED = {}
+
+
 def frames(kind, size, chosen):
     """KIND at rest or chosen, size x size, hard alpha, as the drives (soft3d_drives_art.frames)"""
     big = size >= 48
     S = 512 if big else 256
-    pair = [render(kind, S, c, not big) for c in (False, True)]
-    from PIL import ImageChops
-    m = ImageChops.lighter(pair[0].getchannel("A"), pair[1].getchannel("A")).point(lambda v: 255 if v >= 60 else 0)
-    x0, y0, x1, y1 = m.getbbox()
-    side = int(max(x1 - x0, y1 - y0) * 1.06)
-    cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
-    box = (cx - side // 2, cy - side // 2, cx - side // 2 + side, cy - side // 2 + side)
-    im = d3.hard(pair[1 if chosen else 0].crop(box), size)
+    if (kind, S) not in _FITTED:                    # both frames drawn once, cut to one square
+        pair = [render(kind, S, c, not big) for c in (False, True)]
+        from PIL import ImageChops
+        m = ImageChops.lighter(pair[0].getchannel("A"), pair[1].getchannel("A")).point(lambda v: 255 if v >= 60 else 0)
+        x0, y0, x1, y1 = m.getbbox()
+        side = int(max(x1 - x0, y1 - y0) * 1.06)
+        cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+        box = (cx - side // 2, cy - side // 2, cx - side // 2 + side, cy - side // 2 + side)
+        _FITTED[kind, S] = [p.crop(box) for p in pair]
+    im = d3.hard(_FITTED[kind, S][1 if chosen else 0], size)
     return im if big else d3.edged(im)
 
 

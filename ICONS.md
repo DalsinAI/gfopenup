@@ -68,6 +68,15 @@ the object lifts off it). Every frame is a GlowIcon's: each pixel solid or see-t
   for `def_<device>` first. A USB stick's and the IDE drive's device names differ from machine to machine, so those
   keep the ROM's own picture for their device.
 
+**Every drawer is the Soft 3D folder (Dale, 17 November 2026: "we should redo all the folder icons").** The blue
+open folder of `tools/soft3d_kinds_art.py`; a named drawer is the same folder with a white mark on its front that
+says what it holds (`drawer:<motif>`, the marks in `tools/soft3d_motifs.py`: a gear for System, sliders for Prefs,
+a globe for the browser's drawer). Its outline is the plain folder's exactly. `tools/openicons_part.py` writes them
+(GFOpenIcons 0.5): the system's drawers and the ones in a second place (by the manifest's motif), GFOpenUp's own
+(`OWN_DRAWERS`), AmiCradle's own on Work: and SYS: (`NAMED_DRAWERS`) and the system drawers a GFOpenKick disk has
+no icon for (`OPENKICK_DRAWERS`). A drawer whose motif has no mark stops the build: draw the mark. The look B tan
+box is no longer used for a drawer. Tests: `tests/test_soft3d_drawers.py`.
+
 ## 2. Format
 
 - **OS 3.5 GlowIcon** (FORM ICON with FACE and two IMAG chunks), written by
