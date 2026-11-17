@@ -184,6 +184,83 @@ def draw_games(f, small):
     return 70
 
 
+def volume_dome(f):
+    """the spindle's dome low on a volume's hard disk, as the Games: picture has it (64 px only)"""
+    f.ell([196, 330, 316, 450], dark((196, 202, 212), 0.12), light((196, 202, 212), 0.25))
+    f.ell([236, 370, 276, 410], dark((196, 202, 212), 0.35))
+
+
+def draw_demos(f, small):
+    """the Demos: volume (Dale, 17 November 2026: "update the icons so they are like games , representative"): the
+    hard disk's body with a demo on it, a dark screen of copper bars and a ball"""
+    hd_body(f, small=small)
+    top, bot = (96, 318) if small else (84, 304)
+    x0, x1 = (96, 416) if small else (112, 400)
+    f.rr([x0, top, x1, bot], 24, (22, 26, 36), (70, 76, 90))                # the screen
+    bars = ((255, 122, 26), (226, 182, 72), (74, 163, 255)) if small else \
+           ((200, 56, 52), (255, 122, 26), (226, 182, 72), (52, 170, 156), (74, 163, 255))
+    step = (bot - top - 40) / len(bars)
+    for i, col in enumerate(bars):                                          # the copper bars
+        y = top + 20 + i * step
+        f.rr([x0 + 18, y + 3, x1 - 18, y + step - 3], 6, dark(col, 0.25), light(col, 0.35))
+    r = 62 if small else 50                                                 # the ball
+    cx, cy = x1 - r - 34, (top + bot) / 2 + 6
+    f.ell([cx - r - 6, cy - r - 6, cx + r + 6, cy + r + 6], (22, 26, 36))
+    f.ell([cx - r, cy - r, cx + r, cy + r], (196, 202, 212), (255, 255, 255))
+    f.ell([cx - r * 0.55, cy - r * 0.62, cx - r * 0.05, cy - r * 0.12], (246, 248, 251))
+    if not small:
+        volume_dome(f)
+    return 70
+
+
+def draw_media(f, small):
+    """the Media: volume: the hard disk's body with a picture and a note of music on it (pictures and music are
+    what the volume holds)"""
+    hd_body(f, small=small)
+    top, bot = (110, 350) if small else (92, 300)
+    x0, x1 = (92, 330) if small else (106, 318)
+    f.rr([x0 - 6, top - 6, x1 + 6, bot + 6], 16, (70, 76, 90))               # the picture's edge
+    f.rr([x0, top, x1, bot], 12, (246, 248, 251))                           # its card
+    a, b, c, d = x0 + 16, top + 16, x1 - 16, bot - 16
+    f.rr([a, b, c, d], 4, (74, 163, 255), light((74, 163, 255), 0.55))      # the sky
+    f.ell([c - 62, b + 14, c - 18, b + 58], (226, 182, 72), (255, 236, 150))    # the sun
+    f.poly([(a, d), (a + (c - a) * 0.36, b + (d - b) * 0.38), (a + (c - a) * 0.70, d)], (30, 120, 70))
+    f.poly([(a + (c - a) * 0.42, d), (a + (c - a) * 0.74, b + (d - b) * 0.58), (c, d - (d - b) * 0.08), (c, d)],
+           (52, 170, 156))
+    note = (255, 122, 26)                                                   # the note
+    nx, ny = (398, 330) if small else (392, 286)
+    w = 20 if small else 16
+    f.ell([nx - 62, ny - 26, nx + 2, ny + 26], dark(note, 0.1), light(note, 0.25))
+    f.rr([nx - w, ny - 170, nx + 2, ny + 2], 6, note)
+    f.poly([(nx + 2, ny - 170), (nx + 40, ny - 134), (nx + 40, ny - 92), (nx + 2, ny - 126)], note)
+    if not small:
+        volume_dome(f)
+    return 70
+
+
+def draw_emulation(f, small):
+    """the Emulation: volume: the hard disk's body with a processor on it, another machine's screen for its die"""
+    hd_body(f, small=small)
+    cx, cy, h = (256, 256, 124) if small else (256, 196, 100)
+    gold = (226, 182, 72)
+    legs = (-62, 0, 62) if small else (-66, -33, 0, 33, 66)
+    w, reach = (15, 34) if small else (9, 30)
+    for o in legs:                                                          # the legs, four sides
+        f.rr([cx + o - w, cy - h - reach, cx + o + w, cy + h + reach], 5, dark(gold, 0.15), light(gold, 0.3))
+        f.rr([cx - h - reach, cy + o - w, cx + h + reach, cy + o + w], 5, dark(gold, 0.15), light(gold, 0.3))
+    chip = (34, 38, 46)
+    f.rr([cx - h, cy - h, cx + h, cy + h], 16, chip, (86, 92, 106))         # the package
+    d = h * 0.56
+    f.rr([cx - d - 6, cy - d - 6, cx + d + 6, cy + d + 6], 10, (22, 26, 36))
+    f.rr([cx - d, cy - d, cx + d, cy + d], 8, (11, 94, 215), (74, 163, 255))    # the die: a screen within
+    f.rr([cx - d * 0.6, cy - d * 0.5, cx + d * 0.1, cy - d * 0.2], 4, (246, 248, 251))
+    f.rr([cx - d * 0.6, cy + d * 0.05, cx + d * 0.6, cy + d * 0.3], 4, (246, 248, 251))
+    if not small:
+        f.ell([cx - h + 12, cy - h + 12, cx - h + 30, cy - h + 30], (130, 138, 152))    # pin one
+        volume_dome(f)
+    return 70
+
+
 def draw_nvme(f, small):
     pcb = (34, 38, 46)
     x0, x1 = (150, 362)
@@ -313,7 +390,8 @@ def draw_network(f, small):
 
 DRAW = {"system": draw_system, "harddisk": draw_harddisk, "nvme": draw_nvme, "ide": draw_ide, "usb": draw_usb,
         "cd": draw_cd, "floppy": draw_floppy, "ram": draw_ram, "network": draw_network,
-        "games": draw_games}            # a volume's picture, not a kind of drive: not in KINDS
+        # a volume's picture, not a kind of drive: not in KINDS
+        "games": draw_games, "demos": draw_demos, "media": draw_media, "emulation": draw_emulation}
 
 
 # ---- tilt, thickness, light, edge, shadow ------------------------------------------------------------

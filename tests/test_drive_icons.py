@@ -76,6 +76,24 @@ check("S3D:games: 64 x 64, at rest and chosen differ, not the hard disk's nor th
       and not np.array_equal(ga, ha) and not np.array_equal(ga, np.array(srest)))
 check("S3D:games: the hard disk's outline (the same body), so it stands as the other drives do",
       np.array_equal(ga[..., 3] > 0, ha[..., 3] > 0))
+# Demos:, Media: and Emulation: (Dale, 17 November 2026: "update the icons so they are like games , representative")
+vols = {"demos": "Demos:Disk", "media": "Media:Disk", "emulation": "Emulation:Disk"}
+vpics = {"games": ga}
+for v, dest in vols.items():
+    check(f"{dest[:-5]} takes the Soft 3D picture S3D:{v}", part.AOS_VOLUMES.get(dest) == "S3D:" + v, str(part.AOS_VOLUMES))
+    check(f"{v} is a volume's picture, not a kind of drive", v in s3d.DRAW and v not in s3d.KINDS and "S3D:" + v not in kinds.values())
+    for n in (64, 32):
+        vr, vc = part.picture_frames("S3D:" + v, n)
+        hr = part.picture_frames("S3D:harddisk", n)[0]
+        check(f"S3D:{v} at {n}: at rest and chosen differ, the hard disk's outline, not its picture",
+              vr.size == vc.size == (n, n) and not np.array_equal(np.array(vr), np.array(vc))
+              and np.array_equal(np.array(vr)[..., 3] > 0, np.array(hr)[..., 3] > 0)
+              and not np.array_equal(np.array(vr), np.array(hr)))
+    vpics[v] = np.array(part.picture_frames("S3D:" + v, 64)[0])
+vn = list(vpics)
+vsame = [(x, y) for i, x in enumerate(vn) for y in vn[i + 1:] if np.array_equal(vpics[x], vpics[y])]
+check("Games, Demos, Media and Emulation each have their own picture", not vsame, str(vsame))
+check("each volume's Disk.info name fits an FFS name (30)", all(len(d.replace(":", "-") + ".info") <= 30 for d in part.AOS_VOLUMES))
 from PIL import Image
 check("the boot drive's logo is AmiCradle's own (the ball and the A), kept with the tool", s3d.LOGO.is_file())
 check("the logo keeps its shape and sits centred", s3d.logo_box(988, 669, 256, 250, 310) == (101, 145, 310, 210),
