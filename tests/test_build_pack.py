@@ -245,17 +245,65 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     check("GFOpenWrite: the dictionary an earlier part put beside it archived, and nothing else of its drawer",
           [l for l in wl if l.startswith("retire")] == ['retire "SYS:Utilities/GFOpenWrite/Dictionaries/en_GB.words"'])
     check("GFOpenWrite: its release notes are the newest", (wr.dir / "Utilities/GFOpenWrite/Release-Notes.txt").read_bytes() == b"1.0.2\n")
-    check("GFOpenWrite: its drawer icon only where none is or GFOpenUp's",
-          'add "Utilities/GFOpenWrite.info" "SYS:Utilities/GFOpenWrite.info"' in wl)
+    def homes(lines, verb, rel):
+        """the line's two homes: Work:<...> where a Work drive is mounted, SYS:Utilities/<...> elsewhere, and the
+        old copy retired where the drive is (build_pack.work_home)"""
+        tail = rel[len("Utilities/"):]
+        return (f'when WorkDrive {verb} "{rel}" "Work:{tail}"' in lines
+                and f'unless WorkDrive {verb} "{rel}" "SYS:{rel}"' in lines
+                and f'when WorkDrive retire "SYS:{rel}"' in lines
+                and f'{verb} "{rel}" "SYS:{rel}"' not in lines)
+
+    check("GFOpenWrite: its drawer icon only where none is or GFOpenUp's, on Work: where there is a Work drive",
+          homes(wl, "add", "Utilities/GFOpenWrite.info") and homes(wl, "copy", "Utilities/GFOpenWrite/GFOpenWrite"), str(wl))
+
+    # The applications on Work: (Dale, 17 Nov 2026: "Yes, move them"): build_pack.work_home, the menu and the Installer
+    wh = bp.work_home(['part X 1', 'copy "Utilities/GFOpenPuTTY/GFOpenPuTTY" "SYS:Utilities/GFOpenPuTTY/GFOpenPuTTY"',
+                       'add "Utilities/GFOpenPuTTY.info" "SYS:Utilities/GFOpenPuTTY.info"',
+                       'copy "Utilities/UnofficialTelegram" "SYS:Utilities/UnofficialTelegram"',
+                       'copy "a" "SYS:Utilities/GFOpenFiles"', 'copy "a" "SYS:Utilities/GFOpenWriteX"',
+                       'retire "SYS:Utilities/GFOpenWrite/Dictionaries/x"', 'when AmiCradle copy "a" "SYS:Utilities/GFOpenFTP/x"'])
+    check("work_home: an application's file goes on Work: where there is a Work drive, in SYS:Utilities elsewhere",
+          wh[1:7] == ['when WorkDrive copy "Utilities/GFOpenPuTTY/GFOpenPuTTY" "Work:GFOpenPuTTY/GFOpenPuTTY"',
+                      'unless WorkDrive copy "Utilities/GFOpenPuTTY/GFOpenPuTTY" "SYS:Utilities/GFOpenPuTTY/GFOpenPuTTY"',
+                      'when WorkDrive add "Utilities/GFOpenPuTTY.info" "Work:GFOpenPuTTY.info"',
+                      'unless WorkDrive add "Utilities/GFOpenPuTTY.info" "SYS:Utilities/GFOpenPuTTY.info"',
+                      'when WorkDrive copy "Utilities/UnofficialTelegram" "Work:UnofficialTelegram"',
+                      'unless WorkDrive copy "Utilities/UnofficialTelegram" "SYS:Utilities/UnofficialTelegram"'], str(wh))
+    check("work_home: the desktop's tools, another program, a retire and a line with a condition are as they were",
+          wh[7:11] == ['copy "a" "SYS:Utilities/GFOpenFiles"', 'copy "a" "SYS:Utilities/GFOpenWriteX"',
+                       'retire "SYS:Utilities/GFOpenWrite/Dictionaries/x"', 'when AmiCradle copy "a" "SYS:Utilities/GFOpenFTP/x"'], str(wh))
+    check("work_home: where there is a Work drive the copy in SYS:Utilities is retired, after everything else",
+          wh[11:] == ['when WorkDrive retire "SYS:Utilities/GFOpenPuTTY/GFOpenPuTTY"', 'when WorkDrive retire "SYS:Utilities/GFOpenPuTTY.info"',
+                      'when WorkDrive retire "SYS:Utilities/UnofficialTelegram"'], str(wh))
+    check("work_home: a part with none of them is as it was", bp.work_home(['part Y 1', 'copy "a" "C:a"']) == ['part Y 1', 'copy "a" "C:a"'])
+    home_h = (ROOT / "src/openup_home.h").read_text(encoding="latin-1")
+    listed = re.findall(r'"([A-Za-z]+)"', home_h.split("ouh_apps[] = {", 1)[1].split("}", 1)[0])
+    check("the menu's and the dock's list of applications on Work: is the pack's (src/openup_home.h, WORK_APPS)",
+          listed == list(bp.WORK_APPS), str(listed))
+    menu_c = (ROOT / "src/openupmenu.c").read_text(encoding="latin-1")
+    check("GFOpenUpMenu looks for an application on Work: first, and never asks for a volume that isn't there",
+          '#include "openup_home.h"' in menu_c and "ouh_work(e->path" in menu_c and "FindDosEntry(dl, (STRPTR)\"Work\"" in menu_c
+          and "OpenWorkbenchObjectA((STRPTR)e->path" not in menu_c)
+    inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+    check("the Installer knows an application installed on Work: as installed, without asking for the volume",
+          all(f'(exists "Work:{a}" (noreq))' in inst for a in ("GFOpenMail/GFOpenMail", "OpenBrowser/OpenBrowser", "GFOpenPuTTY/GFOpenPuTTY",
+                                                              "GFOpenFTP/GFOpenFTP", "UnofficialTelegram"))
+          and len(re.findall(r'\(exists "Work:', inst)) == len(re.findall(r'\(exists "Work:[^"]*" \(noreq\)\)', inst)))
+    home_test = Path(tempfile.mkdtemp()) / "test_openup_home"
+    built = subprocess.run(["cc", "-Wall", "-Werror", "-I", str(ROOT / "src"), "-o", str(home_test), str(ROOT / "tests/test_openup_home.c")],
+                           capture_output=True, text=True)
+    ran = subprocess.run([str(home_test)], capture_output=True, text=True) if built.returncode == 0 else built
+    check("src/openup_home.h: an application's place on Work: (tests/test_openup_home.c)", ran.returncode == 0, (ran.stdout + ran.stderr)[-400:])
 
     # GFOpenCalc: the same way
     check("GFOpenCalc: its program's version, and it needs the GFOffice part",
           cl[0] == "part GFOpenCalc 0.1" and "needs part GFOffice" in cl, str(cl[:3]))
     check("GFOpenCalc: in SYS:Utilities/GFOpenCalc, with its icon, licence and drawer icon",
-          'copy "Utilities/GFOpenCalc/GFOpenCalc" "SYS:Utilities/GFOpenCalc/GFOpenCalc"' in cl
-          and 'copy "Utilities/GFOpenCalc/GFOpenCalc.info" "SYS:Utilities/GFOpenCalc/GFOpenCalc.info"' in cl
-          and 'copy "Utilities/GFOpenCalc/LICENSE" "SYS:Utilities/GFOpenCalc/LICENSE"' in cl
-          and 'add "Utilities/GFOpenCalc.info" "SYS:Utilities/GFOpenCalc.info"' in cl
+          homes(cl, "copy", "Utilities/GFOpenCalc/GFOpenCalc")
+          and homes(cl, "copy", "Utilities/GFOpenCalc/GFOpenCalc.info")
+          and homes(cl, "copy", "Utilities/GFOpenCalc/LICENSE")
+          and homes(cl, "add", "Utilities/GFOpenCalc.info")
           and (oc.dir / "Utilities/GFOpenCalc/GFOpenCalc").read_bytes() == files[onlib / "GFOpenCalc"], str(cl))
     tool = icon_of((oc.dir / "Utilities/GFOpenCalc/GFOpenCalc.info").read_bytes())
     check("GFOpenCalc.info: a tool icon with 32 KB of stack, as GFOpenWrite's", tool[0] == FakeIcons.WBTOOL and tool[4] == 32768)
@@ -290,11 +338,11 @@ def gfoffice_checks(tmp: Path, filt: Path) -> None:
     check("GFOpenPresentation: its program's version, and it needs the GFOffice part",
           pl[0] == "part GFOpenPresentation 0.6.23" and "needs part GFOffice" in pl, str(pl[:3]))
     check("GFOpenPresentation: in SYS:Utilities/GFOpenPresentation with its icon, toolbar pictures, licence and drawer icon",
-          f'copy "{d}GFOpenPresentation" "SYS:{d}GFOpenPresentation"' in pl
-          and f'copy "{d}GFOpenPresentation.info" "SYS:{d}GFOpenPresentation.info"' in pl
-          and f'copy "{d}Images/Toolbar/Toolbar.ilbm" "SYS:{d}Images/Toolbar/Toolbar.ilbm"' in pl
-          and f'copy "{d}LICENSE" "SYS:{d}LICENSE"' in pl
-          and 'add "Utilities/GFOpenPresentation.info" "SYS:Utilities/GFOpenPresentation.info"' in pl
+          homes(pl, "copy", f"{d}GFOpenPresentation")
+          and homes(pl, "copy", f"{d}GFOpenPresentation.info")
+          and homes(pl, "copy", f"{d}Images/Toolbar/Toolbar.ilbm")
+          and homes(pl, "copy", f"{d}LICENSE")
+          and homes(pl, "add", "Utilities/GFOpenPresentation.info")
           and (pr.dir / d / "GFOpenPresentation").read_bytes() == pfiles[linked / "GFOpenPresentation"], str(pl))
     check("GFOpenPresentation's version is read from its program",
           bp.PART_MAIN.get("GFOpenPresentation") == (d + "GFOpenPresentation", "GFOpenPresentation"))

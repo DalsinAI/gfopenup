@@ -58,8 +58,12 @@ def main() -> int:
     check(len({ap.part_name(a) for a in apps}) == len(apps) and all(ap.version(a["tag"]) for a in apps),
           "every app has a part name of its own and a version")
     by = {a["drawer"]: a for a in apps}
-    check({"GFOpenBrowser", "GFOffice", "GFOpenMakerSuite", "GFOpenPuTTY", "aMule", "KiCad"} <= set(by),
-          "the browser, GFOffice, the maker suite, PuTTY, aMule and KiCad are in it")
+    check({"GFOpenBrowser", "GFOffice", "GFOpenMakerSuite", "aMule", "KiCad"} <= set(by),
+          "the browser, GFOffice, the maker suite, aMule and KiCad are in it")
+    sys.path.insert(0, str(ROOT / "tools"))
+    import build_pack
+    check(not set(by) & set(build_pack.WORK_APPS),
+          "no application is in both packs: what the GFOpenUp pack puts on Work: (WORK_APPS) is not in apps.lock")
     check(by["DOSBox"]["home"] == "Emulation" and all(a["home"] == "Work" for a in apps if a["drawer"] != "DOSBox"),
           "DOSBox, our emulator, is for the Emulation drive, and every other application for Work:")
     check(ap.version("v0.9.0-rc2") == "0.9.0" and ap.version("gfoffice-2.0.25-rc91") == "2.0.25"

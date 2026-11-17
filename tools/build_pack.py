@@ -452,7 +452,38 @@ class Part:
     def write(self):
         if not self.lines[0]:
             self.lines[0] = f"part {self.name} {program_version(self.dir, self.name)}"
+        self.lines = work_home(self.lines)
         (self.dir / "Part").write_text("\n".join(self.lines) + "\n", encoding="latin-1")
+
+
+# The applications that live on Work: where a volume named Work is mounted (the standard build's DH1:; Dale, 17 Nov
+# 2026: "work is for applications", "on the work volume of all appliances and instances we should include all our
+# open apps", and of these, in SYS:Utilities until then: "Yes, move them"): each one's drawer, or its one file, by
+# its name in SYS:Utilities. The desktop's own tools (GFOpenFiles, GFOpenPlay, GFOpenCompress, GFOpenPrint's viewer,
+# GFOpenMonitor) stay in SYS:Utilities: the Shell's path and the file types name them there.
+WORK_APPS = ("GFOpenWrite", "GFOpenCalc", "GFOpenPresentation", "GFOpenPuTTY", "GFOpenFTP", "GFOpenMail",
+             "UnofficialTelegram", "OpenBrowser", "GFOpenBrowserLite")
+_WORK_LINE = re.compile(r'^(copy|add|default) "([^"]*)" "SYS:Utilities/(' + "|".join(WORK_APPS) + r')((?:/|\.info")[^"]*"?|")$')
+
+
+def work_home(lines: list[str]) -> list[str]:
+    """A part's lines with each WORK_APPS file given its two homes: "when WorkDrive" it goes in Work:<App>, "unless
+    WorkDrive" where it went before, in SYS:Utilities/<App>; and where there is a Work drive an earlier install's
+    copy in SYS:Utilities is retired, so the application is in one place (as GFOpenDemos on Demos:, demos_part). The
+    same file in the part serves both. A line that has a condition already, and every other line, is as it was. The
+    conditions are GFOpenUpTool 0.8.23's (src/openup_lines.h); the pack carries its own GFOpenUpTool."""
+    out, retire = [], []
+    for line in lines:
+        m = _WORK_LINE.match(line)
+        if not m:
+            out.append(line)
+            continue
+        verb, rel, app, rest = m.groups()
+        rest = rest[:-1]                                    # without the closing quote
+        out.append(f'when WorkDrive {verb} "{rel}" "Work:{app}{rest}"')
+        out.append(f'unless WorkDrive {verb} "{rel}" "SYS:Utilities/{app}{rest}"')
+        retire.append(f'when WorkDrive retire "SYS:Utilities/{app}{rest}"')
+    return out + retire
 
 
 DEMOS = (("Boing", "boing"), ("Chrome Gears", "gears"), ("Copper Tunnel", "tunnel"))
