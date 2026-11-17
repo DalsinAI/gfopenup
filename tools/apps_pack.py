@@ -51,7 +51,8 @@ HOMES = {"Work": "WorkDrive", "Emulation": "EmulationDrive"}       # a volume an
 EMULATION_DRAWERS = {"Roms": "chip", "Disks": "mount", "HardDrives": "archive", "Optical Media": "film"}
 EMULATION_PART = "EmulationDrawers"
 DEST_MAX = 180                # GFOpenUpTool's path buffers are 200
-NAME_MAX = 30                 # the longest name a standard FFS volume keeps
+NAME_MAX = 30                 # the longest drawer name a standard FFS volume keeps (a drawer and its .info)
+FILE_MAX = 107                # the longest name AmigaDOS takes; the standard build's drives are folder drives and keep it
 
 
 class AppsError(Exception):
@@ -157,16 +158,20 @@ def app_part(top: Path, app: dict, tree: Path, icon) -> dict:
     files = sorted(p for p in root.rglob("*") if p.is_file())
     if not files:
         raise AppsError(f"{app['drawer']}: the release holds no files")
-    size = 0
+    size, bad = 0, []
     for f in files:
         rel = f.relative_to(root).as_posix()
         dest = f"{home}/{rel}"
-        if '"' in rel or len(dest) > DEST_MAX or any(len(c) > NAME_MAX for c in rel.split("/")):
-            raise AppsError(f"{app['drawer']}: {rel} is a path the Amiga side can't hold")
+        if '"' in rel or len(dest) > DEST_MAX or any(len(c) > FILE_MAX for c in rel.split("/")):
+            bad.append(rel)
+            continue
         (pdir / "Files" / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(f, pdir / "Files" / rel)
         size += f.stat().st_size
         lines.append(f'{cond} copy "Files/{rel}" "{dest}"')
+    if bad:
+        raise AppsError(f"{app['drawer']}: {len(bad)} paths the Amiga side can't hold (over {DEST_MAX} letters, or a name over "
+                        f"{FILE_MAX}), the first: {bad[0]}")
     (pdir / "Drawer.info").write_bytes(icon(app["mark"]))
     lines.append(f'{cond} add "Drawer.info" "{home}.info"')
     (pdir / "Part").write_text("\n".join(lines) + "\n", encoding="latin-1")

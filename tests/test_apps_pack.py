@@ -144,8 +144,8 @@ def main() -> int:
 
         long = t / "long"
         (long / "a").mkdir(parents=True)
-        (long / "a" / ("n" * 31)).write_bytes(b"x")
-        refused("a name longer than an FFS volume keeps stops the build",
+        (long / "a" / ("n" * 108)).write_bytes(b"x")
+        refused("a name longer than AmigaDOS takes stops the build",
                 lambda: ap.app_part(t / "p", dict(repo="r", tag="v1.0", asset="a", drawer="D", mark="globe", title="", home="Work"), long, icon))
         refused("a release with no files stops the build",
                 lambda: ap.app_part(t / "p", dict(repo="r", tag="v1.0", asset="a", drawer="D", mark="globe", title="", home="Work"), (t / "empty").mkdir() or t / "empty", icon))
