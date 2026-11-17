@@ -67,7 +67,7 @@ struct RxsLib *RexxSysBase;
 #define INDEX_FILE OUD_WORK "/GFOpenUpdate.index"
 #define UNPACKED OUD_WORK "/x"
 #define MAX_PARTS 96
-#define MAX_TEXT 65536L
+#define MAX_TEXT (4L * 1024 * 1024)
 
 static struct {
     long interval;
@@ -86,18 +86,24 @@ static long now_seconds(void)
     return ds.ds_Days * 86400L + ds.ds_Minute * 60L + ds.ds_Tick / TICKS_PER_SECOND;
 }
 
-/* A whole file into a new buffer (NUL after it), its length in *len; NULL when there is none or it is too big. */
+/* A whole file into a new buffer (NUL after it), its length in *len; NULL when there is none or it is over
+ * MAX_TEXT (GFOpenUpTool's manifest is over 120 KB on a full install). */
 static char *read_file(const char *path, long *len)
 {
     BPTR fh = Open((STRPTR)path, MODE_OLDFILE);
-    char *buf;
-    long n;
+    struct FileInfoBlock *fib;
+    char *buf = NULL;
+    long size = -1, n;
     *len = 0;
     if (!fh) return NULL;
-    if (!(buf = AllocVec(MAX_TEXT + 1, MEMF_ANY))) { Close(fh); return NULL; }
-    n = Read(fh, buf, MAX_TEXT);
+    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
+        if (ExamineFH(fh, fib)) size = fib->fib_Size;
+        FreeDosObject(DOS_FIB, fib);
+    }
+    if (size < 0 || size > MAX_TEXT || !(buf = AllocVec(size + 1, MEMF_ANY))) { Close(fh); return NULL; }
+    n = Read(fh, buf, size);
     Close(fh);
-    if (n < 0 || n == MAX_TEXT) { FreeVec(buf); return NULL; }
+    if (n != size) { FreeVec(buf); return NULL; }
     buf[n] = 0;
     *len = n;
     return buf;
