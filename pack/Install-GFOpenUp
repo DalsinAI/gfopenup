@@ -492,22 +492,27 @@
 ; backdrop: Workbench's look is the OS's own (the ROM's on GFOpenKick), and no look is written. A Novice
 ; (who never sees the question) keeps the theme in place, so the backdrop stays.
 (set #theme0 (getenv "GFOpenUp/Theme"))
+; 0.8.31: a new install's backdrop is Glass Light (the Backdrops part's Swish-Glass-Light, the user, 17 November
+; 2026), first in the list and the one a Novice gets. It is a backdrop alone, not a theme: an Amiga that has a
+; theme starts on that theme's line as before.
 (set #pick -1)
 (if (= #theme0 "") (set #pick 0))
-(if (= #theme0 "Open") (set #pick 0))
-(if (= #theme0 "Glass") (set #pick 1))
-(if (= #theme0 "Graphite") (set #pick 2))
-(if (= #theme0 "Ember") (set #pick 3))
-(if (= #theme0 "Clear") (set #pick 4))
-(if (= #theme0 "Sky") (set #pick 5))
-(if (= #theme0 "Classic") (set #pick 6))
+(if (= #theme0 "Glass Light") (set #pick 0))
+(if (= #theme0 "Open") (set #pick 1))
+(if (= #theme0 "Glass") (set #pick 2))
+(if (= #theme0 "Graphite") (set #pick 3))
+(if (= #theme0 "Ember") (set #pick 4))
+(if (= #theme0 "Clear") (set #pick 5))
+(if (= #theme0 "Sky") (set #pick 6))
+(if (= #theme0 "Classic") (set #pick 7))
 (if (<> #theme0 "") (set #theme #theme0))
 (if (and (bitand #parts 16) (>= #pick 0))
     (set #theme
         (select
             (askchoice
                 (prompt "Which backdrop?")
-                (help "Each theme's desktop, drawn for your screen's shape:\n"
+                (help "Glass Light: glass ribbons of red and blue over a pale sky.\n"
+                      "Or a theme's desktop, drawn for your screen's shape:\n"
                       "Open: calm and flat, with one blue accent.\n"
                       "Glass: steel-blue glass.\n"
                       "Graphite: graphite and steel.\n"
@@ -516,9 +521,9 @@
                       "Sky: Open's colours with graduated blue.\n"
                       "Classic: none; the backdrop stays as it is.\n\n"
                       "Change it later with WBPattern in SYS:Prefs.")
-                (choices "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")
+                (choices "Glass Light" "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")
                 (default #pick))
-            "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")))
+            "Glass Light" "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic")))
 ; a new install, or another theme picked: its backdrop; the theme in place: the backdrop stays
 (set #newlook (or (= #theme0 "") (<> #theme #theme0)))
 ; GFOpenUp's backdrops were there before this run: the backdrop chosen since stays unless the theme changes
@@ -526,6 +531,7 @@
 (set #back (cat #theme "-light"))
 ; on AmiCradle, its own backdrop: the theme's colours with chrome sweeps
 (if #ac (set #back (cat #theme "-light-chrome")))
+(if (= #theme "Glass Light") (set #back "Swish-Glass-Light"))
 (if (= #theme "Classic") (set #back ""))
 
 ; 0.8.13: the OpenUp from before the GF names goes now, as its own Uninstall-OpenUp took it out, with its own

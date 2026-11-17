@@ -1977,7 +1977,7 @@ def picture_tone(path: Path) -> str:
 
 def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_tone) -> "Part":
     """The Backdrops part: GFOpenUp's own desktops (gfopengadtools' make_backdrops.py, the themes' pictures, strips and
-    logo versions), each with its .tone, into SYS:Prefs/Presets/Backdrops/GFOpenUp.
+    logo versions, the Ethereal set and the Swish set, whose Swish-Glass-Light a new install shows), each with its .tone, into SYS:Prefs/Presets/Backdrops/GFOpenUp.
 
     make_backdrops.py also exports the AmiCradle Background Pack's art (gfopengadtools #73). That pack is not
     GFOpenUp's: it is an optional install, from Cradle's Media Library or its own InstallBackgrounds, and GFOpenUp keeps
@@ -1986,7 +1986,7 @@ def backdrops_part(top: Path, backdrops: Path, opengadtools: Path, tone=picture_
     folder: an export from before pack 1.1 leaves its 2560x1440 and 3840x2160 art there, and 1.1's names no longer
     list them. None of GFOpenUp's own pictures is named so."""
     art = art_backdrop_names(opengadtools) or set()
-    bd = Part(top, "Backdrops", "0.3", "The themes' desktops and the Ethereal ones as Workbench backdrops, with their tones")
+    bd = Part(top, "Backdrops", "0.4", "The themes' desktops, the Ethereal and the Swish ones as Workbench backdrops, with their tones")
     for png in sorted(Path(backdrops).glob("*.png")):
         if png.name in art or ART_NAME_RE.match(png.name):
             continue

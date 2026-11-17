@@ -1107,7 +1107,8 @@ def main() -> int:
         (ogt / "tools/make_art_backdrops.py").write_text(
             "from PIL import Image\nSIZES = [(640, 480), (1920, 1200)]\n"
             "ART = [('Prismatic-light', 'light'), ('Nebula-dark', 'dark')]\n", encoding="utf-8")
-        own = ["Clear-light-chrome-logo-1920x1080.png", "Open-dark-1920x1200.png", "Open-light-strip-1080.png"]
+        own = ["Clear-light-chrome-logo-1920x1080.png", "Open-dark-1920x1200.png", "Open-light-strip-1080.png",
+               "Swish-Glass-Light-1920x1080.png"]
         art = [f"AmiCradle-{d}-{size}.png" for d in ("Prismatic-light", "Nebula-dark") for size in ("640x480", "1920x1200")]
         for n in own + art:
             (bdir / n).write_bytes(n.encode())
@@ -1117,7 +1118,15 @@ def main() -> int:
         bd = bp.backdrops_part(top, bdir, ogt, tone=fake_tone)
         bd.write()
         lines = (bd.dir / "Part").read_text(encoding="latin-1").splitlines()
-        check("the Backdrops part is 0.3 (the Ethereal backdrops are new)", lines[0] == "part Backdrops 0.3", lines[0])
+        check("the Backdrops part is 0.4 (the Swish backdrops are new)", lines[0] == "part Backdrops 0.4", lines[0])
+        inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+        check("Install-GFOpenUp: Glass Light is the first backdrop offered, so a new install's default",
+              inst.count('"Glass Light" "Open" "Glass" "Graphite" "Ember" "Clear" "Sky" "Classic"') == 2
+              and '(if (= #theme0 "") (set #pick 0))' in inst and '(if (= #theme0 "Glass Light") (set #pick 0))' in inst)
+        check("Install-GFOpenUp: Glass Light's backdrop is Swish-Glass-Light, on AmiCradle too (set after the chrome line)",
+              0 < inst.find('(if #ac (set #back (cat #theme "-light-chrome")))')
+              < inst.find('(if (= #theme "Glass Light") (set #back "Swish-Glass-Light"))')
+              < inst.find('(if (= #theme "Classic") (set #back ""))'))
         want = []
         for n in own:
             want += [f'copy "Backdrops/{n}" "SYS:Prefs/Presets/Backdrops/GFOpenUp/{n}"',
