@@ -391,6 +391,8 @@
 ; 2 mathieeedoubbas.library, 4 input.device, 8 OpenRexx. A library switched on already is ticked, so an
 ; upgrade (a Novice one never shows the question) changes nothing; unticking one puts OS 3.2's own back.
 ; OpenRexx is on when LIBS:rexxsyslib.library is 48 or later (OS 3.2's is 47.2).
+; 18 Nov 2026: on the GFOpenKick ROM (GFOS, which has no ARexx of its own) OpenRexx is ticked by default, a Novice
+; install included, and its part starts RexxMast at boot (Dale: "it should go in as standard", "if its a GFOS machine").
 ; 0.8.7: on the GFOpenKick ROM utility.library and input.device (OS 3.2's LoadModule, from S:Pre-LoadModule-Startup)
 ; are never ticked, and one an earlier GFOpenUp switched on is taken out: under GFOpenKick that startup stopped the
 ; boot with "device not mounted" (Instance-32, 20 October 2026). Their parts say "needs Kickstart" as well.
@@ -424,12 +426,13 @@
               "OpenRexx 48: ARexx, the Team's own rexxsyslib.library and rexxsupport.library in OS 3.2's "
               "place in LIBS:. OS 3.2's RexxMast and Rexxc commands work with them; OpenRexx's RexxMast is "
               "added only where there is none. It takes over at the next start. Needs a 68040 or 68060 "
-              "with its FPU.")
+              "with its FPU. On the GFOpenKick ROM it is ticked already, as GFOS has no ARexx of its own, "
+              "and RexxMast starts with the Amiga.")
         (choices "utility.library 47.100 (68020)"
                  "mathieeedoubbas.library 47.100 (68040 + FPU)"
                  "input.device 50.2 (68020)"
                  "OpenRexx 48: ARexx (68040 + FPU)")
-        (default (if #openkick (bitand #libs0 10) #libs0))))
+        (default (if #openkick (bitor (bitand #libs0 10) 8) #libs0))))
 (set #cpu (database "cpu"))
 (if (and #openkick (bitand (bitor #libs #libs0) 5))
     (

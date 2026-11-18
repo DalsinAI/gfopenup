@@ -40,6 +40,21 @@ int main(void)
     CHECK(strstr(buf, "(?)") && strstr(buf, "120 parts"), "an unknown reason, a three-digit count");
     /* the Kickstart set: AUTO installs it on the slim ROM whether or not the manifest lists it, as the Installer does
      * (Ivanova's unattended run, 14 Nov: KickstartSet is new on Instance-32, so a reinstall alone never added it) */
+    /* OpenRexx standard on GFOS (18 Nov 2026) */
+    CHECK(ou_auto_rexx(1, 1, 0, 0) == 1, "GFOpenKick, the pack has OpenRexx, not installed, no ARexx: AUTO installs it");
+    CHECK(ou_auto_rexx(0, 1, 0, 0) == 0, "Kickstart 3.2.3: the user's own choice stays");
+    CHECK(ou_auto_rexx(1, 0, 0, 0) == 0, "no OpenRexx in the pack: nothing");
+    CHECK(ou_auto_rexx(1, 1, 1, 1) == 0, "installed already: REINSTALL's business, not added again");
+    CHECK(ou_auto_rexx(1, 1, 0, 1) == 0, "an ARexx on the disk already (the OpenKick disk's, the user's): left as it is");
+    strcpy(buf, "x: ok");
+    ou_log_rexx(buf, sizeof buf, 1);
+    CHECK(!strcmp(buf, "x: ok (OpenRexx installed)"), buf);
+    strcpy(buf, "x: failed");
+    ou_log_rexx(buf, sizeof buf, -1);
+    CHECK(!strcmp(buf, "x: failed (OpenRexx failed)"), buf);
+    strcpy(buf, "x: ok");
+    ou_log_rexx(buf, sizeof buf, 0);
+    CHECK(!strcmp(buf, "x: ok"), "not tried: the line as it was");
     CHECK(ou_auto_kickset(1, 1) == 1, "slim ROM, the pack has KickstartSet: AUTO installs it");
     CHECK(ou_auto_kickset(1, 0) == 0, "slim ROM, no KickstartSet in the pack: nothing");
     CHECK(ou_auto_kickset(0, 1) == 0, "another ROM: not installed (the Installer's rule)");

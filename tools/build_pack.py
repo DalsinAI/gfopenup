@@ -178,7 +178,8 @@ a Part file that C/GFOpenUpTool reads:
                         SYS:System/GFOpenBench in LoadWB's place; GFOpenUp doesn't change the
                         Startup-Sequence yet. With GFOpenMeters, the desktop's widget (the date, the RAM
                         and each volume as bars), in SYS:WBStartup
-  GFOpenLibs/             the open libraries, one switch each, off by default (0.8.0): S:GFOpenLibs-Startup
+  GFOpenLibs/             the open libraries, one switch each, off by default (0.8.0; OpenRexx on by default on GFOS,
+                        with RexxMast at boot, 18 Nov 2026): S:GFOpenLibs-Startup
                         (OS 3.2's LoadModule, from S:Pre-LoadModule-Startup), and a part of its own per library in
                         GFOpenLibs/<name> (utility.module, mathieeedoubbas.library, input.device
                         50.2, OpenRexx's ARexx libraries), which GFOpenUpTool REMOVE takes out alone (amicradle-guest,
@@ -2014,11 +2015,18 @@ OPENLIBS = {
               "input.device 50.5 in the ROM's place, with the wheel (gfopeninput #9, #27; a module, loaded by OS 3.2's LoadModule)"),
     # ARexx stays on the disk (Dale, 18 Oct 2026): OpenRexx's two libraries in OS 3.2's place in LIBS:, and its
     # RexxMast only where there is none (OS 3.2.3's RexxMast works with them, measured: amicradle-guest
-    # docs/design/openrexx.md, and under stock Kickstart 3.2.3: W75). Off by default, as every switch here is.
+    # docs/design/openrexx.md, and under stock Kickstart 3.2.3: W75). Off by default on Kickstart 3.2.3; on by
+    # default on the GFOpenKick ROM, GFOS, which has no ARexx of its own (Dale, 18 Nov 2026: "it should go in as
+    # standard", "if its a GFOS machine").
     "rexx": ("openrexx/libs/rexxsyslib.library", "Libs/rexxsyslib.library", "LIBS:rexxsyslib.library",
              "rexxsyslib.library", "OpenRexx, ARexx's rexxsyslib.library and rexxsupport.library in OS 3.2's place, "
              "for a 68040 or 68060 with its FPU"),
 }
+
+# OpenRexx's startup line (GFOpenLibs-rexx): RexxMast at boot on the GFOpenKick ROM, where OpenRexx is standard (the
+# Installer ticks it there, GFOpenUpTool UPDATE AUTO adds it, amicradle's card build installs it). Run, so a RexxMast
+# already started (the OpenKick boot disk's own line) says "already active" to NIL: and the startup goes on.
+REXX_STARTUP = "when GFOpenKick startup Run >NIL: SYS:System/RexxMast"
 
 # S:GFOpenLibs-Startup, from S:Pre-LoadModule-Startup, which OS 3.2's Startup-Sequence runs first of all: the ROM
 # libraries switched on, in one call of OS 3.2's own C:LoadModule, as gfopeninput #9's install notes do for
@@ -2088,6 +2096,9 @@ def openlibs_parts(top: Path, a) -> list:
                 raise SystemExit(f"GFOpenLibs: rexxsupport.library isn't {ver} as rexxsyslib.library is")
             p.add("Libs/rexxsupport.library", sup, "LIBS:rexxsupport.library")
             p.add("System/RexxMast", (ol / "openrexx/C/RexxMast").read_bytes(), "SYS:System/RexxMast", default=True)
+            # standard on GFOS (Dale, 18 Nov 2026: "it should go in as standard", "if its a GFOS machine"): RexxMast
+            # starts at boot on the GFOpenKick ROM, which has no ARexx of its own (the Pi 5 card .151: none ran)
+            p.line(REXX_STARTUP)
         p.write()
         made.append(name)
     print(f"  GFOpenLibs: {', '.join(made)}")

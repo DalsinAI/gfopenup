@@ -4342,12 +4342,14 @@ static int show_changes(void)
 
 /* The unattended UPDATE's one line, in ENVARC:GFOpenUp/GFOpenUpTool.log and on the Shell; rc back. */
 static int auto_kick;                               /* UPDATE AUTO's Kickstart set: 1 in, -1 failed, 0 not tried */
+static int auto_rexx_done;                          /* UPDATE AUTO's OpenRexx: 1 in, -1 failed, 0 not tried */
 
 static int update_logged(int by, const char *installed, const char *newer, int done, int rc)
 {
     char line[200];
     BPTR fh, l;
     ou_log_line(line, sizeof line, auto_kick, by, installed, newer, done, rc);
+    ou_log_rexx(line, sizeof line, auto_rexx_done);
     say(line, NULL, NULL);
     if (!exists("ENVARC:GFOpenUp") && (l = CreateDir((STRPTR)"ENVARC:GFOpenUp"))) UnLock(l);
     if ((fh = Open((STRPTR)OU_LOG, MODE_READWRITE))) {
@@ -4370,6 +4372,23 @@ static int update_logged(int by, const char *installed, const char *newer, int d
 #define KICKSET_DIR "SYS:Kickstart/default/"
 #endif
 #define PACK_KICK_MANIFEST CRADLE_DRAWER "/Parts/KickstartSet/Kickstart/default/Manifest"   /* build_pack's */
+
+/* OpenRexx, standard on GFOS (ou_auto_rexx): the pack's GFOpenLibs-rexx part in, when the GFOpenKick ROM runs and
+ * the disk has no ARexx. Its startup line starts RexxMast at boot; the caller writes S:User-Startup after. */
+#define PACK_REXX CRADLE_DRAWER "/Parts/GFOpenLibs/rexx"
+static void auto_rexx(int *rc)
+{
+    int r;
+    auto_rexx_done = 0;
+    manifest_load();
+    if (manifest_short || !ou_auto_rexx(openkick_rom(), exists(PACK_REXX "/Part"),
+                                        oul_installed(ents, nents, "GFOpenLibs-rexx"), exists("LIBS:rexxsyslib.library")))
+        return;
+    say("GFOpenUp: OpenRexx (ARexx) is standard on GFOS and isn't installed here: it goes in now.", NULL, NULL);
+    r = install(PACK_REXX);
+    auto_rexx_done = r > RETURN_WARN ? -1 : 1;
+    if (r > *rc) *rc = r;
+}
 
 static int update(const char *how)
 {
@@ -4406,7 +4425,15 @@ static int update(const char *how)
                 rc = r;
             }
         }
-        if (!auto_kick) say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
+        auto_rexx_done = 0;
+        if (unattended && rc < RETURN_ERROR) {
+            auto_rexx(&rc);
+            if (auto_rexx_done > 0 && !write_startup(0)) {
+                say("GFOpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL);
+                rc = RETURN_ERROR;
+            }
+        }
+        if (!auto_kick && !auto_rexx_done) say("GFOpenUp ", installed, " is installed, and it is the newest Cradle has. Nothing to do.");
         return unattended ? update_logged(by, installed, newer, -1, rc) : rc;
     }
     Printf((STRPTR)"GFOpenUp %s is waiting in " CRADLE_DRAWER " (%s is installed).\n", (LONG)newer, (LONG)installed);
@@ -4421,6 +4448,9 @@ static int update(const char *how)
             auto_kick = r > RETURN_WARN ? -1 : 1;
             if (r > rc) rc = r;
         }
+        auto_rexx_done = 0;
+        if (rc < RETURN_ERROR)
+            auto_rexx(&rc);
         if (rc < RETURN_ERROR && !write_startup(0)) {
             say("GFOpenUp: can't write S:User-Startup. Is SYS: write-protected?", NULL, NULL);
             rc = RETURN_ERROR;
