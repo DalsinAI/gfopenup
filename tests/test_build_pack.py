@@ -1721,6 +1721,10 @@ def main() -> int:
         check("GFOpenNotifier's part: its version, OpenRexx needed, the program in SYS:WBStartup with a DONOTWAIT icon",
               text.startswith("part GFOpenNotifier 0.1") and "needs part GFOpenLibs-rexx" in text
               and '"SYS:WBStartup/GFOpenNotifier"' in text and b"DONOTWAIT" in (ntp.dir / "WBStartup/GFOpenNotifier.info").read_bytes(), text)
+        main = bp.PART_MAIN.get("GFOpenNotifier")
+        check("GFOpenNotifier's part: the pack's version check finds its program (PART_MAIN), so the cut doesn't stop",
+              main is not None and (ntp.dir / main[0]).is_file()
+              and bp.binary_version((ntp.dir / main[0]).read_bytes(), main[1]) == "0.1", main)
     with tempfile.TemporaryDirectory() as t:     # OpenRexx standard on GFOS (18 Nov 2026): RexxMast at boot there
         t = Path(t)
         rx = t / "build/openlibs/openrexx"

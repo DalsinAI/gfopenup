@@ -1465,6 +1465,7 @@ PART_MAIN = {
     "GFOpenInput": ("Libs/gfopeninput.library", "gfopeninput.library"),
     "GFOpenWindows": ("Tools/Commodities/GFOpenWindows", "GFOpenWindows"),
     "GFOpenDock": ("C/GFOpenDock", "GFOpenDock"),
+    "GFOpenNotifier": ("WBStartup/GFOpenNotifier", "GFOpenNotifier"),
     "GFOpenUpSetup": ("Prefs/GFOpenUp-Setup", "GFOpenUp-Setup"),
     "GFOpenMenus": ("C/GFOpenMenus", "GFOpenMenus"),
     "HostClock": ("C/HostClock", "HostClock"),
