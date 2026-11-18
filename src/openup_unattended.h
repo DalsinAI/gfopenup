@@ -123,4 +123,20 @@ static int ou_set_stale(const char *have, long nhave, const char *pack, long npa
     return memcmp(have, pack, (size_t)npack) != 0;
 }
 
+/* OpenRexx is standard on GFOS (Dale, 18 Nov 2026: "it should go in as standard", "if its a GFOS machine"): AUTO
+ * installs the pack's GFOpenLibs-rexx part on the GFOpenKick ROM when GFOpenUp's list hasn't got it and the disk has
+ * no LIBS:rexxsyslib.library (an ARexx that is there, the OpenKick boot disk's or the user's own, stays as it is).
+ * GFOpenNotifier and GFOpenUpdate talk through ARexx, so without it they have nothing to talk through (the Pi 5 card
+ * .151 on 18 Nov 2026: no rexxsyslib.library, no RexxMast). A Kickstart 3.2.3 machine keeps its own choice. 1: install it. */
+static int ou_auto_rexx(int openkick, int in_pack, int installed, int has_rexxsyslib)
+{
+    return openkick && in_pack && !installed && !has_rexxsyslib;
+}
+
+/* The log line's note for it: rexx 1 installed, -1 failed, 0 not tried (nothing added). */
+static void ou_log_rexx(char *buf, int size, int rexx)
+{
+    if (rexx) ou_cat(buf, size, rexx > 0 ? " (OpenRexx installed)" : " (OpenRexx failed)");
+}
+
 #endif

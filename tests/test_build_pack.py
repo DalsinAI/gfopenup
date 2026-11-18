@@ -1721,6 +1721,29 @@ def main() -> int:
         check("GFOpenNotifier's part: its version, OpenRexx needed, the program in SYS:WBStartup with a DONOTWAIT icon",
               text.startswith("part GFOpenNotifier 0.1") and "needs part GFOpenLibs-rexx" in text
               and '"SYS:WBStartup/GFOpenNotifier"' in text and b"DONOTWAIT" in (ntp.dir / "WBStartup/GFOpenNotifier.info").read_bytes(), text)
+    with tempfile.TemporaryDirectory() as t:     # OpenRexx standard on GFOS (18 Nov 2026): RexxMast at boot there
+        t = Path(t)
+        rx = t / "build/openlibs/openrexx"
+        (rx / "libs").mkdir(parents=True)
+        (rx / "C").mkdir()
+        (rx / "libs/rexxsyslib.library").write_bytes(b"\0rexxsyslib.library 48.1 (18.11.2026)\0")
+        (rx / "libs/rexxsupport.library").write_bytes(b"\0rexxsupport.library 48.1 (18.11.2026)\0")
+        (rx / "C/RexxMast").write_bytes(b"\0$VER: RexxMast 48.1 (18.11.2026)\0")
+        (t / "top/Parts").mkdir(parents=True)
+        saved, bp.ROOT = bp.ROOT, t
+        try:
+            made = bp.openlibs_parts(t / "top", object())
+        finally:
+            bp.ROOT = saved
+        text = (t / "top/Parts/GFOpenLibs/rexx/Part").read_text(encoding="latin-1")
+        check("GFOpenLibs-rexx: its libraries, RexxMast where none is, and RexxMast started at boot on GFOpenKick only",
+              made == ["rexx"] and text.startswith("part GFOpenLibs-rexx 48.1")
+              and '"SYS:System/RexxMast"' in text and "needs Kickstart" not in text
+              and bp.REXX_STARTUP in text.splitlines()
+              and bp.REXX_STARTUP == "when GFOpenKick startup Run >NIL: SYS:System/RexxMast", text)
+    inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
+    check("Install-GFOpenUp: OpenRexx ticked by default on the GFOpenKick ROM (bit 8), a Novice install too",
+          "(default (if #openkick (bitor (bitand #libs0 10) 8) #libs0))" in inst)
     entries = re.findall(r'HOW_PAGE, "([^"]+)", +"SYS:Preferences/([^"]+)", +"([A-Z]+)"', menu)
     pagewords = {p: w for p, w, _ in bp.PREFERENCES_PAGES}
     check("GFOpenUpMenu's page entries: each a page icon by its plain name, with its page's SECTION word",
