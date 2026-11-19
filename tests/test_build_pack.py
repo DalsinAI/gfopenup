@@ -941,8 +941,10 @@ def demos_part_checks(tmp: Path, filt: Path) -> None:
     tool = (ROOT / "src/openuptool.c").read_text(encoding="latin-1")
     check("GFOpenUpTool: the Demos volume is read from the DOS list (no requester), and is a machine bit",
           'FindDosEntry(dl, (STRPTR)"Demos", LDF_VOLUMES)' in tool and "demos_drive() ? OUL_DEMOSDRIVE : 0" in tool)
-    check("GFOpenUpTool: the Media volume is read from the DOS list (no requester), and is a machine bit",
-          'FindDosEntry(dl, (STRPTR)"Media", LDF_VOLUMES)' in tool and "media_drive() ? OUL_MEDIADRIVE : 0" in tool)
+    check("GFOpenUpTool: the MediaFiles volume is read from the DOS list (no requester), and is a machine bit",
+          'FindDosEntry(dl, (STRPTR)"MediaFiles", LDF_VOLUMES)' in tool and "media_drive() ? OUL_MEDIADRIVE : 0" in tool)
+    check("GFOpenUpTool: no volume named Media, which meets the MEDIA: handler's name (Dale, 19 November 2026)",
+          '(STRPTR)"Media",' not in tool)
 
 
 def main() -> int:
@@ -1498,11 +1500,11 @@ def main() -> int:
         check("GFOpenSnap's part version is read from its program", bp.PART_MAIN.get("GFOpenSnap") ==
               ("Tools/Commodities/GFOpenSnap", "GFOpenSnap"))
 
-        # GFOpenBlanker's music (1.7): the icon's tool types choose it, Copper List from GFOpenSynth's Media:midi/Dance
+        # GFOpenBlanker's music (1.7): the icon's tool types choose it, Copper List from GFOpenSynth's MediaFiles:midi/Dance
         bl_icon = icon_of(bp.blanker_icon(FakeIcons()))
-        check("GFOpenBlanker.info: a tool icon, 16 KB of stack, PLAYMIDI=TRUE and MIDIFILE=Media:midi/Dance/copper-list.mid",
+        check("GFOpenBlanker.info: a tool icon, 16 KB of stack, PLAYMIDI=TRUE and MIDIFILE=MediaFiles:midi/Dance/copper-list.mid",
               bl_icon[0] == FakeIcons.WBTOOL and bl_icon[4] == 16384
-              and bl_icon[3] == ["PLAYMIDI=TRUE", "MIDIFILE=Media:midi/Dance/copper-list.mid"], str(bl_icon))
+              and bl_icon[3] == ["PLAYMIDI=TRUE", "MIDIFILE=MediaFiles:midi/Dance/copper-list.mid"], str(bl_icon))
         check("the GFOpenBlanker part's icon is blanker_icon's",
               'bl.add("Tools/Commodities/GFOpenBlanker.info", blanker_icon(icons),' in (ROOT / "tools/build_pack.py").read_text(encoding="utf-8"))
         oap = Path(os.environ.get("OPENAMIGAPREFS", ROOT.parent / "gfopenprefs"))
@@ -1515,7 +1517,7 @@ def main() -> int:
             print(f"skipped GFOpenBlanker's tool type names: no {bl_src} (OPENAMIGAPREFS=)")
         synth = Path(os.environ.get("GFOPENSYNTH", ROOT.parent / "gfopensynth"))
         if (synth / "midi").is_dir():
-            check("MIDIFILE names a tune GFOpenSynth's part puts in Media:midi",
+            check("MIDIFILE names a tune GFOpenSynth's part puts in MediaFiles:midi",
                   (synth / "midi/Dance/copper-list.mid").is_file())
         else:
             print(f"skipped the blanker's tune: no {synth}/midi (GFOPENSYNTH=)")

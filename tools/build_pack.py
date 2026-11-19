@@ -1195,9 +1195,9 @@ OPENSNAP_TOOLTYPES = ["DONOTWAIT", "CX_PRIORITY=0", "SCREENKEY=shift rcommand s"
 
 # GFOpenBlanker's music (1.7, the user, 17 November 2026): the show plays one MIDI file, and which one is the icon's
 # MIDIFILE tool type, never the program's own choice. Copper List is one of GFOpenSynth's own dance tunes, which its
-# part puts in Media:midi/Dance where there is a Media drive; with no such file the blanker stays silent. GFOpenBlanker
+# part puts in MediaFiles:midi/Dance where there is a MediaFiles drive; with no such file the blanker stays silent. GFOpenBlanker
 # 1.7 also stays silent while something else already plays MIDI.
-BLANKER_TOOLTYPES = ["PLAYMIDI=TRUE", "MIDIFILE=Media:midi/Dance/copper-list.mid"]
+BLANKER_TOOLTYPES = ["PLAYMIDI=TRUE", "MIDIFILE=MediaFiles:midi/Dance/copper-list.mid"]
 
 
 def blanker_icon(icons) -> bytes:

@@ -376,15 +376,15 @@ def openkick_drawer_files(out: Path) -> None:
         (out / "Drawers" / f"{name}.info").write_bytes(aos_icon("S3D:drawer:" + motif, "drawer"))
 
 
-# Drawers other parts put on the Media drive (the standard build's DH4:), which arrive with no icon: Media:midi, the
+# Drawers other parts put on the Media drive (the standard build's DH4:), which arrive with no icon: MediaFiles:midi, the
 # GFOpenSynth part's MIDI collection (Dale, 17 November 2026: "include in the media drive an folder called midi").
-# Each gets the Soft 3D folder with its mark where it has no icon, only where a volume named Media is mounted
+# Each gets the Soft 3D folder with its mark where it has no icon, only where a volume named MediaFiles is mounted (Media until 19 November 2026)
 # (when MediaDrive, GFOpenUpTool 0.8.22).
 MEDIA_DRAWERS = {"midi": "waveform"}
 
 
 def media_drawer_lines() -> list[str]:
-    return [f'when MediaDrive default "Drawers/Media-{name}.info" "Media:{name}.info"' for name in MEDIA_DRAWERS]
+    return [f'when MediaDrive default "Drawers/Media-{name}.info" "MediaFiles:{name}.info"' for name in MEDIA_DRAWERS]
 
 
 def media_drawer_files(out: Path) -> None:
@@ -407,12 +407,12 @@ AOS_BY_NAME = {"GFOpenCalc": "CALC", "GFOpenClock": "CLOCK", "GFOpenFTP": "FTP",
 # machine without the volume is left alone.
 # Games: is drawn as the Soft 3D drives are, a hard disk with a game pad on it (Dale, 17 November 2026, of its AOS
 # picture beside them on the Pi 5: "games drive icon ?").
-# Demos:, Media: and Emulation: the same way, each with what it holds on it (Dale, 17 November 2026: "update the
+# Demos:, MediaFiles: and Emulation: the same way, each with what it holds on it (Dale, 17 November 2026: "update the
 # icons so they are like games , representative").
 # Work: is drawn as the plain Soft 3D hard disk, as the other drives are (Dale, 17 November 2026, of its AOS
 # picture beside them on the Pi 5 after an update: "the work icon has changed on the pi5").
 AOS_VOLUMES = {"Work:Disk": "S3D:harddisk", "Games:Disk": "S3D:games", "Demos:Disk": "S3D:demos",
-               "Media:Disk": "S3D:media", "Emulation:Disk": "S3D:emulation"}
+               "MediaFiles:Disk": "S3D:media", "Emulation:Disk": "S3D:emulation"}
 # The drives with no Disk.info (OLDLOOK takes SYS:Disk.info out), by device: the boot drive and the RAM disk. A USB
 # stick's or the IDE drive's device name differs from machine to machine, so those keep the ROM's picture for their
 # device (GFOpenIcon's built-in).

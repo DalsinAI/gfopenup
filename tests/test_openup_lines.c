@@ -84,13 +84,13 @@ static int checks(void)
     same("unless DemosDrive, without it", oul_strip("unless DemosDrive copy \"a\" \"SYS:a\"", both, 0), "copy \"a\" \"SYS:a\"");
     same("when DemosDrive retire, with the drive", oul_strip("when DemosDrive retire \"SYS:x\"", OUL_DEMOSDRIVE, 0), "retire \"SYS:x\"");
     same("REMOVE takes a DemosDrive condition off", oul_strip("when DemosDrive copy \"a\" \"Demos:a\"", none, 1), "copy \"a\" \"Demos:a\"");
-    /* MediaDrive (0.8.22): a volume named Media is mounted, the standard build's DH4: */
-    same("when MediaDrive, with the drive", oul_strip("when MediaDrive copy \"a\" \"Media:midi/a\"", OUL_MEDIADRIVE, 0), "copy \"a\" \"Media:midi/a\"");
-    same("when MediaDrive, without it", oul_strip("when MediaDrive copy \"a\" \"Media:midi/a\"", both | OUL_DEMOSDRIVE, 0), NULL);
+    /* MediaDrive (0.8.22): a volume named MediaFiles is mounted, the standard build's DH4: */
+    same("when MediaDrive, with the drive", oul_strip("when MediaDrive copy \"a\" \"MediaFiles:midi/a\"", OUL_MEDIADRIVE, 0), "copy \"a\" \"MediaFiles:midi/a\"");
+    same("when MediaDrive, without it", oul_strip("when MediaDrive copy \"a\" \"MediaFiles:midi/a\"", both | OUL_DEMOSDRIVE, 0), NULL);
     same("unless MediaDrive, with the drive", oul_strip("unless MediaDrive copy \"a\" \"SYS:a\"", ac | OUL_MEDIADRIVE, 0), NULL);
     same("unless MediaDrive, without it", oul_strip("unless MediaDrive copy \"a\" \"SYS:a\"", both, 0), "copy \"a\" \"SYS:a\"");
-    same("REMOVE takes a MediaDrive condition off", oul_strip("when MediaDrive copy \"a\" \"Media:midi/a\"", none, 1), "copy \"a\" \"Media:midi/a\"");
-    same("the Demos drive is not the Media drive", oul_strip("when MediaDrive copy \"a\" \"Media:a\"", OUL_DEMOSDRIVE, 0), NULL);
+    same("REMOVE takes a MediaDrive condition off", oul_strip("when MediaDrive copy \"a\" \"MediaFiles:midi/a\"", none, 1), "copy \"a\" \"MediaFiles:midi/a\"");
+    same("the Demos drive is not the Media drive", oul_strip("when MediaDrive copy \"a\" \"MediaFiles:a\"", OUL_DEMOSDRIVE, 0), NULL);
     truth("the Media bit is its own", OUL_MEDIADRIVE == 8u && !(OUL_MEDIADRIVE & (OUL_AMICRADLE | OUL_OPENKICK | OUL_DEMOSDRIVE)), 1);
     /* WorkDrive (0.8.23): a volume named Work is mounted, the standard build's DH1:, where applications go */
     same("when WorkDrive, with the drive", oul_strip("when WorkDrive copy \"a\" \"Work:a\"", OUL_WORKDRIVE, 0), "copy \"a\" \"Work:a\"");
