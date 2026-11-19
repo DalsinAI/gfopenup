@@ -13,8 +13,8 @@
  *   when DemosDrive <line>     only where a volume named Demos is mounted (0.8.21, 17 November 2026: the standard
  *                                build's drives are System, Work for applications, Games, Demos and Media)
  *   unless DemosDrive <line>   where there is none: the file goes where it went before
- *   when MediaDrive <line>     only where a volume named Media is mounted (0.8.22: the standard build's DH4:,
- *                                where pictures and music go; a part's MIDI files go in Media:midi)
+ *   when MediaDrive <line>     only where a volume named MediaFiles is mounted (0.8.22: the standard build's DH4:,
+ *                                where pictures and music go; a part's MIDI files go in MediaFiles:midi; Media until 0.8.25)
  *   unless MediaDrive <line>   where there is none
  *   when WorkDrive <line>      only where a volume named Work is mounted (0.8.23: the standard build's DH1:, which
  *                                is for applications; Dale, 17 Nov 2026: "on the work volume of all appliances
@@ -42,7 +42,7 @@
 #define OUL_AMICRADLE 1u          /* an AmiCradle instance (its ACBridge or ACStorage board) */
 #define OUL_OPENKICK    2u          /* the open ROM that applies the boot's settings (oul_prefs_task) */
 #define OUL_DEMOSDRIVE  4u          /* a volume named Demos is mounted (the standard build's DH3:) */
-#define OUL_MEDIADRIVE  8u          /* a volume named Media is mounted (the standard build's DH4:) */
+#define OUL_MEDIADRIVE  8u          /* a volume named MediaFiles is mounted (the standard build's DH4:) */
 #define OUL_WORKDRIVE   16u         /* a volume named Work is mounted (the standard build's DH1:, applications) */
 #define OUL_EMULATIONDRIVE 32u      /* a volume named Emulation is mounted (the standard build's DH5:, emulators) */
 

@@ -78,8 +78,8 @@ check("S3D:games: 64 x 64, at rest and chosen differ, not the hard disk's nor th
       and not np.array_equal(ga, ha) and not np.array_equal(ga, np.array(srest)))
 check("S3D:games: the hard disk's outline (the same body), so it stands as the other drives do",
       np.array_equal(ga[..., 3] > 0, ha[..., 3] > 0))
-# Demos:, Media: and Emulation: (Dale, 17 November 2026: "update the icons so they are like games , representative")
-vols = {"demos": "Demos:Disk", "media": "Media:Disk", "emulation": "Emulation:Disk"}
+# Demos:, MediaFiles: and Emulation: (Dale, 17 November 2026: "update the icons so they are like games , representative")
+vols = {"demos": "Demos:Disk", "media": "MediaFiles:Disk", "emulation": "Emulation:Disk"}
 vpics = {"games": ga}
 for v, dest in vols.items():
     check(f"{dest[:-5]} takes the Soft 3D picture S3D:{v}", part.AOS_VOLUMES.get(dest) == "S3D:" + v, str(part.AOS_VOLUMES))

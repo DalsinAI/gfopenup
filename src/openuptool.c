@@ -160,7 +160,7 @@
 static int slim_rom(void);
 static int kickset(const char *a1, const char *a2);
 
-static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.24 (17.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
+static const char version[] __attribute__((used)) = "$VER: GFOpenUpTool 0.8.25 (19.11.2026) MIT, Copyright (c) 2026 AmiCradle Team";
 
 struct ExpansionBase *ExpansionBase;
 struct Library *IconBase;
@@ -794,12 +794,14 @@ static int demos_drive(void)
     return there;
 }
 
-/* 0.8.22: a volume named Media is mounted (the standard build's DH4:, where pictures and music go; Dale 17 Nov
- * 2026: "include in the media drive an folder called midi"). From the DOS list too: no requester. */
+/* 0.8.22: the Media drive is mounted (the standard build's DH4:, where pictures and music go; Dale 17 Nov
+ * 2026: "include in the media drive an folder called midi"). From the DOS list too: no requester.
+ * 0.8.25: the volume is MediaFiles, not Media (Dale, 19 Nov 2026: "change dh4 to MediaFiles", "that way it wont
+ * happen again"): a volume Media beside the MEDIA: handler made Mount say "already mounted" at boot. */
 static int media_drive(void)
 {
     struct DosList *dl = LockDosList(LDF_VOLUMES | LDF_READ);
-    int there = FindDosEntry(dl, (STRPTR)"Media", LDF_VOLUMES) != NULL;
+    int there = FindDosEntry(dl, (STRPTR)"MediaFiles", LDF_VOLUMES) != NULL;
     UnLockDosList(LDF_VOLUMES | LDF_READ);
     return there;
 }

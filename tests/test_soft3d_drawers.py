@@ -46,8 +46,8 @@ for name, table in (("GFOpenUp's own drawers", part.OWN_DRAWERS), ("AmiCradle's 
                     ("the drawers other parts put on the Media drive", part.MEDIA_DRAWERS)):
     miss = sorted({m for m in table.values() if m not in marks.MOTIFS})
     check(f"{name}: every mark is drawn", not miss, str(miss))
-check("Media:midi gets the folder with the sound mark, where it has no icon and only where Media is mounted",
-      part.media_drawer_lines() == ['when MediaDrive default "Drawers/Media-midi.info" "Media:midi.info"'],
+check("MediaFiles:midi gets the folder with the sound mark, where it has no icon and only where MediaFiles is mounted",
+      part.media_drawer_lines() == ['when MediaDrive default "Drawers/Media-midi.info" "MediaFiles:midi.info"'],
       str(part.media_drawer_lines()))
 check("a named drawer's file name fits an FFS name (30)",
       all(len(d.replace(":", "-") + ".info") <= 30 for d in part.NAMED_DRAWERS))
