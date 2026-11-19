@@ -889,6 +889,10 @@ def build_parts(a):
     # LIBS:GFOpenGPU/ (Oolite first; Dale, 19 Nov 2026: "add it to the pack")
     run(["sh", a.openamigartg / "library/modules/sdl3/build.sh", a.openamigartg / "build/sdl3", "module stub"],
         env=dict(os.environ, STOVE=str(Path(gcc16_root) / "prefix")))
+    # The chipset's monitors (gfopenrtg monitors/: DEVS:Monitors/AGA and ECS, lab-tested 8 November 2026), with the GCC
+    # 16 stove (the script takes STOVE as the stove's root and OUT): the GFOpenRTG part carries them (Dale, 19 Nov 2026)
+    run(["sh", a.openamigartg / "monitors/build-amiga.sh"],
+        env=dict(os.environ, STOVE=str(gcc16_root), OUT=str(a.openamigartg / "build/monitors")))
     if a.openamigamesa:                     # the GCC 16 stove first on PATH, as demos/README.md says
         stove16 = Path(os.environ.get("STOVE16", Path.home() / "AmiCradle/stoves/os32-gcc16/prefix"))
         run(["sh", a.openamigamesa / "demos/build.sh"],
@@ -3278,6 +3282,12 @@ def main() -> int:
     rt.add("Libs/GFOpenRTG/cybergraphics.library", (rtg / "cybergraphics.library").read_bytes(), "LIBS:GFOpenRTG/cybergraphics.library")
     rt.add("C/GFOpenRTG", (rtg / "GFOpenRTG").read_bytes(), "C:GFOpenRTG")
     rt.add("Devs/Monitors/GFOpenRTG", (rtg / "GFOpenRTG-Monitor").read_bytes(), "DEVS:Monitors/GFOpenRTG")
+    # 0.8.31: the chipset's monitors (gfopenrtg monitors/): the chipset is a card with monitors of its own, so AGA's
+    # 31 kHz modes and ECS's Multiscan sit in one ScreenMode list with GFOpenRTG's, each native mode named by its chipset.
+    # ModeIDs don't change. Each does nothing on a chipset that can't show it, and AGA's ECS view does nothing while
+    # AGA runs. On GFOpenGfx they add the MonitorSpecs only (no OS 3.2 driver files: those hang on it)
+    for mon in ("AGA", "ECS"):
+        rt.add(f"Devs/Monitors/{mon}", (rtg / "monitors" / mon).read_bytes(), f"DEVS:Monitors/{mon}")
     rt.write()
     # Workbench's screen mode is the user's (0.8.2; the user, 16 October 2026): the part writes none. On the GFOpenKick
     # ROM Workbench opens on GFOpenRTG's 16-bit screen by itself; on Kickstart 3.2.3 a new install asks, and only a Yes
