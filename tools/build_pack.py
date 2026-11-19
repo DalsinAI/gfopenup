@@ -884,6 +884,11 @@ def build_parts(a):
     # build/openal and puts AL/, libopenal.a and openal.pc in the kit
     run(["sh", a.openamigartg / "library/modules/openal/build.sh", a.openamigartg / "build/openal"],
         env=dict(os.environ, STOVE=str(Path(gcc16_root) / "prefix")))
+    # SDL3.module (gfopenrtg library/modules/sdl3: SDL 3.4.14 on GFOpenGPU, SDL3_68k's Amiga back ends), the same
+    # way: the GCC 16 stove as STOVE, 68040 with its FPU. Programs linked with its libSDL3.a open it from
+    # LIBS:GFOpenGPU/ (Oolite first; Dale, 19 Nov 2026: "add it to the pack")
+    run(["sh", a.openamigartg / "library/modules/sdl3/build.sh", a.openamigartg / "build/sdl3", "module stub"],
+        env=dict(os.environ, STOVE=str(Path(gcc16_root) / "prefix")))
     if a.openamigamesa:                     # the GCC 16 stove first on PATH, as demos/README.md says
         stove16 = Path(os.environ.get("STOVE16", Path.home() / "AmiCradle/stoves/os32-gcc16/prefix"))
         run(["sh", a.openamigamesa / "demos/build.sh"],
@@ -3323,6 +3328,9 @@ def main() -> int:
     # 0.8.27: OpenAL.module (gfopenrtg library/modules/openal; OpenAL 1.1, no EFX or capture), which programs linked
     # with the kit's libopenal.a open from LIBS:GFOpenGPU/; MIT, the Team's, like the rest of the part
     gp.add("Libs/GFOpenGPU/OpenAL.module", (rtg / "openal" / "OpenAL.module").read_bytes(), "LIBS:GFOpenGPU/OpenAL.module")
+    # 0.8.31: SDL3.module (gfopenrtg library/modules/sdl3), beside SDL2.module: programs built with SDL 3 (Oolite) open
+    # it from LIBS:GFOpenGPU/. Only there: no program was ever built against LIBS:OpenGPU/SDL3.module
+    gp.add("Libs/GFOpenGPU/SDL3.module", (rtg / "sdl3" / "SDL3.module").read_bytes(), "LIBS:GFOpenGPU/SDL3.module")
     # 0.8.16: the same modules under the drawer's name from before the GF rename too, LIBS:OpenGPU, for programs built
     # against it: OpenTunnel opens LIBS:OpenGPU/SDL2.module and couldn't start on Instance-32 after 0.8.15. The modules
     # open gfopengpu.library themselves. The pack carries each file once; the line copies it to both places.
@@ -3353,13 +3361,16 @@ def main() -> int:
     # stub hands a program that opens gfopengfx.library the same calls there
     gp.add("Libs/gfopengfx.library", (a.guest / "libraries/opengfx/build-amiga/lib/gfopengfx.library").read_bytes(),
            "LIBS:gfopengfx.library")
-    # The modules' third-party licences (Mesa: MIT; SDL 2 and its Amiga back ends:
+    # The modules' third-party licences (Mesa: MIT; SDL 2, SDL 3 and their Amiga back ends:
     # Zlib), in GFOpenUp's drawer: not in LIBS:GFOpenGPU/, where the library looks for drivers
     gl_work = Path(os.environ.get("GL_WORK", a.openamigartg / "library/modules/gl/build"))
     sdl = rtg / "sdl2-work"
+    sdl3 = rtg / "sdl3" / "sdl3-work"
     for name, f in ((("Mesa.txt", next(gl_work.glob("mesa-*/docs/license.rst"), None)),
                     ("SDL2.txt", next(sdl.glob("SDL2-*/LICENSE.txt"), None)),
-                    ("libSDL2-amigaos3.txt", next(sdl.glob("SDL2-*/LICENSE.libSDL2-amigaos3.txt"), None)))
+                    ("libSDL2-amigaos3.txt", next(sdl.glob("SDL2-*/LICENSE.libSDL2-amigaos3.txt"), None)),
+                    ("SDL3.txt", next(sdl3.glob("SDL3-*/LICENSE.txt"), None)),
+                    ("SDL3_68k.txt", next(sdl3.glob("SDL3-*/LICENSE.SDL3_68k.txt"), None)))
                    + ((("SDL2_image.txt", next(sdl.rglob("SDL2_image-*/LICENSE.txt"), None)),) if "SDL2_image" in sats else ())
                    + ((("SDL2_mixer.txt", next(sdl.rglob("SDL2_mixer-*/LICENSE.txt"), None)),
                        ("libxmp.txt", next((f for f in sdl.rglob("libxmp-*/*") if f.name in ("COPYING", "LICENSE", "LICENSE.txt", "README")), None)))

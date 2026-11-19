@@ -1586,6 +1586,11 @@ def main() -> int:
     check("the GFOpenGPU part needs a 68040 or 68060 with its FPU and MMU", 'gp.line("needs 68040")' in src)
     check("the GFOpenGPU part brings OpenAL.module, and copies it to LIBS:OpenGPU",
           '"LIBS:GFOpenGPU/OpenAL.module"' in src and '"GL", "OpenAL"]' in src)
+    # 0.8.31: SDL3.module beside SDL2.module (Oolite), built from gfopenrtg's library/modules/sdl3, with SDL 3's and
+    # SDL3_68k's licences; only in LIBS:GFOpenGPU (no program was built against LIBS:OpenGPU/SDL3.module)
+    check("the GFOpenGPU part brings SDL3.module, built with the GCC 16 stove, with its licences",
+          '"LIBS:GFOpenGPU/SDL3.module"' in src and '"library/modules/sdl3/build.sh"' in src
+          and '"SDL3.txt"' in src and '"SDL3_68k.txt"' in src and '"GL", "OpenAL", "SDL3"]' not in src)
     # 0.8.28: LIBS:physfs.library 1.1 (gfopenphysfs, pinned by commit) with LIBS:z.library in the GFOpenGPU part
     with tempfile.TemporaryDirectory() as t:
         t = Path(t)
