@@ -3,5 +3,5 @@
 # (python3 tools/fetch_parts.py parts.lock --checkout) and tools/build_pack.py copies its Parts/<Name> into the pack.
 # Moving a part forward is a one-line change here. Copyright (c) 2026 AmiCradle Team. MIT licence.
 acgame         v1.3-rc2    # ACGame: acgame.library, the game layer (screens, input, sound through AHI or Paula)
-gfopensynth    v1.0-rc4    # GFOpenSynth: gfopensynth.library, PlaySynth, GFOpenSynth Basic, the demo tune, the MIDI collection and our dance tunes (MediaFiles:midi)
+gfopensynth    v1.0-rc5    # GFOpenSynth: gfopensynth.library, PlaySynth, GFOpenSynth Basic, the demo tune, the MIDI collection and our dance tunes (MediaFiles:midi)
 gfopenallegro  v1.1-rc2    # Allegro4: allegro4.library; its music plays on GFOpenSynth; needs ACGame
