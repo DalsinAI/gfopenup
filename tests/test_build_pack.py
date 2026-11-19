@@ -1581,6 +1581,9 @@ def main() -> int:
           'Part(top, "GFOpenService", "1.4",' in src and '"DEVS:mitchy.device"' in src and '"DEVS:gfopenservice.device"' in src)
     # GFOpenGPU 0.29 (0.8.22): gfopengpu.library 0.29 (256 fence results, c2p through the core), ACRTG.gpu 1.6, C:GLQuery
     check("the GFOpenGPU part is 0.29 (gfopengpu.library 0.29)", 'Part(top, "GFOpenGPU", "0.29",' in src)
+    # 0.8.31: the chipset's monitors in the GFOpenRTG part, built from gfopenrtg's monitors/ with the GCC 16 stove
+    check("the GFOpenRTG part brings DEVS:Monitors/AGA and ECS from gfopenrtg's monitors/",
+          'f"DEVS:Monitors/{mon}"' in src and 'for mon in ("AGA", "ECS")' in src and '"monitors/build-amiga.sh"' in src)
     check("the GFOpenGPU part brings C:GLQuery when the build has it", '"C:GLQuery"' in src)
     # 0.8.27: the CPU floor (9 November 2026), and OpenAL.module beside SDL2.module and GL.module
     check("the GFOpenGPU part needs a 68040 or 68060 with its FPU and MMU", 'gp.line("needs 68040")' in src)
