@@ -20,8 +20,8 @@
 #include "ogt_tabs.h"
 #include "ogt_status.h"
 
-#define OM_VERSION "1.1"
-#define OM_DATE "12.11.2026"
+#define OM_VERSION "1.2"
+#define OM_DATE "20.11.2026"
 
 #define REG(r, decl) register decl __asm(#r)
 

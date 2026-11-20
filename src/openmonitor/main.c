@@ -8,6 +8,13 @@
  * The same file is the open ROM's C/GFOpenMonitor (amicradle-guest's romprefs.sh, the design's P6) and the
  * disk's SYS:Utilities/GFOpenMonitor, which GFOpenUp installs on every ROM.
  *
+ * 1.2 (Dale, 20 November 2026: a click on GFOpenMeters starts it, and "monitor should behave like a commodity after
+ * that"): a commodity, named GFOpenMonitor in Exchange. Its close gadget and Esc hide the window and it stays,
+ * reading nothing while hidden (every view freed, as when it ended); Exchange's Show, its hot key (CX_POPKEY, by
+ * default ctrl alt m), a second start or a click on GFOpenMeters bring the window back as it was. Exchange's Remove,
+ * Q in the window or Ctrl-C end it. CX_POPUP=NO starts it hidden; CX_PRIORITY as any commodity's. Tooltypes from
+ * Workbench, arguments from a Shell. Without commodities.library it closes and ends, as 1.1 did.
+ *
  * MIT, Copyright (c) 2026 AmiCradle Team. */
 
 #include <exec/types.h>
@@ -29,6 +36,11 @@
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 #include <proto/gadtools.h>
+#include <libraries/commodities.h>
+#include <proto/commodities.h>
+#include <workbench/startup.h>
+#include <workbench/workbench.h>
+#include <proto/icon.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -531,6 +543,123 @@ static void pens(void)
 
 static struct MsgPort *front_port;
 
+/* ---- 1.2: a commodity ------------------------------------------------------------------------------------ */
+
+struct Library *CxBase;
+static struct MsgPort *cx_port;
+static CxObj *broker;
+static char cx_popkey[64] = "ctrl alt m";
+static LONG cx_pri;
+static int cx_popup = 1;
+static int cx_kill;                        /* Exchange's Remove, Q, Ctrl-C: it ends, not only hides */
+#define CX_EVT_POPKEY 1
+enum { CX_NONE, CX_SHOW, CX_HIDE, CX_KILL };
+
+static void cx_open(void)
+{
+    struct NewBroker nb;
+    LONG err = 0;
+    if (!(CxBase = OpenLibrary((STRPTR)"commodities.library", 37))) return;
+    if (!(cx_port = CreateMsgPort())) return;
+    memset(&nb, 0, sizeof nb);
+    nb.nb_Version = NB_VERSION;
+    nb.nb_Name = (STRPTR)"GFOpenMonitor";
+    nb.nb_Title = (STRPTR)("GFOpenMonitor " OM_VERSION);
+    nb.nb_Descr = (STRPTR)"Tasks, memory, libraries and calls";
+    nb.nb_Unique = NBU_UNIQUE | NBU_NOTIFY;
+    nb.nb_Flags = COF_SHOW_HIDE;
+    nb.nb_Pri = (BYTE)cx_pri;
+    nb.nb_Port = cx_port;
+    if (!(broker = CxBroker(&nb, &err))) return;
+    if (cx_popkey[0]) {
+        CxObj *f = CxFilter((STRPTR)cx_popkey);
+        if (f) {
+            AttachCxObj(f, CxSender(cx_port, CX_EVT_POPKEY));
+            AttachCxObj(f, CxTranslate(NULL));             /* the key goes no further */
+            AttachCxObj(broker, f);
+        }
+    }
+    ActivateCxObj(broker, 1);
+}
+
+static void cx_close(void)
+{
+    if (broker) { DeleteCxObjAll(broker); broker = NULL; }
+    if (cx_port) {
+        struct Message *m;
+        while ((m = GetMsg(cx_port))) ReplyMsg(m);
+        DeleteMsgPort(cx_port);
+        cx_port = NULL;
+    }
+    if (CxBase) { CloseLibrary(CxBase); CxBase = NULL; }
+}
+
+static ULONG cx_sig(void) { return broker ? 1UL << cx_port->mp_SigBit : 0; }
+
+/* Exchange's commands and the hot key: what to do now (the last that says something) */
+static int cx_take(void)
+{
+    CxMsg *m;
+    int what = CX_NONE;
+    if (!broker) return CX_NONE;
+    while ((m = (CxMsg *)GetMsg(cx_port))) {
+        ULONG type = CxMsgType(m), id = CxMsgID(m);
+        ReplyMsg((struct Message *)m);
+        if (type == CXM_IEVENT && id == CX_EVT_POPKEY) what = CX_SHOW;
+        else if (type == CXM_COMMAND) {
+            if (id == CXCMD_APPEAR || id == CXCMD_UNIQUE) what = CX_SHOW;
+            else if (id == CXCMD_DISAPPEAR) what = CX_HIDE;
+            else if (id == CXCMD_KILL) { what = CX_KILL; cx_kill = 1; }
+            else if (id == CXCMD_DISABLE) ActivateCxObj(broker, 0);
+            else if (id == CXCMD_ENABLE) ActivateCxObj(broker, 1);
+        }
+    }
+    return what;
+}
+
+/* Hidden: until it is to show (1) or to end (0) */
+static int cx_wait(void)
+{
+    for (;;) {
+        ULONG fsig = front_port ? 1UL << front_port->mp_SigBit : 0;
+        ULONG got = Wait(cx_sig() | fsig | SIGBREAKF_CTRL_C);
+        if (got & SIGBREAKF_CTRL_C) { cx_kill = 1; return 0; }
+        if (got & fsig) {
+            struct Message *fm;
+            int any = 0;
+            while ((fm = GetMsg(front_port))) { ReplyMsg(fm); any = 1; }
+            if (any) return 1;
+        }
+        if (got & cx_sig()) {
+            int w = cx_take();
+            if (w == CX_KILL) return 0;
+            if (w == CX_SHOW) return 1;
+        }
+    }
+}
+
+/* Workbench's tooltypes (CX_POPKEY, CX_PRIORITY, CX_POPUP) */
+static void cx_tooltypes(void)
+{
+    extern struct WBStartup *_WBenchMsg;
+    struct Library *IconBase;
+    struct DiskObject *dob;
+    BPTR old;
+    char *v;
+    if (!_WBenchMsg || !_WBenchMsg->sm_NumArgs || !(IconBase = OpenLibrary((STRPTR)"icon.library", 37))) return;
+    old = CurrentDir(_WBenchMsg->sm_ArgList[0].wa_Lock);
+    if ((dob = GetDiskObject((STRPTR)_WBenchMsg->sm_ArgList[0].wa_Name))) {
+        if ((v = (char *)FindToolType((CONST_STRPTR *)dob->do_ToolTypes, (STRPTR)"CX_POPKEY"))) {
+            strncpy(cx_popkey, v, sizeof cx_popkey - 1); cx_popkey[sizeof cx_popkey - 1] = 0;
+        }
+        if ((v = (char *)FindToolType((CONST_STRPTR *)dob->do_ToolTypes, (STRPTR)"CX_PRIORITY"))) cx_pri = atol(v);
+        if ((v = (char *)FindToolType((CONST_STRPTR *)dob->do_ToolTypes, (STRPTR)"CX_POPUP"))) cx_popup = !(v[0] == 'N' || v[0] == 'n');
+        FreeDiskObject(dob);
+    }
+    CurrentDir(old);
+    CloseLibrary(IconBase);
+}
+
 /* a view's name as typed (VIEW memory, "ports"): its first letters, any case */
 static int same_word(const char *a, const char *b)
 {
@@ -633,8 +762,13 @@ static int gui(STRPTR first_view)
     while (!quit) {
         struct IntuiMessage *m;
         ULONG tsig = om_timer_sig(), fsig = front_port ? 1UL << front_port->mp_SigBit : 0;
-        ULONG got = Wait((1UL << U.win->UserPort->mp_SigBit) | tsig | fsig | SIGBREAKF_CTRL_C);
-        if (got & SIGBREAKF_CTRL_C) quit = 1;
+        ULONG got = Wait((1UL << U.win->UserPort->mp_SigBit) | tsig | fsig | cx_sig() | SIGBREAKF_CTRL_C);
+        if (got & SIGBREAKF_CTRL_C) { quit = 1; cx_kill = 1; }
+        if (got & cx_sig()) {
+            int w = cx_take();                  /* 1.2: Exchange's Hide or Remove; Show and the hot key bring it to the front */
+            if (w == CX_HIDE || w == CX_KILL) { quit = 1; continue; }
+            if (w == CX_SHOW) { ScreenToFront(U.win->WScreen); WindowToFront(U.win); ActivateWindow(U.win); }
+        }
         if (got & fsig) {
             struct Message *fm;
             while ((fm = GetMsg(front_port))) ReplyMsg(fm);
@@ -670,7 +804,8 @@ static int gui(STRPTR first_view)
                 if (tab >= 0) { om_open_view(tab); continue; }
             }
             if (cls == IDCMP_VANILLAKEY) {
-                if (code == 27 || code == 'q' || code == 'Q') { quit = 1; break; }
+                if (code == 27) { quit = 1; break; }                    /* 1.2: Esc hides, as the close gadget */
+                if (code == 'q' || code == 'Q') { quit = 1; cx_kill = 1; break; }   /* Q ends it */
                 if (code >= '1' && code < '1' + V_N) { om_open_view(code - '1'); continue; }
                 if (code == 9) { om_open_view((U.view + (qual & (IEQUALIFIER_LSHIFT | IEQUALIFIER_RSHIFT) ? V_N - 1 : 1)) % V_N); continue; }
             }
@@ -773,7 +908,7 @@ static int detach(const char *view, const char *task)
 {
     struct CommandLineInterface *cli = Cli();
     struct Segment *seg;
-    char name[108], cmd[400], extra[160];
+    char name[108], cmd[400], extra[240];
     const char *base;
     BPTR in, out, dir;
     LONG rc;
@@ -784,6 +919,10 @@ static int detach(const char *view, const char *task)
     if (view && strlen(view) < 32) snprintf(extra, sizeof extra, " VIEW \"%s\"", view);
     if (task && strlen(task) < 40) snprintf(extra + strlen(extra), sizeof extra - strlen(extra), " TASK \"%s\"", task);
     if (pubscreen[0]) snprintf(extra + strlen(extra), sizeof extra - strlen(extra), " PUBSCREEN \"%s\"", pubscreen);
+    if (strcmp(cx_popkey, "ctrl alt m") && strlen(cx_popkey) < 40)       /* 1.2: the commodity's settings go along */
+        snprintf(extra + strlen(extra), sizeof extra - strlen(extra), " CX_POPKEY \"%s\"", cx_popkey);
+    if (cx_pri) snprintf(extra + strlen(extra), sizeof extra - strlen(extra), " CX_PRIORITY %ld", (long)cx_pri);
+    if (!cx_popup) snprintf(extra + strlen(extra), sizeof extra - strlen(extra), " CX_POPUP NO");
     Forbid();
     seg = FindSegment((STRPTR)base, NULL, FALSE);
     if (!seg || seg->seg_Seg != cli->cli_Module) seg = FindSegment((STRPTR)base, NULL, TRUE);
@@ -816,22 +955,39 @@ int main(void)
     if (Cli()) {
         /* WAIT/S: stay in this Shell until the window closes; VIEW/K: the view to open on (Tasks, Memory...);
          * TASK/K: the task to choose in the Tasks view, by its name; PUBSCREEN/K: the public screen to open on */
-        LONG arg[4] = { 0, 0, 0, 0 };
-        struct RDArgs *ra = ReadArgs((STRPTR)"WAIT/S,VIEW/K,TASK/K,PUBSCREEN/K", arg, NULL);
+        LONG arg[7] = { 0, 0, 0, 0, 0, 0, 0 };
+        struct RDArgs *ra = ReadArgs((STRPTR)"WAIT/S,VIEW/K,TASK/K,PUBSCREEN/K,CX_POPKEY/K,CX_PRIORITY/K/N,CX_POPUP/K", arg, NULL);
         if (!ra) { PrintFault(IoErr(), (STRPTR)"GFOpenMonitor"); return RETURN_ERROR; }
         if (arg[1]) { strncpy(view, (const char *)arg[1], sizeof view - 1); view[sizeof view - 1] = 0; }
         if (arg[2]) { strncpy(om_first_task, (const char *)arg[2], sizeof om_first_task - 1); om_first_task[sizeof om_first_task - 1] = 0; }
         if (arg[3]) { strncpy(pubscreen, (const char *)arg[3], sizeof pubscreen - 1); pubscreen[sizeof pubscreen - 1] = 0; }
+        if (arg[4]) { strncpy(cx_popkey, (const char *)arg[4], sizeof cx_popkey - 1); cx_popkey[sizeof cx_popkey - 1] = 0; }
+        if (arg[5]) cx_pri = *(LONG *)arg[5];
+        if (arg[6]) cx_popup = !(((const char *)arg[6])[0] == 'N' || ((const char *)arg[6])[0] == 'n');
         FreeArgs(ra);
         if (!arg[0]) {
             if (send_to_front()) return RETURN_OK;
             if (detach(view[0] ? view : NULL, om_first_task[0] ? om_first_task : NULL)) return RETURN_OK;
         }
     }
+    else cx_tooltypes();
     fp = claim_front(&other);
     if (other) return RETURN_OK;
     front_port = fp;
-    rc = gui(view[0] ? (STRPTR)view : NULL);
+    cx_open();
+    {
+        /* 1.2: the window, then (a commodity) hidden until it is shown again or removed */
+        int show = !broker || cx_popup, first = 1;
+        rc = RETURN_OK;
+        while (!cx_kill) {
+            if (!show && !cx_wait()) break;
+            rc = gui(first && view[0] ? (STRPTR)view : NULL);
+            first = 0;
+            show = 0;
+            if (!broker || rc != RETURN_OK) break;
+        }
+    }
+    cx_close();
     front_port = NULL;
     release_front(fp);
     return rc;
