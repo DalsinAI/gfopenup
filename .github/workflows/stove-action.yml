@@ -1,5 +1,5 @@
 # Copyright (c) 2026 AmiCradle Team. MIT licence.
-# The stove action (.github/actions/stove) on a GitHub-hosted runner: GFOpenAmigaGCC and the NDK in place, and a
+# The stove action (.github/actions/stove) on bigguy's runners (lumavault; GitHub's are not used): GFOpenAmigaGCC and the NDK in place, and a
 # program on exec.library's and dos.library's headers compiled and linked for the 68040 (docs/design/PARTS-ON-MERGE.md).
 name: Stove action
 on:
@@ -13,7 +13,7 @@ permissions:
   contents: read
 jobs:
   stove:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, lumavault]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
