@@ -196,6 +196,17 @@ def openprinter_checks() -> None:
     check("Install-GFOpenUp: GFOpenPrinter right after GFOpenPrint, under the same choice", 0 < a < b
           and inst.rfind("(if (bitand #parts 2)", 0, a) > inst.rfind("(if (bitand #parts", 0, a) - 1
           and inst.find("(if (bitand #parts", a) > b)
+    # GFOpenBlanker is a choice, unticked on a new install (it was installed with every install)
+    a = inst.find("INSTALL Parts/GFOpenBlanker >>")
+    check("Install-GFOpenUp: GFOpenBlanker only where #parts2's 1024 is picked",
+          a > 0 and inst.rfind("(if (bitand #parts2 1024)", 0, a) > inst.rfind("(if (bitand #parts", 0, a) - 1
+          and inst.count("INSTALL Parts/GFOpenBlanker") == 1)
+    check("Install-GFOpenUp: GFOpenBlanker is the fourth page's sixth choice, ticked only where it is installed",
+          '"GFOpenBlanker: a screen blanker")' in inst and "(if (bitand #g4 32) (set #parts2 (bitor #parts2 1024)))" in inst
+          and '(if (exists "SYS:Tools/Commodities/GFOpenBlanker") (set #default2 (bitor #default2 1024)))' in inst
+          and "(set #default2 128)" in inst)
+    check("Install-GFOpenUp: leaving out OpenBrowser Lite or OpenAmigaPython keeps the other #parts2 choices",
+          "(bitand #parts2 511)" not in inst and "(bitand #parts2 255)" not in inst)
     a = inst.find("INSTALL Parts/GFOpenImage >>")
     end = inst.find("(if (bitand #parts", a)
     check("Install-GFOpenUp: with GFOpenImage, the old OpenPNG, OpenTGA and OpenGIF descriptors are RETIREd "

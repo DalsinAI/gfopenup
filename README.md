@@ -60,8 +60,8 @@ You choose the parts in the Installer. Among them:
 - **Desktop:** GFOpenWindows (snapping, Amiga+Tab, window places), GFOpenDock,
   GFOpenMenus, GFOpenTitle (logo, free memory, clock and settings on the title
   bar), GFOpenIcons (the Team's own icon set), backdrops for each theme,
-  GFOpenBlanker and GFOpenUp Setup (questions at the first start, and the
-  startup switches).
+  GFOpenBlanker (a choice, off unless picked) and GFOpenUp Setup (questions at
+  the first start, and the startup switches).
 - **Files and media:** GFOpenFiles (a two-pane file manager), GFOpenCompress
   (ADF, ADZ, DMS, LhA, zip, tar, gzip), GFOpenTypes (which program opens which
   file), GFOpenImage datatypes (PNG, GIF, Targa, WebP, WebM and more),

@@ -106,7 +106,8 @@
 ; The second word, #parts2 (GFOpenUp 0.7.0): 1 GFOpenFTP, 2 Unofficial Telegram, 4 GFOpenGPU developer files,
 ; 8 GFOpenInput, 16 GFOpenTLS, 32 GFOpenDrawer, 64 GFOpenBench, 128 GFOpenDateTime (GFOpenUp 0.7.9),
 ; 256 OpenAmigaPython (19 October 2026; the ninth choice of the fifth page),
-; 512 OpenBrowser Lite (19 October 2026; the fifth choice of the fourth page, whose bits 0-3 stay #parts' 27-30).
+; 512 OpenBrowser Lite (19 October 2026; the fifth choice of the fourth page, whose bits 0-3 stay #parts' 27-30),
+; 1024 GFOpenBlanker (21 November 2026; the sixth choice of the fourth page).
 ; Of these GFOpenDateTime is ticked by default on a new install, and OpenBrowser Lite (the standard set) on a
 ; 68040 or 68060 with its FPU; an upgrade ticks those already there (below).
 ; AmiCradle's defaults: everything but GFOpenRTG, GFOpenMUI, GFOpenMail, OpenBrowser, GFOpenDemos, GFOpenPuTTY
@@ -157,6 +158,8 @@
 (if (exists "SYS:Utilities/GFOpenDrawer") (set #default2 (bitor #default2 32)))
 (if (exists "SYS:System/GFOpenBench") (set #default2 (bitor #default2 64)))
 (if (exists "SYS:Tools/OpenAmigaPython") (set #default2 (bitor #default2 256)))
+; GFOpenBlanker is optional (Dale, 21 November 2026): ticked only where it is installed already
+(if (exists "SYS:Tools/Commodities/GFOpenBlanker") (set #default2 (bitor #default2 1024)))
 ; 0.8.13: the parts an OpenUp from before the GF names has, by their old names, are ticked as well (it is taken out
 ; below, and GFOpenUp's parts take their places)
 (if #oldup
@@ -323,13 +326,17 @@
               "OpenBrowser Lite: a small web browser, about 100 KB and no WebKit (new). Pages are laid "
               "out with headings, lists, links, pictures (through your datatypes) and their CSS; no "
               "JavaScript. https:// works through GFOpenTLS, which comes with it. It needs a 68040 or 68060 "
-              "with its FPU and a network stack (GFOpenSocket, Roadshow or AmiTCP). In SYS:Utilities/GFOpenBrowserLite.")
+              "with its FPU and a network stack (GFOpenSocket, Roadshow or AmiTCP). In SYS:Utilities/GFOpenBrowserLite.\n\n"
+              "GFOpenBlanker: blanks the screen after a while with its show, Gods and Angels (off unless picked). "
+              "In SYS:Tools/Commodities, started at every boot.")
         (choices "GFOpenDemos: three 3D demos in GL (new)"
                  "GFOpenCrypto: SSH and TLS sums (new)"
                  "GFOpenPuTTY: SSH and Telnet (new)"
                  "Tata: warns about known problems (new, 0.x)"
-                 "OpenBrowser Lite: a small web browser (new, 68040)")
-        (default (bitor (bitand (shiftright #default 27) 15) (shiftleft (bitand (shiftright #default2 9) 1) 4)))))
+                 "OpenBrowser Lite: a small web browser (new, 68040)"
+                 "GFOpenBlanker: a screen blanker")
+        (default (bitor (bitor (bitand (shiftright #default 27) 15) (shiftleft (bitand (shiftright #default2 9) 1) 4))
+                        (shiftleft (bitand (shiftright #default2 10) 1) 5)))))
 (set #g5
     (askoptions
         (prompt "Which parts should GFOpenUp install? (5 of 6)")
@@ -468,19 +475,20 @@
 (if (bitand #parts 512) (set #parts (bitor #parts 33554432)))
 ; the fourth page's fifth choice is OpenBrowser Lite, #parts2's 512
 (if (bitand #g4 16) (set #parts2 (bitor #parts2 512)))
+(if (bitand #g4 32) (set #parts2 (bitor #parts2 1024)))
 ; OpenBrowser Lite is built for a 68040 with its FPU: elsewhere it is left out, and doesn't pull in GFOpenTLS
 (if (and (bitand #parts2 512) (or (= (database "fpu") "NOFPU") (and (<> #cpu "68040") (<> #cpu "68060"))))
     (
         (message "OpenBrowser Lite needs a 68040 or 68060 with its FPU, which this Amiga doesn't have, "
                  "so it was left out. Nothing else changed.")
-        (set #parts2 (bitand #parts2 511))))
+        (set #parts2 (bitand #parts2 1535))))   ; all but 512
 ; OpenAmigaPython is built for a 68020 or later (no FPU): on a 68000 or 68010 it is left out, so
 ; it doesn't pull in GFOpenTLS either
 (if (and (bitand #parts2 256) (or (= #cpu "68000") (= #cpu "68010")))
     (
         (message "OpenAmigaPython needs a 68020 or later, and this Amiga has a " #cpu
                  ", so it was left out. Nothing else changed.")
-        (set #parts2 (bitand #parts2 255))))
+        (set #parts2 (bitand #parts2 1791))))   ; all but 256
 ; GFOpenFTP's FTPS, GFOpenMail, OpenAmigaPython's ssl and OpenBrowser Lite's https:// need GFOpenTLS, and GFOpenTLS does its sums with GFOpenCrypto
 (if (bitand #parts2 1) (set #parts2 (bitor #parts2 16)))
 (if (bitand #parts 2097152) (set #parts2 (bitor #parts2 16)))
@@ -598,10 +606,12 @@
         (working "Installing GFOpenFont")
         (if (> (run (cat #tool " INSTALL Parts/GFOpenFont >>T:GFOpenUp.log")) 5)
             (message "GFOpenFont didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
-; GFOpenBlanker, with its show Gods and Angels, comes with every install.
-(working "Installing GFOpenBlanker")
-(if (> (run (cat #tool " INSTALL Parts/GFOpenBlanker >>T:GFOpenUp.log")) 5)
-    (message "GFOpenBlanker didn't install completely. T:GFOpenUp.log says why; nothing else changed."))
+; GFOpenBlanker, with its show Gods and Angels, where it was picked (#parts2's 1024)
+(if (bitand #parts2 1024)
+    (
+        (working "Installing GFOpenBlanker")
+        (if (> (run (cat #tool " INSTALL Parts/GFOpenBlanker >>T:GFOpenUp.log")) 5)
+            (message "GFOpenBlanker didn't install completely. T:GFOpenUp.log says why; nothing else changed."))))
 ; GFOpenSnap (24 Oct 2026) comes with every install: Shift+Right Amiga+S takes the front screen, Shift+Right Amiga+W the
 ; active window, each a dated PNG in SYS:Snapshots and an IFF picture on the clipboard. Its keys are its icon's tool
 ; types, kept on an upgrade.
