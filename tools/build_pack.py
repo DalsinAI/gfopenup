@@ -77,7 +77,7 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenImage/            datatypes: PNG, Targa (TGA), WebP, WebM and music modules (MOD,
                         MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
                         through GFOpenService (gfopendatatypes)
-  GFOpenBlanker/          the screen blanker and its show, Gods and Angels: always installed (gfopenprefs), with
+  GFOpenBlanker/          the screen blanker and its show, Gods and Angels: a choice, off unless picked (gfopenprefs), with
                         DejaVu Sans and Serif for its credits where OS 3.2's CGTriumvirate and CGTimes
                         aren't (FONTS:GFOpenBlanker; --dejavu-serif)
   GFOpenSnap/             GFOpenSnap, the snapshot commodity: Shift+Right Amiga+S takes the front screen and
