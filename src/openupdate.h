@@ -195,6 +195,30 @@ static int oud_offers(struct oud_part *parts, int count, const char *manifest, l
     return n;
 }
 
+/* Whether a part the index has and the manifest doesn't is listed as "not installed". GFOpenUp is always there.
+ * KickstartSet goes in with the slim ROM, through GFOpenUpTool KICKSET. */
+static int oud_listed_as_new(const char *name)
+{
+    return strcmp(name, "GFOpenUp") && strcmp(name, "KickstartSet");
+}
+
+/* The index's parts from parts[from] on (count in all) that aren't installed move to parts[from], in the index's
+ * order, each with installed "". How many. Update never installs them, GFOpenUp's Installer adds a part. */
+static int oud_new_parts(struct oud_part *parts, int from, int count, const char *manifest, long mlen)
+{
+    int i, n = from;
+    char have[24];
+    if (!manifest) return 0;
+    for (i = from; i < count; i++) {
+        if (oud_installed(manifest, mlen, parts[i].name, have, sizeof have) || !oud_listed_as_new(parts[i].name))
+            continue;
+        if (n != i) parts[n] = parts[i];
+        parts[n].installed[0] = 0;
+        n++;
+    }
+    return n - from;
+}
+
 /* The INTERVAL tooltype's value, seconds between checks after the one at startup. NULL or empty is the default;
  * 0 is "only at startup"; anything else under OUD_INTERVAL_MIN is raised to it; a value that isn't a number is the
  * default. */
@@ -412,12 +436,30 @@ static int oud_rows(const char *manifest, long len, const struct oud_part *offer
     return n;
 }
 
-/* A row as the list shows it: "<Name>  <installed>  new: <version>", or "<Name>  <installed>". The length. */
+/* The parts oud_new_parts found (fresh, more of them) after the n rows already there: rows with installed "" and
+ * the index's version as newer. The count of rows. */
+static int oud_rows_add_new(struct oud_row *rows, int n, int max, const struct oud_part *fresh, int more)
+{
+    int i;
+    for (i = 0; i < more && n < max; i++, n++) {
+        strcpy(rows[n].name, fresh[i].name);
+        rows[n].installed[0] = 0;
+        strcpy(rows[n].newer, fresh[i].version);
+    }
+    return n;
+}
+
+/* A row as the list shows it: "<Name>  <installed>  new: <version>", "<Name>  <installed>", or for a part that
+ * isn't installed "<Name>  not installed: <version>". The length. */
 static int oud_row_text(const struct oud_row *r, char *out, int size)
 {
     int n = 0;
     out[0] = 0;
     n = oud_put(out, size, n, r->name);
+    if (!r->installed[0]) {
+        n = oud_put(out, size, n, "  not installed: ");
+        return oud_put(out, size, n, r->newer);
+    }
     n = oud_put(out, size, n, "  ");
     n = oud_put(out, size, n, r->installed);
     if (r->newer[0]) {
@@ -434,6 +476,14 @@ static const char *oud_status(int state, int offers)
     if (state == 0) return "Not checked yet.";
     if (offers == 0) return "GFOS is up to date.";
     return offers == 1 ? "One update is ready." : "Updates are ready.";
+}
+
+/* The status line when parts can be added too (more of them, from oud_new_parts): oud_status's line, then that. */
+static const char *oud_status_more(int state, int offers, int more)
+{
+    if (state != 1 || more == 0) return oud_status(state, offers);
+    if (offers == 0) return "GFOS is up to date. More parts can be added with GFOpenUp's Installer.";
+    return "Updates are ready. More parts can be added with GFOpenUp's Installer.";
 }
 
 /* ---- GFOpenNotifier, or Ranchero or Ringhio: "updates are waiting" ---- */

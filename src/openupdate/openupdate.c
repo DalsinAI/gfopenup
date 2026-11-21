@@ -209,6 +209,7 @@ static int update_part(const struct oud_part *p, char *why, int size)
 
 static struct oud_row rows[MAX_PARTS];
 static int nrows, offers, state;               /* state: 0 not checked yet, 1 checked, -1 the index couldn't be had */
+static int fresh, more;                        /* parts[fresh] on: the more parts not installed */
 
 static olui *ui;
 static olui_amiga *glue;
@@ -242,7 +243,7 @@ static int check(int asked)
     clear_work();
     manifest = read_file(MANIFEST, &mlen);
     if (count < 0) {                           /* the parts installed are still shown, with nothing newer */
-        offers = 0;
+        offers = more = 0;
         nrows = oud_rows(manifest, mlen, parts, 0, rows, MAX_PARTS);
         if (manifest) FreeVec(manifest);
         state = -1;
@@ -251,7 +252,10 @@ static int check(int asked)
     }
     skipped = asked ? NULL : read_file(OUD_SKIPPED, &slen);
     offers = manifest ? oud_offers(parts, count, manifest, mlen, skipped, slen) : 0;
+    fresh = offers;
+    more = oud_new_parts(parts, fresh, count, manifest, mlen);
     nrows = oud_rows(manifest, mlen, parts, offers, rows, MAX_PARTS);
+    nrows = oud_rows_add_new(rows, nrows, MAX_PARTS, parts + fresh, more);
     if (manifest) FreeVec(manifest);
     if (skipped) FreeVec(skipped);
     state = 1;
@@ -300,6 +304,7 @@ static void skip_all(void)
     manifest = read_file(MANIFEST, &mlen);
     offers = 0;
     nrows = oud_rows(manifest, mlen, parts, 0, rows, MAX_PARTS);
+    nrows = oud_rows_add_new(rows, nrows, MAX_PARTS, parts + fresh, more);
     if (manifest) FreeVec(manifest);
     show();
 }
@@ -308,7 +313,7 @@ static void skip_all(void)
 
 static const char markup[] =
     "<column style='flex:1'>"
-    "  <p id=head>The GFOS parts installed, and the newer versions there are.</p>"
+    "  <p id=head>The GFOS parts installed, the newer versions there are, and the parts not installed.</p>"
     "  <list id=list style='flex:1;height:auto' title='Parts installed'></list>"
     "  <p id=status>Not checked yet.</p>"
     "  <row>"
@@ -341,7 +346,7 @@ static void show(void)
         oud_row_text(&rows[i], t, sizeof t);
         olui_list_add(ui, list, NULL, t, NULL);
     }
-    olui_set_text(ui, olui_find(ui, "status"), oud_status(state, offers));
+    olui_set_text(ui, olui_find(ui, "status"), oud_status_more(state, offers, more));
     olui_set_disabled(ui, olui_find(ui, "update"), offers == 0);
     olui_set_disabled(ui, olui_find(ui, "skip"), offers == 0);
     olui_amiga_draw(glue);

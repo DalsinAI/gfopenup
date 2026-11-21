@@ -193,6 +193,39 @@ int main(void)
               && oud_status(-1, 0)[0] == 'T' && !strcmp(oud_status(0, 0), "Not checked yet."), "the status line");
     }
 
+    /* the parts the index has and the disk doesn't are listed, never offered */
+    {
+        static const char man[] = "part\tGFOpenUp\t0.8.31\npart\tGFOpenPlay\t0.1.6\n";
+        static const char idx[] =
+            "GFOpenUpdate 1\n"
+            "part GFOpenPlay 0.1.7-rc1 1 " SHA_A " GFOpenPlay-0.1.7-rc1.lha\n"
+            "part KickstartSet 0.8.31 1 " SHA_A " KickstartSet-0.8.31.lha\n"
+            "part GFOpenDock 0.6.15 1 " SHA_A " GFOpenDock-0.6.15.lha\n"
+            "part GFOpenUp 0.8.32 1 " SHA_A " GFOpenUp-0.8.32.lha\n"
+            "part GFOpenSynth 1.0 1 " SHA_B " GFOpenSynth-1.0.lha\n"
+            "GFOpenUpdate end\n";
+        struct oud_row rows[8];
+        char t[120];
+        int o, m, r;
+        n = parts_of(idx, p, 8);
+        o = oud_offers(p, n, man, (long)strlen(man), NULL, 0);
+        CHECK(o == 2 && !strcmp(p[0].name, "GFOpenPlay") && !strcmp(p[1].name, "GFOpenUp"), "only installed parts offered");
+        m = oud_new_parts(p, o, n, man, (long)strlen(man));
+        CHECK(m == 2 && !strcmp(p[2].name, "GFOpenDock") && !strcmp(p[3].name, "GFOpenSynth") && !p[2].installed[0],
+              "the parts not installed follow the offers, KickstartSet left out");
+        r = oud_rows(man, (long)strlen(man), p, o, rows, 8);
+        r = oud_rows_add_new(rows, r, 8, p + o, m);
+        CHECK(r == 4 && !strcmp(rows[3].name, "GFOpenSynth"), "their rows come last");
+        oud_row_text(&rows[2], t, sizeof t);
+        CHECK(!strcmp(t, "GFOpenDock  not installed: 0.6.15"), "a not-installed row's text");
+        CHECK(oud_rows_add_new(rows, 3, 3, p + o, m) == 3, "no more rows than room");
+        CHECK(oud_new_parts(p, 0, n, NULL, 0) == 0, "no manifest: nothing listed as new");
+        CHECK(!strcmp(oud_status_more(1, 0, 2), "GFOS is up to date. More parts can be added with GFOpenUp's Installer.")
+              && !strcmp(oud_status_more(1, 2, 2), "Updates are ready. More parts can be added with GFOpenUp's Installer.")
+              && !strcmp(oud_status_more(1, 2, 0), "Updates are ready.") && oud_status_more(-1, 0, 3)[0] == 'T',
+              "the status line with more parts");
+    }
+
     /* the notice through GFOpenNotifier */
     {
         char c[200];
