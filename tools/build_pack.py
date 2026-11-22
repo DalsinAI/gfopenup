@@ -75,8 +75,8 @@ a Part file that C/GFOpenUpTool reads:
                         by GFOpenUpTool KICKSET on a machine on the slim ROM, and before one moves to it;
                         left out without --thinsupport
   GFOpenImage/            datatypes: PNG, Targa (TGA), WebP, WebM and music modules (MOD,
-                        MED, XM...) on the 68k, and AVIF, HEIC, SVG, FLAC, MP4, DOCX and more
-                        through GFOpenService (gfopendatatypes)
+                        MED, XM...) and Smacker films on the 68k, and AVIF, HEIC, SVG, FLAC, MP4,
+                        Bink, DOCX and more through GFOpenService (gfopendatatypes)
   GFOpenBlanker/          the screen blanker and its show, Gods and Angels: a choice, off unless picked (gfopenprefs), with
                         DejaVu Sans and Serif for its credits where OS 3.2's CGTriumvirate and CGTimes
                         aren't (FONTS:GFOpenBlanker; --dejavu-serif)
@@ -3109,7 +3109,9 @@ def main() -> int:
     # 68k (Dale, 9 November 2026): the ROM's gfopensound.datatype carries none and sends those formats to
     # media.decode/1 through mitchy.library (the services card); without the card it opens this library, which
     # the pack installs with gfopensound's choice (its CLASS_LIBS), so a disk install always has it.
-    img = Part(top, "GFOpenImage", "0.6", "GFOpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
+    # 0.7: smacker.datatype 47.1, Smacker films (SMK2, SMK4) decoded on the 68k, and the Bink descriptor, which sends
+    # Bink films to gfopenvideo.datatype and media.decode/1 (gfopendatatypes #1, its 0.2-rc1)
+    img = Part(top, "GFOpenImage", "0.7", "GFOpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
     packer = a.opendatatypes / "tools/build_pack.py"
     if packer.is_file():
         pk = ROOT / "build/gfopendatatypes"
