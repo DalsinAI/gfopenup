@@ -3653,7 +3653,8 @@ def main() -> int:
 
     # GFOpenPlay: the media player for every datatype (gfopenmediaplayer).
     # Files can be shift-clicked with it or dropped on its window.
-    op = Part(top, "GFOpenPlay", "0.1.8", "GFOpenPlay: plays everything the datatypes open, with a playlist")
+    op = Part(top, "GFOpenPlay", "0.2.0", "GFOpenPlay: plays everything the datatypes open, with a playlist; films through "
+              "ACMedia (akikoplus.device, the AkikoPlus part) fitted to the window or full screen")
     op.add("Utilities/GFOpenPlay", (a.openamigamediaplayer / "build/os3/GFOpenPlay").read_bytes(), "SYS:Utilities/GFOpenPlay")
     op.add("Utilities/GFOpenPlay.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenPlay.info")
     op.write()
