@@ -540,6 +540,10 @@ def notifier_part(top: Path, repo: Path, icons) -> "Part":
     return nt
 
 
+# GFOpenPlay's icon: its settings, off until the user takes the brackets away
+OPENPLAY_TOOLTYPES = ["(AVDELAY=300)", "(BUTTONS=ICONS)", "(OWNSCREEN)"]
+
+
 def bench_meters(bench: "Part", built: Path) -> None:
     """GFOpenMeters, the desktop's widget (gfopenbench meters/), in the GFOpenBench part, so every Amiga with
     GFOpenBench gets it and an update brings it (Dale, 17 Nov 2026: "open meter is still missing": no pack had
@@ -3653,10 +3657,15 @@ def main() -> int:
 
     # GFOpenPlay: the media player for every datatype (gfopenmediaplayer).
     # Files can be shift-clicked with it or dropped on its window.
-    op = Part(top, "GFOpenPlay", "0.2.0", "GFOpenPlay: plays everything the datatypes open, with a playlist; films through "
-              "ACMedia (akikoplus.device, the AkikoPlus part) fitted to the window or full screen")
+    # Its icon carries AVDELAY, off (in brackets): how many ms a film's pictures wait for its sound, the machine's
+    # own until the user opens it (0.2.1; Dale, 22 Nov 2026: "an option to tweak that in its icon as tooltypes").
+    # The icon holds the user's settings, so it is written only where there is none.
+    op = Part(top, "GFOpenPlay", "0.2.1", "GFOpenPlay: plays everything the datatypes open, with a playlist; films through "
+              "ACMedia (akikoplus.device, the AkikoPlus part) fitted to the window or full screen, the sound kept "
+              "with the pictures (AVDELAY)")
     op.add("Utilities/GFOpenPlay", (a.openamigamediaplayer / "build/os3/GFOpenPlay").read_bytes(), "SYS:Utilities/GFOpenPlay")
-    op.add("Utilities/GFOpenPlay.info", icons.icon(icons.WBTOOL, "install", stack=32768), "SYS:Utilities/GFOpenPlay.info")
+    op.add("Utilities/GFOpenPlay.info", icons.icon(icons.WBTOOL, "install", None, OPENPLAY_TOOLTYPES, stack=32768),
+           "SYS:Utilities/GFOpenPlay.info", default=True)
     op.write()
 
     # GFOpenTitle: the title bar's logo, free memory, clock and settings cog, and its editor (gfopenprefs)
