@@ -21,14 +21,24 @@ gfopendatatypes at or after its pull request #1 (GFOpenDatatypes 0.2-rc1), merge
   Smacker films; in a copy of Instance-32, every frame of six films through `animation.datatype`, and MM7's Bink
   film's 90 frames through `gfopenvideo.datatype`.
 
-## Known
+- **On the GFOpenKick ROM, GFOpenImage's datatypes open from disk.** Until now none did there (Dale, 22 November
+  2026: "need the startup sequence fixed i think"). A class opens its superclass as `datatypes/animation.datatype`
+  (or `picture.datatype`, `sound.datatype`), and on an open-ROM machine none of these was on the disk or found in the
+  ROM by that name. `LIBS:` didn't reach `SYS:Classes` either on a machine whose Startup-Sequence was made before
+  amicradle's 17 November one.
+  - The part puts the GFOpenDatatypes pack's eight system classes (picture, ilbm, sound, 8svx, text, ascii,
+    animation, anim) in `SYS:Classes/DataTypes`, on the GFOpenKick ROM only, and only where none is. Kickstart
+    3.2.3's own classes stay as they are. The library itself still stays out.
+  - Its startup line, on the GFOpenKick ROM only, is `Assign >NIL: LIBS: SYS:Classes ADD`.
+  - The system classes come from gfopendatatypes' `build/library`. A build without it says so, and the part then
+    has none.
 
-- **On the open-ROM machine no datatype class opens from disk**, the part's older ones (cdxl, webm, gfopenvideo...)
-  included. Checked in a copy of Instance-32 on 22 November 2026, after a clean boot:
-  - Its Startup-Sequence assigns `LIBS:` to `SYS:Libs` and adds `GFOSBOOT:Classes` only when there is a GFOSBOOT:
-    volume, so `datatypes/<class>.datatype` is not found in `SYS:Classes/DataTypes`.
-  - A class opens its superclass the same way (`datatypes/animation.datatype`, `datatypes/picture.datatype`), and
-    neither is on the disk. This part leaves the system classes out on purpose (they go with GFOpenLibs).
-  - With both put right by hand (`Assign LIBS: SYS:Libs SYS:Classes` and the GFOpenDatatypes pack's
-    animation.datatype in `SYS:Classes/DataTypes`), cdxl.datatype and smacker.datatype opened. With either one alone,
-    neither did.
+## Tested so far, the GFOpenKick ROM
+
+In a copy of Instance-32 (lab t5-oolite-20261119), from a clean boot each time:
+- As it was: no class opened, cdxl.datatype included (2002, "couldn't open").
+- With only the assign, or only animation.datatype on disk: still none.
+- With the assign in `S:user-startup`'s GFOpenUp block, where this part's startup line goes, and the eight system
+  classes on disk: all 15 classes on the disk opened (PNG, GIF, WebP, Targa, the picture service, sound, WAV, modules,
+  documents, CDXL, Smacker, gfopenvideo, WebM, stream, gzip), and MM7's Smacker film loaded all 41 frames.
+- Not yet: the part itself installed by GFOpenUpTool on such a machine.

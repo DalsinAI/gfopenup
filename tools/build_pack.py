@@ -3110,12 +3110,16 @@ def main() -> int:
     # media.decode/1 through mitchy.library (the services card); without the card it opens this library, which
     # the pack installs with gfopensound's choice (its CLASS_LIBS), so a disk install always has it.
     # 0.7: smacker.datatype 47.1, Smacker films (SMK2, SMK4) decoded on the 68k, and the Bink descriptor, which sends
-    # Bink films to gfopenvideo.datatype and media.decode/1 (gfopendatatypes #1, its 0.2-rc1)
+    # Bink films to gfopenvideo.datatype and media.decode/1 (gfopendatatypes #1, its 0.2-rc1); on the GFOpenKick ROM the
+    # system classes and SYS:Classes in LIBS: (below)
     img = Part(top, "GFOpenImage", "0.7", "GFOpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
     packer = a.opendatatypes / "tools/build_pack.py"
     if packer.is_file():
         pk = ROOT / "build/gfopendatatypes"
-        run([sys.executable, packer, "--no-build", "--out", pk, "--library-out", pk / "no-library",
+        lib_out = a.opendatatypes / "build/library"     # the library's and its system classes' build (its OUT)
+        if not (lib_out / "libs/datatypes.library").is_file():
+            lib_out = pk / "no-library"
+        run([sys.executable, packer, "--no-build", "--out", pk, "--library-out", lib_out,
              "--zlib-out", ROOT / "build/openzlib"])
         man = json.loads((pk / "GFOpenDatatypes.json").read_text())
         for c in man["choices"] + man["always"]:
@@ -3123,6 +3127,20 @@ def main() -> int:
                 name = f["dest"].rsplit("/", 1)[-1]
                 img.add(f["pack"], (pk / "GFOpenDatatypes" / f["pack"]).read_bytes(), f["dest"],
                         own=not f["pack"].startswith("Classes/") or name in ("webp.datatype", "webm.datatype"))
+        # 0.7, on the GFOpenKick ROM only: every class opens its superclass as datatypes/<name>.datatype, and on an
+        # open-ROM machine none is on the disk (picture, animation, sound...) and the ROM offers none by that name, so
+        # no class of this part opened there (a copy of Instance-32, 22 November 2026). The pack's system classes go
+        # where none is; the library itself stays out, as above. A disk whose Startup-Sequence came before LIBS:
+        # reached SYS:Classes (amicradle appliance_fresh.py, 17 November 2026) gets that assign from this part.
+        if man.get("library"):
+            for f in man["library"]["files"]:
+                if f["pack"].startswith("Library/Classes/"):
+                    img.add(f["pack"], (pk / "GFOpenDatatypes" / f["pack"]).read_bytes(), f["dest"], default=True,
+                            cond="when GFOpenKick")
+        else:
+            print(f"GFOpenImage: no system classes for the GFOpenKick ROM ({a.opendatatypes / 'build/library'} has "
+                  "no build): the part's datatypes won't open on an open-ROM machine without them")
+        img.line("when GFOpenKick startup Assign >NIL: LIBS: SYS:Classes ADD")
         # z.library is the Team's GFOpenZlib (the user, 23 October 2026), the same file the GFOffice part carries:
         # gzip.datatype and openpng.datatype open it, so it comes with them too. The pack lists it under "zlib"
         # when it was built (gfopendatatypes builds it from the guest checkout).
