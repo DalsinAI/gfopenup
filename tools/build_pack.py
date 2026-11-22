@@ -2231,6 +2231,18 @@ AKIKOPLUS_FILES = (
     ("Developer/AkikoPlus/include/proto/akikoplus.h", "SYS:Developer/AkikoPlus/include/proto/akikoplus.h"),
     ("Developer/AkikoPlus/sfd/akikoplus_lib.sfd", "SYS:Developer/AkikoPlus/sfd/akikoplus_lib.sfd"),
 )
+# ACMedia on the board (gfosdesign gfos/apps/gfopenplay-films): akikoplus.device, the films and sound a player
+# opens by the file's name and the host decodes (GFOpenPlay, the datatypes); APMTest tries it from the Shell; the
+# MIDI port's device and CAMD driver. Taken when the drawer has them (a drawer built before 22 Nov 2026 has none).
+AKIKOPLUS_DEVICE_FILES = (
+    ("Devs/akikoplus.device", "DEVS:akikoplus.device"),
+    ("Devs/akikomidi.device", "DEVS:akikomidi.device"),
+    ("Devs/Midi/akikoplus", "DEVS:Midi/akikoplus"),
+    ("C/APMTest", "C:APMTest"),
+    ("C/AKMTest", "C:AKMTest"),
+    ("Developer/AkikoPlus/include/devices/akikoplus.h", "SYS:Developer/AkikoPlus/include/devices/akikoplus.h"),
+    ("Developer/AkikoPlus/include/devices/akikomidi.h", "SYS:Developer/AkikoPlus/include/devices/akikomidi.h"),
+)
 
 
 def akikoplus_part(top: Path, src: Path | None) -> Part | None:
@@ -2246,9 +2258,16 @@ def akikoplus_part(top: Path, src: Path | None) -> Part | None:
     data = (src / "Libs/akikoplus.library").read_bytes()
     ak = Part(top, "AkikoPlus", binary_version(data, "akikoplus.library") or "2.0",
               "AkikoPlus: akikoplus.library, the media board's helpers (C2P, swaps, fills, scaling, YUV, colours, "
-              "zlib) on the board when fitted, on the 68k when not; AkikoTest and APTest")
+              "zlib) on the board when fitted, on the 68k when not; akikoplus.device, films and sound decoded "
+              "by the host (ACMedia); AkikoTest, APTest and APMTest")
     for rel, dest in AKIKOPLUS_FILES:
         ak.add(rel, (src / rel).read_bytes(), dest)
+    devices = [(rel, dest) for rel, dest in AKIKOPLUS_DEVICE_FILES if (src / rel).is_file()]
+    if devices and not (src / "Devs/akikoplus.device").is_file():
+        raise SystemExit(f"AkikoPlus: {src} has device files but no Devs/akikoplus.device")
+    for rel, dest in devices:
+        ak.add(rel, (src / rel).read_bytes(), dest)
+    print(f"  AkikoPlus: akikoplus.device {'in' if devices else 'left out (the drawer has no Devs/akikoplus.device)'}")
     ak.write()
     return ak
 
@@ -2812,7 +2831,7 @@ def main() -> int:
     ap.add_argument("--gfopennotifier", type=Path, default=first(DEV / "gfopennotifier", DEV.parent / "gfopennotifier"),
                     help="gfopennotifier's checkout: the GFOpenNotifier part (left out without it)")
     ap.add_argument("--akikoplus", type=Path, default=None,
-                    help="a built AkikoPlus drawer (Libs/akikoplus.library, C/AkikoTest, C/APTest, Developer/AkikoPlus/): "
+                    help="a built AkikoPlus drawer (Libs/akikoplus.library, C/AkikoTest, C/APTest, Developer/AkikoPlus/; Devs/akikoplus.device and the rest of AKIKOPLUS_DEVICE_FILES when built): "
                          "gfosautoconfigboards cards/akikoplus/guest's build; the part is left out without it")
     ap.add_argument("--opengpu-sdk", type=Path, default=None,
                     help="where the GFOpenGPU developer kit is made (or, with --no-build, read): the GFOpenGPUDev part (left out without it)")
