@@ -1683,6 +1683,22 @@ def main() -> int:
               and not any(x.startswith("needs") for x in lines), str(lines))
         bp.check_part_versions(t / "top/Parts")
         check("without --akikoplus the AkikoPlus part is left out", bp.akikoplus_part(t / "top2", None) is None)
+        # with the device (ACMedia: gfopenplay-films): every device file goes in
+        for rel, _ in bp.AKIKOPLUS_DEVICE_FILES:
+            (t / "ak" / rel).parent.mkdir(parents=True, exist_ok=True)
+            (t / "ak" / rel).write_bytes(b"x")
+        bp.akikoplus_part(t / "top3", t / "ak")
+        lines = (t / "top3/Parts/AkikoPlus/Part").read_text(encoding="latin-1").splitlines()
+        check("the AkikoPlus part carries akikoplus.device and APMTest when the drawer has them",
+              'copy "Devs/akikoplus.device" "DEVS:akikoplus.device"' in lines and 'copy "C/APMTest" "C:APMTest"' in lines
+              and sum(1 for x in lines if x.startswith("copy ")) == len(bp.AKIKOPLUS_FILES) + len(bp.AKIKOPLUS_DEVICE_FILES),
+              str(lines))
+        (t / "ak/Devs/akikoplus.device").unlink()
+        try:
+            bp.akikoplus_part(t / "top4", t / "ak")
+            check("device files without akikoplus.device are refused", False)
+        except SystemExit:
+            check("device files without akikoplus.device are refused", True)
     inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
     sv_block = inst[inst.index('(working "Installing GFOpenService")'):inst.index("(if (bitand #parts 8388608)")]
     check("Install-GFOpenUp installs Parts/AkikoPlus with GFOpenService", "INSTALL Parts/AkikoPlus" in sv_block)
