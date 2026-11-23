@@ -77,9 +77,9 @@ def main() -> int:
     check(ap.half_moved([dict(drawer="A", tag="v1.0-rc3", asset="A-1.0-rc1.lha"), dict(drawer="B", tag="v1.0-rc3", asset="B-1.0-RC3.lha"),
                          dict(drawer="C", tag="v1.0-rc4", asset="C-8.0.lha"), dict(drawer="D", tag="v1.0", asset="D-1.0-rc2.lha")]) == ["A"],
           "a file of another candidate than its release's is found; a file or a release that names none is let be")
-    check(by["GFOffice"]["tag"] == "gfoffice-2.0.25-rc92" and by["GFOffice"]["asset"] == "GFOffice-2.0.25-rc92-AmigaOS3.lha"
+    check(by["GFOffice"]["tag"] == "gfoffice-2.0.25-rc93" and by["GFOffice"]["asset"] == "GFOffice-2.0.25-rc93-AmigaOS3.lha"
           and by["DOSBox"]["tag"] == "v0.82.2-amigaos3-rc3" and by["DOSBox"]["asset"] == "dosbox-0.82.2-amigaos3-rc3-68040.lha",
-          "GFOffice is at RC92 and DOSBox at RC3 (GF-45): the newest each has published")
+          "GFOffice is at RC93, the first with Install-Libraries (GF-103), and DOSBox at RC3 (GF-45)")
 
     with tempfile.TemporaryDirectory() as t:
         t = Path(t)
