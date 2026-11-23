@@ -3837,7 +3837,7 @@ def main() -> int:
             if f.is_file():
                 d = f"Utilities/GFOpenMail/{Path(sub).name}/{f.name}"
                 ml.add(d, f.read_bytes(), f"SYS:{d}")
-    for name, src in (("LICENSE", "LICENSE"), ("GFOpenMail.readme", "gfopenmail.readme"), ("LICENCE.Boxie", "package/icons/LICENCE.Boxie")):
+    for name, src in (("LICENSE", "LICENSE"), ("GFOpenMail.readme", "gfopenmail.readme")):
         if (a.openamigamail / src).is_file():
             ml.add(f"Utilities/GFOpenMail/{name}", (a.openamigamail / src).read_bytes(), f"SYS:Utilities/GFOpenMail/{name}")
     ml.add("Utilities/GFOpenMail.info", (mi / "Drawer.info").read_bytes(), "SYS:Utilities/GFOpenMail.info", own=True)

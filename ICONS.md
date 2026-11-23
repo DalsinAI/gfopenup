@@ -137,7 +137,7 @@ own kit (`tools/gstyle.py`), from the pilot on the "GFOpenLook default theme
 candidates" canvas.
 
 The style until 8 October 2026, kept for the record: AmigaOS 4.1's, in our own artwork, so the icons sat with the
-modern icon set (amicradle's Boxie and OS4 pack):
+modern icon set (the OS4 pack):
 
 - **2:1 isometric.** Objects stand on the ground, seen from the front left;
   x runs right-down, y left-down, z up.
@@ -150,7 +150,7 @@ modern icon set (amicradle's Boxie and OS4 pack):
 - **The palette** is in `tools/open_icons_art.py` (BLUE, TEAL, ORANGE, GREEN,
   RED, GOLD, PURPLE, PAPER, GREY, DARK, INK). Use it before inventing a new
   colour.
-- **Drawers of our own** are Boxie's blue filing cabinet with the app's own
+- **Drawers of our own** were a blue filing cabinet with the app's own
   icon as a badge at its foot.
 - **Both frames are cropped and scaled alike,** so only the moving part
   moves. `frames()` in the drawing script does this.
@@ -259,7 +259,7 @@ remove them and use ours"), in place of AROS's Gorilla set, which GFOpenUp
   GFOpenWrite, GFOpenDemos, GFOpenGPU-SDK, Developer, Docs) are made as GFOpenIcons
   look B drawers with their program's motif at pack-build time
   (`own_drawers`, after `open_icons()`), in place of the Gorilla-era
-  `drawer-NAME` pictures and Boxie's blue drawer; each keeps its window and
+  `drawer-NAME` pictures; each keeps its window and
   place. The apps' own animated icons (section 1) are unchanged.
 - **Not the default icons or the volumes.** The GFOpenKick ROM's icon.library
   has its own (RAM, hard disk, floppy, CD, RAD, card, Kickstart, drawer,
@@ -303,8 +303,7 @@ On 8 October 2026 every row that is an icon was drawn in the house style
 draws each from a recipe of things in `tools/gvocab.py` (a page, a drawer,
 a globe, about 170 of them, each an icon of its own or a badge on another),
 both frames, and writes them as PNG icons for AmiCradle's icon library
-(`resources/icons/collections/openup-gorilla-style`, rank 3, so the new icon
-set picks them before Boxie's). The `Library` column says where each went.
+(`resources/icons/collections/openup-gorilla-style`, rank 3). The `Library` column says where each went.
 The title bar glyphs and pointers are drawn by GFOpenLook and GFOpenWindows, not
 as icons; four situations (the selected frame, an AppIcon, Leave Out, the
 dock's dot) are not pictures of their own.
