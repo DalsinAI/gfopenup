@@ -29,7 +29,6 @@ credits its own third-party work.
 
 ## Added at build time, not committed
 
-- **Boxie icons** (Damir Šijaković, MIT): the pack's drawer icon is Boxie's OS 3.2 drawer, and its `LICENCE` ships in the pack as `LICENCE.Boxie`.
 
 Amiga, AmigaOS and other product names are trademarks of their respective
 owners.
