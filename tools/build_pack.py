@@ -586,33 +586,33 @@ def icon_maker(openamigaprint: Path):
 
 def os32_icons(oap: Path, icons_mod, jobs: list[tuple[Path, str | None]]) -> None:
     """Rewrites classic icons as OS 3.2-style ones (OS 3.5 colour icons with
-    the classic picture as fallback), as gfopenprint's package does: art
-    from its icon_art, written by ACBuild's amiga-icon.js; None means a drawer
-    (Boxie's OS 3.2 drawer, MIT)."""
-    import tempfile
-    drawer = icons_mod.BOXIE / "os3" / "containers" / "drawer-blue.info"
-    if not icons_mod.ACBUILD_ICON_JS.is_file() or not drawer.is_file() or not shutil.which("node"):
-        raise RuntimeError("needs node, ACBuild's amiga-icon.js and the Boxie set")
+    the classic picture as fallback), as gfopenprint's package does, in Python:
+    art from gfopenprint's icon_art (or a picture of the pack's own), written by
+    AmiCradle's amiga_icon.py; None means a drawer, our own Soft 3D folder (Dale,
+    23 November 2026: "soft 3d our own look on design"; Boxie is retired)."""
+    amiga_icon, soft3d = icons_mod.icon_tools()
     sys.path.insert(0, str(oap / "tools"))
     import icon_art
-    with tempfile.TemporaryDirectory() as tmp:
-        spec = []
-        for info, art in jobs:
-            if art is None:
-                spec.append({"info": str(info), "from": str(drawer)})
-                continue
-            if callable(art):                       # a picture of the pack's own
-                rgba = Path(tmp) / f"{art.__name__}.rgba"
-                rgba.write_bytes(art())
-                spec.append({"info": str(info), "rgba": str(rgba), "w": icon_art.W, "h": icon_art.H})
-                continue
-            rgba = Path(tmp) / f"{art}.rgba"
-            if not rgba.exists():
-                rgba.write_bytes(icon_art.draw(art))
-            spec.append({"info": str(info), "rgba": str(rgba), "w": icon_art.W, "h": icon_art.H})
-        (Path(tmp) / "jobs.json").write_text(json.dumps(spec))
-        subprocess.run(["node", str(oap / "tools" / "os32_icons.js"), str(icons_mod.ACBUILD_ICON_JS), str(Path(tmp) / "jobs.json")],
-                       check=True, stdout=subprocess.DEVNULL)
+
+    def two(w: int, h: int, rest: bytes, chosen: bytes) -> list[tuple[int, int, bytes]]:
+        return [(w, h, amiga_icon.dither_rgb565(w, h, rest)), (w, h, amiga_icon.dither_rgb565(w, h, chosen))]
+
+    rest, chosen = (soft3d.frames("drawer", icons_mod.DRAWER_SIZE, c).convert("RGBA") for c in (False, True))
+    folder = two(rest.width, rest.height, rest.tobytes(), chosen.tobytes())
+    drawn: dict = {}
+    for info, art in jobs:
+        if art is None:
+            pics = folder
+        else:
+            if art not in drawn:
+                rgba = art() if callable(art) else icon_art.draw(art)   # a picture of the pack's own, or icon_art's
+                drawn[art] = two(icon_art.W, icon_art.H, rgba, amiga_icon.glow_selected(icon_art.W, icon_art.H, rgba))
+            pics = drawn[art]
+        icon = amiga_icon.read_icon(Path(info).read_bytes())
+        meta = {"type": icon["type"], "defaultTool": icon.get("defaultTool"), "toolTypes": icon.get("toolTypes") or [],
+                "toolWindow": icon.get("toolWindow"), "stack": icon.get("stack") or 4096,
+                "x": amiga_icon.NO_POSITION, "y": amiga_icon.NO_POSITION, "drawer": icon.get("drawer")}
+        Path(info).write_bytes(amiga_icon.write_os35(meta, pics))
 
 
 OPEN_ART = ROOT / "icons" / "open"     # the Open apps' pictures, 64 x 64 (tools/open_icons_art.py draws them)
@@ -1043,7 +1043,8 @@ def build_parts(a):
     # has no SetRexxVar, which GFOpenView calls); IPPS through GFOpenTLS, whose headers gfopenprint carries
     p = a.openamigaprint
     cc16 = Path(gcc16_root) / "prefix/bin/m68k-amigaos-gcc"
-    print_env = dict(os.environ, AMIGA_CC=str(cc16), PATH=f"{cc16.parent}:{os.environ['PATH']}")
+    print_env = dict(os.environ, AMIGA_CC=str(cc16), PATH=f"{cc16.parent}:{os.environ['PATH']}",
+                     AMICRADLE=str(a.amigachrome), GFOPENUP=str(ROOT))   # its icons: amiga_icon.py, the Soft 3D folder
     for script in ("build-amiga.sh", "build-browser.sh", "build-viewer.sh"):
         run(["sh", p / script], cwd=p, env=print_env)
     run([sys.executable, p / "tools/make_package.py", "--out", p / "build/package"], cwd=p, env=print_env)
@@ -2890,6 +2891,7 @@ def main() -> int:
                              "repositories' part.yml, docs/design/PARTS-ON-MERGE.md):\n  " + "\n  ".join(cache.missing))
     cache.commits(a.out / "GFOpenUp-commits.tsv")
     icons = icon_maker(a.openamigaprint)
+    icons.AMICRADLE, icons.GFOPENUP = Path(a.amigachrome), ROOT    # the GlowIcon writer and the Soft 3D folder
     date = time.strftime("%d.%m.%Y").lstrip("0").replace(".0", ".")
     top = a.out / "GFOpenUp"
     if top.exists():
@@ -3920,7 +3922,6 @@ def main() -> int:
                     + ([(oin.dir / "Utilities/GFOpenUp/Docs.info", None)]
                        + [(oin.dir / f"Utilities/GFOpenUp/Docs/{n}.info", "page") for n in ("GFOpenInput.txt", "Design-GFOpenInput.txt", "Gamepads.txt")]
                        if oin else []))
-        put("LICENCE.Boxie", (icons.BOXIE / "LICENCE").read_bytes())   # the drawer icon is Boxie's (MIT)
     except Exception as e:                  # never carry on with the classic icons: the pack's look is wrong without these
         raise SystemExit(f"the OS 3.2-style icons weren't made: {e!r}")
     try:
@@ -3961,7 +3962,7 @@ def main() -> int:
         raise SystemExit(f"the Open apps' icons weren't made: {e!r}")
     # GFOpenUp's own drawers as the Soft 3D folder with their program's mark (Dale, 17 November 2026: "we should
     # redo all the folder icons"; look B drawers from W78, 18 October 2026), over the Gorilla-era drawer-NAME and
-    # Boxie drawers above; each keeps its window and place. The apps' own animated icons stay as ICONS.md section 1 has them.
+    # plain Soft 3D drawers above; each keeps its window and place. The apps' own animated icons stay as ICONS.md section 1 has them.
     if not a.no_openicons:
         import openicons_part
         n = openicons_part.own_drawers(a.guest, [a.out / "GFOpenUp.info", core.dir / "Utilities/GFOpenUp.info", opp.dir / "Preferences.info",

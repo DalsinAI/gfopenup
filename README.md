@@ -104,9 +104,9 @@ It needs:
   `--amicradle`, `--guest`, `--openamigaprint`, `--opengadtools` and the
   other options (`python3 tools/build_pack.py --help`). Some of those
   repositories are not public yet.
-- The icon writer: `ACBUILD_ICON_JS=<amicradle>/launcher/acbuild-tools/amiga-icon.js`
-  and `BOXIE_ICONS=<amicradle>/resources/icons/collections/boxie`, when
-  AmiCradle isn't installed on the build machine.
+- The icons are written in Python: AmiCradle's `scripts/icons/amiga_icon.py`
+  (`--amigachrome`) and this repository's Soft 3D drawings; no node, no
+  outside icon set.
 
 `tests/` holds the host-side checks. `DESIGN.md` is the design, and
 `ICONS.md` covers the icons. Every build, pack, installer and port ships icons in
