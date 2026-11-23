@@ -41,3 +41,5 @@ jobs:
         run: python3 tests/test_publish_updates.py
       - name: our programs' Soft 3D icons (tools/soft3d_programs_art.py)
         run: python3 tests/test_soft3d_programs.py
+      - name: GFAPT's Aminet package index, gfapt.db (tools/gfapt_bootstrap.py)
+        run: python3 tests/test_gfapt_bootstrap.py

@@ -34,7 +34,7 @@ icons are GFOpenIcons look B already, and GFOpenUpTool OLDLOOK takes those files
 and RECONCILE's Prefs/Classic; AmiCradle's Apps, Games and Demos on either
 volume), and own_drawers(), which build_pack.py runs on GFOpenUp's own drawer
 icons (GFOpenUp, GFOpenPrint, GFOpenWrite, GFOpenDemos, Developer...) so they are look
-B drawers with their program's motif, not the Gorilla-era or Boxie drawers.
+B drawers with their program's motif, not the Gorilla-era drawers.
 
 0.5 (Dale, 17 November 2026: "we should redo all the folder icons"): every drawer the part writes is the Soft 3D
 folder (tools/soft3d_kinds_art.py), a named one with its motif's mark on the front (tools/soft3d_motifs.py):
@@ -113,7 +113,7 @@ NAMED_DRAWERS = {
 
 # GFOpenUp's own drawers (the pack's, ICONS.md section 1): the Soft 3D folder with the program's mark on its front
 # (Dale, 17 November 2026: "we should redo all the folder icons"; tools/soft3d_motifs.py). From 0.8.4 they were
-# GFOpenIcons look B drawers, before that the Gorilla-era drawer with a badge (drawer-NAME) or Boxie's blue drawer.
+# GFOpenIcons look B drawers, before that the Gorilla-era drawer with a badge (drawer-NAME).
 OWN_DRAWERS = {
     "GFOpenUp": "install", "GFOpenPrint": "printer", "GFOpenWrite": "pages", "OpenBrowser": "globe",
     "GFOpenDemos": "film", "GFOpenGPU-SDK": "cube", "Developer": "code", "Docs": "page", "GFOpenFTP": "swap",
