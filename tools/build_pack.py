@@ -821,6 +821,8 @@ def build_parts(a):
     # GFOpenNotifier (gfopennotifier): pop-up notices for ARexx scripts, Ranchero's and Ringhio's interface
     if getattr(a, "gfopennotifier", None):
         run(["sh", a.gfopennotifier / "build.sh", a.gfopennotifier / "build/os3"], env=dict(env, STOVE=str(STOVE)))
+    # GFOpenApt, C:apt: GFOpenUpdate's index, fetch and install from the Shell (docs/design/GFOPENAPT.md)
+    run(["sh", ROOT / "src/openapt/build.sh", ROOT / "build/os3/GFOpenApt"], env=dict(os.environ, OS32_GCC16=gcc16_root))
     # GFOpenUpdate, the commodity that offers GFOS's updates, its window GFOpenLayout UI (docs/design/GFOPENUPDATE.md)
     run(["sh", ROOT / "src/openupdate/build.sh", ROOT / "build/os3/GFOpenUpdate"],
         env=dict(os.environ, OS32_GCC16=gcc16_root, OLAYOUT=str(a.openamigalayout), OGT=str(a.opengadtools)))
@@ -2933,6 +2935,10 @@ def main() -> int:
     core.add("WBStartup/GFOpenUpdate", (ROOT / "build/os3/GFOpenUpdate").read_bytes(), "SYS:WBStartup/GFOpenUpdate")
     core.add("WBStartup/GFOpenUpdate.info", icons.icon(icons.WBTOOL, "install", None, UPDATE_TOOLTYPES, stack=32768),
              "SYS:WBStartup/GFOpenUpdate.info", default=True)
+    # C:apt (Dale, 23 Nov 2026: "amiga version of apt", "c: command", "needs the repo list"): GFOpenUpdate from the
+    # Shell. The repo list is the user's once it is there, so it is written only where there is none.
+    core.add("C/apt", (ROOT / "build/os3/GFOpenApt").read_bytes(), "SYS:C/apt", own=True)   # never over another program's apt
+    core.add("S/apt.sources", (ROOT / "pack/apt.sources").read_bytes(), "S:apt.sources", default=True)
     # AmigaOS 3.2.3's own icons and their default tools (names and tool strings): FIXTOOLS puts back the ones
     # GFOpenUp 0.6.14 to 0.7.0 changed to GFOpenView by mistake, on the 0.7.1 upgrade and on UNINSTALL
     core.add("StockDefaultTools", (ROOT / "pack/StockDefaultTools").read_bytes(), "ENVARC:GFOpenAmiga/StockDefaultTools")

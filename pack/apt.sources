@@ -1,0 +1,40 @@
+; GFOS's repo list, read by C:apt (docs/design/GFOPENAPT.md). It is S:apt.sources, and yours to change.
+;   github <owner>/<repo> <tag>   a release whose files include GFOpenUpdate.index
+;   github <owner>/<repo>         a repository's newest release, the same file on it
+;   index <address>               an index anywhere: GFOpenUpdate's form, or the software store's
+;   off <any of those>            listed, not read
+; "apt update" reads them; "apt sources" shows how each went.
+; Copyright (c) 2026 AmiCradle Team. MIT licence.
+
+; GFOpenUp's own parts: the index GFOpenUpdate reads
+github DalsinAI/gfopenup updates
+
+; The GFOS software store's catalogue (amigagfosports/gfosdistribution)
+index https://raw.githubusercontent.com/amigagfosports/gfosdistribution/main/software/index.txt
+
+; The parts that have releases of their own (gfopenup's parts.lock). Each is off until its releases carry
+; GFOpenUpdate.index and the part's archive beside it; until then the part comes in GFOpenUp's index above.
+off github DalsinAI/acgame
+off github DalsinAI/gfopensynth
+off github DalsinAI/gfopenallegro
+
+; Our applications that have releases of their own (gfopenup's apps.lock). Off for the same reason.
+off github DalsinAI/gfopenbrowser
+off github DalsinAI/gfoffice
+off github DalsinAI/GFOpenMakerSuite
+off github DalsinAI/gfopendraw
+off github DalsinAI/gfopenasm
+off github DalsinAI/amigaclisp
+off github DalsinAI/gfamigaamule
+off github DalsinAI/gfamigafilezilla
+off github DalsinAI/gfamiga4pane
+off github DalsinAI/gfamigacodeblocks
+off github DalsinAI/gfamigafreefilesync
+off github DalsinAI/gfamigawxmaxima
+off github DalsinAI/gfamigardp
+off github DalsinAI/gfamigaaudacity
+off github DalsinAI/gfamigawxhexeditor
+off github DalsinAI/gfamigagolly
+off github DalsinAI/gfamigaopencpn
+off github DalsinAI/gfamigakicad
+off github DalsinAI/amigadosbox

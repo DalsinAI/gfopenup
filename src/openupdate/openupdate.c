@@ -52,6 +52,7 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #include "../openupdate.h"
 #include "../openupdate_sha256.h"
+#include "../openupdate_amiga.h"    /* shared with C:apt (src/openapt/openapt.c) */
 
 #define NAME "GFOpenUpdate"
 #define VERSION_TEXT "0.2"
@@ -87,26 +88,10 @@ static long now_seconds(void)
 }
 
 /* A whole file into a new buffer (NUL after it), its length in *len; NULL when there is none or it is over
- * MAX_TEXT (GFOpenUpTool's manifest is over 120 KB on a full install). */
+ * MAX_TEXT (src/openupdate_amiga.h). */
 static char *read_file(const char *path, long *len)
 {
-    BPTR fh = Open((STRPTR)path, MODE_OLDFILE);
-    struct FileInfoBlock *fib;
-    char *buf = NULL;
-    long size = -1, n;
-    *len = 0;
-    if (!fh) return NULL;
-    if ((fib = AllocDosObject(DOS_FIB, NULL))) {
-        if (ExamineFH(fh, fib)) size = fib->fib_Size;
-        FreeDosObject(DOS_FIB, fib);
-    }
-    if (size < 0 || size > MAX_TEXT || !(buf = AllocVec(size + 1, MEMF_ANY))) { Close(fh); return NULL; }
-    n = Read(fh, buf, size);
-    Close(fh);
-    if (n != size) { FreeVec(buf); return NULL; }
-    buf[n] = 0;
-    *len = n;
-    return buf;
+    return oud_read_file(path, len, MAX_TEXT);
 }
 
 static int write_file(const char *path, const char *text, long len)
@@ -121,12 +106,7 @@ static int write_file(const char *path, const char *text, long len)
 
 static LONG run(const char *cmd)
 {
-    BPTR nil = Open((STRPTR)"NIL:", MODE_NEWFILE);
-    LONG rc;
-    if (!nil) return -1;
-    rc = SystemTags((STRPTR)cmd, SYS_Input, 0, SYS_Output, nil, NP_StackSize, 32768, TAG_DONE);
-    Close(nil);
-    return rc;
+    return oud_run(cmd, 0);
 }
 
 static void clear_work(void)
@@ -143,66 +123,25 @@ static LONG ask(const char *body, const char *gadgets, ULONG arg)
 
 static int network_up(void)
 {
-    struct Library *b = OpenLibrary((STRPTR)"bsdsocket.library", 4);
-    if (!b) return 0;
-    CloseLibrary(b);
-    return 1;
+    return oud_network_up();
 }
 
 /* ---- one part: fetch, check, unpack, install ------------------------------------------------------------- */
 
-/* The part's drawer in what was unpacked: the one drawer there ("<drawer>/..." in the archive, by the part's own
- * drawer name, which for a part inside another's, rexx in GFOpenLibs, isn't the part's name). 1, else 0. */
-static int part_drawer(const char *where, char *out, int size)
-{
-    BPTR lock = Lock((STRPTR)where, ACCESS_READ);
-    struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
-    int found = 0, many = 0;
-    if (lock && fib && Examine(lock, fib)) {
-        while (ExNext(lock, fib)) {
-            if (fib->fib_DirEntryType <= 0) continue;
-            if (found) { many = 1; continue; }
-            if ((int)strlen((const char *)fib->fib_FileName) < size) { strcpy(out, (const char *)fib->fib_FileName); found = 1; }
-        }
-    }
-    if (fib) FreeDosObject(DOS_FIB, fib);
-    if (lock) UnLock(lock);
-    return found && !many;
-}
-
-/* 0 when installed; else why not into why. */
+/* 0 when installed; else why not into why. The steps are src/openupdate_amiga.h's, which C:apt shares. */
 static int update_part(const struct oud_part *p, char *why, int size)
 {
-    char url[300], path[160], cmd[600], drawer[80];
-    struct oud_sha s;
-    char got[65];
-    unsigned char *buf;
-    long total = 0, n;
-    BPTR fh;
+    char url[300], path[160], drawer[80];
+    const char *w;
 
     strcpy(path, OUD_WORK "/");
     strcat(path, p->file);
-    if (!oud_url(set.url, p->file, url, sizeof url) || !oud_fetch_cmd(url, path, cmd, sizeof cmd)) {
-        strncpy(why, "its address won't fit", size); return 1;
-    }
-    if (run(cmd) != 0) { strncpy(why, "it couldn't be fetched", size); return 1; }
-    if (!(fh = Open((STRPTR)path, MODE_OLDFILE))) { strncpy(why, "it couldn't be fetched", size); return 1; }
-    if (!(buf = AllocVec(8192, MEMF_ANY))) { Close(fh); strncpy(why, "no memory", size); return 1; }
-    oud_sha_start(&s);
-    while ((n = Read(fh, buf, 8192)) > 0) { oud_sha_add(&s, buf, n); total += n; }
-    Close(fh);
-    FreeVec(buf);
-    oud_sha_end(&s, got);
-    if (n < 0 || total != p->bytes) { strncpy(why, "its size is wrong", size); return 1; }
-    if (!oud_sha_same(got, p->sha256)) { strncpy(why, "its SHA-256 is wrong", size); return 1; }
-
-    run("C:Delete >NIL: \"" UNPACKED "\" ALL QUIET FORCE");
-    if (!oud_unpack_cmd(path, UNPACKED, cmd, sizeof cmd) || run(cmd) != 0) { strncpy(why, "it couldn't be unpacked", size); return 1; }
-    if (!part_drawer(UNPACKED, drawer, sizeof drawer)) { strncpy(why, "its archive holds no part", size); return 1; }
-    if (!oud_install_cmd(UNPACKED, drawer, cmd, sizeof cmd) || run(cmd) > RETURN_WARN) {
-        strncpy(why, "GFOpenUpTool INSTALL failed (T:GFOpenUp.log)", size); return 1;
-    }
-    return 0;
+    if (!oud_url(set.url, p->file, url, sizeof url)) w = "its address won't fit";
+    else if (!(w = oud_fetch_checked(url, path, p->bytes, p->sha256))
+             && !(w = oud_unpack_part(path, UNPACKED, drawer, sizeof drawer)))
+        w = oud_install_part(UNPACKED, drawer, 0, NULL);
+    if (w) strncpy(why, w, size);
+    return w != NULL;
 }
 
 /* ---- a check, and what the window shows ----------------------------------------------------------------- */
