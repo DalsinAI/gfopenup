@@ -77,9 +77,9 @@ def main() -> int:
     check(ap.half_moved([dict(drawer="A", tag="v1.0-rc3", asset="A-1.0-rc1.lha"), dict(drawer="B", tag="v1.0-rc3", asset="B-1.0-RC3.lha"),
                          dict(drawer="C", tag="v1.0-rc4", asset="C-8.0.lha"), dict(drawer="D", tag="v1.0", asset="D-1.0-rc2.lha")]) == ["A"],
           "a file of another candidate than its release's is found; a file or a release that names none is let be")
-    check(by["GFOffice"]["tag"] == "gfoffice-2.0.25-rc92" and by["GFOffice"]["asset"] == "GFOffice-2.0.25-rc92-AmigaOS3.lha"
+    check(by["GFOffice"]["tag"] == "gfoffice-2.0.25-rc93" and by["GFOffice"]["asset"] == "GFOffice-2.0.25-rc93-AmigaOS3.lha"
           and by["DOSBox"]["tag"] == "v0.82.2-amigaos3-rc3" and by["DOSBox"]["asset"] == "dosbox-0.82.2-amigaos3-rc3-68040.lha",
-          "GFOffice is at RC92 and DOSBox at RC3 (GF-45): the newest each has published")
+          "GFOffice is at RC93, the first with Install-Libraries (GF-103), and DOSBox at RC3 (GF-45)")
 
     with tempfile.TemporaryDirectory() as t:
         t = Path(t)
@@ -182,8 +182,64 @@ def main() -> int:
               and script.index("EmulationDrawers") < script.index("AppOne") < script.index("AppTwoApp") and "FailAt 21" in script,
               "the install script installs each part with GFOpenUpTool, in the lock's order")
         listing = (top / "APPS-LIST.txt").read_text().splitlines()
-        check(len(listing) == 3 and rows[0]["sha256"] in listing[1] and "\tInstall" in listing[1], "APPS-LIST.txt has a row an app")
+        check(len(listing) == 3 and rows[0]["sha256"] in listing[1] and "\tInstall\t" in listing[1], "APPS-LIST.txt has a row an app")
         check(not (t / "out" / "unpacked" / "one").exists(), "the unpacked copies are cleared away")
+
+        # GF-103: a release that carries Install-Libraries gets its libraries into LIBS: through a part of their own
+        check(all(r["libpart"] == "" and r["libs"] == 0 for r in rows) and not (top / "Parts/AppTwoAppLibs").exists()
+              and "LIBS:" not in two, "a release with no Install-Libraries gets no libraries part, whatever library drawer it has")
+        suite = t / "suite"
+        (suite / "library").mkdir(parents=True)
+        (suite / "Write").write_bytes(ap.HUNK_HEADER + b"code")
+        for lib in ("gfopenlayout", "sqlite", "gfopendraw", "owfspell", "private"):
+            (suite / "library" / f"{lib}.library").write_bytes(lib.encode())
+        (suite / "Install-Libraries").write_text(
+            "; Install-Libraries: copies the four libraries into LIBS:\nFailAt 21\n"
+            "If NOT EXISTS library/gfopendraw.library\n    Quit 10\nEndIf\n"
+            "Copy library/gfopenlayout.library LIBS: CLONE\nIf WARN\n    Echo \"gfopenlayout.library was not copied.\"\nEndIf\n"
+            "Copy library/sqlite.library LIBS: CLONE\ncopy Library/GFOpenDraw.library LIBS: CLONE\n"
+            'Copy "library/owfspell.library" "LIBS:"\nCopy library/private.library RAM: CLONE\n; Copy library/private.library LIBS:\n')
+        office = dict(repo="gfoffice", tag="gfoffice-2.0.25-rc93", asset="a", drawer="GFOffice", mark="pages", title="", home="Work")
+        check(ap.system_libraries(suite) == [f"library/{n}.library" for n in ("gfopenlayout", "sqlite", "gfopendraw", "owfspell")],
+              "Install-Libraries' own Copy lines to LIBS: say which libraries go there, in its order, whatever their case; "
+              "a copy elsewhere and a comment say nothing")
+        row = ap.app_part(t / "sp", office, suite, icon)
+        lp = t / "sp" / "Parts" / "AppGFOfficeLibs"
+        ll = (lp / "Part").read_text().splitlines()
+        check(row["libpart"] == "AppGFOfficeLibs" and row["libs"] == 4 and ll[0] == "part AppGFOfficeLibs 2.0.25"
+              and ll[2:] == [f'when WorkDrive copy "Files/{n}.library" "LIBS:{n}.library"' for n in ("gfopenlayout", "sqlite", "gfopendraw", "owfspell")],
+              "the libraries part copies each named library to LIBS:, where the application itself goes in")
+        check(sorted(f.name for f in (lp / "Files").iterdir()) == sorted(f"{n}.library" for n in ("gfopenlayout", "sqlite", "gfopendraw", "owfspell"))
+              and (lp / "Files/sqlite.library").read_bytes() == b"sqlite",
+              "the part holds those libraries and no other")
+        ol = (t / "sp" / "Parts" / "AppGFOffice" / "Part").read_text()
+        check("LIBS:" not in ol and 'when WorkDrive copy "Files/library/sqlite.library" "Work:GFOffice/library/sqlite.library"' in ol,
+              "the application's own part is as before: its drawer keeps the libraries, and it has no LIBS: line")
+        emu_app = dict(office, drawer="Thing", home="Emulation")
+        ap.app_part(t / "se", emu_app, suite, icon)
+        check(all(l.startswith("when EmulationDrive copy ") for l in (t / "se/Parts/AppThingLibs/Part").read_text().splitlines()[2:]),
+              "an Emulation drive application's libraries go in where that drive is")
+        slock = t / "suite.lock"
+        slock.write_text("first v1.0 First.zip First globe\ngfoffice gfoffice-2.0.25-rc93 Suite.zip GFOffice pages\n")
+        zipped(t / "sassets" / "first" / "First.zip", {"First/First": b"program"})
+        zipped(t / "sassets" / "gfoffice" / "Suite.zip", {"GFOffice/" + f.relative_to(suite).as_posix(): f.read_bytes()
+                                                           for f in suite.rglob("*") if f.is_file()})
+        srows = ap.build(slock, t / "sassets", t / "sout", icon=icon, check_private=lambda top: [], face=None)
+        sscript = (t / "sout/GFOpenApps/Install-GFOpenApps").read_text()
+        check(sscript.index('Parts/AppFirst"') < sscript.index('Parts/AppGFOfficeLibs"') < sscript.index('Parts/AppGFOffice"')
+              and sscript.count("GFOpenUpTool INSTALL") == 4,
+              "the install script installs an application's libraries just before the application")
+        slist = (t / "sout/GFOpenApps/APPS-LIST.txt").read_text().splitlines()
+        check(slist[0].endswith("\tlibraries to LIBS:") and slist[1].endswith("\t0") and slist[2].endswith("\t4")
+              and [r["libs"] for r in srows] == [0, 4], "APPS-LIST.txt says how many libraries each app puts in LIBS:")
+        (suite / "Install-Libraries").write_text("Copy library/missing.library LIBS: CLONE\n")
+        refused("an Install-Libraries that names a library the release doesn't hold stops the build", lambda: ap.system_libraries(suite))
+        (suite / "Install-Libraries").write_text("Echo nothing\n")
+        refused("an Install-Libraries that copies nothing to LIBS: stops the build", lambda: ap.system_libraries(suite))
+        (suite / "other").mkdir()
+        (suite / "other" / "sqlite.library").write_bytes(b"twin")
+        (suite / "Install-Libraries").write_text("Copy library/sqlite.library LIBS:\nCopy other/sqlite.library LIBS:\n")
+        refused("two libraries of one name for LIBS: stop the build", lambda: ap.system_libraries(suite))
 
         refused("a file held back from release stops the build",
                 lambda: ap.build(lock, assets, t / "out", icon=icon, check_private=lambda top: ["Parts/AppOne/Files/One: held"], face=None))

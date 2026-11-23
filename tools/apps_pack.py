@@ -14,6 +14,8 @@ parts beside GFOpenUp's own, so the GFOpenUp pack stays its size:
                                             picture of its kind and no place of its own, and a program at the
                                             drawer's top with no icon gets the tool icon: each drawer opens with
                                             one style of icon, set out in rows by Workbench
+    GFOpenApps/Parts/App<Drawer>Libs/Part   only for a release that carries Install-Libraries: the libraries that
+                                            script copies to LIBS:, as "copy" lines of a part of their own (GF-103)
     GFOpenApps/Install-GFOpenApps           Execute Work:GFOpenApps/Install-GFOpenApps (GFOpenUp must be installed)
     GFOpenApps/APPS-LIST.txt                each app: part, release, file, sha256, files, bytes, its own installer
 
@@ -23,6 +25,12 @@ Emulation drive ("when EmulationDrive"), and the part EmulationDrawers gives tha
 and Optical Media drawers, each with a ReadMe and nothing else. GFOpenUpTool records each part, so UPDATE and REMOVE work as for any part. An
 application that carries an installer of its own (Install, Install-<name>) keeps it in its drawer, and APPS-LIST.txt
 names it: a part has no line that runs a program, so that installer is still the user's to run.
+
+One installer is read, not run: Install-Libraries (gfoffice's, 23 Nov 2026). The libraries it copies to LIBS: go
+there through a part, App<Drawer>Libs, installed just before the application's own, so the programs find them
+without the user running anything (GF-103: GFOffice's programs open gfopenlayout, sqlite, gfopendraw and owfspell
+by name, and OpenUp left them in Work:GFOffice/library). GFOpenUpTool's copy never puts an older file over a newer
+one, and the libraries are a part of their own, so taking the application out leaves LIBS: as it is.
 
 Copyright (c) 2026 AmiCradle Team. MIT licence."""
 from __future__ import annotations
@@ -47,6 +55,7 @@ OWNER = "DalsinAI"
 API = "https://api.github.com"
 PACK = "GFOpenApps"
 INSTALL = "Install-GFOpenApps"
+LIBS_SCRIPT = "Install-Libraries"   # a release's own script whose "Copy <file> LIBS:" lines say which libraries go there
 HOME = "Work"                 # the volume: the standard build's DH1:, which is for applications
 HOMES = {"Work": "WorkDrive", "Emulation": "EmulationDrive"}       # a volume an app may live on, and its condition
 # Emulation:'s own drawers (Dale, 17 Nov 2026: "make sure our own emulaton applications are in emulation, with two
@@ -165,6 +174,53 @@ def own_installer(root: Path) -> str:
     return ""
 
 
+def system_libraries(root: Path) -> list[str]:
+    """The libraries a release's own Install-Libraries copies to LIBS:, as paths in the release (its "Copy <file>
+    LIBS:" lines; nothing else of the script is read, and it is never run). None when the release has no such
+    script. A script that names no library, or one the release doesn't hold, stops the build."""
+    script = root / LIBS_SCRIPT
+    if not script.is_file():
+        return []
+    have = {f.relative_to(root).as_posix().lower(): f.relative_to(root).as_posix() for f in root.rglob("*") if f.is_file()}
+    rels = []
+    for line in script.read_text(encoding="latin-1").splitlines():
+        m = re.match(r'\s*copy\s+"?([^"\s;]+\.library)"?\s+"?LIBS:"?(?:\s|$)', line, re.I)
+        if not m:
+            continue
+        rel = have.get(m.group(1).lower())
+        if rel is None:
+            raise AppsError(f"{LIBS_SCRIPT} copies {m.group(1)}, which the release doesn't hold")
+        if rel not in rels:
+            rels.append(rel)
+    if not rels:
+        raise AppsError(f"{LIBS_SCRIPT} copies no library to LIBS:")
+    names = [r.rsplit("/", 1)[-1].lower() for r in rels]
+    if len(set(names)) != len(names):
+        raise AppsError(f"{LIBS_SCRIPT} copies two libraries of one name")
+    return rels
+
+
+def libs_part(top: Path, app: dict, root: Path, rels: list[str]) -> str:
+    """Parts/App<Drawer>Libs: the libraries the release's Install-Libraries names, each to LIBS:<its name>, where
+    the application itself goes in (the same condition as its part). The part's name."""
+    name = part_name(app) + "Libs"
+    pdir = top / "Parts" / name
+    if pdir.exists():
+        shutil.rmtree(pdir)
+    (pdir / "Files").mkdir(parents=True)
+    cond = "when " + HOMES[app.get("home", HOME)]
+    lines = [f"part {name} {version(app['tag'])}",
+             f"; {app['drawer']}: the libraries its programs open, in LIBS: (its {LIBS_SCRIPT}; {app['repo']} {app['tag']})"]
+    for rel in rels:
+        lib = rel.rsplit("/", 1)[-1]
+        if '"' in lib or len(lib) > NAME_MAX:
+            raise AppsError(f"{app['drawer']}: {lib} is no library name LIBS: can hold")
+        shutil.copyfile(root / rel, pdir / "Files" / lib)
+        lines.append(f'{cond} copy "Files/{lib}" "LIBS:{lib}"')
+    (pdir / "Part").write_text("\n".join(lines) + "\n", encoding="latin-1")
+    return name
+
+
 def icon_kind(data: bytes) -> str:
     """drawer, tool or project when data is such an icon file, else nothing"""
     if len(data) >= 78 and data[:2] == b"\xe3\x10":
@@ -243,8 +299,10 @@ def app_part(top: Path, app: dict, tree: Path, icon, face=None) -> dict:
     (pdir / "Drawer.info").write_bytes(icon(app["mark"]))
     lines.append(f'{cond} add "Drawer.info" "{home}.info"')
     (pdir / "Part").write_text("\n".join(lines) + "\n", encoding="latin-1")
+    libs = system_libraries(root)
     return dict(part=name, drawer=app["drawer"], repo=app["repo"], tag=app["tag"], asset=app["asset"],
-                files=len(files), bytes=size, installer=own_installer(root), icons=faced)
+                files=len(files), bytes=size, installer=own_installer(root), icons=faced,
+                libpart=libs_part(top, app, root, libs) if libs else "", libs=len(libs))
 
 
 def emulation_part(top: Path, icon) -> str:
@@ -332,9 +390,12 @@ def build(lock: Path, assets: Path, out: Path, icon=soft3d_icon, check_private=N
         row["sha256"] = got
         rows.append(row)
         shutil.rmtree(tree)
-    (top / INSTALL).write_text(install_script([emulation_part(top, icon)] + [r["part"] for r in rows]), encoding="latin-1")
-    listing = ["# part\tdrawer\trepository\trelease\tfile\tsha256\tfiles\tbytes\town installer\ticons made standard"]
-    listing += ["\t".join(str(r[k]) for k in ("part", "drawer", "repo", "tag", "asset", "sha256", "files", "bytes", "installer", "icons"))
+    names = [emulation_part(top, icon)]
+    for r in rows:                          # an application's libraries first, so its programs find them at their first start
+        names += [r["libpart"]] * bool(r["libpart"]) + [r["part"]]
+    (top / INSTALL).write_text(install_script(names), encoding="latin-1")
+    listing = ["# part\tdrawer\trepository\trelease\tfile\tsha256\tfiles\tbytes\town installer\ticons made standard\tlibraries to LIBS:"]
+    listing += ["\t".join(str(r[k]) for k in ("part", "drawer", "repo", "tag", "asset", "sha256", "files", "bytes", "installer", "icons", "libs"))
                 for r in rows]
     (top / "APPS-LIST.txt").write_text("\n".join(listing) + "\n")
     if check_private is None:
