@@ -59,7 +59,7 @@ def main() -> int:
         commits.append(f"{repo}\t{sha or 'MISSING'}")
         if not sha: missing.append(repo)
     env = dict(os.environ, STOVES=str(stoves), STOVE=str(stoves / "os32"), OS32_GCC16=str(stoves / "os32-gcc16"),
-               STOVE16=str(stoves / "os32-gcc16"), SDL2_STOVE=str(stoves / "os32-gcc16"),
+               STOVE16=str(stoves / "os32-gcc16" / "prefix"), SDL2_STOVE=str(stoves / "os32-gcc16"),
                OS32_GCC16_OPEN6=str(stoves / "os32-gcc16-open8"), GL_WORK=str(DEV / ".gl-work"))
     gcc = subprocess.run([str(stoves / "os32-gcc16/prefix/bin/m68k-amigaos-gcc"), "--version"], capture_output=True, text=True)
     old = subprocess.run([str(stoves / "os32/prefix/bin/m68k-amigaos-gcc"), "--version"], capture_output=True, text=True)
