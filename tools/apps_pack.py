@@ -109,6 +109,19 @@ def version(tag: str) -> str:
     return m.group(0)
 
 
+def candidate(name: str) -> int | None:
+    """The release candidate's number in a release's name or a file's (rc3, RC3: 3), or None when it names none."""
+    m = re.search(r"(?<![A-Za-z])rc(\d+)(?!\d)", name, re.I)
+    return int(m.group(1)) if m else None
+
+
+def half_moved(apps: list[dict]) -> list[str]:
+    """The drawers whose line was moved forward by half: the release and its file both name a release candidate,
+    and not the same one. A file that names none (4Pane-8.0.lha) says nothing either way."""
+    return [a["drawer"] for a in apps
+            if candidate(a["tag"]) is not None and candidate(a["asset"]) is not None and candidate(a["tag"]) != candidate(a["asset"])]
+
+
 def unpack(archive: Path, to: Path) -> None:
     """The archive's files under to: .lha by the host's lha, .zip and .tar.gz by Python. A member that would
     land outside to is refused."""

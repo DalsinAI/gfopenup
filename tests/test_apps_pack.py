@@ -69,6 +69,17 @@ def main() -> int:
     check(ap.version("v0.9.0-rc2") == "0.9.0" and ap.version("gfoffice-2.0.25-rc91") == "2.0.25"
           and ap.version("v5.14.2-amiga.2") == "5.14.2", "a part's version is its release's dotted number")
     refused("a release name with no version is refused", lambda: ap.version("latest"))
+    # a line moved forward by half (the release's name, not its file, or the other way) would fetch nothing, or an old file
+    check(ap.candidate("v0.82.2-amigaos3-rc3") == 3 and ap.candidate("GFAmigaKiCad-0.1.0-RC5.lha") == 5
+          and ap.candidate("gfoffice-2.0.25-rc92") == 92 and ap.candidate("v1.1.0") is None and ap.candidate("4Pane-8.0.lha") is None
+          and ap.candidate("src-arch.lha") is None, "a release candidate's number is read from a release's name and from a file's")
+    check(ap.half_moved(apps) == [], "in apps.lock, a file that names a release candidate names its release's")
+    check(ap.half_moved([dict(drawer="A", tag="v1.0-rc3", asset="A-1.0-rc1.lha"), dict(drawer="B", tag="v1.0-rc3", asset="B-1.0-RC3.lha"),
+                         dict(drawer="C", tag="v1.0-rc4", asset="C-8.0.lha"), dict(drawer="D", tag="v1.0", asset="D-1.0-rc2.lha")]) == ["A"],
+          "a file of another candidate than its release's is found; a file or a release that names none is let be")
+    check(by["GFOffice"]["tag"] == "gfoffice-2.0.25-rc92" and by["GFOffice"]["asset"] == "GFOffice-2.0.25-rc92-AmigaOS3.lha"
+          and by["DOSBox"]["tag"] == "v0.82.2-amigaos3-rc3" and by["DOSBox"]["asset"] == "dosbox-0.82.2-amigaos3-rc3-68040.lha",
+          "GFOffice is at RC92 and DOSBox at RC3 (GF-45): the newest each has published")
 
     with tempfile.TemporaryDirectory() as t:
         t = Path(t)
