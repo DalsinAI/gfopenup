@@ -8,7 +8,8 @@ as the kinds and the drives are (tools/soft3d_kinds_art.py, tools/soft3d_drives_
 A program is one object, what it is. Chosen, it lifts with the glow and one thing in it moves.
 
 GFOpenUpdate: a part's parcel, its lid open, and the blue arrow bringing the new version down into it; chosen,
-the arrow goes deeper in. GFOpenNotifier: a bell; chosen, it swings and rings.
+the arrow goes deeper in. GFOpenNotifier: a bell; chosen, it swings and rings. AmiPortAtlas: an atlas with
+a world map on its cover; chosen, the cover opens from the spine.
 
 MIT, Copyright (c) 2026 AmiCradle Team.
 """
@@ -58,7 +59,51 @@ def draw_gfopennotifier(f, small, chosen=False):
     return 40
 
 
-DRAW = {"GFOpenUpdate": draw_gfopenupdate, "GFOpenNotifier": draw_gfopennotifier}
+NAVY = (44, 72, 138)                            # the atlas's cloth cover
+PAGES = (240, 234, 220)
+SEA = (120, 182, 226)
+LAND = (98, 168, 84)
+
+
+def draw_amiportatlas(f, small, chosen=False):
+    """AmiPortAtlas: an atlas, the book of every game; its cover a world map. Chosen, the cover opens from the spine."""
+    A, B, C, D = (40, 300), (170, 70), (472, 150), (342, 380)                 # spine front, spine back, back, front
+    T = 70                                                                     # the book's depth
+    def down(p, h=T):
+        return (p[0], p[1] + h)
+    f.poly([A, D, down(D), down(A)], d3.dark(NAVY, 0.1))                       # the back cover's edge
+    f.poly([D, C, down(C), down(D)], d3.dark(NAVY, 0.3))
+    f.poly([(A[0] + 8, A[1] + 10), D, down(D, T - 16), down(A, T - 16)], PAGES)   # the pages, front
+    f.poly([D, (C[0], C[1] + 8), down(C, T - 16), down(D, T - 16)], d3.dark(PAGES, 0.16))   # and right
+    if not small:
+        for k in (24, 40):                                                     # the page edges
+            f.line([(A[0] + 12, A[1] + k), (D[0] - 6, D[1] + k)], 3, d3.dark(PAGES, 0.14))
+    if chosen:
+        f.poly([A, B, C, D], d3.light(PAGES, 0.3))                             # the first page, under the cover
+        f.line([(A[0] + 30, A[1] - 20), (B[0] + 26, B[1] + 30)], 6, d3.dark(PAGES, 0.1))
+    lx, ly = (-70, -110) if chosen else (0, 0)                                 # the cover's free edge, lifted
+    c, d = (C[0] + lx, C[1] + ly), (D[0] + lx, D[1] + ly)
+    def at(u, v):                                                              # u: spine to edge, v: front to back
+        return (A[0] + u * (d[0] - A[0]) + v * (B[0] - A[0]) + u * v * (c[0] - d[0] - B[0] + A[0]),
+                A[1] + u * (d[1] - A[1]) + v * (B[1] - A[1]) + u * v * (c[1] - d[1] - B[1] + A[1]))
+    if chosen:
+        f.poly([d, c, (c[0], c[1] + 18), (d[0], d[1] + 18)], d3.dark(NAVY, 0.35))   # the cover's board edge
+    f.poly([A, d, c, B], NAVY)                                                 # the cover
+    f.poly([A, at(0.1, 0), at(0.1, 1), B], d3.dark(NAVY, 0.25))                # the spine's cloth
+    f.poly([at(0.2, 0.12), at(0.92, 0.12), at(0.92, 0.88), at(0.2, 0.88)], d3.light(NAVY, 0.55))  # the map's frame
+    f.poly([at(0.23, 0.16), at(0.89, 0.16), at(0.89, 0.84), at(0.23, 0.84)], SEA)          # the map
+    lands = [[(0.30, 0.50), (0.38, 0.78), (0.52, 0.80), (0.56, 0.62), (0.46, 0.44)],      # three lands
+             [(0.56, 0.24), (0.62, 0.46), (0.78, 0.50), (0.86, 0.34), (0.74, 0.20)],
+             [(0.64, 0.62), (0.70, 0.78), (0.84, 0.76), (0.82, 0.60)]]
+    for land in (lands if not small else lands[:2]):
+        f.poly([at(u, v) for u, v in land], LAND)
+    if not small:
+        f.line([at(0.23, 0.55), at(0.89, 0.55)], 3, d3.light(SEA, 0.45))      # the equator
+        f.poly([B, c, (c[0], c[1] + 8), (B[0], B[1] + 8)], d3.light(NAVY, 0.35))   # the cover's lit back edge
+    return 40
+
+DRAW = {"GFOpenUpdate": draw_gfopenupdate, "GFOpenNotifier": draw_gfopennotifier,
+        "AmiPortAtlas": draw_amiportatlas}
 
 
 def render(name, S, chosen, small):
