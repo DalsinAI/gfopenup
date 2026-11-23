@@ -5,7 +5,7 @@
 # python3 tools/apps_pack.py fetch, then build; moving an app forward is a one-line change here.
 # Copyright (c) 2026 AmiCradle Team. MIT licence.
 gfopenbrowser        v0.9.0-rc5                  GFOpenBrowser-0.9.0-RC5.lha            GFOpenBrowser   globe     # the web browser
-gfoffice             gfoffice-2.0.25-rc92        GFOffice-2.0.25-rc92-AmigaOS3.lha      GFOffice        pages     # the GFOffice Suite
+gfoffice             gfoffice-2.0.25-rc93        GFOffice-2.0.25-rc93-AmigaOS3.lha      GFOffice        pages     # the GFOffice Suite
 GFOpenMakerSuite     openmake-libs-v0.1.0-pre1   OpenMake-libs-0.1.0-pre1.lha           GFOpenMakerSuite cube     # the maker suite, as far as it has got: its OpenMake libraries
 # GFOpenPuTTY is not here: the GFOpenUp pack builds it from gfopenputty's main and installs it in Work:GFOpenPuTTY
 # (tools/build_pack.py, WORK_APPS), so it is on the machine once.
