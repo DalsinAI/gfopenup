@@ -47,6 +47,7 @@ def bring(repo: str) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", required=True, help="the version being worked towards (0.8.31): the pack is <base>.<date>")
+    ap.add_argument("--fonts", type=Path, help="a folder holding DejaVu fonts 2.37's DejaVuSans.ttf and DejaVuSerif.ttf, the files build_pack.py pins (Ubuntu's fonts-dejavu-core 2.37-8build1); without it, the build machine's own, whose Debian build of 2.37 is a different file")
     a = ap.parse_args()
     day = os.environ.get("NIGHTLY", "").split("-")[0] or __import__("time").strftime("%Y%m%d")
     out = Path(os.environ.get("NIGHTLY_OUT") or ROOT / "build" / "nightly")
@@ -73,6 +74,8 @@ def main() -> int:
     version = f"{a.base}.{day}"
     cmd = [sys.executable, str(ROOT / "tools/build_pack.py"), "--version", version, "--out", str(out / "pack"), "--lha",
            "--steps", str(DEV / ".gfopenup-steps")]
+    if a.fonts:
+        cmd += ["--dejavu-sans", str(a.fonts / "DejaVuSans.ttf"), "--dejavu-serif", str(a.fonts / "DejaVuSerif.ttf")]
     print("nightly_pack: " + " ".join(cmd), flush=True)
     return subprocess.run(cmd, env=env, cwd=ROOT).returncode
 
