@@ -4879,14 +4879,17 @@ static void kickset_retire_one(const char *fn)
 {
     char from[160], to[160], rev[8];
     int n, k, v;
+    /* a drawer name is a CPU number (kickset_retire_bodies keeps at most 31 characters): one longer than 40 is
+     * not ours, and is left where it is rather than cut short (a cut name would be another drawer's) */
+    if (strlen(fn) > 40) return;
     strcpy(from, KICKSET_DIR ".bodies/");
-    strncat(from, fn, 40);
+    strcat(from, fn);
     UnLock(CreateDir((STRPTR)"SYS:Kickstart/.retired"));
     strcpy(to, "SYS:Kickstart/.retired/bodies-");
-    strncat(to, fn, 40);
+    strcat(to, fn);
     for (n = 2; exists(to) && n < 100; n++) {
         strcpy(to, "SYS:Kickstart/.retired/bodies-");
-        strncat(to, fn, 40);
+        strcat(to, fn);
         strcat(to, "-");
         v = n;
         k = 0;
@@ -5033,11 +5036,13 @@ static void kickset_prune(void)
                     continue;
                 strncpy(name, fn, sizeof name - 1);
                 name[sizeof name - 1] = 0;
+                /* name holds at most 107 characters: both paths fit in 160 whole, so nothing is cut (a name cut at
+                 * 100 would have moved, or deleted at the target, a different file) */
                 strcpy(from, KICKSET_DIR);
-                strncat(from, name, 100);
+                strcat(from, name);
                 UnLock(CreateDir((STRPTR)"SYS:Kickstart/.retired"));
                 strcpy(to, "SYS:Kickstart/.retired/");
-                strncat(to, name, 100);
+                strcat(to, name);
                 DeleteFile((STRPTR)to);
                 if (Rename((STRPTR)from, (STRPTR)to))
                     say("GFOpenUp: ", from, ": an older set's module the new set doesn't have, moved to SYS:Kickstart/.retired");
