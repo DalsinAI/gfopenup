@@ -59,8 +59,10 @@ def main() -> int:
         sha = bring(repo)
         commits.append(f"{repo}\t{sha or 'MISSING'}")
         if not sha: missing.append(repo)
+    # SDL2_STOVE is a prefix (gfopenrtg library/build.sh looks for $SDL2_STOVE/bin/m68k-amigaos-gcc and leaves SDL 2,
+    # OpenAL and SDL 1.2 out without a word when it isn't there), like STOVE16; OS32_GCC16 is the stove's root.
     env = dict(os.environ, STOVES=str(stoves), STOVE=str(stoves / "os32"), OS32_GCC16=str(stoves / "os32-gcc16"),
-               STOVE16=str(stoves / "os32-gcc16" / "prefix"), SDL2_STOVE=str(stoves / "os32-gcc16"),
+               STOVE16=str(stoves / "os32-gcc16" / "prefix"), SDL2_STOVE=str(stoves / "os32-gcc16" / "prefix"),
                OS32_GCC16_OPEN6=str(stoves / "os32-gcc16-open8"), GL_WORK=str(DEV / ".gl-work"))
     gcc = subprocess.run([str(stoves / "os32-gcc16/prefix/bin/m68k-amigaos-gcc"), "--version"], capture_output=True, text=True)
     old = subprocess.run([str(stoves / "os32/prefix/bin/m68k-amigaos-gcc"), "--version"], capture_output=True, text=True)
