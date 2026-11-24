@@ -382,6 +382,54 @@ def run(cmd, cwd=None, env=None, extra=None):
         _run(cmd, cwd=cwd, env=env)
 
 
+# AC-232 (Dale, 24 Nov 2026: a readme double-clicked on Instance-32 gave "couldn't be opened (DOS error 2002)"):
+# an open-ROM machine has no AmigaOS disk, so it has no text, ascii, picture, ilbm, sound, 8svx, animation or anim
+# class and no descriptor for the classic IFF files. GFOpenImage carries gfopendatatypes' open classes there; these
+# are the four descriptors that send ILBM, 8SVX, ANIM and FTXT files to them, made by gfopendatatypes' own
+# Datatypes/common/mkdtdesc.py as gfopenkick's openkick-boot disk makes them (DT_IFF: tried on IFF data only). Plain
+# text needs none: datatypes.library's own ascii type takes it to ascii.datatype.
+SYSTEM_IFF_DESCRIPTORS = (   # file and name, base class, group, ID; the FORM type is the name
+    ("ILBM", "ilbm", "pict", "ilbm"),
+    ("8SVX", "8svx", "soun", "8svx"),
+    ("ANIM", "anim", "anim", "anim"),
+    ("FTXT", "ascii", "text", "ftxt"),
+)
+SYSTEM_FAMILIES = ("picture", "ilbm", "sound", "8svx", "text", "animation")   # gfopendatatypes' SYSTEM_CLASSES
+
+
+def system_iff_descriptors(odt: Path, out: Path) -> list[Path]:
+    """The four classic IFF descriptors (SYSTEM_IFF_DESCRIPTORS) in out, made by odt's mkdtdesc.py."""
+    mk = odt / "Datatypes/common/mkdtdesc.py"
+    out.mkdir(parents=True, exist_ok=True)
+    made = []
+    for name, base, group, ident in SYSTEM_IFF_DESCRIPTORS:
+        mask = ["'F'", "'O'", "'R'", "'M'", "ANY", "ANY", "ANY", "ANY"] + [f"'{c}'" for c in name]
+        _run([sys.executable, mk, out / name, name, base, group, ident, "#?", f"$VER: {name} 47.100 (24.11.2026)",
+              *mask], env=dict(os.environ, DT_IFF="1"))
+        made.append(out / name)
+    return made
+
+
+def build_system_classes(odt: Path, out: Path) -> bool:
+    """datatypes.library and its system classes, by gfopendatatypes' own scripts (as its build_pack.py's build()),
+    into out, for a checkout whose build/library has no build: a pack build that never made one gave a GFOpenImage
+    with no classes for the open ROM (AC-232). False, saying why, when they can't be built here."""
+    lib = odt / "libraries/opendatatypes"
+    if not (lib / "build-amiga.sh").is_file():
+        print(f"  GFOpenImage: {lib} has no build-amiga.sh: no system classes")
+        return False
+    env = dict(os.environ, OUT=str(out),
+               STOVE=os.environ.get("OS32_GCC16", str(Path.home() / "AmiCradle/stoves/os32-gcc16")))
+    try:
+        run(["sh", lib / "build-amiga.sh"], env=env)
+        for family in SYSTEM_FAMILIES:
+            run(["sh", lib / "classes/datatypes" / family / "build-amiga.sh"], env=env)
+    except (OSError, subprocess.CalledProcessError) as e:
+        print(f"  GFOpenImage: the system classes didn't build ({e})")
+        return False
+    return (out / "libs/datatypes.library").is_file()
+
+
 def dev_checkouts(a, dev: Path = DEV) -> dict:
     """Every git checkout this build can read, by its folder name: the ones given on the command line, this one,
     and the ones beside it (a part's script can reach a sibling by a relative path)."""
@@ -3143,13 +3191,18 @@ def main() -> int:
     # 0.7: smacker.datatype 47.1, Smacker films (SMK2, SMK4) decoded on the 68k, and the Bink descriptor, which sends
     # Bink films to gfopenvideo.datatype and media.decode/1 (gfopendatatypes #1, its 0.2-rc1); on the GFOpenKick ROM the
     # system classes and SYS:Classes in LIBS: (below)
-    img = Part(top, "GFOpenImage", "0.7", "GFOpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
+    # 0.8 (AC-232): the system classes built here when the gfopendatatypes checkout has no build/library (the pack
+    # build never made one, so 0.7 went out without them), and the ILBM, 8SVX, ANIM and FTXT descriptors with them:
+    # readmes, ILBM pictures, 8SVX sounds and ANIM films open on an open-ROM machine
+    img = Part(top, "GFOpenImage", "0.8", "GFOpenImage: datatypes for today's pictures (PNG and Targa on the Amiga itself), sounds, music modules, documents and video")
     packer = a.opendatatypes / "tools/build_pack.py"
     if packer.is_file():
         pk = ROOT / "build/gfopendatatypes"
         lib_out = a.opendatatypes / "build/library"     # the library's and its system classes' build (its OUT)
         if not (lib_out / "libs/datatypes.library").is_file():
-            lib_out = pk / "no-library"
+            lib_out = ROOT / "build/dtlibrary"           # 0.8: built here when the checkout has none (AC-232)
+            if not build_system_classes(a.opendatatypes, lib_out):
+                lib_out = pk / "no-library"
         run([sys.executable, packer, "--no-build", "--out", pk, "--library-out", lib_out,
              "--zlib-out", ROOT / "build/openzlib"])
         man = json.loads((pk / "GFOpenDatatypes.json").read_text())
@@ -3168,6 +3221,10 @@ def main() -> int:
                 if f["pack"].startswith("Library/Classes/"):
                     img.add(f["pack"], (pk / "GFOpenDatatypes" / f["pack"]).read_bytes(), f["dest"], default=True,
                             cond="when GFOpenKick")
+            # 0.8: and the classic IFF files' descriptors, where none is (AC-232)
+            for d in system_iff_descriptors(a.opendatatypes, ROOT / "build/dtsystem-descriptors"):
+                img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", default=True,
+                        cond="when GFOpenKick")
         else:
             print(f"GFOpenImage: no system classes for the GFOpenKick ROM ({a.opendatatypes / 'build/library'} has "
                   "no build): the part's datatypes won't open on an open-ROM machine without them")
