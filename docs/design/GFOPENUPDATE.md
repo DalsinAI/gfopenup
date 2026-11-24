@@ -57,3 +57,39 @@ to install: what is installed stays GFOpenUpTool's manifest, and a part goes in 
 Dale, 17 November 2026: "yes build parts from public releases". The index and the part archives go on this
 repository's public releases, so the Amiga needs no token. Built files only, as the pack itself holds: never source,
 and never anything `check_private` refuses.
+
+## gfosdistribution (0.3, backlog AC-280)
+
+Dale, 24 November 2026: "now can we update the GFOpenUpdate tool to go look there [gfosdistribution]". His standing
+rule: every card is a stranger's card. A card pulls what is released from the public channel; nothing is pushed to
+it and nothing assumes his LAN.
+
+- **The list** is gfosdistribution's `software/index.txt` (tabs between: name, version, bytes, sha256, address,
+  description), fetched from `https://raw.githubusercontent.com/amigagfosports/gfosdistribution/main/software/index.txt`
+  with GFOpenSocket's httpget through GFOpenTLS. Read by `src/opencatalogue.h`, tested by `tests/test_opencatalogue.c`.
+  The `CATALOGUE` tooltype (or `ENV:GFOpenUpdate/Catalogue`) changes where it comes from.
+- **Downloads** only from the address in `RELEASES` (gfosdistribution's releases), as `<tag>/<file>` after it. Each is
+  checked against the catalogue's size and SHA-256 before it is unpacked.
+- **What it shows:** every release on gfosdistribution, newer than installed, not installed, or up to date. Install all
+  installs the newer and the not installed; Install the one picked. A release that is not a GFOpenUp part (no `Part`
+  file, GFOpenSQLite's zip) gets one written by its layout: `C/` to `C:`, `Libs/` to `LIBS:`, `Devs/`, `L/`, `S/`,
+  `Fonts/`, `Locale/`, `Classes/`, `WBStartup/` to theirs, the rest to `SYS:Software/<Name>/`. Then `GFOpenUpTool INSTALL`
+  installs it, so the manifest lists every file and UNINSTALL takes it out. After an update it offers a restart.
+- **Started from its icon** it opens its window and checks at once; an older GFOpenUpdate running from `SYS:WBStartup`
+  is asked to quit first. From `SYS:WBStartup` it stays quiet until something is newer.
+- **From a Shell:** `GFOpenUpdate LIST` and `GFOpenUpdate GET=<Name>`.
+- **Fallback:** when the catalogue can't be had, GFOpenUp's own update release (`URL`, 0.2's only source) is tried, for
+  this one release.
+
+### Signing, the next step
+
+Today the check is each file's SHA-256 in the catalogue, the catalogue coming over HTTPS from GitHub. The next step:
+
+- **Key:** Ed25519. One key pair for gfosdistribution; the private key stays with the release process (LumaVAULT's Dev >
+  Distribution publish, on Dale's word) and never goes in a repository, an image or a log.
+- **Public key in the image:** `S:GFOS/gfosdistribution.pub` (32 bytes, beside `S:GFOpenTLS/ca-bundle.pem`), put there by
+  the base image and the GFOpenUp pack; a second key slot for rotation.
+- **What is signed:** `software/index.txt`, as a detached `software/index.txt.sig` beside it. One signature covers every
+  file, because the index carries each file's size and SHA-256.
+- **The hook:** `catalogue_trusted()` in `src/openupdate/openupdate.c`. 0.3 refuses the catalogue on a card that has the
+  key, since it can't check signatures yet, so once keys ship no card falls back to an unsigned list.

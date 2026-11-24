@@ -1,26 +1,33 @@
-/* GFOpenUpdate 0.2: GFOS's updates offered on the Amiga (docs/design/GFOPENUPDATE.md, steps 3 and 4).
+/* GFOpenUpdate 0.3: GFOS's updates and software from gfosdistribution, offered on the Amiga
+ * (docs/design/GFOPENUPDATE.md; backlog AC-280).
  *
  * Dale, 17 November 2026: "a GFOS updater that knows what versions of things are installed and checks dalsinai etc
  * for updates and offers them to the user to update"; "make it a wbstartup commodity"; "once at start up when the
  * network is up, then periodically that can be set via TOOLTYPE"; "store its data in envarc:".
+ * Dale, 24 November 2026: "now can we update the GFOpenUpdate tool to go look there [gfosdistribution]"; "every
+ * card is a stranger's card": what a card gets it pulls from the public channel, nothing is pushed to it.
  *
- * A commodity in SYS:WBStartup. Once a minute it looks whether a check is due (src/openupdate.h, oud_due): the
- * first once bsdsocket.library opens and the index comes, then every INTERVAL seconds. A check fetches
- * GFOpenUpdate.index from the release with GFOpenSocket's httpget and weighs it against GFOpenUpTool's manifest.
- * When an installed part has a newer version, its window opens (Dale: "lets give gfopenup a ui"): every part
- * installed with its version, the newer version beside each one that has one, and Update, Skip these, Check now
- * and Not now. Update fetches each part's archive, checks its size and SHA-256, unpacks it with GFOpenCompress and
- * installs it with GFOpenUpTool INSTALL. Nothing is installed unasked.
+ * A commodity. Its list is gfosdistribution's catalogue, software/index.txt (src/opencatalogue.h), fetched with
+ * GFOpenSocket's httpget through GFOpenTLS and weighed against GFOpenUpTool's manifest: each release newer than
+ * what is installed, not installed, or up to date. Install all (or Install for the one picked) fetches each
+ * archive, checks its size and SHA-256 against the catalogue, unpacks it with GFOpenCompress and installs it with
+ * GFOpenUpTool INSTALL, writing a Part file by the release's layout when it hasn't one. After an update it offers a
+ * restart. Nothing is installed unasked. When the catalogue can't be had, GFOpenUp's own update release (the URL
+ * tooltype, GFOpenUpdate 0.2's only source) is tried instead, for this one release.
  *
- * A timed check that finds updates says so through GFOpenNotifier (or Ranchero, or Ringhio: the RINGHIO port);
- * a double-click on the notice sends SHOW to its port GFOPENUPDATE, which opens the window. With no notifier
- * running the window opens by itself.
- * Exchange's Show (or GFOpenUpdate started again) opens the window and checks now; Hide closes it.
+ * Started from its icon or a Shell it opens its window and checks at once (a GFOpenUpdate running already, an
+ * older one from SYS:WBStartup, is asked to quit first). From SYS:WBStartup it waits quietly: it checks once at
+ * startup when the network is up, then every INTERVAL seconds, and says when something is newer (GFOpenNotifier,
+ * Ranchero or Ringhio, else its window).
  * Tool types (its icon, or KEY=VALUE on the command line):
+ *   CATALOGUE=<address> gfosdistribution's software/index.txt (also ENV:GFOpenUpdate/Catalogue)
+ *   RELEASES=<address>  the only place a download may come from (gfosdistribution's releases)
  *   INTERVAL=86400      seconds between checks after the one at startup; never under 600; 0 = only at startup
- *   URL=<address>       where the index and archives are (default gfopenup's release "updates")
+ *   URL=<address>       GFOpenUp's own update release, the fallback
  *   CX_PRIORITY=0       the broker's priority
- * Its data: ENVARC:GFOpenUpdate/LastCheck (seconds) and ENVARC:GFOpenUpdate/Skipped ("skip <Name> <version>").
+ * From a Shell also: LIST (what the catalogue has against what is installed, then quit) and GET=<Name> (that one
+ * fetched, checked and installed, then quit).
+ * Its data: ENVARC:GFOpenUpdate/LastCheck (seconds).
  *
  * MIT, Copyright (c) 2026 AmiCradle Team. */
 
@@ -28,6 +35,7 @@
 #include <exec/memory.h>
 #include <dos/dos.h>
 #include <dos/dostags.h>
+#include <dos/var.h>
 #include <devices/timer.h>
 #include <intuition/intuition.h>
 #include <libraries/commodities.h>
@@ -53,11 +61,12 @@
 #include "../openupdate.h"
 #include "../openupdate_sha256.h"
 #include "../openupdate_amiga.h"    /* shared with C:apt (src/openapt/openapt.c) */
+#include "../opencatalogue.h"
 
 #define NAME "GFOpenUpdate"
-#define VERSION_TEXT "0.2"
+#define VERSION_TEXT "0.3"
 unsigned long __stack = 32768;
-static const char version[] __attribute__((used)) = "$VER: " NAME " " VERSION_TEXT " (17.11.2026)";
+static const char version[] __attribute__((used)) = "$VER: " NAME " " VERSION_TEXT " (24.11.2026)";
 
 struct Library *CxBase, *IconBase;
 struct IntuitionBase *IntuitionBase;
@@ -66,6 +75,7 @@ struct RxsLib *RexxSysBase;
 
 #define MANIFEST "ENVARC:GFOpenAmiga/GFOpenUp.manifest"
 #define INDEX_FILE OUD_WORK "/GFOpenUpdate.index"
+#define CAT_FILE OUD_WORK "/index.txt"
 #define UNPACKED OUD_WORK "/x"
 #define MAX_PARTS 96
 #define MAX_TEXT (4L * 1024 * 1024)
@@ -73,10 +83,16 @@ struct RxsLib *RexxSysBase;
 static struct {
     long interval;
     char url[200];
+    char catalogue[200];
+    char releases[200];
     LONG cxpri;
-} set = { OUD_INTERVAL_DEFAULT, OUD_URL_DEFAULT, 0 };
+} set = { OUD_INTERVAL_DEFAULT, OUD_URL_DEFAULT, OUC_CATALOGUE_DEFAULT, OUC_RELEASES_DEFAULT, 0 };
 
-static struct oud_part parts[MAX_PARTS];
+static struct oud_part parts[MAX_PARTS];       /* the old index, read into this first */
+static struct ouc_item items[MAX_PARTS];       /* what the list shows */
+static int nitems, newer, fresh, state;        /* state: 0 not checked yet, 1 checked, -1 nothing could be had */
+static const char *source = "";                /* which list it is */
+static BPTR shell_out;                         /* LIST and GET: where they print; 0 in the window */
 
 /* ---- small things ---------------------------------------------------------------------------------------- */
 
@@ -87,8 +103,6 @@ static long now_seconds(void)
     return ds.ds_Days * 86400L + ds.ds_Minute * 60L + ds.ds_Tick / TICKS_PER_SECOND;
 }
 
-/* A whole file into a new buffer (NUL after it), its length in *len; NULL when there is none or it is over
- * MAX_TEXT (src/openupdate_amiga.h). */
 static char *read_file(const char *path, long *len)
 {
     return oud_read_file(path, len, MAX_TEXT);
@@ -114,6 +128,16 @@ static void clear_work(void)
     run("C:Delete >NIL: \"" OUD_WORK "\" ALL QUIET FORCE");
 }
 
+static void print(const char *a, const char *b, const char *c)
+{
+    if (!shell_out) return;
+    if (a) FPuts(shell_out, (STRPTR)a);
+    if (b) FPuts(shell_out, (STRPTR)b);
+    if (c) FPuts(shell_out, (STRPTR)c);
+    FPuts(shell_out, (STRPTR)"\n");
+    Flush(shell_out);
+}
+
 static struct Window *win;
 static LONG ask(const char *body, const char *gadgets, ULONG arg)
 {
@@ -121,37 +145,105 @@ static LONG ask(const char *body, const char *gadgets, ULONG arg)
     return EasyRequest(win, &es, NULL, arg);
 }
 
-static int network_up(void)
+static int exists(const char *path)
 {
-    return oud_network_up();
+    BPTR l = Lock((STRPTR)path, ACCESS_READ);
+    if (l) UnLock(l);
+    return l != 0;
 }
 
-/* ---- one part: fetch, check, unpack, install ------------------------------------------------------------- */
+/* ---- signing: AC-280's next step ------------------------------------------------------------------------ */
 
-/* 0 when installed; else why not into why. The steps are src/openupdate_amiga.h's, which C:apt shares. */
-static int update_part(const struct oud_part *p, char *why, int size)
+/* NULL when the catalogue may be used, else why not. Today each file is checked against the catalogue's SHA-256
+ * and the catalogue itself comes over HTTPS from GitHub. The next step signs the catalogue: the release process
+ * signs software/index.txt (Ed25519, a detached software/index.txt.sig beside it), and the image carries the public
+ * key at OUC_KEY. A card with that key refuses a catalogue this build can't check, so once keys ship an old
+ * GFOpenUpdate never falls back to trusting an unsigned list. */
+static const char *catalogue_trusted(const char *text, long len)
 {
-    char url[300], path[160], drawer[80];
-    const char *w;
+    (void)text; (void)len;
+    if (exists(OUC_KEY)) return "this card wants a signed list, and GFOpenUpdate 0.3 can't check signatures yet";
+    return NULL;
+}
 
+/* ---- a release's Part file, when it hasn't one ---------------------------------------------------------- */
+
+/* Every file under base/rel (rel "" at the top) as a copy line, depth at most 8. 1, else 0. */
+static int part_lines(BPTR fh, const char *name, const char *base, const char *rel, int depth)
+{
+    char path[300], sub[260], line[600];
+    struct FileInfoBlock *fib;
+    BPTR lock;
+    int ok = 1;
+    if (depth > 8 || strlen(base) + strlen(rel) + 2 >= sizeof path) return 0;
+    strcpy(path, base);
+    if (*rel) { strcat(path, "/"); strcat(path, rel); }
+    if (!(lock = Lock((STRPTR)path, ACCESS_READ))) return 0;
+    if (!(fib = AllocDosObject(DOS_FIB, NULL))) { UnLock(lock); return 0; }
+    if (Examine(lock, fib))
+        while (ok && ExNext(lock, fib)) {
+            const char *n = (const char *)fib->fib_FileName;
+            if (!*rel && !Stricmp((STRPTR)n, (STRPTR)"Part")) continue;
+            if (strlen(rel) + strlen(n) + 2 >= sizeof sub) { ok = 0; break; }
+            strcpy(sub, rel);
+            if (*rel) strcat(sub, "/");
+            strcat(sub, n);
+            if (fib->fib_DirEntryType > 0) ok = part_lines(fh, name, base, sub, depth + 1);
+            else if (!ouc_part_line(name, sub, line, sizeof line) || FPuts(fh, (STRPTR)line)) ok = 0;
+        }
+    FreeDosObject(DOS_FIB, fib);
+    UnLock(lock);
+    return ok;
+}
+
+/* The drawer's Part file: its own when it has one (a GFOpenUp part), else written by its layout. NULL, else why. */
+static const char *ensure_part(const char *drawer, const struct ouc_item *it)
+{
+    char path[300];
+    BPTR fh;
+    int ok;
+    if (strlen(drawer) + 6 >= sizeof path) return "its drawer's name won't fit";
+    strcpy(path, drawer);
+    strcat(path, "/Part");
+    if (exists(path)) return NULL;
+    if (!(fh = Open((STRPTR)path, MODE_NEWFILE))) return "its Part file couldn't be written";
+    FPuts(fh, (STRPTR)"part ");
+    FPuts(fh, (STRPTR)it->p.name);
+    FPuts(fh, (STRPTR)" ");
+    FPuts(fh, (STRPTR)it->p.version);
+    FPuts(fh, (STRPTR)"\n; written by " NAME " " VERSION_TEXT " from the release's layout\n");
+    ok = part_lines(fh, it->p.name, drawer, "", 0);
+    if (!Close(fh)) ok = 0;
+    return ok ? NULL : "its Part file couldn't be written";
+}
+
+/* ---- one release: fetch, check, unpack, install --------------------------------------------------------- */
+
+/* NULL when installed; else why not. */
+static const char *install_item(const struct ouc_item *it)
+{
+    char path[160], drawer[80], where[200];
+    const char *w;
+    BPTR l;
+    if ((l = CreateDir((STRPTR)OUD_WORK))) UnLock(l);
     strcpy(path, OUD_WORK "/");
-    strcat(path, p->file);
-    if (!oud_url(set.url, p->file, url, sizeof url)) w = "its address won't fit";
-    else if (!(w = oud_fetch_checked(url, path, p->bytes, p->sha256))
-             && !(w = oud_unpack_part(path, UNPACKED, drawer, sizeof drawer)))
-        w = oud_install_part(UNPACKED, drawer, 0, NULL);
-    if (w) strncpy(why, w, size);
-    return w != NULL;
+    strcat(path, it->p.file);
+    print("  fetching ", it->url, NULL);
+    if ((w = oud_fetch_checked(it->url, path, it->p.bytes, it->p.sha256))) return w;
+    print("  size and SHA-256 match the catalogue: ", it->p.sha256, NULL);
+    if ((w = oud_unpack_part(path, UNPACKED, drawer, sizeof drawer))) return w;
+    strcpy(where, UNPACKED "/");
+    strcat(where, drawer);
+    if ((w = ensure_part(where, it))) return w;
+    print("  installing with GFOpenUpTool INSTALL", NULL, NULL);
+    return oud_install_part(UNPACKED, drawer, shell_out, NULL);
 }
 
 /* ---- a check, and what the window shows ----------------------------------------------------------------- */
 
-static struct oud_row rows[MAX_PARTS];
-static int nrows, offers, state;               /* state: 0 not checked yet, 1 checked, -1 the index couldn't be had */
-static int fresh, more;                        /* parts[fresh] on: the more parts not installed */
-
 static olui *ui;
 static olui_amiga *glue;
+static int picked = -1;                        /* the row picked in the list, or -1 */
 
 static void show(void);
 
@@ -162,133 +254,171 @@ static void say(const char *text)              /* the status line now, before so
     olui_amiga_draw(glue);
 }
 
-/* The index fetched and weighed: offers and rows set, state 1; or -1 when it couldn't be had (try again later).
- * asked: the user asked (Check now), so versions said no to are offered again. */
-static int check(int asked)
+/* The old index (GFOpenUpdate 0.2's source) as items: the count, or -1. */
+static int from_old_index(void)
 {
-    char url[300], cmd[600], *index, *manifest, *skipped;
-    long ilen, mlen = 0, slen = 0;
-    int count;
+    char url[300], cmd[600], *index;
+    long ilen;
+    int count = -1;
+    if (oud_url(set.url, OUD_INDEX_NAME, url, sizeof url) && oud_fetch_cmd(url, INDEX_FILE, cmd, sizeof cmd) && run(cmd) == 0
+        && (index = read_file(INDEX_FILE, &ilen))) {
+        count = oud_index_parts(index, ilen, parts, MAX_PARTS);
+        FreeVec(index);
+    }
+    return count < 0 ? -1 : ouc_from_index(parts, count, set.url, items, MAX_PARTS);
+}
+
+/* The catalogue fetched and weighed: items set, state 1; or -1 when neither it nor the old index could be had. */
+static int check(void)
+{
+    char cmd[600], *text, *manifest;
+    const char *why = NULL;
+    long tlen, mlen = 0;
+    int count = -1, bad = 0;
     BPTR l;
 
-    say("Checking for updates...");
+    say("Checking gfosdistribution...");
     clear_work();
     if ((l = CreateDir((STRPTR)OUD_WORK))) UnLock(l);
-    index = NULL;
-    if (oud_url(set.url, OUD_INDEX_NAME, url, sizeof url) && oud_fetch_cmd(url, INDEX_FILE, cmd, sizeof cmd) && run(cmd) == 0)
-        index = read_file(INDEX_FILE, &ilen);
-    count = index ? oud_index_parts(index, ilen, parts, MAX_PARTS) : -1;
-    if (index) FreeVec(index);
+    if (oud_fetch_cmd(set.catalogue, CAT_FILE, cmd, sizeof cmd) && run(cmd) == 0 && (text = read_file(CAT_FILE, &tlen))) {
+        if (!(why = catalogue_trusted(text, tlen))) count = ouc_parse(text, tlen, set.releases, items, MAX_PARTS, &bad);
+        FreeVec(text);
+        source = "gfosdistribution";
+    }
+    if (count <= 0 && !why) { count = from_old_index(); source = "GFOpenUp's update release"; }
     clear_work();
-    manifest = read_file(MANIFEST, &mlen);
-    if (count < 0) {                           /* the parts installed are still shown, with nothing newer */
-        offers = more = 0;
-        nrows = oud_rows(manifest, mlen, parts, 0, rows, MAX_PARTS);
-        if (manifest) FreeVec(manifest);
+    picked = -1;
+    if (count < 0 || why) {
+        nitems = newer = fresh = 0;
         state = -1;
-        show();
+        if (why) { say(why); print(NAME ": ", why, NULL); }
+        else show();
         return -1;
     }
-    skipped = asked ? NULL : read_file(OUD_SKIPPED, &slen);
-    offers = manifest ? oud_offers(parts, count, manifest, mlen, skipped, slen) : 0;
-    fresh = offers;
-    more = oud_new_parts(parts, fresh, count, manifest, mlen);
-    nrows = oud_rows(manifest, mlen, parts, offers, rows, MAX_PARTS);
-    nrows = oud_rows_add_new(rows, nrows, MAX_PARTS, parts + fresh, more);
+    manifest = read_file(MANIFEST, &mlen);
+    nitems = count;
+    newer = ouc_weigh(items, nitems, manifest, mlen, &fresh);
     if (manifest) FreeVec(manifest);
-    if (skipped) FreeVec(skipped);
     state = 1;
     show();
     return 0;
 }
 
-/* Update: each offer fetched, checked, unpacked and installed; then what didn't go, and the list again. */
-static void update_all(void)
+static void restart_offer(int updated)
+{
+    if (!updated) return;
+    if (ask("Installed.\nSome of it starts only after a restart.\n\nRestart the Amiga now?", "Restart now|Later", 0) == 1) {
+        Delay(100);                            /* the disk's buffers written out */
+        ColdReboot();
+    }
+}
+
+/* Install all (which -1: every newer one and every one not installed) or the one picked. */
+static void install(int which)
 {
     char *res = AllocVec(4096, MEMF_CLEAR);
-    int i, bad = 0, len = 0;
+    int i, bad = 0, good = 0, updated = 0, len = 0;
     if (!res) return;
-    for (i = 0; i < offers; i++) {
-        char why[80], line[120];
-        strcpy(line, "Updating ");
-        strncat(line, parts[i].name, 40);
-        strcat(line, "...");
+    for (i = 0; i < nitems; i++) {
+        char line[120];
+        const char *why;
+        int n;
+        if (which >= 0 ? i != which : items[i].state == OUC_SAME) continue;
+        n = oud_put(line, sizeof line, 0, "Installing ");
+        n = oud_put(line, sizeof line, n, items[i].p.name);
+        n = oud_put(line, sizeof line, n, " ");
+        n = oud_put(line, sizeof line, n, items[i].p.version);
+        oud_put(line, sizeof line, n, "...");
         say(line);
-        why[0] = 0;
-        if (update_part(&parts[i], why, sizeof why - 1)) {
-            why[sizeof why - 1] = 0;
+        if ((why = install_item(&items[i]))) {
             bad++;
-            len = oud_put(res, 4096, len, parts[i].name);
+            len = oud_put(res, 4096, len, items[i].p.name);
             len = oud_put(res, 4096, len, ": ");
             len = oud_put(res, 4096, len, why);
             len = oud_put(res, 4096, len, "\n");
+        } else {
+            good++;
+            updated |= items[i].state == OUC_NEWER;
         }
+        clear_work();
     }
-    clear_work();
-    if (bad) ask("Not updated:\n\n%s", "OK", (ULONG)res);
-    else ask("GFOS is updated.\nSome changes need a reboot to start.", "OK", 0);
+    if (bad) ask("Not installed:\n\n%s", "OK", (ULONG)res);
+    else if (good && !updated) ask("Installed.", "OK", 0);
     FreeVec(res);
-    check(1);
-}
-
-/* Skip these versions: not offered again until a newer one comes. */
-static void skip_all(void)
-{
-    long slen = 0, mlen = 0;
-    char *old = read_file(OUD_SKIPPED, &slen), *text = AllocVec(4096, MEMF_ANY), *manifest;
-    int n;
-    if (text && (n = oud_skip_text(parts, offers, old, slen, text, 4096)) >= 0) write_file(OUD_SKIPPED, text, n);
-    if (text) FreeVec(text);
-    if (old) FreeVec(old);
-    manifest = read_file(MANIFEST, &mlen);
-    offers = 0;
-    nrows = oud_rows(manifest, mlen, parts, 0, rows, MAX_PARTS);
-    nrows = oud_rows_add_new(rows, nrows, MAX_PARTS, parts + fresh, more);
-    if (manifest) FreeVec(manifest);
-    show();
+    restart_offer(updated);
+    check();
 }
 
 /* ---- the window (GFOpenLayout UI, the look every GFOpenUp program has) ---------------------------------- */
 
 static const char markup[] =
     "<column style='flex:1'>"
-    "  <p id=head>The GFOS parts installed, the newer versions there are, and the parts not installed.</p>"
-    "  <list id=list style='flex:1;height:auto' title='Parts installed'></list>"
-    "  <p id=status>Not checked yet.</p>"
+    "  <p id=head>What gfosdistribution has, against what this Amiga has installed.</p>"
+    "  <list id=list style='flex:1;height:auto' title='gfosdistribution'></list>"
+    "  <p id=desc> </p>"
+    "  <p id=status>Checking gfosdistribution...</p>"
     "  <row>"
-    "    <button id=update style='flex:1' title='Downloads, checks and installs the newer versions'>Update</button>"
-    "    <button id=skip style='flex:1' title='Not offered again until a newer version comes'>Skip these</button>"
-    "    <button id=check style='flex:1' title='Looks for updates now'>Check now</button>"
-    "    <button id=later style='flex:1' title='Closes the window'>Not now</button>"
+    "    <button id=all style='flex:1' title='Downloads, checks and installs everything new'>Install all</button>"
+    "    <button id=one style='flex:1' title='Downloads, checks and installs the one picked'>Install</button>"
+    "    <button id=check style='flex:1' title='Looks at gfosdistribution again'>Check now</button>"
+    "    <button id=later style='flex:1' title='Closes the window'>Close</button>"
     "  </row>"
     "</column>";
 
 static const char css[] = "row{gap:6px} column{gap:6px} #head{font-weight:bold} p{margin:2px 0}";
 
-enum { A_NONE, A_UPDATE, A_SKIP, A_CHECK, A_CLOSE };
+enum { A_NONE, A_ALL, A_ONE, A_CHECK, A_CLOSE, A_PICK };
 static int action;
 
-static void on_update(olui *u, const olui_event *ev, void *d) { (void)u; (void)ev; (void)d; action = A_UPDATE; }
-static void on_skip(olui *u, const olui_event *ev, void *d) { (void)u; (void)ev; (void)d; action = A_SKIP; }
+static void on_all(olui *u, const olui_event *ev, void *d) { (void)u; (void)ev; (void)d; action = A_ALL; }
+static void on_one(olui *u, const olui_event *ev, void *d) { (void)u; (void)ev; (void)d; action = A_ONE; }
 static void on_check(olui *u, const olui_event *ev, void *d) { (void)u; (void)ev; (void)d; action = A_CHECK; }
 static void on_later(olui *u, const olui_event *ev, void *d) { (void)u; (void)ev; (void)d; action = A_CLOSE; }
+static void on_pick(olui *u, const olui_event *ev, void *d) { (void)u; (void)ev; (void)d; action = A_PICK; }
+
+static void show_pick(void)
+{
+    olui_el *sel;
+    const char *v;
+    char t[220];
+    int n = 0;
+    if (!ui) return;
+    sel = olui_list_selected(olui_find(ui, "list"));
+    v = sel ? olui_get_value(sel) : NULL;
+    picked = -1;
+    if (v && *v) { LONG k; if (StrToLong((STRPTR)v, &k) > 0 && k >= 0 && k < nitems) picked = (int)k; }
+    t[0] = 0;
+    if (picked >= 0) {
+        n = oud_put(t, sizeof t, 0, items[picked].p.name);
+        n = oud_put(t, sizeof t, n, ": ");
+        oud_put(t, sizeof t, n, items[picked].desc[0] ? items[picked].desc : "(no description)");
+    }
+    olui_set_text(ui, olui_find(ui, "desc"), t[0] ? t : " ");
+    olui_set_disabled(ui, olui_find(ui, "one"), picked < 0 || items[picked].state == OUC_SAME);
+    olui_amiga_draw(glue);
+}
 
 static void show(void)
 {
     olui_el *list;
     int i;
-    char t[120];
+    char t[140], num[8];
+    if (shell_out) {                           /* LIST */
+        print(NAME " " VERSION_TEXT ": ", state < 0 ? "no list" : source, state < 0 ? "" : " (SHA-256 checked on each download)");
+        for (i = 0; i < nitems; i++) { ouc_row_text(&items[i], t, sizeof t); print("  ", t, NULL); }
+        print(ouc_status(state, newer, fresh), NULL, NULL);
+    }
     if (!ui) return;
     list = olui_find(ui, "list");
     olui_list_clear(ui, list);
-    for (i = 0; i < nrows; i++) {
-        oud_row_text(&rows[i], t, sizeof t);
-        olui_list_add(ui, list, NULL, t, NULL);
+    for (i = 0; i < nitems; i++) {
+        ouc_row_text(&items[i], t, sizeof t);
+        num[0] = (char)('0' + i / 10); num[1] = (char)('0' + i % 10); num[2] = 0;
+        olui_list_add(ui, list, NULL, t, num);
     }
-    olui_set_text(ui, olui_find(ui, "status"), oud_status_more(state, offers, more));
-    olui_set_disabled(ui, olui_find(ui, "update"), offers == 0);
-    olui_set_disabled(ui, olui_find(ui, "skip"), offers == 0);
-    olui_amiga_draw(glue);
+    olui_set_text(ui, olui_find(ui, "status"), ouc_status(state, newer, fresh));
+    olui_set_disabled(ui, olui_find(ui, "all"), newer + fresh == 0);
+    show_pick();
 }
 
 static void close_win(void)
@@ -309,11 +439,11 @@ static int open_win(void)
     if (win) { WindowToFront(win); ActivateWindow(win); return 1; }
     if (!(scr = LockPubScreen(NULL))) return 0;
     fh = scr->Font ? scr->Font->ta_YSize : 8;
-    w = fh * 40;
-    h = fh * 22;
+    w = fh * 50;
+    h = fh * 24;
     if (w > scr->Width) w = scr->Width;
     if (h > scr->Height) h = scr->Height;
-    win = OpenWindowTags(NULL, WA_PubScreen, (ULONG)scr, WA_Title, (ULONG)"GFOS Updates",
+    win = OpenWindowTags(NULL, WA_PubScreen, (ULONG)scr, WA_Title, (ULONG)"GFOS Updates: gfosdistribution",
                          WA_ScreenTitle, (ULONG)NAME " " VERSION_TEXT,
                          WA_Left, (scr->Width - w) / 2, WA_Top, (scr->Height - h) / 2, WA_Width, w, WA_Height, h,
                          WA_MinWidth, fh * 30, WA_MinHeight, fh * 12, WA_MaxWidth, ~0UL, WA_MaxHeight, ~0UL,
@@ -325,10 +455,11 @@ static int open_win(void)
     if (!(ui = olui_new()) || !(glue = olui_amiga_new(ui, win))) goto fail;
     olui_amiga_theme(glue, NULL);
     if (!olui_load(ui, markup, css, err, sizeof err)) goto fail;
-    olui_on(ui, "update", OLUI_CLICK, on_update, NULL);
-    olui_on(ui, "skip", OLUI_CLICK, on_skip, NULL);
+    olui_on(ui, "all", OLUI_CLICK, on_all, NULL);
+    olui_on(ui, "one", OLUI_CLICK, on_one, NULL);
     olui_on(ui, "check", OLUI_CLICK, on_check, NULL);
     olui_on(ui, "later", OLUI_CLICK, on_later, NULL);
+    olui_on(ui, "list", OLUI_SELECT, on_pick, NULL);
     if (!olui_amiga_layout(glue)) goto fail;
     show();
     return 1;
@@ -390,19 +521,36 @@ static int notify(int count)
     return notifier_cmd(cmd);
 }
 
+/* ---- the one running already: commodities.library's private BrokerCommand (-198), as GFOpenExchange's ---- */
+
+static LONG cx_BrokerCommand(const char *name, LONG id)
+{
+    register struct Library *a6 __asm("a6") = CxBase;
+    register const char *a0 __asm("a0") = name;
+    register LONG d0 __asm("d0") = id;
+    __asm__ volatile("jsr -198(%%a6)" : "+r"(d0), "+r"(a0) : "r"(a6) : "d1", "a1", "cc", "memory");
+    return d0;
+}
+
 /* ---- settings -------------------------------------------------------------------------------------------- */
+
+static int address_ok(const char *value, int size)
+{
+    char t[300];
+    return value && (int)strlen(value) < size && oud_url(value, "x", t, sizeof t) && !strncmp(value, "https://", 8);
+}
 
 static void take(const char *key, const char *value)
 {
     if (!value) return;
     if (!Stricmp((STRPTR)key, (STRPTR)"INTERVAL")) set.interval = oud_interval(value);
-    else if (!Stricmp((STRPTR)key, (STRPTR)"URL")) {
-        char t[300];
-        if (oud_url(value, "x", t, sizeof t) && strlen(value) < sizeof set.url) strcpy(set.url, value);
-    } else if (!Stricmp((STRPTR)key, (STRPTR)"CX_PRIORITY")) { LONG v; if (StrToLong((STRPTR)value, &v) > 0) set.cxpri = v; }
+    else if (!Stricmp((STRPTR)key, (STRPTR)"URL")) { if (address_ok(value, sizeof set.url)) strcpy(set.url, value); }
+    else if (!Stricmp((STRPTR)key, (STRPTR)"CATALOGUE")) { if (address_ok(value, sizeof set.catalogue)) strcpy(set.catalogue, value); }
+    else if (!Stricmp((STRPTR)key, (STRPTR)"RELEASES")) { if (address_ok(value, sizeof set.releases)) strcpy(set.releases, value); }
+    else if (!Stricmp((STRPTR)key, (STRPTR)"CX_PRIORITY")) { LONG v; if (StrToLong((STRPTR)value, &v) > 0) set.cxpri = v; }
 }
 
-static const char *const KEYS[] = { "INTERVAL", "URL", "CX_PRIORITY" };
+static const char *const KEYS[] = { "INTERVAL", "URL", "CX_PRIORITY", "CATALOGUE", "RELEASES" };
 #define NKEYS (sizeof KEYS / sizeof KEYS[0])
 
 static void from_icon(struct DiskObject *d)
@@ -413,20 +561,37 @@ static void from_icon(struct DiskObject *d)
         take(KEYS[i], (const char *)FindToolType((CONST_STRPTR *)d->do_ToolTypes, (STRPTR)KEYS[i]));
 }
 
+static int quiet;                              /* from SYS:WBStartup: no window until something is newer */
+static int list_only;
+static char get_name[40];
+
+/* 1 when the drawer is SYS:WBStartup (its name ends so) */
+static int is_wbstartup(BPTR dir)
+{
+    char p[256];
+    int n;
+    if (!dir || !NameFromLock(dir, (STRPTR)p, sizeof p)) return 0;
+    n = (int)strlen(p);
+    return n >= 9 && !Stricmp((STRPTR)(p + n - 9), (STRPTR)"WBStartup");
+}
+
 static void settings(int argc, char **argv)
 {
+    char v[200];
+    if (GetVar((STRPTR)OUC_ENV_CATALOGUE, (STRPTR)v, sizeof v, GVF_GLOBAL_ONLY) > 0) take("CATALOGUE", v);
     if (argc == 0) {                        /* from Workbench: its icon */
         struct WBStartup *wbs = (struct WBStartup *)argv;
         if (IconBase && wbs && wbs->sm_NumArgs > 0) {
             BPTR old = CurrentDir(wbs->sm_ArgList[0].wa_Lock);
             struct DiskObject *d = GetDiskObject((STRPTR)wbs->sm_ArgList[0].wa_Name);
+            quiet = is_wbstartup(wbs->sm_ArgList[0].wa_Lock);
             from_icon(d);
             if (d) FreeDiskObject(d);
             CurrentDir(old);
         }
     } else {                                /* from a Shell: the icon beside it, then the line */
         char prog[256], icon[300];
-        LONG a[NKEYS] = { 0, 0, 0 };
+        LONG a[NKEYS + 2] = { 0, 0, 0, 0, 0, 0, 0 };
         struct RDArgs *rd;
         unsigned i;
         if (IconBase && GetProgramName((STRPTR)prog, sizeof prog)) {
@@ -435,17 +600,41 @@ static void settings(int argc, char **argv)
             strncat(icon, (const char *)FilePart((STRPTR)prog), sizeof icon - 10);
             if ((d = GetDiskObject((STRPTR)icon))) { from_icon(d); FreeDiskObject(d); }
         }
-        if ((rd = ReadArgs((STRPTR)"INTERVAL/K,URL/K,CX_PRIORITY/K", a, NULL))) {
+        if ((rd = ReadArgs((STRPTR)"INTERVAL/K,URL/K,CX_PRIORITY/K,CATALOGUE/K,RELEASES/K,LIST/S,GET/K", a, NULL))) {
             for (i = 0; i < NKEYS; i++) take(KEYS[i], (const char *)a[i]);
+            list_only = a[NKEYS] != 0;
+            if (a[NKEYS + 1] && strlen((const char *)a[NKEYS + 1]) < sizeof get_name) strcpy(get_name, (const char *)a[NKEYS + 1]);
             FreeArgs(rd);
         }
     }
 }
 
+/* LIST and GET, from a Shell: the return code. */
+static int shell_mode(void)
+{
+    int i;
+    shell_out = Output();
+    if (!oud_network_up()) { print(NAME ": the network isn't up (no bsdsocket.library)", NULL, NULL); return RETURN_FAIL; }
+    if (check() < 0) return RETURN_ERROR;
+    if (!get_name[0]) return RETURN_OK;
+    for (i = 0; i < nitems; i++)
+        if (!Stricmp((STRPTR)items[i].p.name, (STRPTR)get_name)) {
+            const char *why;
+            print("Installing ", items[i].p.name, NULL);
+            why = install_item(&items[i]);
+            clear_work();
+            print(items[i].p.name, why ? ": not installed: " : ": installed", why);
+            if (!why) check();
+            return why ? RETURN_ERROR : RETURN_OK;
+        }
+    print(NAME ": the catalogue has no ", get_name, NULL);
+    return RETURN_WARN;
+}
+
 /* ---- the commodity --------------------------------------------------------------------------------------- */
 
 static struct NewBroker nb = {
-    NB_VERSION, (STRPTR)NAME, (STRPTR)NAME " " VERSION_TEXT, (STRPTR)"Offers GFOS's updates (Show: its window)",
+    NB_VERSION, (STRPTR)NAME, (STRPTR)NAME " " VERSION_TEXT, (STRPTR)"GFOS updates from gfosdistribution (Show: its window)",
     NBU_UNIQUE | NBU_NOTIFY, COF_SHOW_HIDE, 0, NULL, 0
 };
 
@@ -455,7 +644,7 @@ int main(int argc, char **argv)
     struct timerequest *tr = NULL;
     CxObj *broker = NULL;
     LONG err = 0;
-    int timer = 0, tpending = 0, quit = 0, active = 1, checked = 0, first = 1, rc = RETURN_FAIL;
+    int timer = 0, tpending = 0, quit = 0, active = 1, checked = 0, first = 1, rc = RETURN_FAIL, tries;
     long last = 0;
 
     CxBase = OpenLibrary((STRPTR)"commodities.library", 37);
@@ -464,6 +653,7 @@ int main(int argc, char **argv)
     UtilityBase = OpenLibrary((STRPTR)"utility.library", 37);
     if (!CxBase || !IntuitionBase || !UtilityBase) goto out;
     settings(argc, argv);
+    if (list_only || get_name[0]) { rc = shell_mode(); goto out; }
     {
         long len;
         char *t = read_file(OUD_LAST, &len);
@@ -471,6 +661,17 @@ int main(int argc, char **argv)
     }
 
     RexxSysBase = (struct RxsLib *)OpenLibrary((STRPTR)"rexxsyslib.library", 0);   /* only for the notice */
+    if (!(port = CreateMsgPort())) goto out;
+    nb.nb_Port = port;
+    nb.nb_Pri = (BYTE)set.cxpri;
+    for (tries = 0; !(broker = CxBroker(&nb, &err)) && err == CBERR_DUP && !quiet && tries < 10; tries++) {
+        cx_BrokerCommand(NAME, CXCMD_KILL);    /* an older one (SYS:WBStartup's 0.2) steps aside for this one */
+        Delay(25);
+    }
+    if (!broker) {                             /* running already: that one checks now (CXCMD_UNIQUE) */
+        if (err == CBERR_DUP) rc = RETURN_OK;
+        goto out;
+    }
     if (RexxSysBase && (rxport = CreateMsgPort())) {
         rxport->mp_Node.ln_Name = (char *)OUD_PORT;
         rxport->mp_Node.ln_Pri = 0;
@@ -478,18 +679,14 @@ int main(int argc, char **argv)
         if (FindPort((STRPTR)OUD_PORT)) { Permit(); DeleteMsgPort(rxport); rxport = NULL; }
         else { AddPort(rxport); Permit(); }
     }
-    if (!(port = CreateMsgPort())) goto out;
-    nb.nb_Port = port;
-    nb.nb_Pri = (BYTE)set.cxpri;
-    if (!(broker = CxBroker(&nb, &err))) {     /* running already: that one checks now (CXCMD_UNIQUE) */
-        if (err == CBERR_DUP) rc = RETURN_OK;
-        goto out;
-    }
     ActivateCxObj(broker, 1);
     if (!(tport = CreateMsgPort()) || !(tr = (struct timerequest *)CreateIORequest(tport, sizeof *tr))) goto out;
     if (OpenDevice((STRPTR)TIMERNAME, UNIT_VBLANK, (struct IORequest *)tr, 0)) goto out;
     timer = 1;
     rc = RETURN_OK;
+    if (!quiet && open_win()) {                /* from its icon: the window, and the list at once */
+        if (check() == 0) { checked = 1; last = now_seconds(); save_last(last); }
+    }
 
     while (!quit) {
         ULONG got;
@@ -542,21 +739,22 @@ int main(int argc, char **argv)
             long now = now_seconds();
             WaitIO((struct IORequest *)tr);
             tpending = 0;
-            if (active && oud_due(network_up(), checked, now, last, set.interval) && check(0) == 0) {
+            if (active && oud_due(oud_network_up(), checked, now, last, set.interval) && check() == 0) {
                 save_last(now);
                 checked = 1;
                 last = now;
-                if (offers && !win && !notify(offers)) open_win();   /* never installs: it says so, and waits */
+                if (newer && !win && !notify(newer)) open_win();   /* never installs: it says so, and waits */
             }
         }
         if (now_asked) {                           /* Exchange's Show, or started again: the window, checked now */
-            if (open_win() && check(1) == 0) { checked = 1; last = now_seconds(); save_last(last); }
+            if (open_win() && check() == 0) { checked = 1; last = now_seconds(); save_last(last); }
         }
         switch (action) {
-        case A_UPDATE: action = A_NONE; update_all(); break;
-        case A_SKIP: action = A_NONE; skip_all(); break;
-        case A_CHECK: action = A_NONE; if (check(1) == 0) { checked = 1; last = now_seconds(); save_last(last); } break;
-        case A_CLOSE: action = A_NONE; close_win(); break;
+        case A_ALL: action = A_NONE; install(-1); break;
+        case A_ONE: action = A_NONE; if (picked >= 0) install(picked); break;
+        case A_CHECK: action = A_NONE; if (check() == 0) { checked = 1; last = now_seconds(); save_last(last); } break;
+        case A_PICK: action = A_NONE; show_pick(); break;
+        case A_CLOSE: action = A_NONE; close_win(); if (!quiet) quit = 1; break;
         }
     }
 out:
