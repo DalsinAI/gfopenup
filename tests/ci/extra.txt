@@ -1,1 +1,3 @@
-openmouseaccel: make -C src/openmouseaccel test
+# name @ paths: command, run from the top of the repository (the paths: a change there runs it)
+c-tests @ src tests: sh tests/c_tests.sh
+openmouseaccel @ src/openmouseaccel: make -C src/openmouseaccel test

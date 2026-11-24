@@ -1,7 +1,7 @@
 #!/bin/sh
 # Every host C test in tests/: each is built as its own header comment says (the "cc ..." line),
 # into a scratch folder, and run from the top of the repository.
-#   tests/run_c.sh
+#   tests/c_tests.sh
 # MIT, Copyright (c) 2026 AmiCradle Team.
 set -u
 cd "$(dirname "$0")/.."
