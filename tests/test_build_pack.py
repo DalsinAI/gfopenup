@@ -1739,6 +1739,36 @@ def main() -> int:
             check("device files without akikoplus.device are refused", False)
         except SystemExit:
             check("device files without akikoplus.device are refused", True)
+    # AkikoPlus 3.0 (BL-141): the drawer laid out from gfosautoconfigboards' checkout and its build's OUT, every
+    # file the part takes, and the part's version the built library's
+    with tempfile.TemporaryDirectory() as t2:
+        t2 = Path(t2)
+        drawer_files = {rel for rel, _ in bp.AKIKOPLUS_FILES} | {rel for rel, _ in bp.AKIKOPLUS_DEVICE_FILES}
+        check("the AkikoPlus drawer has exactly the files the part takes",
+              {rel for rel, _ in bp.AKIKOPLUS_DRAWER} == drawer_files and len(bp.AKIKOPLUS_DRAWER) == len(drawer_files))
+        boards, built = t2 / "boards", t2 / "out"
+        for rel, frm in bp.AKIKOPLUS_DRAWER:
+            where, name = frm.split(":", 1)
+            f = (built / name) if where == "out" else (boards / bp.AKIKOPLUS_GUEST / name)
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(rel.encode())
+        (built / "akikoplus.library").write_bytes(b"\0$VER: akikoplus.library 3.0 (24.11.2026) board and 68k\0")
+        d = bp.akikoplus_drawer(boards, built, t2 / "drawer")
+        check("akikoplus_drawer puts each file where the part looks",
+              d is not None and all((d / rel).read_bytes() == rel.encode() for rel in drawer_files - {"Libs/akikoplus.library"}))
+        ak3 = bp.akikoplus_part(t2 / "top", d)
+        lines = (t2 / "top/Parts/AkikoPlus/Part").read_text(encoding="latin-1").splitlines()
+        check("the AkikoPlus part from the laid-out drawer is 3.0 with the device files",
+              ak3 is not None and lines[0] == "part AkikoPlus 3.0"
+              and 'copy "Devs/akikoplus.device" "DEVS:akikoplus.device"' in lines
+              and sum(1 for x in lines if x.startswith("copy ")) == len(drawer_files), str(lines))
+        check("no drawer when the build made no library", bp.akikoplus_drawer(boards, t2 / "nothing", t2 / "d2") is None)
+        (boards / bp.AKIKOPLUS_GUEST / "akikoplus.doc").unlink()
+        try:
+            bp.akikoplus_drawer(boards, built, t2 / "d3"); ok = False
+        except SystemExit as e:
+            ok = "akikoplus.doc" in str(e)
+        check("a missing file stops the build, named", ok)
     inst = (ROOT / "pack/Install-GFOpenUp").read_text(encoding="latin-1")
     sv_block = inst[inst.index('(working "Installing GFOpenService")'):inst.index("(if (bitand #parts 8388608)")]
     check("Install-GFOpenUp installs Parts/AkikoPlus with GFOpenService", "INSTALL Parts/AkikoPlus" in sv_block)

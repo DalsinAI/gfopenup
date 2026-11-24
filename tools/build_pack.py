@@ -63,10 +63,12 @@ a Part file that C/GFOpenUpTool reads:
   GFOpenService/          mitchy.device (with gfopenservice.device, its old name) and Nursery: services from boards and
                         paired Cradles; ServiceTest; MEDIA:, files decoded through
                         media.decode/1 (L:media-handler, DEVS:DOSDrivers/MEDIA); mitchy.library (gfopenservice)
-  AkikoPlus/              akikoplus.library 2: C2P, swaps, fills, scaling, YUV, colours and zlib on
-                        AmiCradle's AkikoPlus media board (through mitchy.library) or on the 68k;
+  AkikoPlus/              akikoplus.library 3: C2P, swaps, fills, scaling, YUV, colours and zlib on
+                        AmiCradle's AkikoPlus media board (through mitchy.library) or on the 68k, and (3.0,
+                        BL-141) the named services (AP_OpenService: media.decode/1 and the rest);
                         C:AkikoTest, C:APTest and SYS:Developer/AkikoPlus. Installed with GFOpenService
-                        (gfosautoconfigboards cards/akikoplus/guest; left out without --akikoplus)
+                        (gfosautoconfigboards cards/akikoplus/guest, built here from the checkout beside this
+                        one, --autoconfigboards, or a built drawer, --akikoplus; left out without either)
   KickstartSet/           the slim ROM's disk part (amicradle-guest's thin profile, docs/design/thin-loader.md):
                         the module set the ROM leaves out, as SYS:Kickstart/default/ with its Manifest, and
                         the files the full ROM held on demand (asl, locale, version, datatypes and its
@@ -869,6 +871,11 @@ def build_parts(a):
     # GFOpenNotifier (gfopennotifier): pop-up notices for ARexx scripts, Ranchero's and Ringhio's interface
     if getattr(a, "gfopennotifier", None):
         run(["sh", a.gfopennotifier / "build.sh", a.gfopennotifier / "build/os3"], env=dict(env, STOVE=str(STOVE)))
+    # AkikoPlus (akikoplus.library 3, BL-141) from gfosautoconfigboards' main, with the GCC 16 stove its script names,
+    # unless a built drawer was given (--akikoplus)
+    if getattr(a, "autoconfigboards", None) and not getattr(a, "akikoplus", None):
+        run(["sh", a.autoconfigboards / AKIKOPLUS_GUEST / "build-amiga.sh"],
+            env=dict(os.environ, STOVE=gcc16_root, OUT=str(ROOT / "build/akikoplus-out")))
     # GFOpenApt, C:apt: GFOpenUpdate's index, fetch and install from the Shell (docs/design/GFOPENAPT.md)
     run(["sh", ROOT / "src/openapt/build.sh", ROOT / "build/os3/GFOpenApt"], env=dict(os.environ, OS32_GCC16=gcc16_root))
     # GFOpenUpdate, the commodity that offers GFOS's updates, its window GFOpenLayout UI (docs/design/GFOPENUPDATE.md)
@@ -2269,7 +2276,7 @@ def ogles3_part(top: Path, built: Path, src: Path) -> Part | None:
     return og
 
 
-# AkikoPlus (0.8.27): akikoplus.library 2 (gfosautoconfigboards #4, cards/akikoplus/guest), built with the os32-gcc16
+# AkikoPlus (0.8.27; 3.0 with the services, BL-141): akikoplus.library (gfosautoconfigboards cards/akikoplus/guest), built with the os32-gcc16
 # stove. --akikoplus is a folder laid out as the part: Libs/akikoplus.library, C/AkikoTest, C/APTest and
 # Developer/AkikoPlus/ (the autodoc, SFD, FD, headers and boardonly/akikoplus.library, the AP_NO_FALLBACK build).
 AKIKOPLUS_FILES = (
@@ -2298,6 +2305,50 @@ AKIKOPLUS_DEVICE_FILES = (
     ("Developer/AkikoPlus/include/devices/akikoplus.h", "SYS:Developer/AkikoPlus/include/devices/akikoplus.h"),
     ("Developer/AkikoPlus/include/devices/akikomidi.h", "SYS:Developer/AkikoPlus/include/devices/akikomidi.h"),
 )
+# The drawer from gfosautoconfigboards' own build (Dale, 24 Nov 2026: "release akikoplus and get it into the open up
+# pack"): cards/akikoplus/guest/build-amiga.sh's OUT holds the programs flat; the headers, SFD, FD and autodoc are
+# the checkout's own. Each drawer file and where it comes from: "out:" the build's OUT, "src:" the card's folder.
+AKIKOPLUS_DRAWER = (
+    ("Libs/akikoplus.library", "out:akikoplus.library"),
+    ("C/AkikoTest", "out:AkikoTest"),
+    ("C/APTest", "out:APTest"),
+    ("Developer/AkikoPlus/akikoplus.doc", "src:akikoplus.doc"),
+    ("Developer/AkikoPlus/boardonly/akikoplus.library", "out:boardonly/akikoplus.library"),
+    ("Developer/AkikoPlus/fd/akikoplus_lib.fd", "src:fd/akikoplus_lib.fd"),
+    ("Developer/AkikoPlus/include/clib/akikoplus_protos.h", "src:include/clib/akikoplus_protos.h"),
+    ("Developer/AkikoPlus/include/inline/akikoplus.h", "src:include/inline/akikoplus.h"),
+    ("Developer/AkikoPlus/include/libraries/akikoplus.h", "src:include/libraries/akikoplus.h"),
+    ("Developer/AkikoPlus/include/pragmas/akikoplus_pragmas.h", "src:include/pragmas/akikoplus_pragmas.h"),
+    ("Developer/AkikoPlus/include/proto/akikoplus.h", "src:include/proto/akikoplus.h"),
+    ("Developer/AkikoPlus/sfd/akikoplus_lib.sfd", "src:sfd/akikoplus_lib.sfd"),
+    ("Devs/akikoplus.device", "out:akikoplus.device"),
+    ("Devs/akikomidi.device", "out:akikomidi.device"),
+    ("Devs/Midi/akikoplus", "out:Midi/akikoplus"),
+    ("C/APMTest", "out:APMTest"),
+    ("C/AKMTest", "out:AKMTest"),
+    ("Developer/AkikoPlus/include/devices/akikoplus.h", "src:include/devices/akikoplus.h"),
+    ("Developer/AkikoPlus/include/devices/akikomidi.h", "src:include/devices/akikomidi.h"),
+)
+AKIKOPLUS_GUEST = "cards/akikoplus/guest"
+
+
+def akikoplus_drawer(boards: Path, built: Path, drawer: Path) -> Path | None:
+    """--akikoplus's drawer laid out from gfosautoconfigboards (boards) and its build's OUT (built). The drawer,
+    or None (with the reason printed) when the build didn't make the library."""
+    src = boards / AKIKOPLUS_GUEST
+    if not (built / "akikoplus.library").is_file():
+        print(f"  AkikoPlus: {built} has no akikoplus.library (gfosautoconfigboards {AKIKOPLUS_GUEST}/build-amiga.sh)")
+        return None
+    if drawer.exists():
+        shutil.rmtree(drawer)
+    for rel, frm in AKIKOPLUS_DRAWER:
+        where, name = frm.split(":", 1)
+        f = (built if where == "out" else src) / name
+        if not f.is_file():
+            raise SystemExit(f"AkikoPlus: {f} is missing (for {rel})")
+        (drawer / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(f, drawer / rel)
+    return drawer
 
 
 def akikoplus_part(top: Path, src: Path | None) -> Part | None:
@@ -2313,7 +2364,8 @@ def akikoplus_part(top: Path, src: Path | None) -> Part | None:
     data = (src / "Libs/akikoplus.library").read_bytes()
     ak = Part(top, "AkikoPlus", binary_version(data, "akikoplus.library") or "2.0",
               "AkikoPlus: akikoplus.library, the media board's helpers (C2P, swaps, fills, scaling, YUV, colours, "
-              "zlib) on the board when fitted, on the 68k when not; akikoplus.device, films and sound decoded "
+              "zlib) on the board when fitted, on the 68k when not; the board's named services (3.0: AP_OpenService, "
+              "media.decode/1); akikoplus.device, films and sound decoded "
               "by the host (ACMedia); AkikoTest, APTest and APMTest")
     for rel, dest in AKIKOPLUS_FILES:
         ak.add(rel, (src / rel).read_bytes(), dest)
@@ -2885,6 +2937,9 @@ def main() -> int:
                          "KickstartSet part (left out without it)")
     ap.add_argument("--gfopennotifier", type=Path, default=first(DEV / "gfopennotifier", DEV.parent / "gfopennotifier"),
                     help="gfopennotifier's checkout: the GFOpenNotifier part (left out without it)")
+    ap.add_argument("--autoconfigboards", type=Path, default=first(DEV / "gfosautoconfigboards", DEV.parent / "gfosautoconfigboards"),
+                    help="gfosautoconfigboards' checkout: the AkikoPlus part is built from its cards/akikoplus/guest when "
+                         "--akikoplus doesn't name a built drawer (left out without either)")
     ap.add_argument("--akikoplus", type=Path, default=None,
                     help="a built AkikoPlus drawer (Libs/akikoplus.library, C/AkikoTest, C/APTest, Developer/AkikoPlus/; Devs/akikoplus.device and the rest of AKIKOPLUS_DEVICE_FILES when built): "
                          "gfosautoconfigboards cards/akikoplus/guest's build; the part is left out without it")
@@ -3160,9 +3215,13 @@ def main() -> int:
     sv.add("Devs/DOSDrivers/MEDIA", (a.openamigaservice / "devs/MEDIA").read_bytes(), "DEVS:DOSDrivers/MEDIA", own=True)
     sv.write()
 
-    # AkikoPlus 2.0 (0.8.27): akikoplus.library (gfosautoconfigboards #4), on AmiCradle's media board through
-    # mitchy.library when it is fitted, on the 68k when not; Install-GFOpenUp installs it with GFOpenService.
-    akikoplus_part(top, a.akikoplus)
+    # AkikoPlus 3.0 (BL-141): akikoplus.library (gfosautoconfigboards), on AmiCradle's media board through
+    # mitchy.library when it is fitted, on the 68k when not, and the board's named services; Install-GFOpenUp
+    # installs it with GFOpenService. The drawer is --akikoplus's, or laid out here from --autoconfigboards' build.
+    akikoplus = a.akikoplus
+    if not akikoplus and getattr(a, "autoconfigboards", None):
+        akikoplus = akikoplus_drawer(a.autoconfigboards, ROOT / "build/akikoplus-out", ROOT / "build/akikoplus")
+    akikoplus_part(top, akikoplus)
     kickstartset_part(top, a.thinsupport)
 
     # The parts their own repositories released (parts.lock): ACGame, GFOpenSynth, Allegro4. As they are.

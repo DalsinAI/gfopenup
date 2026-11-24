@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEV = ROOT.parent
 ORG = "https://github.com/DalsinAI/"
 # The checkouts build_pack.py looks for beside this one (its --options' defaults), by repository name.
-REPOS = ("amicradle", "amicradle-guest", "gfopenprint", "gfopengadtools", "gfopenprefs", "gfopencompress", "gfopenservice",
+REPOS = ("amicradle", "amicradle-guest", "gfosautoconfigboards", "gfopenprint", "gfopengadtools", "gfopenprefs", "gfopencompress", "gfopenservice",
          "gfopendatatypes", "gfopenrtg", "gfopenfilemanager", "gfopenmedia", "gfopenmediaplayer", "gfopenmui", "gfopenedit",
          "gfoffice", "gfopenmulticore", "gfopenmail", "gfopenlayout", "gfopenmesa", "gfopentls", "gfopenputty", "gfopentata",
          "gfopenftp", "gfopentelegram", "gfopeninput", "gfopensocket", "gfopenphysfs", "gfopenbench", "gfopenfont", "gfosfonts",
