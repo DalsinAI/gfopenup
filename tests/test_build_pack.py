@@ -958,6 +958,41 @@ def demos_part_checks(tmp: Path, filt: Path) -> None:
           '(STRPTR)"Media",' not in tool)
 
 
+def system_descriptor_checks() -> None:
+    """AC-232: the four classic IFF descriptors, made by a gfopendatatypes checkout's mkdtdesc.py (ODT, else beside
+    this one), read back as datatypes.library reads them: FORM DTYP, DTHD's name, base, group, ID, DTF_IFF and the
+    mask FORM ???? <type>."""
+    odt = Path(os.environ.get("ODT", ROOT.parent / "gfopendatatypes"))
+    if not (odt / "Datatypes/common/mkdtdesc.py").is_file():
+        print(f"skip the classic IFF descriptors: no gfopendatatypes checkout at {odt} (set ODT)")
+        return
+    with tempfile.TemporaryDirectory() as d:
+        made = bp.system_iff_descriptors(odt, Path(d))
+        check("four classic IFF descriptors are made", [p.name for p in made] == ["ILBM", "8SVX", "ANIM", "FTXT"])
+        for p, (name, base, group, ident) in zip(made, bp.SYSTEM_IFF_DESCRIPTORS):
+            b = p.read_bytes()
+            ok = b[:4] == b"FORM" and b[8:12] == b"DTYP" and int.from_bytes(b[4:8], "big") == len(b) - 8
+            chunks, i = {}, 12
+            while ok and i + 8 <= len(b):
+                n = int.from_bytes(b[i + 4:i + 8], "big")
+                chunks[b[i:i + 4]] = b[i + 8:i + 8 + n]
+                i += 8 + n + (n & 1)
+            h = chunks.get(b"DTHD", b"")
+            def at(off):
+                o = int.from_bytes(h[off:off + 4], "big")
+                return h[o:h.index(b"\0", o)].decode("latin-1")
+            ok = ok and len(h) >= 32
+            flags = int.from_bytes(h[28:30], "big") if ok else 0
+            masklen = int.from_bytes(h[24:26], "big") if ok else 0
+            mo = int.from_bytes(h[12:16], "big") if ok else 0
+            mask = [int.from_bytes(h[mo + 2 * k:mo + 2 * k + 2], "big") for k in range(masklen)] if ok else []
+            want = [ord(c) for c in "FORM"] + [0xFFFF] * 4 + [ord(c) for c in name]
+            check(f"{name}: a FORM DTYP for {base}.datatype, group {group}, ID {ident}, DTF_IFF, mask FORM ???? {name}",
+                  ok and at(0) == name and at(4) == base and h[16:20] == group.encode() and h[20:24] == ident.encode()
+                  and flags & 0x000F == 0x0002 and mask == want,
+                  f"name={at(0) if ok else '?'} base={at(4) if ok else '?'} flags={flags:#x} mask={mask}")
+
+
 def main() -> int:
     cc = shutil.which("cc") or shutil.which("gcc")
     if not cc:
@@ -1711,7 +1746,15 @@ def main() -> int:
     gpu_block = inst[inst.index('(working "Installing GFOpenGPU")'):inst.index("; Warp3D, as it always has")]
     check("Install-GFOpenUp installs Parts/OGLES3 with GFOpenGPU", "INSTALL Parts/OGLES3" in gpu_block)
     check("the GFOpenCompress part takes its program's version", 'Part(top, "GFOpenCompress", None,' in src)
-    check("the GFOpenImage part is 0.7 (smacker.datatype and the Bink descriptor)", 'Part(top, "GFOpenImage", "0.7",' in src)
+    check("the GFOpenImage part is 0.8 (AC-232: the system classes built when missing, the classic IFF descriptors)",
+          'Part(top, "GFOpenImage", "0.8",' in src)
+    check("GFOpenImage builds the system classes when gfopendatatypes' build/library has none (AC-232)",
+          "if not build_system_classes(a.opendatatypes, lib_out):" in src
+          and bp.SYSTEM_FAMILIES == ("picture", "ilbm", "sound", "8svx", "text", "animation"))
+    check("GFOpenImage on the GFOpenKick ROM: the classic IFF descriptors where none is (AC-232)",
+          'img.add(f"Devs/DataTypes/{d.name}", d.read_bytes(), f"DEVS:DataTypes/{d.name}", default=True,\n'
+          '                        cond="when GFOpenKick")' in src)
+    system_descriptor_checks()
     check("GFOpenImage on the GFOpenKick ROM: SYS:Classes in LIBS: at startup",
           'img.line("when GFOpenKick startup Assign >NIL: LIBS: SYS:Classes ADD")' in src)
     check("GFOpenImage on the GFOpenKick ROM: the pack's system classes where none is",
