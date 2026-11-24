@@ -1231,6 +1231,11 @@ def main() -> int:
                         str(ROOT / "tests/test_openupdate_sha256.c"), "-o", str(sh)], check=True)
         r = subprocess.run([str(sh)], capture_output=True, text=True)
         check("GFOpenUpdate's SHA-256 (tests/test_openupdate_sha256.c)", r.returncode == 0, r.stdout[-600:])
+        oc = tmp / "test_opencatalogue"
+        subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
+                        str(ROOT / "tests/test_opencatalogue.c"), "-o", str(oc)], check=True)
+        r = subprocess.run([str(oc)], capture_output=True, text=True)
+        check("GFOpenUpdate's gfosdistribution catalogue (tests/test_opencatalogue.c)", r.returncode == 0, r.stdout[-600:])
         ap = tmp / "test_openapt"
         subprocess.run([cc, "-std=c99", "-Wall", "-Werror", f"-I{ROOT / 'src'}",
                         str(ROOT / "tests/test_openapt.c"), "-o", str(ap)], check=True)
