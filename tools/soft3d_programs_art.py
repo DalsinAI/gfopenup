@@ -9,7 +9,8 @@ A program is one object, what it is. Chosen, it lifts with the glow and one thin
 
 GFOpenUpdate: a part's parcel, its lid open, and the blue arrow bringing the new version down into it; chosen,
 the arrow goes deeper in. GFOpenNotifier: a bell; chosen, it swings and rings. AmiPortAtlas: an atlas with
-a world map on its cover; chosen, the cover opens from the spine.
+a world map on its cover; chosen, the cover opens from the spine. TaitoX: an arcade cabinet, its game on the
+screen; chosen, the joystick is pushed over and a shot flies up the screen.
 
 MIT, Copyright (c) 2026 AmiCradle Team.
 """
@@ -102,8 +103,43 @@ def draw_amiportatlas(f, small, chosen=False):
         f.poly([B, c, (c[0], c[1] + 8), (B[0], B[1] + 8)], d3.light(NAVY, 0.35))   # the cover's lit back edge
     return 40
 
+CAB = (58, 66, 104)                             # the cabinet's paint
+MARQUEE = (214, 70, 60)
+SCREEN = (22, 26, 40)
+PANEL = (90, 98, 136)
+
+
+def draw_taitox(f, small, chosen=False):
+    """TaitoX (the Taito X board's emulator): an arcade cabinet, seen from the front left, its game on the
+    screen. Chosen, the joystick is pushed over and a shot flies up the screen."""
+    dx, dy = 80, -50                                                            # the cabinet's depth, to the back right
+    f.poly([(352, 40), (352 + dx, 40 + dy), (352 + dx, 470 + dy), (352, 470)], d3.dark(CAB, 0.35))   # its right side
+    f.rr([150, 40, 352, 470], 10, CAB, d3.light(CAB, 0.2))                     # its front
+    f.rr([164, 52, 338, 112], 8, MARQUEE, d3.light(MARQUEE, 0.35))             # the marquee, lit
+    f.rr([170, 122, 332, 272], 10, d3.dark(CAB, 0.5))                          # the screen's bezel
+    f.rr([184, 134, 318, 260], 8, SCREEN, d3.light(SCREEN, 0.12))              # the screen
+    f.poly([(251, 220), (229, 252), (273, 252)], (110, 200, 255))              # the player's ship
+    if not small:
+        f.ell([198, 148, 230, 172], (240, 200, 70))                            # an enemy, and another
+        f.ell([272, 160, 304, 184], (240, 200, 70))
+    if chosen:
+        f.rr([245, 150, 257, 204], 6, (255, 250, 220))                         # the shot, going up
+    f.poly([(120, 320), (382, 320), (382 + dx // 2, 320 + dy // 2), (150 + dx // 2, 320 + dy // 2)], d3.light(PANEL, 0.3))   # the panel's top
+    f.poly([(120, 320), (382, 320), (372, 372), (130, 372)], PANEL)           # the control panel, out in front
+    sx = 44 if chosen else 0                                                     # the stick, pushed over
+    f.line([(206, 334), (206 + sx, 300)], 14 if not small else 22, d3.dark(PANEL, 0.6))
+    f.ell([184 + sx, 278, 228 + sx, 322], MARQUEE, d3.light(MARQUEE, 0.4))     # its ball
+    f.ell([268, 326, 300, 350], (250, 210, 60))                                # two buttons
+    if not small:
+        f.ell([314, 326, 346, 350], (110, 200, 255))
+    f.rr([222, 396, 280, 452], 6, d3.dark(CAB, 0.45))                          # the coin door
+    if not small:
+        f.rr([244, 408, 258, 438], 4, (250, 210, 60))                          # its slot, lit
+    return 40
+
+
 DRAW = {"GFOpenUpdate": draw_gfopenupdate, "GFOpenNotifier": draw_gfopennotifier,
-        "AmiPortAtlas": draw_amiportatlas}
+        "AmiPortAtlas": draw_amiportatlas, "TaitoX": draw_taitox}
 
 
 def render(name, S, chosen, small):
