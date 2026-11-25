@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Our programs' Soft 3D icons (tools/soft3d_programs_art.py): GFOpenUpdate's, GFOpenNotifier's and AmiPortAtlas's two frames at both sizes, and with
+"""Our programs' Soft 3D icons (tools/soft3d_programs_art.py): GFOpenUpdate's, GFOpenNotifier's, AmiPortAtlas's and TaitoX's two frames at both sizes, and with
     AMICRADLE_GUEST=<amicradle-guest checkout> python3 tests/test_soft3d_programs.py      its icon file, tool types kept
 MIT, Copyright (c) 2026 AmiCradle Team."""
 import os, sys
@@ -15,7 +15,7 @@ def check(what, ok, more=""):
     print(("ok   " if ok else "FAIL ") + what + ("" if ok else f": {more}"))
     fails += 0 if ok else 1
 
-for name, n in [(x, n) for x in ("GFOpenUpdate", "GFOpenNotifier", "AmiPortAtlas") for n in (64, 32)]:
+for name, n in [(x, n) for x in ("GFOpenUpdate", "GFOpenNotifier", "AmiPortAtlas", "TaitoX") for n in (64, 32)]:
     rest, chosen = (np.array(p3.frames(name, n, c)) for c in (False, True))
     check(f"{name} at {n} px: two frames of {n} x {n}", rest.shape == chosen.shape == (n, n, 4), str(rest.shape))
     a = np.concatenate([rest[..., 3].ravel(), chosen[..., 3].ravel()])
